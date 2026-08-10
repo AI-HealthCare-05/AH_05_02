@@ -1,0 +1,11 @@
+app:
+  name: chronic-disease-lifestyle-challenge
+  environment: local
+
+model:
+  artifact_path: models/baseline/model.joblib
+
+rag:
+  enabled: false
+  vector_store: chroma
+
