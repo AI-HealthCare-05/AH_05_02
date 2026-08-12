@@ -1,0 +1,9 @@
+﻿dataset,target_definition,disease,age_group,rows,positive,prevalence,train_rows,validation_rows,test_rows
+KNHANES,undiagnosed,hypertension,19+,38905,4333,0.11137385940110525,22834,7702,8369
+KNHANES,undiagnosed,hypertension,40+,25737,3662,0.14228542565178537,14699,5218,5820
+KNHANES,undiagnosed,hypertension,65+,6709,1308,0.19496199135489642,3580,1457,1672
+KLoSA,incident,hypertension,survey_population,38235,2315,0.060546619589381456,26768,5722,5745
+KNHANES,undiagnosed,diabetes,19+,44828,1945,0.04338806103328277,26005,9132,9691
+KNHANES,undiagnosed,diabetes,40+,32089,1788,0.05572002867026084,18160,6680,7249
+KNHANES,undiagnosed,diabetes,65+,10774,761,0.07063300538333024,5716,2427,2631
+KLoSA,incident,diabetes,survey_population,51807,1299,0.025073831721582025,36273,7678,7856

@@ -1,0 +1,42 @@
+{
+  "knhanes_rows": 67019,
+  "klosa_rows": 74834,
+  "knhanes_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "klosa_waves": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "knhanes_cohorts": {
+    "19": 55342,
+    "40": 41128,
+    "65": 15694
+  },
+  "klosa_population_rows": 74834,
+  "klosa_65_plus_rows": 42696,
+  "knhanes_hypertension_eligible": 38905,
+  "knhanes_hypertension_positive": 4333,
+  "klosa_hypertension_eligible": 38235,
+  "klosa_hypertension_positive": 2315,
+  "knhanes_diabetes_eligible": 44828,
+  "knhanes_diabetes_positive": 1945,
+  "klosa_diabetes_eligible": 51807,
+  "klosa_diabetes_positive": 1299
+}
