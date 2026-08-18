@@ -56,12 +56,12 @@
 ## 로컬 실행
 
 ```bash
-python -m venv .venv
-pip install -r requirements.txt
-uvicorn src.backend.main:app --reload
+uv python install 3.13
+uv sync --all-groups --frozen
+uv run uvicorn app.main:app --reload
 ```
 
-API 상태 확인: `GET http://localhost:8000/health`
+API 문서 확인: `GET http://localhost:8000/api/docs`
 
 ## 환경변수
 
@@ -74,4 +74,3 @@ API 상태 확인: `GET http://localhost:8000/health`
 - 생성형 AI: OpenAI API
 - OCR: CLOVA OCR
 - CI: GitHub Actions
-

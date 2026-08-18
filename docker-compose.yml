@@ -1,8 +1,110 @@
+name: ah-05-02
+
 services:
-  api:
-    build: .
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6380:6379"
+    networks:
+      - healthcare
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "${DB_EXPOSE_PORT:-3306}:${DB_PORT:-3306}"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --port=${DB_PORT:-3306}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - healthcare
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: ${DOCKER_USER:-local}/${DOCKER_REPOSITORY:-ah-05-02}:app-${APP_VERSION:-v0.1.0}
+    restart: unless-stopped
     env_file:
       - .env
+    command:
+      - uv
+      - run
+      - --no-sync
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+    volumes:
+      - ./app:/app/app
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8001:8000"
+    networks:
+      - healthcare
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
+  ai-worker:
+    build:
+      context: .
+      dockerfile: ai_worker/Dockerfile
+    image: ${DOCKER_USER:-local}/${DOCKER_REPOSITORY:-ah-05-02}:ai-${AI_WORKER_VERSION:-v0.1.0}
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["sh", "-c", "echo 'AI worker placeholder ready'; tail -f /dev/null"]
+    mem_limit: 4g
+    networks:
+      - healthcare
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - healthcare
+    depends_on:
+      - fastapi
+
+volumes:
+  mysql_data:
+
+networks:
+  healthcare:
+    driver: bridge

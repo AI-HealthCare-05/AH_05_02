@@ -1,0 +1,10 @@
+{
+  "registry_rows": 28,
+  "approved_rows": 0,
+  "blocked_until_codebook_review": 28,
+  "merge_review_rows": 1586,
+  "high_priority_merge_reviews": 1022,
+  "raw_data_present": false,
+  "codebook_present": false,
+  "pipeline_execution_status": "metadata_only_blocked"
+}

@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - run: pytest
-
+          python-version: "3.13"
+      - run: uv sync --all-groups --frozen
+      - run: uv run ruff check app ai_worker
+      - run: uv run ruff format app ai_worker --check
+      - run: uv run pytest -q

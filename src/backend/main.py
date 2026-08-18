@@ -6,13 +6,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .prototype import router
 
-
 app = FastAPI(
     title="만성질환 생활습관 챌린지 API",
-    description=(
-        "만성질환 위험 선별과 건강교육을 위한 프로토타입 API입니다. "
-        "결과는 의료 진단이나 처방이 아닙니다."
-    ),
+    description=("만성질환 위험 선별과 건강교육을 위한 프로토타입 API입니다. 결과는 의료 진단이나 처방이 아닙니다."),
     version="0.2.0-prototype",
 )
 app.include_router(router)
