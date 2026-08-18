@@ -3,10 +3,11 @@
 ## 바로 실행
 
 ```powershell
-docker compose up --build -d
-docker compose ps
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-ai-pipeline.ps1
 ```
+
+`start-local.ps1`은 Windows 한글 경로에서 Docker Compose의 동시 빌드가 실패하는 경우를 피하기 위해 FastAPI와 AI Worker 이미지를 순서대로 빌드한다.
 
 Swagger UI: <http://localhost/api/docs>
 
