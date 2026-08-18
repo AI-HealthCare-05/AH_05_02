@@ -29,6 +29,14 @@ class Config(BaseSettings):
     DB_NAME: str = "ai_health"
     DB_CONNECT_TIMEOUT: int = 5
     DB_CONNECTION_POOL_MAXSIZE: int = 10
+    DB_GENERATE_SCHEMAS: bool = False
+
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_STREAM: str = "ai:jobs"
+    REDIS_CONSUMER_GROUP: str = "ai-workers"
+    REDIS_JOB_TTL_SECONDS: int = 86400
 
     COOKIE_DOMAIN: str = "localhost"
 

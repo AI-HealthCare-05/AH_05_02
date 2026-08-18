@@ -7,6 +7,7 @@ from app.core import config
 TORTOISE_APP_MODELS = [
     "aerich.models",
     "app.models.users",
+    "app.models.ai_jobs",
 ]
 
 TORTOISE_ORM = {
@@ -36,4 +37,4 @@ TORTOISE_ORM = {
 
 def initialize_tortoise(app: FastAPI) -> None:
     Tortoise.init_models(TORTOISE_APP_MODELS, "models")
-    register_tortoise(app, config=TORTOISE_ORM)
+    register_tortoise(app, config=TORTOISE_ORM, generate_schemas=config.DB_GENERATE_SCHEMAS)

@@ -16,6 +16,8 @@ dependencies = [
 
 [dependency-groups]
 ai = [
+    "asyncmy>=0.2.11",
+    "boto3>=1.42.0",
     "scikit-learn>=1.8.0",
     "torch",
     "torchvision",

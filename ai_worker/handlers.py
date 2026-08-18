@@ -1,0 +1,37 @@
+import asyncio
+from datetime import UTC, datetime
+from typing import Any
+
+from ai_worker.model_loader import load_model
+
+MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보조용이며 진단·처방이 아닙니다."
+
+
+async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if task_type == "demo_inference":
+        await asyncio.sleep(0.5)
+        return {
+            "is_demo": True,
+            "pipeline": "redis-stream-consumer-group",
+            "received_fields": sorted(payload),
+            "processed_at": datetime.now(UTC).isoformat(),
+            "medical_notice": MEDICAL_NOTICE,
+        }
+
+    if task_type == "model_inference":
+        features = payload.get("features")
+        if not isinstance(features, list) or not features:
+            raise ValueError("model_inference payload에는 비어 있지 않은 features 배열이 필요합니다.")
+        model = load_model()
+        prediction = await asyncio.to_thread(model.predict, [features])
+        result: dict[str, Any] = {
+            "prediction": prediction[0].item() if hasattr(prediction[0], "item") else prediction[0],
+            "is_demo": False,
+            "medical_notice": MEDICAL_NOTICE,
+        }
+        if hasattr(model, "predict_proba"):
+            probabilities = await asyncio.to_thread(model.predict_proba, [features])
+            result["probabilities"] = probabilities[0].tolist()
+        return result
+
+    raise ValueError(f"지원하지 않는 task_type입니다: {task_type}")
