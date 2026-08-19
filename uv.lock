@@ -58,6 +58,9 @@ app = [
     { name = "tortoise-orm" },
     { name = "uvicorn" },
 ]
+baseline = [
+    { name = "scikit-learn" },
+]
 dev = [
     { name = "coverage" },
     { name = "mypy" },
@@ -100,6 +103,7 @@ app = [
     { name = "tortoise-orm", specifier = ">=0.25.3" },
     { name = "uvicorn", specifier = ">=0.40.0" },
 ]
+baseline = [{ name = "scikit-learn", specifier = ">=1.8.0" }]
 dev = [
     { name = "coverage", specifier = ">=7.13.2" },
     { name = "mypy", specifier = ">=1.19.1" },
