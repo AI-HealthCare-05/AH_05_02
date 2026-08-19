@@ -52,6 +52,10 @@
 - [팀 룰](docs/TEAM_RULES.md)
 - [기여 및 Git Flow](CONTRIBUTING.md)
 - [프로젝트 작업 규칙](AGENTS.md)
+- [요구사항 정의서 v2.0](docs/REQUIREMENTS.md)
+- [서비스 대상·제외 범위 및 의료 안전 문구](docs/SERVICE_SCOPE_AND_SAFETY_COPY.md)
+- [Sprint 2 요구사항 추적성·누락 QA](docs/TRACEABILITY_AND_GAP_QA_20260819.md)
+- [Sprint 2 기능 구현 백로그](docs/SPRINT2_BACKLOG.md)
 
 ## 로컬 실행
 

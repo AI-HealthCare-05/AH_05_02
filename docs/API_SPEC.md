@@ -2,13 +2,13 @@
 
 | 항목 | 내용 |
 |---|---|
-| 문서 버전 | v0.1 |
-| 작성일 | 2026-08-13 |
-| 상태 | Sprint 1 검토안 |
+| 문서 버전 | v2.0 |
+| 작성일 | 2026-08-19 |
+| 상태 | Sprint 2 구현 기준선 |
 | API Base URL | `/api/v1` |
 | 인증 방식 | Bearer Access Token |
 | 데이터 형식 | `application/json`, `snake_case` |
-| 기준 산출물 | 요구사항 정의서 v1.0, Figma 와이어프레임, ERD v2 |
+| 기준 산출물 | 요구사항 정의서 v2.0, 서비스 대상·제외 범위 및 의료 안전 문구 v1.0, Figma 와이어프레임, ERD v2 |
 
 > 본 서비스의 결과는 의료진의 진단·처방이 아닌 위험 선별 및 건강교육 정보이다. 약물의 시작·중단·용량 변경을 안내하지 않는다.
 
@@ -16,10 +16,11 @@
 
 ### 1.1 API 작성 기준
 
-- 만 19세 이상은 서비스 이용 가능 대상으로 처리하고, 만 65세 이상은 주 타깃 세그먼트로 구분하는 가안을 적용한다.
-- API 계약은 당뇨병과 고혈압을 모두 확장 가능하게 정의하되, 모델 구현은 당뇨병을 먼저 완료하고 고혈압을 후속 연결할 수 있다.
+- 만 19세 이상 서비스 이용 가능 여부, 만 40세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
+- Sprint 2 활성 예측은 당뇨병 미래 신규 발병 이진분류 하나로 제한한다.
+- KLoSA 단독 모델은 검증 근거가 없는 40~44세에 적용하지 않으며, 실제 예측 범위는 활성 모델 카드의 `min_age`·`max_age`·모집단 조건으로 통제한다.
 - 건강검진 1건에 여러 모델 버전의 예측 결과를 허용한다.
-- 최초 대비 위험도 변화는 저장하지 않고 조회 시 계산한다.
+- 원시 확률과 변화값은 내부 감사·분석용으로 저장하거나 계산할 수 있으나, 사용자에게 건강 개선율로 노출하지 않는다.
 - 예측은 비동기 작업으로 접수하여 `job_id`를 먼저 반환한다.
 - 알림 기능과 이미지 식단 분석은 MVP에서 제외한다.
 
@@ -27,10 +28,10 @@
 
 | ID | 항목 | 현재 차이 | API 명세 적용안 |
 |---|---|---|---|
-| DEC-001 | 이용 연령 | 요구사항은 65세 이상 중심, 와이어프레임은 만 19세 이상 확인 | `is_adult`와 `target_segment`를 분리 |
-| DEC-002 | 질환 범위 | 요구사항은 당뇨병·고혈압, ERD는 1차 당뇨병 중심 | `disease_type` 확장형 계약, 활성 모델만 실행 |
-| DEC-003 | 예측 출력 | 요구사항은 위험 점수·구간, ERD는 당뇨 3단계와 클래스별 확률 | 단계와 클래스별 확률을 함께 반환 |
-| DEC-004 | 예측 작업 | 요구사항은 비동기 작업, ERD에는 작업 엔터티가 없음 | 작업 상태는 Redis 또는 `prediction_jobs` 저장소로 보완 |
+| DEC-001 | 이용 범위 | 이용 자격·핵심 타깃·모델 검증 범위가 서로 다름 | `service_eligible`·`target_segment`·`model_eligible` 분리 |
+| DEC-002 | 질환 범위 | 고혈압은 후속 확장 대상 | Sprint 2는 `diabetes_incidence`만 활성화 |
+| DEC-003 | 예측 출력 | 미래 발병 이진분류와 사용자 표시를 구분해야 함 | 내부 확률은 저장하고 공개 화면은 `낮음·주의·높음` 범주 표시 |
+| DEC-004 | 예측 작업 | 비동기 상태와 영속 이력을 분리해야 함 | Redis는 최소 작업 상태, DB는 요청·완료·실패·모델 버전 최소 이력 |
 
 ## 2. 공통 규칙
 
@@ -89,7 +90,7 @@
 | `422` | 필드 형식·단위·범위 오류 |
 | `500` | 서버 내부 오류 |
 | `503` | DB·모델 서버 준비되지 않음 |
-| `504` | 모델 추론 시간 초과 |
+| `504` | 작업 접수 전 동기식 게이트웨이·모델 준비 확인의 시간 초과. `202` 접수 후 시간초과에는 사용하지 않음 |
 
 ## 3. API 목록
 
@@ -97,14 +98,12 @@
 
 | Method | URI | 설명 | 인증 | 관련 요구사항 |
 |---|---|---|---|---|
-| GET | `/health` | 웹 서버 생존 확인 | 불필요 | NFR-OPS-002 |
-| GET | `/ready` | DB·모델 서버 준비 상태 확인 | 불필요 | NFR-OPS-002 |
+| GET | `/health` | 웹 서버 생존 확인 | 불필요 | NFR-OPS-001 |
+| GET | `/ready` | DB·모델 서버 준비 상태 확인 | 불필요 | NFR-OPS-001 |
 | POST | `/auth/signup` | 이메일 회원가입 | 불필요 | REQ-USER-001 |
 | POST | `/auth/login` | 로그인 및 토큰 발급 | 불필요 | REQ-USER-002 |
 | POST | `/auth/refresh` | Access Token 재발급 | Refresh Token | REQ-USER-002 |
 | POST | `/auth/logout` | Refresh Token 폐기 | 필요 | REQ-USER-002 |
-| POST | `/auth/password-reset-requests` | 비밀번호 재설정 메일 요청 | 불필요 | REQ-USER-005 |
-| PATCH | `/auth/password` | 재설정 코드로 비밀번호 변경 | 불필요 | REQ-USER-005 |
 | GET | `/users/me` | 내 계정·프로필 조회 | 필요 | REQ-HEALTH-001 |
 | PATCH | `/users/me/profile` | 성별·생년월일·키 수정 | 필요 | REQ-HEALTH-001 |
 | DELETE | `/users/me` | 재인증 후 탈퇴 요청 | 필요 | REQ-USER-004 |
@@ -115,19 +114,19 @@
 |---|---|---|---|---|
 | GET | `/consents` | 현재 동의 상태·버전 조회 | `consents` | REQ-USER-003 |
 | POST | `/consents` | 건강정보 처리 동의 저장 | `consents` | REQ-USER-003 |
-| PATCH | `/consents/{consent_id}/withdraw` | 동의 철회 | `consents` | NFR-SEC-006 |
-| POST | `/eligibility-checks` | 연령·기진단·경고 증상 기반 적합성 확인 | `eligibility_checks` | REQ-ELIG-001~004 |
-| GET | `/eligibility-checks/latest` | 최근 적합성 결과 조회 | `eligibility_checks` | REQ-ELIG-004 |
+| PATCH | `/consents/{consent_id}/withdraw` | 동의 철회 | `consents` | NFR-SEC-003 |
+| POST | `/eligibility-checks` | 이용 연령·동의·기진단·경고 증상·모델 범위 판정 | `eligibility_checks` | REQ-USER-003~004 |
+| GET | `/eligibility-checks/latest` | 최근 적합성 결과 조회 | `eligibility_checks` | REQ-USER-004 |
 
 ### 3.3 건강정보
 
 | Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
 |---|---|---|---|---|
 | POST | `/health-checkups` | 건강검진·생활습관 기록 생성 | `health_checkups` | REQ-HEALTH-002~004 |
-| GET | `/health-checkups` | 건강검진 이력 목록 | `health_checkups` | REQ-HEALTH-004 |
-| GET | `/health-checkups/{checkup_id}` | 건강검진 상세 조회 | `health_checkups` | REQ-HEALTH-004 |
-| PATCH | `/health-checkups/{checkup_id}` | 예측 전 기록 정정 | `health_checkups` | REQ-HEALTH-005 |
-| GET | `/health-checkups/input-schema` | 입력 필드·단위·허용 범위·필수 여부 조회 | 설정/메타데이터 | REQ-HEALTH-002~003 |
+| GET | `/health-checkups` | 건강검진 이력 목록 | `health_checkups` | REQ-HEALTH-003 |
+| GET | `/health-checkups/{checkup_id}` | 건강검진 상세 조회 | `health_checkups` | REQ-HEALTH-003 |
+| PATCH | `/health-checkups/{checkup_id}` | 예측 전 기록 정정 | `health_checkups` | REQ-HEALTH-003~004 |
+| GET | `/health-checkups/input-schema` | 입력 필드·단위·허용 범위·필수 여부 조회 | 설정/메타데이터 | REQ-HEALTH-002~004 |
 
 예측과 연결된 검진은 수정하지 않는다. 정정값은 새로운 검진 레코드로 저장한다.
 
@@ -135,16 +134,20 @@
 
 | Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
 |---|---|---|---|---|
-| GET | `/models/active` | 현재 실행 가능한 질환·모델 버전·출력 단계 조회 | 모델 레지스트리 | NFR-ARCH-002 |
-| POST | `/prediction-jobs` | 예측 작업 접수, `202`와 `job_id` 반환 | 작업 저장소 | REQ-PRED-001~002, NFR-ASYNC-001 |
-| GET | `/prediction-jobs/{job_id}` | 작업 상태·완료된 `prediction_id` 조회 | 작업 저장소 | NFR-ASYNC-001 |
-| GET | `/predictions/{prediction_id}` | 예측 결과·단계·확률·모델 버전 조회 | `predictions` | REQ-PRED-001~005 |
-| GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-006 |
-| GET | `/predictions/latest` | 질환별 최신 유효 예측 조회 | `predictions` | REQ-PRED-005 |
+| GET | `/models/active` | 활성 모델 버전·연령·모집단·출력 정의 조회 | 모델 레지스트리 | NFR-ML-003 |
+| POST | `/prediction-jobs` | 예측 작업 접수, `202`와 `job_id` 반환 | `prediction_jobs`·Redis | REQ-PRED-001~002 |
+| GET | `/prediction-jobs/{job_id}` | 작업 상태·완료된 `prediction_id` 조회 | `prediction_jobs`·Redis | REQ-PRED-001 |
+| GET | `/predictions/{prediction_id}` | 미래 발병 위험 범주·모델 버전 조회 | `predictions` | REQ-PRED-002~004 |
+| GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-005 |
+| GET | `/predictions/latest` | 최신 유효 예측 조회 | `predictions` | REQ-PRED-004 |
 | GET | `/predictions` | 질환·검진·기간별 예측 이력 조회 | `predictions` | REQ-DASH-003 |
-| GET | `/predictions/changes` | 최초 대비 최신 확률 변화 조회 시 계산 | `predictions` | REQ-DASH-002 |
+| GET | `/predictions/changes` | 내부 분석용 최초·최신 결과 비교 | `predictions` | REQ-DASH-003 |
 
 `/predictions/latest`는 `predicted_at DESC, id DESC` 순으로 최신값을 판별한다. 변화값은 같은 질환과 같은 점수 정의끼리만 비교한다.
+
+예측 작업 상태는 `queued`, `running`, `succeeded`, `failed`로 통일한다. 작업 생성 시각은 DB와 API 모두 `created_at`을 사용한다. `202` 접수 후 추론 시간초과가 발생하면 상태 조회는 HTTP `200`과 함께 `status: failed`, `error_code: TIMEOUT`, `retryable`, `retry_after_seconds`를 반환한다.
+
+위험 범주는 승인된 `threshold_version`이 있을 때만 공개한다. 임계값 숫자는 검증 세트의 판별력·보정·민감도와 의료 안전 문구 검토를 통과한 모델 카드에 기록하며 API 코드에 임의로 고정하지 않는다.
 
 ### 3.5 챌린지
 
@@ -153,9 +156,9 @@
 | GET | `/challenges` | 질환·카테고리·난이도별 챌린지 조회 | `challenges` | REQ-CHAL-001 |
 | GET | `/challenge-recommendations` | 예측 결과에 맞는 후보와 추천 이유 조회 | 규칙·`recommendations` | REQ-CHAL-001, REQ-RECO-001 |
 | POST | `/challenge-cycles` | 최대 3개 챌린지로 28일 사이클 시작 | `challenge_cycles`, `user_challenges` | REQ-CHAL-002~003 |
-| GET | `/challenge-cycles/current` | 현재 진행 중 사이클 조회 | `challenge_cycles` | REQ-DASH-004 |
-| GET | `/challenge-cycles/{cycle_id}` | 사이클·참여 챌린지·달성률 조회 | `challenge_cycles`, `user_challenges` | REQ-CHAL-006 |
-| PATCH | `/challenge-cycles/{cycle_id}/status` | 사용자 중단 또는 기진단 확인에 따른 상태 변경 | `challenge_cycles` | REQ-CHAL-007 |
+| GET | `/challenge-cycles/current` | 현재 진행 중 사이클 조회 | `challenge_cycles` | REQ-DASH-002 |
+| GET | `/challenge-cycles/{cycle_id}` | 사이클·참여 챌린지·달성률 조회 | `challenge_cycles`, `user_challenges` | REQ-CHAL-002~004 |
+| PATCH | `/challenge-cycles/{cycle_id}/status` | 사용자 중단 또는 기진단 확인에 따른 상태 변경 | `challenge_cycles` | REQ-CHAL-005 |
 | PUT | `/user-challenges/{user_challenge_id}/logs/{log_date}` | 날짜별 수행 여부·측정값 생성 또는 정정 | `challenge_logs` | REQ-CHAL-004~005 |
 | GET | `/user-challenges/{user_challenge_id}/logs` | 기간별 수행 기록 조회 | `challenge_logs` | REQ-CHAL-004~006 |
 
@@ -163,13 +166,12 @@
 
 | Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
 |---|---|---|---|---|
-| GET | `/dashboard/summary` | 최신 위험 단계·변화·현재 챌린지 통합 요약 | 조회 집계 | REQ-DASH-001~005 |
+| GET | `/dashboard/summary` | 최신 위험 범주·현재 챌린지 통합 요약 | 조회 집계 | REQ-DASH-001~003 |
 | GET | `/dashboard/risk-trends` | 질환별 예측 시계열 | `predictions` | REQ-DASH-003 |
-| GET | `/dashboard/challenge-progress` | 최근 7일·4주 달성률 | 챌린지 엔터티 | REQ-DASH-004 |
-| GET | `/follow-up-actions` | 의료기관 상담 권고 이력 조회 | `follow_up_actions` | REQ-FOLLOW-001~002 |
-| PATCH | `/follow-up-actions/{action_id}/acknowledge` | 권고 확인 시각 저장 | `follow_up_actions` | REQ-FOLLOW-002 |
+| GET | `/dashboard/challenge-progress` | 최근 7일·4주 달성률 | 챌린지 엔터티 | REQ-DASH-002 |
+| GET | `/follow-up-actions` | 의료기관 상담 권고 이력 조회 | `follow_up_actions` | REQ-PRED-006 |
+| PATCH | `/follow-up-actions/{action_id}/acknowledge` | 권고 확인 시각 저장 | `follow_up_actions` | REQ-PRED-006 |
 | GET | `/recommendations` | 검토된 예방 행동·챌린지 설명과 출처 조회 | `recommendations` | REQ-RECO-001 |
-| POST | `/feedbacks` | 예측 설명·추천 이해도와 도움 여부 제출 | `feedbacks` | REQ-FEED-001 |
 
 의료기관 권고 생성은 적합성 또는 예측 서비스 내부에서 수행한다. `trigger_source`는 `eligibility_check` 또는 `prediction`, `trigger_entity_id`는 해당 레코드 ID로 저장한다.
 
@@ -204,12 +206,9 @@
 
 ```json
 {
-  "birth_date": "1955-04-12",
+  "birth_date": "1975-04-12",
   "has_diabetes_diagnosis": false,
-  "has_hypertension_diagnosis": false,
-  "uses_glucose_lowering_drug": false,
-  "has_alarming_symptom": false,
-  "has_exercise_limitation": false
+  "has_urgent_warning_sign": false
 }
 ```
 
@@ -217,17 +216,23 @@
 {
   "data": {
     "eligibility_check_id": 31,
-    "is_adult": true,
-    "target_segment": "primary_senior",
-    "is_eligible": true,
-    "exclusion_reasons": [],
-    "next_action": "health_checkup_input"
+    "service_eligible": true,
+    "target_segment": "primary_40_plus",
+    "model_eligible": true,
+    "reason_codes": [],
+    "next_action": "health_checkup_input",
+    "active_model": {
+      "model_key": "diabetes_incidence",
+      "version": "v1.0.0",
+      "min_age": 45,
+      "max_age": null
+    }
   },
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
 }
 ```
 
-기진단 또는 경고 증상이 확인되면 `is_eligible=false`, `next_action=medical_guidance`를 반환하고 예측 작업 생성을 허용하지 않는다.
+적합성 판정 API는 판정이 완료되면 `200`을 반환한다. 기진단·경고 증상·미동의·모델 검증 범위 밖이면 `model_eligible=false`, 표준 `reason_codes`, 적절한 `next_action`을 반환하고 이후 예측 작업 생성을 허용하지 않는다.
 
 ### 4.3 건강검진 입력
 
@@ -239,17 +244,15 @@
   "checkup_date": "2026-08-01",
   "weight_kg": 67.5,
   "waist_cm": 91.0,
-  "systolic_bp": 138,
-  "diastolic_bp": 84,
-  "fasting_glucose_mg_dl": 112,
   "smoking_status": "never",
   "drinking_frequency": "monthly_or_less",
   "physical_activity_level": "insufficient",
-  "has_family_history_diabetes": true
+  "has_family_history_diabetes": true,
+  "feature_contract_version": "diabetes-incidence-input-v1"
 }
 ```
 
-응답에는 서버에서 계산한 `bmi`, 생성된 `checkup_id`, 입력값의 단위와 검증 결과를 포함한다. 실제 모델 입력 사용 여부는 모델 버전별 특징 목록으로 관리하며, 라벨을 직접 결정하는 검사값은 모델 입력에서 제외한다.
+응답에는 생성된 `checkup_id`, 입력값의 단위와 검증 결과를 포함한다. 위 필드는 계약 예시이며 실제 필수·선택 입력은 양준혁 담당 모델 입력 계약으로 고정한다. 라벨을 직접 결정하거나 기준 시점 이후에 관측된 값은 입력에서 제외한다.
 
 ### 4.4 비동기 예측 요청
 
@@ -258,7 +261,7 @@
 ```json
 {
   "checkup_id": 501,
-  "disease_types": ["diabetes", "hypertension"]
+  "model_key": "diabetes_incidence"
 }
 ```
 
@@ -269,8 +272,8 @@
   "data": {
     "job_id": "predjob_01J...",
     "status": "queued",
-    "accepted_disease_types": ["diabetes"],
-    "unavailable_disease_types": ["hypertension"],
+    "model_key": "diabetes_incidence",
+    "model_version": "v1.0.0",
     "status_url": "/api/v1/prediction-jobs/predjob_01J..."
   },
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
@@ -291,6 +294,22 @@
 }
 ```
 
+시간초과 실패 응답은 최초 요청을 `504`로 되돌리지 않고 다음과 같이 상태 조회 결과로 제공한다.
+
+```json
+{
+  "data": {
+    "job_id": "predjob_01J...",
+    "status": "failed",
+    "error_code": "TIMEOUT",
+    "retryable": true,
+    "retry_after_seconds": 30,
+    "finished_at": "2026-08-13T03:20:14Z"
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:14Z"}
+}
+```
+
 ### 4.5 예측 결과
 
 `GET /api/v1/predictions/901`
@@ -300,17 +319,14 @@
   "data": {
     "prediction_id": 901,
     "checkup_id": 501,
-    "disease_type": "diabetes",
-    "predicted_stage": "prediabetes",
-    "class_probabilities": {
-      "normal": 0.21,
-      "prediabetes": 0.62,
-      "diabetes": 0.17
-    },
-    "display_risk_percent": 17.0,
-    "model_version": "diabetes-knhanes-v1.0.0",
+    "model_key": "diabetes_incidence",
+    "outcome_definition": "next_observation_new_diabetes_diagnosis",
+    "risk_category": "caution",
+    "risk_category_label": "주의",
+    "model_version": "v1.0.0",
+    "model_population": "baseline_undiagnosed_age_45_plus",
     "predicted_at": "2026-08-13T03:20:04Z",
-    "disclaimer": "이 결과는 진단이 아닌 위험 선별 및 건강교육 정보입니다."
+    "disclaimer": "이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다."
   },
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
 }
@@ -368,10 +384,10 @@
   "data": {
     "risk_cards": [
       {
-        "disease_type": "diabetes",
-        "predicted_stage": "prediabetes",
-        "latest_risk_percent": 17.0,
-        "change_from_first_percentage_points": -3.4,
+        "model_key": "diabetes_incidence",
+        "risk_category": "caution",
+        "risk_category_label": "주의",
+        "model_version": "v1.0.0",
         "predicted_at": "2026-08-13T03:20:04Z"
       }
     ],
@@ -382,7 +398,7 @@
       "recent_7_days": {"completed": 8, "planned": 12}
     },
     "next_action": null,
-    "disclaimer": "위험도 변화는 모델의 추정치이며 실제 질병의 호전이나 발병 여부를 의미하지 않습니다."
+    "disclaimer": "위험 범주와 챌린지 수행률은 진단, 질병의 호전 또는 치료 효과를 의미하지 않습니다."
   },
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
 }
@@ -395,14 +411,14 @@
 | 서비스 소개 | NFR-SAFE-001 | 없음 | 없음 |
 | 회원가입·로그인 | REQ-USER-001~002 | `/auth/*` | `users` |
 | 건강정보 동의 | REQ-USER-003 | `/consents` | `consents` |
-| 적합성·안전 확인 | REQ-ELIG-001~004 | `/eligibility-checks` | `eligibility_checks`, `user_profiles` |
-| 검진 결과 입력 | REQ-HEALTH-001~006 | `/health-checkups` | `health_checkups` |
-| 예측 진행·결과 | REQ-PRED-001~008 | `/prediction-jobs`, `/predictions` | `predictions`, `risk_factors` |
+| 적합성·안전 확인 | REQ-USER-003~004 | `/eligibility-checks` | `eligibility_checks`, `user_profiles` |
+| 검진 결과 입력 | REQ-HEALTH-001~004 | `/health-checkups` | `health_checkups` |
+| 예측 진행·결과 | REQ-PRED-001~006 | `/prediction-jobs`, `/predictions` | `prediction_jobs`, `predictions`, `risk_factors` |
 | 챌린지 선택 | REQ-CHAL-001~003 | `/challenge-recommendations`, `/challenge-cycles` | 챌린지 관련 4개 엔터티 |
-| 일일 챌린지 기록 | REQ-CHAL-004~005 | `/user-challenges/*/logs` | `challenge_logs` |
-| 추적 대시보드 | REQ-DASH-001~005 | `/dashboard/*` | 예측·검진·챌린지 집계 |
-| 의료기관 안내 | REQ-PRED-007, REQ-FOLLOW-001~002 | `/follow-up-actions` | `follow_up_actions` |
-| 추천 설명·피드백 | REQ-RECO-001, REQ-FEED-001 | `/recommendations`, `/feedbacks` | `recommendations`, `feedbacks` |
+| 일일 챌린지 기록 | REQ-CHAL-004 | `/user-challenges/*/logs` | `challenge_logs` |
+| 추적 대시보드 | REQ-DASH-001~003 | `/dashboard/*` | 예측·검진·챌린지 집계 |
+| 의료기관 안내 | REQ-PRED-006, REQ-CHAL-005 | `/follow-up-actions` | `follow_up_actions` |
+| 추천 설명 | REQ-RECO-001 | `/recommendations` | `recommendations` |
 
 ## 6. 구현·검수 기준
 
