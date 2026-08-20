@@ -1,0 +1,115 @@
+[project]
+name = "ai-health-example"
+version = "0.1.0"
+description = "AI 헬스케어 파이널 프로젝트 예시용"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "cryptography>=46.0.3",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "python-dateutil>=2.9.0.post0",
+    "redis>=7.1.0",
+    "tomlkit>=0.14.0",
+    "tzdata>=2026.3",
+]
+
+[dependency-groups]
+baseline = [
+    # Bumped from >=1.8.0: the shipped model.joblib was pickled with
+    # scikit-learn 1.9.0, and scikit-learn's own docs warn that loading a
+    # bundle with an older minor version than it was trained on can
+    # silently produce wrong results (InconsistentVersionWarning), not
+    # just raise a warning. Pin the floor to the version it was trained on.
+    "scikit-learn>=1.9.0",
+    "pandas>=2.3.0",
+    "joblib>=1.4.0",
+]
+ai = [
+    "asyncmy>=0.2.11",
+    "boto3>=1.42.0",
+    "scikit-learn>=1.9.0",
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "sentence-transformers>=5.2.0"
+]
+app = [
+    "aerich>=0.9.2",
+    "asyncmy>=0.2.11",
+    "bcrypt<=4.0.1",
+    "fastapi[standard]>=0.128.0",
+    "httpx>=0.28.1",
+    "joblib>=1.4.0",
+    "orjson>=3.11.5",
+    "pandas>=2.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "pyjwt>=2.10.1",
+    # Needed at runtime now: src/ml/inference/diabetes_model.py loads and
+    # runs the real KLoSA model.joblib pipeline from inside the API process.
+    "scikit-learn>=1.9.0",
+    "tortoise-orm>=0.25.3",
+    "uvicorn>=0.40.0",
+]
+dev = [
+    "coverage>=7.13.2",
+    "mypy>=1.19.1",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.14",
+    "types-passlib>=1.7.7.20250602",
+    "types-python-dateutil>=2.9.0.20260124",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.aerich]
+tortoise_orm = "app.core.db.databases.TORTOISE_ORM"
+location = "./app/core/db/migrations"
+src_folder = "./."
+
+# NOTE: pytest config lives in pytest.ini, not here. pytest.ini's mere
+# presence makes pytest ignore [tool.pytest.ini_options] entirely (confirmed
+# via `uv run pytest -v`, which prints "configfile: pytest.ini (WARNING:
+# ignoring pytest config in pyproject.toml!)" and showed asyncio running in
+# Mode.STRICT instead of the "auto" this section used to ask for). Moved
+# asyncio_mode/asyncio_default_fixture_loop_scope into pytest.ini so they
+# actually take effect; keep any future pytest settings there too.
+
+[tool.ruff]
+# 기본 라인 길이 설정
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# 사용할 린트 규칙들 선택
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C90", # mccabe
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+]
+ignore = ["UP046", "E501"]
+
+# 특정 파일에서 무시할 규칙들
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"db/migrations/*" = ["ALL"]
+
+[tool.ruff.format]
+# 포매터 설정
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

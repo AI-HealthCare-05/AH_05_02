@@ -35,12 +35,7 @@ def to_diabetes_model_input(
     as_of: date | None = None,
 ) -> DiabetesModelInput:
     """Convert API values to stable model names and encodings."""
-    reference_date = as_of or date.today()
-    age = (
-        reference_date.year
-        - health.birth_date.year
-        - ((reference_date.month, reference_date.day) < (health.birth_date.month, health.birth_date.day))
-    )
+    age = health.age_years(as_of=as_of)
     bmi = health.weight_kg / ((health.height_cm / 100) ** 2)
     model_input: DiabetesModelInput = {
         "age": age,

@@ -24,20 +24,27 @@ class PredictionPreviewRequest(BaseModel):
     previously_diagnosed_diabetes: bool = False
 
     @model_validator(mode="after")
-    def validate_model_population(self) -> "PredictionPreviewRequest":
-        today = date.today()
-        age = (
-            today.year
-            - self.birth_date.year
-            - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
-        )
-        if age < 45 or age > 105:
-            raise ValueError("KLoSA 미래발병 모델 적용 연령은 만 45~105세입니다.")
-        if self.previously_diagnosed_diabetes:
-            raise ValueError("당뇨병 기진단자는 미래발병 예측 대상이 아닙니다.")
+    def validate_input_consistency(self) -> "PredictionPreviewRequest":
+        """Pure input-format/logic checks only (422 territory).
+
+        Policy-based exclusions — model age range, prior diagnosis, consent,
+        etc. — are NOT checked here. Per SERVICE_SCOPE_AND_SAFETY_COPY.md
+        SS6-1/6-2 those must return 403 PREDICTION_NOT_ALLOWED, which a
+        pydantic validator cannot produce (FastAPI always maps validator
+        errors to 422). See prediction_service._ensure_policy_eligible.
+        """
         if not self.regular_exercise and (self.exercise_days_per_week != 0 or self.exercise_minutes != 0):
             raise ValueError("규칙적 운동을 하지 않는 경우 운동 일수와 시간은 0이어야 합니다.")
         return self
+
+    def age_years(self, *, as_of: date | None = None) -> int:
+        """Age in whole years as of ``as_of`` (defaults to today)."""
+        reference_date = as_of or date.today()
+        return (
+            reference_date.year
+            - self.birth_date.year
+            - ((reference_date.month, reference_date.day) < (self.birth_date.month, self.birth_date.day))
+        )
 
 
 class SafetyNotice(BaseModel):
@@ -51,10 +58,15 @@ class PredictionPreviewData(BaseModel):
     condition: Literal["diabetes"]
     model_type: Literal["future_incidence"]
     data_source: Literal["klosa"]
-    target_horizon: Literal["next_wave_about_2y"]
-    risk_category: Literal["low", "moderate", "high"]
-    risk_category_label: Literal["낮음", "주의", "높음"]
-    predicted_class: Literal[0, 1]
+    # 2026-08-20 모델 연동 Q&A SS5 "최종 명칭": target_horizon -> outcome_definition.
+    outcome_definition: Literal["next_observation_new_diabetes_diagnosis"]
+    risk_score: float
+    # 2026-08-20 모델 연동 Q&A SS6, 안 B 채택: 임계값 승인 전에는 범주·판정을
+    # 반환하지 않는다. risk_score만 노출하고 나머지는 null.
+    risk_category: Literal["low", "caution", "high"] | None
+    risk_category_label: Literal["낮음", "주의", "높음"] | None
+    decision_threshold: float | None
+    predicted_class: Literal[0, 1] | None
     model_version: str
     target_definition_version: str
     input_schema_version: str
