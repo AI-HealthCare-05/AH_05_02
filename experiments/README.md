@@ -7,4 +7,5 @@
 - `sp2_tree_stacking/`: RF·XGBoost·LightGBM만 기본 모델로 사용하고 Logistic Regression으로 최종 결합한 트리 전용 Stacking 추가 실험입니다.
 - `klosa_full_retrain/`: KLoSA 전체 표본 Logistic 재학습, Train 유병률 Null Model, Brier Skill Score, Calibration Curve와 Reliability Diagram 결과입니다.
 - `knhanes_full_comparison/`: KNHANES 전체 표본의 기본 모델·앙상블·임계값·Sigmoid·Isotonic 비교와 시간 분할 Test 결과입니다.
+- `age_stratified_thresholds/`: KNHANES 연령별 임계값·3단계 위험구간과 KLoSA 단일 임계값 연령 감사 결과입니다.
 
