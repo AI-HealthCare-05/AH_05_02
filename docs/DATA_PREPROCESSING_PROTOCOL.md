@@ -6,6 +6,8 @@
 
 모델 결과는 진단·처방이 아니라 위험 선별과 건강교육에만 사용한다.
 
+현재 Sprint 2의 우선 구현 질환은 당뇨병이다. 고혈압 전처리 경로는 동일한 인터페이스로 후속 확장할 수 있도록 유지하며, 서비스에 노출하기 전 별도 모델 검증을 거친다.
+
 ## 2. 입력 자료
 
 | 자료 | 범위 | 관측 구조 | 주된 용도 |
@@ -75,9 +77,14 @@
 ## 8. 재현 실행
 
 ```powershell
-python -m src.ml.preprocessing.run_official
-python -m pytest -q
+uv sync --group ai --group dev
+uv run python -m src.ml.preprocessing.run_official
+uv run pytest -q tests/ml/test_preprocessing.py
 ```
+
+`requirements-ml.txt`은 UV를 사용할 수 없는 환경을 위한 최소 의존성 목록이다. 프로젝트의 공식 실행환경은 Python 3.13과 `uv.lock`을 기준으로 한다.
+
+집계 산출물은 전처리 버전별 재현 결과다. 모델 브랜치에서 라벨 또는 적격 조건을 변경하면 표본 수가 달라질 수 있으므로 모델 카드에 전처리 버전과 Git 커밋을 기록하고, 다른 버전의 집계값을 혼용하지 않는다.
 
 ## 9. 공식 근거
 

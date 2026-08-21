@@ -6,9 +6,9 @@ from pathlib import Path
 from .official import (
     KLOSA_FEATURES,
     KNHANES_FEATURES,
-    build_quality_summary,
     build_cohort_quality_table,
     build_missingness_table,
+    build_quality_summary,
     build_selected_variable_registry,
     preprocess_klosa_directory,
     preprocess_knhanes_directory,
@@ -28,8 +28,8 @@ def _quality_report(summary: dict[str, object], cohort_table) -> str:
 
 ## 처리 결과
 
-- KNHANES: {summary['knhanes_rows']:,}건, 2016–2024년
-- KLoSA: {summary['klosa_rows']:,}개 패널 관측행, 1–10차
+- KNHANES: {summary["knhanes_rows"]:,}건, 2016–2024년
+- KLoSA: {summary["klosa_rows"]:,}개 패널 관측행, 1–10차
 - 중복 키: KNHANES `연도:ID`, KLoSA `PID-차수` 기준 0건
 - 두 조사는 행 단위로 합치지 않고 공통 개념의 통합 변수 명세로 연결함
 
@@ -68,15 +68,25 @@ def main() -> None:
 
     for disease in ("hypertension", "diabetes"):
         for threshold in (19, 40, 65):
-            kn_mask = (
-                knhanes[f"cohort_{threshold}_plus"].fillna(False)
-                & knhanes[f"eligible_{disease}_undiagnosed"].fillna(False)
-            )
+            kn_mask = knhanes[f"cohort_{threshold}_plus"].fillna(False) & knhanes[
+                f"eligible_{disease}_undiagnosed"
+            ].fillna(False)
             kn_columns = ["record_key", "survey_year", "split", f"target_{disease}_clinical", *KNHANES_FEATURES]
-            write_csv(knhanes.loc[kn_mask, kn_columns], args.processed_dir / f"knhanes_{disease}_undiagnosed_{threshold}plus.csv")
+            write_csv(
+                knhanes.loc[kn_mask, kn_columns],
+                args.processed_dir / f"knhanes_{disease}_undiagnosed_{threshold}plus.csv",
+            )
 
         kl_mask = klosa[f"eligible_{disease}_incident"].fillna(False)
-        kl_columns = ["participant_id", "survey_wave", "survey_year", "next_wave", "split", f"target_{disease}_incident_next_wave", *KLOSA_FEATURES]
+        kl_columns = [
+            "participant_id",
+            "survey_wave",
+            "survey_year",
+            "next_wave",
+            "split",
+            f"target_{disease}_incident_next_wave",
+            *KLOSA_FEATURES,
+        ]
         write_csv(
             klosa.loc[kl_mask, kl_columns],
             args.processed_dir / f"klosa_{disease}_incident_all.csv",
@@ -99,14 +109,14 @@ def main() -> None:
         build_selected_variable_registry(),
         Path("data/metadata/official_selected_variable_registry.csv"),
     )
-    (args.report_dir / "QUALITY_REPORT.md").write_text(
-        _quality_report(summary, cohort_table), encoding="utf-8"
-    )
+    (args.report_dir / "QUALITY_REPORT.md").write_text(_quality_report(summary, cohort_table), encoding="utf-8")
     write_csv(
-        source_manifest([
-            *Path("data/raw/knhanes").glob("*.zip"),
-            Path("data/raw/klosa/KLoSA_1-10_SPSS.zip"),
-        ]),
+        source_manifest(
+            [
+                *Path("data/raw/knhanes").glob("*.zip"),
+                Path("data/raw/klosa/KLoSA_1-10_SPSS.zip"),
+            ]
+        ),
         Path("data/metadata/official_raw_source_manifest.csv"),
     )
     print(summary)

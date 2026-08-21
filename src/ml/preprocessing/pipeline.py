@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Mapping
 
 import numpy as np
 import pandas as pd
-
 
 APPROVED = {"approved", "approved_with_note"}
 MODEL_FEATURE_ROLES = {"feature", "feature_optional"}
@@ -28,6 +27,39 @@ def _parse_codes(value: object) -> list[object]:
         except ValueError:
             parsed.append(token)
     return parsed
+
+
+def _clean_registry_series(
+    series: pd.Series,
+    row: Mapping[str, object],
+    *,
+    canonical: str,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    codes = _parse_codes(row.get("missing_codes"))
+    missing_mask = series.isin(codes) if codes else pd.Series(False, index=series.index)
+    cleaned = series.mask(missing_mask)
+    dtype = str(row.get("dtype", "string")).lower()
+    out_of_range = pd.Series(False, index=series.index)
+
+    if dtype in {"float", "numeric", "integer", "int"}:
+        cleaned = pd.to_numeric(cleaned, errors="coerce")
+        lower = pd.to_numeric(pd.Series([row.get("valid_min")]), errors="coerce").iloc[0]
+        upper = pd.to_numeric(pd.Series([row.get("valid_max")]), errors="coerce").iloc[0]
+        if pd.notna(lower):
+            out_of_range |= cleaned < float(lower)
+        if pd.notna(upper):
+            out_of_range |= cleaned > float(upper)
+        cleaned = cleaned.mask(out_of_range)
+        if dtype in {"integer", "int"}:
+            cleaned = cleaned.astype("Int64")
+    elif dtype in {"category", "categorical", "string"}:
+        cleaned = cleaned.astype("string")
+    elif dtype in {"boolean", "bool"}:
+        cleaned = cleaned.astype("boolean")
+    else:
+        raise ValueError(f"지원하지 않는 dtype: {dtype} ({canonical})")
+
+    return cleaned, missing_mask, out_of_range
 
 
 def clean_with_registry(
@@ -77,30 +109,7 @@ def clean_with_registry(
             )
             continue
 
-        series = raw[source].copy()
-        codes = _parse_codes(row.get("missing_codes"))
-        missing_mask = series.isin(codes) if codes else pd.Series(False, index=series.index)
-        series = series.mask(missing_mask)
-
-        dtype = str(row.get("dtype", "string")).lower()
-        out_of_range = pd.Series(False, index=series.index)
-        if dtype in {"float", "numeric", "integer", "int"}:
-            series = pd.to_numeric(series, errors="coerce")
-            lower = pd.to_numeric(pd.Series([row.get("valid_min")]), errors="coerce").iloc[0]
-            upper = pd.to_numeric(pd.Series([row.get("valid_max")]), errors="coerce").iloc[0]
-            if pd.notna(lower):
-                out_of_range |= series < float(lower)
-            if pd.notna(upper):
-                out_of_range |= series > float(upper)
-            series = series.mask(out_of_range)
-            if dtype in {"integer", "int"}:
-                series = series.astype("Int64")
-        elif dtype in {"category", "categorical", "string"}:
-            series = series.astype("string")
-        elif dtype in {"boolean", "bool"}:
-            series = series.astype("boolean")
-        else:
-            raise ValueError(f"지원하지 않는 dtype: {dtype} ({canonical})")
+        series, missing_mask, out_of_range = _clean_registry_series(raw[source].copy(), row, canonical=canonical)
 
         output[canonical] = series
         audit_rows.append(
@@ -152,11 +161,7 @@ def validate_cohort_coverage(
                 "age_min_observed": float(age[mask].min()) if mask.any() else np.nan,
                 "age_max_observed": float(age[mask].max()) if mask.any() else np.nan,
                 "same_as_previous_cohort": same_as_previous,
-                "warning": (
-                    "직전 코호트와 표본이 동일하여 별도 모델 비교 의미가 낮음"
-                    if same_as_previous
-                    else ""
-                ),
+                "warning": ("직전 코호트와 표본이 동일하여 별도 모델 비교 의미가 낮음" if same_as_previous else ""),
             }
         )
         previous_mask = mask
@@ -164,7 +169,7 @@ def validate_cohort_coverage(
 
 
 def _stable_fraction(value: object, seed: str) -> float:
-    digest = hashlib.sha256(f"{seed}|{value}".encode("utf-8")).digest()
+    digest = hashlib.sha256(f"{seed}|{value}".encode()).digest()
     return int.from_bytes(digest[:8], "big") / 2**64
 
 
@@ -186,10 +191,7 @@ def assign_group_split(
     fractions = df[group_column].astype("string").map(lambda value: _stable_fraction(value, seed))
     split = pd.Series("test", index=df.index, dtype="string")
     split.loc[fractions < train_fraction] = "train"
-    split.loc[
-        (fractions >= train_fraction)
-        & (fractions < train_fraction + validation_fraction)
-    ] = "validation"
+    split.loc[(fractions >= train_fraction) & (fractions < train_fraction + validation_fraction)] = "validation"
     return split
 
 
@@ -258,9 +260,7 @@ def fit_preprocessing_state(
         mode = values.mode(dropna=True)
         modes[column] = str(mode.iloc[0]) if not mode.empty else "__MISSING__"
         observed = sorted(values.dropna().astype(str).unique().tolist())
-        levels[column] = observed + [
-            level for level in ("__MISSING__", "__UNKNOWN__") if level not in observed
-        ]
+        levels[column] = observed + [level for level in ("__MISSING__", "__UNKNOWN__") if level not in observed]
     return PreprocessingState(medians, modes, levels)
 
 

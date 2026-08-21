@@ -3,4 +3,5 @@ numpy>=2,<3
 scikit-learn>=1.5,<2
 PyYAML>=6,<7
 pyreadstat>=1.2,<2
+tabulate>=0.9,<1
 # Optional: install a Python-version-compatible pyarrow only when Parquet output is needed.

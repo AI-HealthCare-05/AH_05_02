@@ -3,6 +3,12 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from src.ml.preprocessing.harmonize import harmonize_klosa_wide, harmonize_knhanes
+from src.ml.preprocessing.official import (
+    add_klosa_incident_targets,
+    knhanes_diabetes_source,
+    knhanes_hypertension_codes,
+)
 from src.ml.preprocessing.pipeline import (
     add_age_cohorts,
     assign_group_split,
@@ -11,12 +17,6 @@ from src.ml.preprocessing.pipeline import (
     fit_preprocessing_state,
     transform_model_matrix,
     validate_cohort_coverage,
-)
-from src.ml.preprocessing.harmonize import harmonize_klosa_wide, harmonize_knhanes
-from src.ml.preprocessing.official import (
-    add_klosa_incident_targets,
-    knhanes_diabetes_source,
-    knhanes_hypertension_codes,
 )
 
 
@@ -53,15 +53,17 @@ def test_cleaning_uses_only_variable_specific_missing_codes() -> None:
 def test_unapproved_registry_is_blocked() -> None:
     raw = pd.DataFrame({"age_raw": [19]})
     registry = pd.DataFrame(
-        [{
-            "canonical_name": "age",
-            "source_column": "age_raw",
-            "dtype": "integer",
-            "missing_codes": "",
-            "valid_min": 19,
-            "valid_max": 120,
-            "review_status": "needs_codebook",
-        }]
+        [
+            {
+                "canonical_name": "age",
+                "source_column": "age_raw",
+                "dtype": "integer",
+                "missing_codes": "",
+                "valid_min": 19,
+                "valid_max": 120,
+                "review_status": "needs_codebook",
+            }
+        ]
     )
     with pytest.raises(ValueError, match="approved"):
         clean_with_registry(raw, registry)
@@ -111,28 +113,30 @@ def test_imputation_state_is_fitted_from_train_only() -> None:
 def test_knhanes_harmonization_blocks_conflicting_aliases() -> None:
     raw = pd.DataFrame({"HE_BMI": [22.0, 23.0], "HE_bmi": [22.0, 99.0]})
     registry = pd.DataFrame(
-        [{
-            "dataset": "KNHANES",
-            "canonical_name": "bmi",
-            "source_columns_all": "HE_BMI | HE_bmi",
-            "review_status": "approved",
-        }]
+        [
+            {
+                "dataset": "KNHANES",
+                "canonical_name": "bmi",
+                "source_columns_all": "HE_BMI | HE_bmi",
+                "review_status": "approved",
+            }
+        ]
     )
     with pytest.raises(ValueError, match="값 충돌"):
         harmonize_knhanes(raw, registry, survey_year=2024, source_file="sample.sav")
 
 
 def test_klosa_wide_is_reshaped_by_wave() -> None:
-    raw = pd.DataFrame(
-        {"pid": [1, 2], "w01A002_age": [50, 60], "w02A002_age": [52, 62]}
-    )
+    raw = pd.DataFrame({"pid": [1, 2], "w01A002_age": [50, 60], "w02A002_age": [52, 62]})
     registry = pd.DataFrame(
-        [{
-            "dataset": "KLoSA",
-            "canonical_name": "age",
-            "source_columns_all": "w01A002_age | w02A002_age",
-            "review_status": "approved",
-        }]
+        [
+            {
+                "dataset": "KLoSA",
+                "canonical_name": "age",
+                "source_columns_all": "w01A002_age | w02A002_age",
+                "review_status": "approved",
+            }
+        ]
     )
     result, _ = harmonize_klosa_wide(
         raw,
@@ -152,14 +156,16 @@ def test_official_knhanes_target_definitions_change_at_documented_years() -> Non
 
 
 def test_official_klosa_target_requires_clean_history_and_adjacent_wave() -> None:
-    frame = pd.DataFrame({
-        "participant_id": ["clean", "clean", "prior", "prior", "gap", "gap", "missing", "missing"],
-        "survey_wave": [1, 2, 1, 2, 1, 3, 1, 2],
-        "source_file": ["a"] * 8,
-        "age": [50] * 8,
-        "hypertension_event": [0, 1, 1, 0, 0, 1, pd.NA, 1],
-        "diabetes_event": [0, 0, 0, 0, 0, 1, 0, 0],
-    })
+    frame = pd.DataFrame(
+        {
+            "participant_id": ["clean", "clean", "prior", "prior", "gap", "gap", "missing", "missing"],
+            "survey_wave": [1, 2, 1, 2, 1, 3, 1, 2],
+            "source_file": ["a"] * 8,
+            "age": [50] * 8,
+            "hypertension_event": [0, 1, 1, 0, 0, 1, pd.NA, 1],
+            "diabetes_event": [0, 0, 0, 0, 0, 1, 0, 0],
+        }
+    )
     result = add_klosa_incident_targets(frame)
     clean = result.query("participant_id == 'clean' and survey_wave == 1").iloc[0]
     prior = result.query("participant_id == 'prior' and survey_wave == 1").iloc[0]

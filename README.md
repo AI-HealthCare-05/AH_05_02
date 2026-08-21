@@ -56,6 +56,8 @@
 - [서비스 대상·제외 범위 및 의료 안전 문구](docs/SERVICE_SCOPE_AND_SAFETY_COPY.md)
 - [Sprint 2 요구사항 추적성·누락 QA](docs/TRACEABILITY_AND_GAP_QA_20260819.md)
 - [Sprint 2 기능 구현 백로그](docs/SPRINT2_BACKLOG.md)
+- [KLoSA·KNHANES 공통 전처리 프로토콜](docs/DATA_PREPROCESSING_PROTOCOL.md)
+- [전처리 결과 공유용 요약](docs/NOTION_PREPROCESSING_SHARE.md)
 
 ## 로컬 실행
 

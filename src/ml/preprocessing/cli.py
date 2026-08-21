@@ -48,9 +48,7 @@ def main() -> None:
         if len(args.input) != 1:
             raise ValueError("KLoSA wide 자료는 입력 파일 하나를 지정합니다.")
         raw = read_tabular(args.input[0])
-        harmonized, mapping_audit = harmonize_klosa_wide(
-            raw, registry, person_column=args.person_column
-        )
+        harmonized, mapping_audit = harmonize_klosa_wide(raw, registry, person_column=args.person_column)
         processed, cleaning_audit = _clean_harmonized(
             harmonized,
             registry,
@@ -63,9 +61,7 @@ def main() -> None:
             person_column="participant_id",
             wave_column="survey_wave",
         )
-        processed["split"] = assign_group_split(
-            processed, group_column="participant_id"
-        )
+        processed["split"] = assign_group_split(processed, group_column="participant_id")
         cohort_report = validate_cohort_coverage(processed, dataset="KLoSA")
     else:
         if not args.year or len(args.year) != len(args.input):
@@ -75,9 +71,7 @@ def main() -> None:
         cleaning_audits: list[pd.DataFrame] = []
         for source, year in zip(args.input, args.year, strict=True):
             raw = read_tabular(source)
-            frame, audit = harmonize_knhanes(
-                raw, registry, survey_year=year, source_file=source.name
-            )
+            frame, audit = harmonize_knhanes(raw, registry, survey_year=year, source_file=source.name)
             cleaned_frame, cleaning = _clean_harmonized(
                 frame,
                 registry,
@@ -91,9 +85,7 @@ def main() -> None:
         mapping_audit = pd.concat(audits, ignore_index=True)
         cleaning_audit = pd.concat(cleaning_audits, ignore_index=True)
         processed = add_age_cohorts(processed)
-        processed["split"] = assign_group_split(
-            processed, group_column="record_key"
-        )
+        processed["split"] = assign_group_split(processed, group_column="record_key")
         cohort_report = validate_cohort_coverage(processed, dataset="KNHANES")
 
     write_processed(processed, args.output_dir / f"{args.dataset}_cleaned.csv")

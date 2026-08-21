@@ -6,7 +6,6 @@ import pandas as pd
 
 from .pipeline import APPROVED
 
-
 DEFAULT_KLOSA_WAVE_YEARS = {
     1: 2006,
     2: 2008,
@@ -48,10 +47,7 @@ def _coalesce_with_conflict_check(
 
 
 def approved_registry(registry: pd.DataFrame, dataset: str) -> pd.DataFrame:
-    selected = registry[
-        (registry["dataset"] == dataset)
-        & registry["review_status"].isin(APPROVED)
-    ].copy()
+    selected = registry[(registry["dataset"] == dataset) & registry["review_status"].isin(APPROVED)].copy()
     if selected.empty:
         raise ValueError(f"{dataset}: 코드북 승인 변수가 없어 전처리를 중단합니다.")
     return selected
@@ -70,9 +66,7 @@ def harmonize_knhanes(
     for row in selected.to_dict("records"):
         aliases = split_aliases(row["source_columns_all"])
         present = [alias for alias in aliases if alias in raw.columns]
-        series, conflicts = _coalesce_with_conflict_check(
-            raw, aliases, canonical_name=str(row["canonical_name"])
-        )
+        series, conflicts = _coalesce_with_conflict_check(raw, aliases, canonical_name=str(row["canonical_name"]))
         output[str(row["canonical_name"])] = series
         audit.append(
             {
@@ -114,9 +108,7 @@ def harmonize_klosa_wide(
         frame["survey_year"] = year
         for row in selected.to_dict("records"):
             aliases = [
-                alias
-                for alias in split_aliases(row["source_columns_all"])
-                if alias.lower().startswith(prefix.lower())
+                alias for alias in split_aliases(row["source_columns_all"]) if alias.lower().startswith(prefix.lower())
             ]
             present = [alias for alias in aliases if alias in raw.columns]
             series, conflicts = _coalesce_with_conflict_check(

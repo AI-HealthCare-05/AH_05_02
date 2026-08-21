@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
@@ -18,22 +18,42 @@ import pyreadstat
 
 from .pipeline import add_age_cohorts, assign_group_split
 
-
-WAVE_YEARS = {1: 2006, 2: 2008, 3: 2010, 4: 2012, 5: 2014,
-              6: 2016, 7: 2018, 8: 2020, 9: 2022, 10: 2024}
+WAVE_YEARS = {1: 2006, 2: 2008, 3: 2010, 4: 2012, 5: 2014, 6: 2016, 7: 2018, 8: 2020, 9: 2022, 10: 2024}
 
 KNHANES_FEATURES = [
-    "age", "sex", "region", "urban", "education", "income_quartile",
-    "household_income_quartile", "height_cm", "weight_kg", "waist_cm",
-    "bmi", "hypertension_family_history", "diabetes_family_history",
-    "current_smoker", "alcohol_frequency", "aerobic_activity",
-    "walking_days", "energy_kcal", "protein_g", "fat_g",
-    "carbohydrate_g", "sodium_mg",
+    "age",
+    "sex",
+    "region",
+    "urban",
+    "education",
+    "income_quartile",
+    "household_income_quartile",
+    "height_cm",
+    "weight_kg",
+    "waist_cm",
+    "bmi",
+    "hypertension_family_history",
+    "diabetes_family_history",
+    "current_smoker",
+    "alcohol_frequency",
+    "aerobic_activity",
+    "walking_days",
+    "energy_kcal",
+    "protein_g",
+    "fat_g",
+    "carbohydrate_g",
+    "sodium_mg",
 ]
 
 KLOSA_FEATURES = [
-    "age", "sex", "bmi", "self_rated_health", "regular_exercise",
-    "current_smoker", "current_drinker", "meal_count_yesterday",
+    "age",
+    "sex",
+    "bmi",
+    "self_rated_health",
+    "regular_exercise",
+    "current_smoker",
+    "current_drinker",
+    "meal_count_yesterday",
 ]
 
 
@@ -47,8 +67,7 @@ def knhanes_diabetes_source(year: int) -> str:
     return "HE_DM_HbA1c" if year >= 2019 else "HE_DM"
 
 
-def _numeric(series: pd.Series, lower: float | None = None,
-             upper: float | None = None) -> pd.Series:
+def _numeric(series: pd.Series, lower: float | None = None, upper: float | None = None) -> pd.Series:
     values = pd.to_numeric(series, errors="coerce")
     if lower is not None:
         values = values.mask(values < lower)
@@ -90,13 +109,48 @@ def _family_history(frame: pd.DataFrame, prefix: str) -> pd.Series:
 def preprocess_knhanes_file(path: Path, year: int) -> pd.DataFrame:
     """Read one official KNHANES ALL DB and create auditable canonical columns."""
     source_columns = [
-        "ID", "year", "age", "sex", "region", "town_t", "edu", "incm",
-        "ho_incm", "wt_itvex", "kstrata", "psu", "HE_ht", "HE_wt",
-        "HE_wc", "HE_BMI", "HE_HPfh1", "HE_HPfh2", "HE_HPfh3",
-        "HE_DMfh1", "HE_DMfh2", "HE_DMfh3", "sm_presnt", "BD1_11",
-        "pa_aerobic", "BE3_31", "HE_sbp", "HE_dbp", "HE_glu",
-        "HE_HbA1c", "DI1_dg", "DI1_2", "DE1_dg", "DE1_3", "HE_HP",
-        "HE_DM", "HE_DM_HbA1c", "N_EN", "N_PROT", "N_FAT", "N_CHO", "N_NA",
+        "ID",
+        "year",
+        "age",
+        "sex",
+        "region",
+        "town_t",
+        "edu",
+        "incm",
+        "ho_incm",
+        "wt_itvex",
+        "kstrata",
+        "psu",
+        "HE_ht",
+        "HE_wt",
+        "HE_wc",
+        "HE_BMI",
+        "HE_HPfh1",
+        "HE_HPfh2",
+        "HE_HPfh3",
+        "HE_DMfh1",
+        "HE_DMfh2",
+        "HE_DMfh3",
+        "sm_presnt",
+        "BD1_11",
+        "pa_aerobic",
+        "BE3_31",
+        "HE_sbp",
+        "HE_dbp",
+        "HE_glu",
+        "HE_HbA1c",
+        "DI1_dg",
+        "DI1_2",
+        "DE1_dg",
+        "DE1_3",
+        "HE_HP",
+        "HE_DM",
+        "HE_DM_HbA1c",
+        "N_EN",
+        "N_PROT",
+        "N_FAT",
+        "N_CHO",
+        "N_NA",
     ]
     _, metadata = pyreadstat.read_sav(path, metadataonly=True)
     available = [column for column in source_columns if column in metadata.column_names]
@@ -161,19 +215,16 @@ def preprocess_knhanes_file(path: Path, year: int) -> pd.DataFrame:
     out.loc[valid_dm, "target_diabetes_clinical"] = dm.loc[valid_dm].eq(3).astype(int)
 
     out["eligible_hypertension_undiagnosed"] = (
-        out["age"].ge(19)
-        & out["target_hypertension_clinical"].notna()
-        & out["hypertension_diagnosed"].eq(0)
+        out["age"].ge(19) & out["target_hypertension_clinical"].notna() & out["hypertension_diagnosed"].eq(0)
     ).astype("boolean")
     out["eligible_diabetes_undiagnosed"] = (
-        out["age"].ge(19)
-        & out["target_diabetes_clinical"].notna()
-        & out["diabetes_diagnosed"].eq(0)
+        out["age"].ge(19) & out["target_diabetes_clinical"].notna() & out["diabetes_diagnosed"].eq(0)
     ).astype("boolean")
     out = add_age_cohorts(out, thresholds=(19, 40, 65))
     out["split"] = np.select(
         [out["survey_year"].le(2020), out["survey_year"].between(2021, 2022)],
-        ["train", "validation"], default="test",
+        ["train", "validation"],
+        default="test",
     )
     return out
 
@@ -193,14 +244,22 @@ def _klosa_source_columns(wave: int, *, new_sample: bool = False) -> dict[str, s
     # its computed age is stored in A001_age rather than A002_age.
     age = f"{prefix}A001_age" if wave == 1 or new_sample else f"{prefix}A002_age"
     return {
-        "pid": "pid", "age": age, "sex": f"{prefix}gender1",
-        "self_rated_health": f"{prefix}C001", "weight_kg": f"{prefix}C105",
-        "height_cm": f"{prefix}C107", "regular_exercise": f"{prefix}C108",
+        "pid": "pid",
+        "age": age,
+        "sex": f"{prefix}gender1",
+        "self_rated_health": f"{prefix}C001",
+        "weight_kg": f"{prefix}C105",
+        "height_cm": f"{prefix}C107",
+        "regular_exercise": f"{prefix}C108",
         "smoking_experience": f"{prefix}C116",
-        "current_smoker": f"{prefix}C117", "current_drinker": f"{prefix}C122",
-        "meal_breakfast": f"{prefix}C114m01", "meal_lunch": f"{prefix}C114m02",
-        "meal_dinner": f"{prefix}C114m03", "hypertension_event": f"{prefix}C006",
-        "diabetes_event": f"{prefix}C011", "panel_weight": f"{prefix}wgt_p",
+        "current_smoker": f"{prefix}C117",
+        "current_drinker": f"{prefix}C122",
+        "meal_breakfast": f"{prefix}C114m01",
+        "meal_lunch": f"{prefix}C114m02",
+        "meal_dinner": f"{prefix}C114m03",
+        "hypertension_event": f"{prefix}C006",
+        "diabetes_event": f"{prefix}C011",
+        "panel_weight": f"{prefix}wgt_p",
     }
 
 
@@ -212,9 +271,7 @@ def preprocess_klosa_wave(path: Path, wave: int) -> pd.DataFrame:
     missing = required.difference(available_mapping)
     if missing:
         raise ValueError(f"{path.name}: required KLoSA columns missing: {sorted(missing)}")
-    raw, _ = pyreadstat.read_sav(
-        path, usecols=list(available_mapping.values()), apply_value_formats=False
-    )
+    raw, _ = pyreadstat.read_sav(path, usecols=list(available_mapping.values()), apply_value_formats=False)
     raw = raw.rename(columns={source: key for key, source in available_mapping.items()})
     out = pd.DataFrame(index=raw.index)
     out["participant_id"] = raw["pid"].astype("string")
@@ -222,7 +279,9 @@ def preprocess_klosa_wave(path: Path, wave: int) -> pd.DataFrame:
     out["survey_year"] = WAVE_YEARS[wave]
     out["age"] = _numeric(raw["age"], 40, 120).astype("Int64")
     out["sex"] = _codes(raw.get("sex", pd.Series(index=raw.index, dtype=float)), (1, 5))
-    out["self_rated_health"] = _codes(raw.get("self_rated_health", pd.Series(index=raw.index, dtype=float)), (1, 2, 3, 4, 5))
+    out["self_rated_health"] = _codes(
+        raw.get("self_rated_health", pd.Series(index=raw.index, dtype=float)), (1, 2, 3, 4, 5)
+    )
     out["weight_kg"] = _numeric(raw.get("weight_kg", pd.Series(index=raw.index, dtype=float)), 20, 250)
     out["height_cm"] = _numeric(raw.get("height_cm", pd.Series(index=raw.index, dtype=float)), 100, 220)
     out["bmi"] = out["weight_kg"] / (out["height_cm"] / 100) ** 2
@@ -259,14 +318,7 @@ def add_klosa_incident_targets(frame: pd.DataFrame) -> pd.DataFrame:
         event = result[event_column]
         event_observed = event.notna().astype(int)
         history_observed = event_observed.groupby(result["participant_id"], sort=False).cummin().eq(1)
-        diagnosed = (
-            event.eq(1)
-            .fillna(False)
-            .astype(int)
-            .groupby(result["participant_id"], sort=False)
-            .cummax()
-            .eq(1)
-        )
+        diagnosed = event.eq(1).fillna(False).astype(int).groupby(result["participant_id"], sort=False).cummax().eq(1)
         next_event = grouped[event_column].shift(-1)
         eligible = history_observed & ~diagnosed & result["adjacent_next_wave"] & next_event.notna()
         target = pd.Series(pd.NA, index=result.index, dtype="Int64")
@@ -330,34 +382,43 @@ def build_cohort_quality_table(knhanes: pd.DataFrame, klosa: pd.DataFrame) -> pd
     rows: list[dict[str, object]] = []
     for disease in ("hypertension", "diabetes"):
         for threshold in (19, 40, 65):
-            mask = (
-                knhanes[f"cohort_{threshold}_plus"].fillna(False)
-                & knhanes[f"eligible_{disease}_undiagnosed"].fillna(False)
-            )
+            mask = knhanes[f"cohort_{threshold}_plus"].fillna(False) & knhanes[
+                f"eligible_{disease}_undiagnosed"
+            ].fillna(False)
             selected = knhanes.loc[mask]
             positive = int(selected[f"target_{disease}_clinical"].sum())
-            rows.append({
-                "dataset": "KNHANES", "target_definition": "undiagnosed",
-                "disease": disease, "age_group": f"{threshold}+",
-                "rows": int(len(selected)), "positive": positive,
-                "prevalence": positive / len(selected) if len(selected) else np.nan,
-                "train_rows": int(selected["split"].eq("train").sum()),
-                "validation_rows": int(selected["split"].eq("validation").sum()),
-                "test_rows": int(selected["split"].eq("test").sum()),
-            })
+            rows.append(
+                {
+                    "dataset": "KNHANES",
+                    "target_definition": "undiagnosed",
+                    "disease": disease,
+                    "age_group": f"{threshold}+",
+                    "rows": int(len(selected)),
+                    "positive": positive,
+                    "prevalence": positive / len(selected) if len(selected) else np.nan,
+                    "train_rows": int(selected["split"].eq("train").sum()),
+                    "validation_rows": int(selected["split"].eq("validation").sum()),
+                    "test_rows": int(selected["split"].eq("test").sum()),
+                }
+            )
 
         mask = klosa[f"eligible_{disease}_incident"].fillna(False)
         selected = klosa.loc[mask]
         positive = int(selected[f"target_{disease}_incident_next_wave"].sum())
-        rows.append({
-            "dataset": "KLoSA", "target_definition": "incident",
-            "disease": disease, "age_group": "survey_population",
-            "rows": int(len(selected)), "positive": positive,
-            "prevalence": positive / len(selected) if len(selected) else np.nan,
-            "train_rows": int(selected["split"].eq("train").sum()),
-            "validation_rows": int(selected["split"].eq("validation").sum()),
-            "test_rows": int(selected["split"].eq("test").sum()),
-        })
+        rows.append(
+            {
+                "dataset": "KLoSA",
+                "target_definition": "incident",
+                "disease": disease,
+                "age_group": "survey_population",
+                "rows": int(len(selected)),
+                "positive": positive,
+                "prevalence": positive / len(selected) if len(selected) else np.nan,
+                "train_rows": int(selected["split"].eq("train").sum()),
+                "validation_rows": int(selected["split"].eq("validation").sum()),
+                "test_rows": int(selected["split"].eq("test").sum()),
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -370,14 +431,16 @@ def build_missingness_table(knhanes: pd.DataFrame, klosa: pd.DataFrame) -> pd.Da
         analysis_frame = frame.loc[frame["age"].ge(19)]
         for column in features:
             missing = int(analysis_frame[column].isna().sum())
-            rows.append({
-                "dataset": dataset,
-                "canonical_name": column,
-                "population": "age_19_plus",
-                "rows": int(len(analysis_frame)),
-                "missing_count": missing,
-                "missing_rate": missing / len(analysis_frame),
-            })
+            rows.append(
+                {
+                    "dataset": dataset,
+                    "canonical_name": column,
+                    "population": "age_19_plus",
+                    "rows": int(len(analysis_frame)),
+                    "missing_count": missing,
+                    "missing_rate": missing / len(analysis_frame),
+                }
+            )
     return pd.DataFrame(rows)
 
 
@@ -386,25 +449,48 @@ def build_selected_variable_registry() -> pd.DataFrame:
     rows: list[dict[str, str]] = []
 
     kn_sources = {
-        "age": "age", "sex": "sex", "region": "region", "urban": "town_t",
-        "education": "edu", "income_quartile": "incm",
-        "household_income_quartile": "ho_incm", "height_cm": "HE_ht",
-        "weight_kg": "HE_wt", "waist_cm": "HE_wc", "bmi": "HE_BMI",
+        "age": "age",
+        "sex": "sex",
+        "region": "region",
+        "urban": "town_t",
+        "education": "edu",
+        "income_quartile": "incm",
+        "household_income_quartile": "ho_incm",
+        "height_cm": "HE_ht",
+        "weight_kg": "HE_wt",
+        "waist_cm": "HE_wc",
+        "bmi": "HE_BMI",
         "hypertension_family_history": "HE_HPfh1|HE_HPfh2|HE_HPfh3",
         "diabetes_family_history": "HE_DMfh1|HE_DMfh2|HE_DMfh3",
-        "current_smoker": "sm_presnt", "alcohol_frequency": "BD1_11",
-        "aerobic_activity": "pa_aerobic", "walking_days": "BE3_31",
-        "energy_kcal": "N_EN", "protein_g": "N_PROT", "fat_g": "N_FAT",
-        "carbohydrate_g": "N_CHO", "sodium_mg": "N_NA",
+        "current_smoker": "sm_presnt",
+        "alcohol_frequency": "BD1_11",
+        "aerobic_activity": "pa_aerobic",
+        "walking_days": "BE3_31",
+        "energy_kcal": "N_EN",
+        "protein_g": "N_PROT",
+        "fat_g": "N_FAT",
+        "carbohydrate_g": "N_CHO",
+        "sodium_mg": "N_NA",
         "target_hypertension_clinical": "HE_HP",
         "target_diabetes_clinical": "HE_DM (2016-2018)|HE_DM_HbA1c (2019-2024)",
-        "hypertension_diagnosed": "DI1_dg", "diabetes_diagnosed": "DE1_dg",
-        "survey_weight": "wt_itvex", "survey_stratum": "kstrata",
-        "survey_cluster": "psu", "systolic_bp": "HE_sbp",
-        "diastolic_bp": "HE_dbp", "fasting_glucose": "HE_glu", "hba1c": "HE_HbA1c",
+        "hypertension_diagnosed": "DI1_dg",
+        "diabetes_diagnosed": "DE1_dg",
+        "survey_weight": "wt_itvex",
+        "survey_stratum": "kstrata",
+        "survey_cluster": "psu",
+        "systolic_bp": "HE_sbp",
+        "diastolic_bp": "HE_dbp",
+        "fasting_glucose": "HE_glu",
+        "hba1c": "HE_HbA1c",
     }
-    leakage = {"systolic_bp", "diastolic_bp", "fasting_glucose", "hba1c",
-               "hypertension_diagnosed", "diabetes_diagnosed"}
+    leakage = {
+        "systolic_bp",
+        "diastolic_bp",
+        "fasting_glucose",
+        "hba1c",
+        "hypertension_diagnosed",
+        "diabetes_diagnosed",
+    }
     for canonical, source in kn_sources.items():
         role = "feature"
         note = "공식 코드북 확인; 변수별 허용값·범위 적용"
@@ -414,27 +500,46 @@ def build_selected_variable_registry() -> pd.DataFrame:
             role, note = "survey_design", "복합표본 설계·가중 평가용"
         elif canonical in leakage:
             role, note = "target_component", "타깃 정의/적합성 확인 전용; 모델 입력 금지"
-        rows.append({
-            "dataset": "KNHANES", "canonical_name": canonical,
-            "source_column": source, "role": role, "unit": {
-                "height_cm": "cm", "weight_kg": "kg", "waist_cm": "cm",
-                "bmi": "kg/m2", "energy_kcal": "kcal/day", "protein_g": "g/day",
-                "fat_g": "g/day", "carbohydrate_g": "g/day", "sodium_mg": "mg/day",
-                "systolic_bp": "mmHg", "diastolic_bp": "mmHg",
-                "fasting_glucose": "mg/dL", "hba1c": "%",
-            }.get(canonical, "code"), "applicable_period": "2016-2024",
-            "missing_rule": "공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환",
-            "model_input": "no" if role != "feature" else "yes",
-            "review_status": "approved", "notes": note,
-        })
+        rows.append(
+            {
+                "dataset": "KNHANES",
+                "canonical_name": canonical,
+                "source_column": source,
+                "role": role,
+                "unit": {
+                    "height_cm": "cm",
+                    "weight_kg": "kg",
+                    "waist_cm": "cm",
+                    "bmi": "kg/m2",
+                    "energy_kcal": "kcal/day",
+                    "protein_g": "g/day",
+                    "fat_g": "g/day",
+                    "carbohydrate_g": "g/day",
+                    "sodium_mg": "mg/day",
+                    "systolic_bp": "mmHg",
+                    "diastolic_bp": "mmHg",
+                    "fasting_glucose": "mg/dL",
+                    "hba1c": "%",
+                }.get(canonical, "code"),
+                "applicable_period": "2016-2024",
+                "missing_rule": "공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환",
+                "model_input": "no" if role != "feature" else "yes",
+                "review_status": "approved",
+                "notes": note,
+            }
+        )
 
     kl_sources = {
         "age": "w01A001_age; w02-10A002_age; w05_newA001_age",
-        "sex": "wXXgender1", "bmi": "wXXC105,wXXC107 (계산)",
-        "self_rated_health": "wXXC001", "regular_exercise": "wXXC108",
-        "current_smoker": "wXXC116+wXXC117", "current_drinker": "wXXC122",
+        "sex": "wXXgender1",
+        "bmi": "wXXC105,wXXC107 (계산)",
+        "self_rated_health": "wXXC001",
+        "regular_exercise": "wXXC108",
+        "current_smoker": "wXXC116+wXXC117",
+        "current_drinker": "wXXC122",
         "meal_count_yesterday": "wXXC114m01-m03",
-        "hypertension_event": "wXXC006", "diabetes_event": "wXXC011",
+        "hypertension_event": "wXXC006",
+        "diabetes_event": "wXXC011",
         "panel_weight": "wXXwgt_p",
         "target_hypertension_incident_next_wave": "다음 인접 차수 wXXC006",
         "target_diabetes_incident_next_wave": "다음 인접 차수 wXXC011",
@@ -448,15 +553,20 @@ def build_selected_variable_registry() -> pd.DataFrame:
             role, note = "target", "인접한 다음 조사차수의 신규 진단; 모델 입력 금지"
         elif canonical == "panel_weight":
             role, note = "survey_design", "패널 가중 평가용"
-        rows.append({
-            "dataset": "KLoSA", "canonical_name": canonical,
-            "source_column": source, "role": role,
-            "unit": "kg/m2" if canonical == "bmi" else "code",
-            "applicable_period": "1-10차 (2006-2024)",
-            "missing_rule": "-8 거절, -9 모름 및 비허용 코드를 NA로 변환",
-            "model_input": "yes" if role == "feature" else "no",
-            "review_status": "approved", "notes": note,
-        })
+        rows.append(
+            {
+                "dataset": "KLoSA",
+                "canonical_name": canonical,
+                "source_column": source,
+                "role": role,
+                "unit": "kg/m2" if canonical == "bmi" else "code",
+                "applicable_period": "1-10차 (2006-2024)",
+                "missing_rule": "-8 거절, -9 모름 및 비허용 코드를 NA로 변환",
+                "model_input": "yes" if role == "feature" else "no",
+                "review_status": "approved",
+                "notes": note,
+            }
+        )
     return pd.DataFrame(rows)
 
 

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 SUPPORTED_SUFFIXES = {".csv", ".parquet", ".dta", ".sav", ".zsav"}
 
 

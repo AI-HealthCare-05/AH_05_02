@@ -7,7 +7,7 @@ KLoSA 1–10차와 국민건강영양조사(KNHANES) 2016–2024년 원자료를
 - KNHANES: 67,019건
 - KLoSA: 74,834개 패널 관측행
 - 중복 키: 0건
-- 전처리 테스트: 11개 통과
+- 전처리 테스트: 10개 통과(전체 저장소 테스트 21개 통과)
 - 원자료 및 행 단위 정제 데이터: GitHub에 업로드하지 않음
 - GitHub 공유 범위: 재현 코드, 변수 명세, 원본 무결성 기록, 집계 품질보고서, 전처리 프로토콜
 
@@ -56,21 +56,22 @@ KLoSA 1–10차와 국민건강영양조사(KNHANES) 2016–2024년 원자료를
 
 ## 4. 주요 문서와 코드
 
-- [전처리 품질보고서](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/outputs/preprocessing_20260812/QUALITY_REPORT.md)
-- [연령·질환별 표본과 양성률](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/outputs/preprocessing_20260812/cohort_target_summary.csv)
-- [특성별 결측률](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/outputs/preprocessing_20260812/feature_missingness.csv)
-- [공식 변수 명세](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/data/metadata/official_selected_variable_registry.csv)
-- [전처리 프로토콜](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/docs/DATA_PREPROCESSING_PROTOCOL.md)
-- [전처리 실행 코드](https://github.com/J36-Ai-Editer/chronic-disease-lifestyle-challenge/blob/agent/official-data-preprocessing/src/ml/preprocessing/run_official.py)
+- [전처리 품질보고서](../outputs/preprocessing_20260812/QUALITY_REPORT.md)
+- [연령·질환별 표본과 양성률](../outputs/preprocessing_20260812/cohort_target_summary.csv)
+- [특성별 결측률](../outputs/preprocessing_20260812/feature_missingness.csv)
+- [공식 변수 명세](../data/metadata/official_selected_variable_registry.csv)
+- [전처리 프로토콜](DATA_PREPROCESSING_PROTOCOL.md)
+- [전처리 실행 코드](../src/ml/preprocessing/run_official.py)
+- [현재 팀 저장소 Issue #7](https://github.com/AI-HealthCare-05/AH_05_02/issues/7)
 
 ## 5. 재현 방법
 
 원자료와 코드북을 안내된 로컬 경로에 배치한 뒤 저장소 루트에서 실행합니다.
 
 ```powershell
-python -m pip install -r requirements-ml.txt
-python -m src.ml.preprocessing.run_official
-python -m pytest -q
+uv sync --group ai --group dev
+uv run python -m src.ml.preprocessing.run_official
+uv run pytest -q tests/ml/test_preprocessing.py
 ```
 
 생성되는 행 단위 파일은 `data/processed/official_v1/`에 저장되며 Git에는 올라가지 않습니다.
@@ -86,3 +87,5 @@ python -m pytest -q
 ## 7. 해석 시 주의사항
 
 본 결과는 의료 진단이나 처방이 아니라 위험 선별과 건강교육을 위한 모델 개발 자료입니다. KNHANES와 KLoSA는 조사설계와 타깃 시점이 다르므로 두 데이터의 행을 직접 결합하거나 양성률·성능을 단순 비교하지 않습니다.
+
+이 문서의 표본 집계는 `preprocessing_20260812` 전처리 v1 재현 결과입니다. Sprint 2 모델 브랜치에서 라벨·적격 조건을 변경한 경우 표본 수가 달라질 수 있으므로, 서로 다른 버전의 집계값을 혼용하지 않고 모델 카드에 전처리 버전과 커밋을 함께 기록합니다. 현재 Sprint 2의 우선 구현 질환은 당뇨병이며, 고혈압 코드는 후속 확장을 위한 공통 구조로 유지합니다.
