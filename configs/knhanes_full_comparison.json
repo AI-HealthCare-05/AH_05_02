@@ -1,0 +1,48 @@
+{
+  "experiment_id": "knhanes-full-model-comparison-20260821",
+  "seed": 20260821,
+  "cv_folds": 5,
+  "stacking_cv_folds": 5,
+  "blend_weight_step": 0.25,
+  "reliability_bins": 10,
+  "selection_constraints": {
+    "minimum_specificity": 0.5,
+    "minimum_auprc_lift": 1.05
+  },
+  "threshold_grid": {
+    "minimum": 0.01,
+    "maximum": 0.99,
+    "points": 99
+  },
+  "dataset": {
+    "feature_schema_version": "knhanes-diabetes-screening-v1",
+    "model_version": "diabetes-knhanes-full-comparison-v0.4.0",
+    "target_type": "current_cross_sectional_screening",
+    "numeric_features": [
+      "age",
+      "height_cm",
+      "weight_kg",
+      "waist_cm",
+      "bmi",
+      "walking_days",
+      "energy_kcal",
+      "protein_g",
+      "fat_g",
+      "carbohydrate_g",
+      "sodium_mg"
+    ],
+    "categorical_features": [
+      "sex",
+      "region",
+      "urban",
+      "education",
+      "income_quartile",
+      "household_income_quartile",
+      "hypertension_family_history",
+      "diabetes_family_history",
+      "current_smoker",
+      "alcohol_frequency",
+      "aerobic_activity"
+    ]
+  }
+}
