@@ -431,7 +431,7 @@
 
 ## 7. 2026-08-21 구현 상태
 
-- 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs` 세로 흐름을 구현했다.
+- 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs`를 포함한 핵심 사용자 흐름(End-to-End)을 구현했다.
 - 작업 상태는 `queued/running/succeeded/failed`, 생성 시각은 `created_at`으로 통일했다.
 - `klosa-diabetes-incident-v1` 입력 계약과 교체 가능한 `PredictionProvider`를 적용했다.
 - 기본 `development` provider는 시스템 연결만 검증하며 위험 범주·내부 점수·확률을 생성하거나 공개하지 않는다.
