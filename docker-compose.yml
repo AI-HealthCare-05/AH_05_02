@@ -54,17 +54,7 @@ services:
       - .env
     environment:
       DB_GENERATE_SCHEMAS: "true"
-    command:
-      - uv
-      - run
-      - --no-sync
-      - uvicorn
-      - app.main:app
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8000"
-      - --reload
+    command: ["sh", "app/start-fastapi.sh", "--reload"]
     volumes:
       - ./app:/app/app
       - ./src/frontend:/app/src/frontend:ro

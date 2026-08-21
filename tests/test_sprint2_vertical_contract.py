@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -88,6 +89,13 @@ def test_signup_minimizes_optional_identity_collection() -> None:
     )
     assert request.name is None
     assert request.phone_number is None
+
+
+def test_fastapi_container_applies_migrations_before_serving() -> None:
+    start_script = Path("app/start-fastapi.sh").read_text(encoding="utf-8")
+    compose = Path("docker-compose.yml").read_text(encoding="utf-8")
+    assert "aerich upgrade" in start_script
+    assert "app/start-fastapi.sh" in compose
 
 
 def test_prediction_feedback_requires_owned_context_reference() -> None:
