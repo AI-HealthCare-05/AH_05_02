@@ -136,3 +136,13 @@ async def get_health_checkup(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="건강정보 기록을 찾을 수 없습니다.")
     return envelope(checkup_payload(item))
+
+
+@health_router.patch("/health-checkups/{checkup_id}")
+async def update_health_checkup(
+    checkup_id: int,
+    request: HealthCheckupCreateRequest,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    item = await HealthService().update_checkup(user, checkup_id, request)
+    return envelope(checkup_payload(item))

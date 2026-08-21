@@ -139,6 +139,8 @@
 | GET | `/prediction-jobs/{job_id}` | 작업 상태·완료된 `prediction_id` 조회 | `prediction_jobs`·Redis | REQ-PRED-001 |
 | GET | `/predictions/{prediction_id}` | 미래 발병 위험 범주·모델 버전 조회 | `predictions` | REQ-PRED-002~004 |
 | GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-005 |
+| POST | `/feedback` | 예측·추천·서비스 의견 저장 | `feedbacks` | REQ-FEED-001 |
+| GET | `/feedback` | 본인 의견 이력 조회 | `feedbacks` | REQ-FEED-001, NFR-FEED-001 |
 | GET | `/predictions/latest` | 최신 유효 예측 조회 | `predictions` | REQ-PRED-004 |
 | GET | `/predictions` | 질환·검진·기간별 예측 이력 조회 | `predictions` | REQ-DASH-003 |
 | GET | `/predictions/changes` | 내부 분석용 최초·최신 결과 비교 | `predictions` | REQ-DASH-003 |

@@ -164,3 +164,17 @@ class FollowUpAction(Model):
 
     class Meta:
         table = "follow_up_actions"
+
+
+class Feedback(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    context_type = fields.CharField(max_length=30)
+    prediction_id = fields.BigIntField(null=True, db_index=True)
+    recommendation_id = fields.BigIntField(null=True, db_index=True)
+    rating = fields.IntField()
+    comment = fields.CharField(max_length=500, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "feedbacks"

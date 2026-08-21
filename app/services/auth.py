@@ -21,11 +21,10 @@ class AuthService:
         # 이메일 중복 체크
         await self.check_email_exists(data.email)
 
-        # 입력받은 휴대폰 번호를 노말라이즈
-        normalized_phone_number = normalize_phone_number(data.phone_number)
-
-        # 휴대폰 번호 중복 체크
-        await self.check_phone_number_exists(normalized_phone_number)
+        # 전화번호는 선택 수집 항목이다. 제공된 경우에만 정규화·중복 검사한다.
+        normalized_phone_number = normalize_phone_number(data.phone_number) if data.phone_number else None
+        if normalized_phone_number:
+            await self.check_phone_number_exists(normalized_phone_number)
 
         # 유저 생성
         async with in_transaction():

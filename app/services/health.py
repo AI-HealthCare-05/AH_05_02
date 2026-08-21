@@ -195,6 +195,43 @@ class HealthService:
             **request.model_dump(),
         )
 
+    async def update_checkup(self, user: User, checkup_id: int, request: HealthCheckupCreateRequest) -> HealthCheckup:
+        item = await self.repo.get_checkup(checkup_id, user.id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="건강정보 기록을 찾을 수 없습니다.")
+        if await self.repo.checkup_has_prediction(checkup_id, user.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "error_code": "CHECKUP_ALREADY_PREDICTED",
+                    "message": "예측에 사용된 건강정보는 수정할 수 없습니다. 재평가 기록을 새로 입력해 주세요.",
+                },
+            )
+        if request.feature_schema_version != ACTIVE_MODEL.feature_schema_version:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error_code": "FEATURE_SCHEMA_VERSION_MISMATCH",
+                    "expected": ACTIVE_MODEL.feature_schema_version,
+                },
+            )
+        bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
+        PredictionFeatures(
+            age=item.age,
+            bmi=bmi,
+            self_rated_health=request.self_rated_health,
+            meal_count_yesterday=request.meal_count_yesterday,
+            sex=item.sex,
+            regular_exercise=request.regular_exercise,
+            current_smoker=request.current_smoker,
+            current_drinker=request.current_drinker,
+        )
+        for field, value in request.model_dump().items():
+            setattr(item, field, value)
+        item.bmi = bmi
+        await item.save()
+        return item
+
     @staticmethod
     def features_for(checkup: HealthCheckup) -> PredictionFeatures:
         return PredictionFeatures(

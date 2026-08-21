@@ -9,6 +9,7 @@ from app.models.health import (
     ChallengeLog,
     Consent,
     EligibilityCheck,
+    Feedback,
     FollowUpAction,
     HealthCheckup,
     Prediction,
@@ -43,6 +44,9 @@ class HealthRepository:
 
     async def list_checkups(self, user_id: int) -> list[HealthCheckup]:
         return await HealthCheckup.filter(user_id=user_id).order_by("-checkup_date", "-id")
+
+    async def checkup_has_prediction(self, checkup_id: int, user_id: int) -> bool:
+        return await Prediction.filter(health_checkup_id=checkup_id, user_id=user_id).exists()
 
     async def get_prediction(self, prediction_id: int, user_id: int) -> Prediction | None:
         return await Prediction.get_or_none(id=prediction_id, user_id=user_id)
@@ -119,3 +123,9 @@ class HealthRepository:
         item.acknowledged_at = at
         await item.save(update_fields=["acknowledged_at"])
         return item
+
+    async def create_feedback(self, **values: Any) -> Feedback:
+        return await Feedback.create(**values)
+
+    async def list_feedback(self, user_id: int) -> list[Feedback]:
+        return await Feedback.filter(user_id=user_id).order_by("-created_at", "-id")

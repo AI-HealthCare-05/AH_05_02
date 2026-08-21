@@ -60,6 +60,33 @@ function renderPrediction(prediction, factors) {
     ? factors.items.map((item) => `<li><strong>${item.factor_name}</strong><p>${item.description}</p></li>`).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${factors.message}</p></li>`;
   $("#high-guidance").hidden = prediction.risk_category !== "high";
+  $("#analysis-failure").hidden = true;
+  $("#retry-analysis").hidden = true;
+  $("#result-next").disabled = false;
+}
+async function runPrediction() {
+  $("#analysis-failure").hidden = true;
+  $("#retry-analysis").hidden = true;
+  $("#result-next").disabled = true;
+  $("#job-status").textContent = "분석 상태: queued";
+  try {
+    const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
+      checkup_id: state.checkupId, model_key: "diabetes_incidence",
+    }) });
+    state.predictionId = await pollPrediction(job.job_id);
+    const [prediction, factors] = await Promise.all([
+      api(`/predictions/${state.predictionId}`),
+      api(`/predictions/${state.predictionId}/risk-factors`),
+    ]);
+    state.prediction = prediction;
+    renderPrediction(prediction, factors);
+  } catch (error) {
+    $("#job-status").textContent = "분석 상태: 실패";
+    $("#result-stage").textContent = "다시 시도 필요";
+    $("#analysis-failure").hidden = false;
+    $("#retry-analysis").hidden = false;
+    showMessage(error.message);
+  }
 }
 async function loadChallenges() {
   const query = state.predictionId ? `?prediction_id=${state.predictionId}` : "";
@@ -98,8 +125,8 @@ $("#signup-form").addEventListener("submit", async (event) => {
     const email = $("#email").value;
     const password = $("#password").value;
     await api("/auth/signup", { method: "POST", body: JSON.stringify({
-      email, password, name: $("#name").value, gender: $("#gender").value,
-      birth_date: $("#birth-date").value, phone_number: $("#phone").value,
+      email, password, gender: $("#gender").value,
+      birth_date: $("#birth-date").value,
     }) });
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
     state.token = login.access_token;
@@ -140,15 +167,24 @@ $("#health-form").addEventListener("submit", async (event) => {
       current_drinker: $("#current-drinker").checked, feature_schema_version: "klosa-diabetes-incident-v1",
     }) });
     state.checkupId = checkup.checkup_id;
-    const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({ checkup_id: state.checkupId, model_key: "diabetes_incidence" }) });
-    $("#job-status").textContent = "분석 상태: queued";
     showStep(5);
-    state.predictionId = await pollPrediction(job.job_id);
-    const [prediction, factors] = await Promise.all([api(`/predictions/${state.predictionId}`), api(`/predictions/${state.predictionId}/risk-factors`)]);
-    state.prediction = prediction;
-    renderPrediction(prediction, factors);
+    await runPrediction();
   } catch (error) { showMessage(error.message); }
   finally { submit.disabled = false; submit.textContent = "미래 발병 위험 분석 요청"; }
+});
+$("#retry-analysis").addEventListener("click", runPrediction);
+$("#feedback-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.predictionId) return showMessage("피드백을 연결할 분석 결과가 없습니다.");
+  try {
+    await api("/feedback", { method: "POST", body: JSON.stringify({
+      context_type: "prediction",
+      prediction_id: state.predictionId,
+      rating: Number($("#feedback-rating").value),
+      comment: $("#feedback-comment").value || null,
+    }) });
+    showMessage("의견을 저장했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
 });
 $("#to-challenges").addEventListener("click", async () => {
   try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }

@@ -8,6 +8,8 @@ from pydantic import ValidationError
 
 from ai_worker.handlers import run_task
 from app.apis.v1.prediction_routers import prediction_payload
+from app.dtos.auth import SignUpRequest
+from app.dtos.health import FeedbackCreateRequest
 from app.main import app
 from app.prediction.contracts import ACTIVE_MODEL, KLOSA_FEATURE_SCHEMA, PredictionFeatures, input_schema_document
 from app.prediction.providers import DevelopmentPredictionProvider
@@ -30,6 +32,32 @@ def test_formal_app_exposes_only_prediction_job_path_in_openapi() -> None:
     assert "/api/v1/prediction-jobs" in visible_paths
     assert "/api/v1/prediction-jobs/{job_id}" in visible_paths
     assert "/api/v1/ai-jobs" not in visible_paths
+
+
+def test_share_documents_endpoints_are_exposed() -> None:
+    visible_paths = set(app.openapi()["paths"])
+    assert "/api/v1/health-checkups/{checkup_id}" in visible_paths
+    assert "/api/v1/feedback" in visible_paths
+
+
+def test_signup_minimizes_optional_identity_collection() -> None:
+    request = SignUpRequest.model_validate(
+        {
+            "email": "minimal@example.com",
+            "password": "Prototype123!",
+            "gender": "FEMALE",
+            "birth_date": "1965-04-12",
+        }
+    )
+    assert request.name is None
+    assert request.phone_number is None
+
+
+def test_prediction_feedback_requires_owned_context_reference() -> None:
+    with pytest.raises(ValidationError, match="prediction_id"):
+        FeedbackCreateRequest(context_type="prediction", rating=4)
+    valid = FeedbackCreateRequest(context_type="prediction", prediction_id=3, rating=4)
+    assert valid.rating == 4
 
 
 def test_feature_contract_matches_pr4_klosa_schema_and_rejects_extra_fields() -> None:

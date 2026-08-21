@@ -75,3 +75,19 @@ class ChallengeCycleStatusRequest(BaseModel):
 class EnvelopeMeta(BaseModel):
     request_id: str
     timestamp: datetime
+
+
+class FeedbackCreateRequest(BaseModel):
+    context_type: Literal["prediction", "recommendation", "service"]
+    prediction_id: int | None = Field(default=None, gt=0)
+    recommendation_id: int | None = Field(default=None, gt=0)
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_context_reference(self) -> FeedbackCreateRequest:
+        if self.context_type == "prediction" and self.prediction_id is None:
+            raise ValueError("예측 결과 피드백에는 prediction_id가 필요합니다.")
+        if self.context_type == "recommendation" and self.recommendation_id is None:
+            raise ValueError("추천 피드백에는 recommendation_id가 필요합니다.")
+        return self
