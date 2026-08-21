@@ -16,7 +16,7 @@
 
 ### 1.1 API 작성 기준
 
-- 만 19세 이상 서비스 이용 가능 여부, 만 40세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
+- 만 19세 이상 서비스 이용 가능 여부, 만 45세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
 - Sprint 2 활성 예측은 당뇨병 미래 신규 발병 이진분류 하나로 제한한다.
 - KLoSA 단독 모델은 검증 근거가 없는 40~44세에 적용하지 않으며, 실제 예측 범위는 활성 모델 카드의 `min_age`·`max_age`·모집단 조건으로 통제한다.
 - 건강검진 1건에 여러 모델 버전의 예측 결과를 허용한다.
@@ -231,7 +231,7 @@
   "data": {
     "eligibility_check_id": 31,
     "service_eligible": true,
-    "target_segment": "primary_40_plus",
+    "target_segment": "primary_45_plus",
     "model_eligible": true,
     "reason_codes": [],
     "next_action": "health_checkup_input",

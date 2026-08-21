@@ -145,6 +145,10 @@ def test_eligibility_blocks_minor_diagnosed_warning_and_out_of_scope() -> None:
     }
 
 
+def test_service_target_matches_active_klosa_minimum_age() -> None:
+    assert ACTIVE_MODEL.min_age == 45
+
+
 def test_unapproved_prediction_never_exposes_internal_score_as_public_probability() -> None:
     item = SimpleNamespace(
         id=9,

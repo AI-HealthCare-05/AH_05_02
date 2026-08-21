@@ -13,7 +13,7 @@
 | 영역 | 반영 내용 | 구현 위치 |
 | --- | --- | --- |
 | 개인정보 최소수집 | 이름·전화번호를 신규 가입 필수 항목에서 제거하고 선택값으로 변경 | `app/dtos/auth.py`, `app/models/users.py`, 가입 화면 |
-| 대상 구분 | 만 19세 이상 서비스, 40세 이상 주 타깃, 활성 모델 연령 범위를 각각 분리 | 적합성 응답의 `service_eligible`, `target_segment`, `model_eligible` |
+| 대상 구분 | 만 19세 이상 서비스, 45세 이상 주 타깃, 활성 모델 연령 범위를 각각 분리 | 적합성 응답의 `service_eligible`, `target_segment`, `model_eligible` |
 | 건강정보 이력 | 검진 이력 조회와 예측 전 정정 API 제공, 예측에 사용된 기록은 덮어쓰기 금지 | `PATCH /api/v1/health-checkups/{id}` |
 | 비동기 분석 UX | 입력 보존, 실패 안내, 입력 확인, 동일 검진 재시도 상태 구현 | Figma 실패 화면을 반영한 결과 화면 |
 | 사용자 피드백 | 예측·추천·서비스 맥락별 별도 피드백 엔터티 및 API 추가 | `feedbacks`, `POST/GET /api/v1/feedback` |

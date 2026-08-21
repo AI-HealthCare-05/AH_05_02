@@ -110,7 +110,7 @@ class HealthService:
         )
 
         service_eligible = age >= 19 and active_consent is not None
-        target_segment = "primary_40_plus" if age >= 40 else "adult_19_39"
+        target_segment = "primary_45_plus" if age >= 45 else "adult_19_44"
         model_blockers = {
             "UNDER_MINIMUM_SERVICE_AGE",
             "CONSENT_REQUIRED",
