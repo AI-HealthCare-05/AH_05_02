@@ -408,6 +408,33 @@ def _weighted_average(probabilities: dict[str, np.ndarray], weights: dict[str, f
     return sum(probabilities[name] * weight for name, weight in weights.items())
 
 
+def _best_blend(
+    probabilities: dict[str, np.ndarray],
+    names: list[str],
+    y_true: np.ndarray,
+    config: dict[str, Any],
+) -> tuple[dict[str, float], np.ndarray]:
+    best_result = None
+    for weights in _blend_weights(names, float(config["blend_weight_step"])):
+        blend = _weighted_average(probabilities, weights)
+        _, metrics = select_threshold(y_true, blend, config)
+        result = (metrics, weights, blend)
+        if best_result is None or (
+            metrics["constraints_passed"],
+            metrics["recall"],
+            metrics["auprc"],
+            metrics["specificity"],
+        ) > (
+            best_result[0]["constraints_passed"],
+            best_result[0]["recall"],
+            best_result[0]["auprc"],
+            best_result[0]["specificity"],
+        ):
+            best_result = result
+    assert best_result is not None
+    return best_result[1], best_result[2]
+
+
 def _sigmoid_calibrator(probabilities: np.ndarray, y: np.ndarray, seed: int) -> LogisticRegression:
     eps = np.finfo(float).eps
     logits = np.log(np.clip(probabilities, eps, 1 - eps) / np.clip(1 - probabilities, eps, 1 - eps))
@@ -491,27 +518,7 @@ def run_dataset(
         "soft_voting_equal": np.mean(np.column_stack(list(validation_predictions.values())), axis=1)
     }
     names = list(oof_predictions)
-    weight_candidates = _blend_weights(names, float(config["blend_weight_step"]))
-    best_weight_result = None
-    for weights in weight_candidates:
-        blend = _weighted_average(oof_predictions, weights)
-        threshold, metrics = select_threshold(y_train, blend, config)
-        result = (metrics, threshold, weights, blend)
-        if best_weight_result is None or (
-            metrics["constraints_passed"],
-            metrics["recall"],
-            metrics["auprc"],
-            metrics["specificity"],
-        ) > (
-            best_weight_result[0]["constraints_passed"],
-            best_weight_result[0]["recall"],
-            best_weight_result[0]["auprc"],
-            best_weight_result[0]["specificity"],
-        ):
-            best_weight_result = result
-    assert best_weight_result is not None
-    blend_weights = best_weight_result[2]
-    ensemble_oof["oof_blending"] = best_weight_result[3]
+    blend_weights, ensemble_oof["oof_blending"] = _best_blend(oof_predictions, names, y_train, config)
     ensemble_validation["oof_blending"] = _weighted_average(validation_predictions, blend_weights)
 
     stacker = LogisticRegression(class_weight="balanced", max_iter=2000, random_state=int(config["seed"]))
@@ -519,6 +526,26 @@ def run_dataset(
     ensemble_oof["stacking"] = stacker.predict_proba(np.column_stack([oof_predictions[name] for name in names]))[:, 1]
     ensemble_validation["stacking"] = stacker.predict_proba(
         np.column_stack([validation_predictions[name] for name in names])
+    )[:, 1]
+
+    tree_names = [name for name in names if name in {"random_forest", "xgboost", "lightgbm"}]
+    if len(tree_names) < 2:
+        raise ValueError("Tree-only ensemble requires at least two tree model families")
+    ensemble_oof["tree_soft_voting_equal"] = np.mean(
+        np.column_stack([oof_predictions[name] for name in tree_names]), axis=1
+    )
+    ensemble_validation["tree_soft_voting_equal"] = np.mean(
+        np.column_stack([validation_predictions[name] for name in tree_names]), axis=1
+    )
+    tree_blend_weights, ensemble_oof["tree_oof_blending"] = _best_blend(oof_predictions, tree_names, y_train, config)
+    ensemble_validation["tree_oof_blending"] = _weighted_average(validation_predictions, tree_blend_weights)
+    tree_stacker = LogisticRegression(class_weight="balanced", max_iter=2000, random_state=int(config["seed"]))
+    tree_stacker.fit(np.column_stack([oof_predictions[name] for name in tree_names]), y_train)
+    ensemble_oof["tree_stacking"] = tree_stacker.predict_proba(
+        np.column_stack([oof_predictions[name] for name in tree_names])
+    )[:, 1]
+    ensemble_validation["tree_stacking"] = tree_stacker.predict_proba(
+        np.column_stack([validation_predictions[name] for name in tree_names])
     )[:, 1]
 
     all_validation_predictions = {**validation_predictions, **ensemble_validation}
@@ -581,6 +608,11 @@ def run_dataset(
         "soft_voting_equal": np.mean(np.column_stack(list(test_predictions.values())), axis=1),
         "oof_blending": _weighted_average(test_predictions, blend_weights),
         "stacking": stacker.predict_proba(np.column_stack([test_predictions[name] for name in names]))[:, 1],
+        "tree_soft_voting_equal": np.mean(np.column_stack([test_predictions[name] for name in tree_names]), axis=1),
+        "tree_oof_blending": _weighted_average(test_predictions, tree_blend_weights),
+        "tree_stacking": tree_stacker.predict_proba(np.column_stack([test_predictions[name] for name in tree_names]))[
+            :, 1
+        ],
     }
     all_test_predictions = {**test_predictions, **ensemble_test}
     all_test_predictions[calibrated_name] = _apply_calibrator(calibrator, all_test_predictions[winner_name])
@@ -618,6 +650,9 @@ def run_dataset(
         "base_model_order": names,
         "blend_weights": blend_weights,
         "stacker": stacker,
+        "tree_base_model_order": tree_names,
+        "tree_blend_weights": tree_blend_weights,
+        "tree_stacker": tree_stacker,
         "calibrator": calibrator,
         "validation_winner": winner_name,
         "final_candidate": final_candidate_name,
@@ -662,6 +697,7 @@ def run_dataset(
         "final_candidate_validation": final_validation_winner,
         "final_candidate_test": final_candidate_test,
         "blend_weights": blend_weights,
+        "tree_blend_weights": tree_blend_weights,
         "local_model_path": str(model_path),
         "promotion_status": "candidate_internal_not_for_personal_probability_display",
     }
