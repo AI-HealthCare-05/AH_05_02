@@ -8,8 +8,8 @@ from redis.asyncio import Redis
 from redis.exceptions import ResponseError
 
 from ai_worker.core import config, logger
-from ai_worker.db import ensure_schema, update_job
-from ai_worker.handlers import run_task
+from ai_worker.db import ensure_schema, persist_prediction, update_job
+from ai_worker.handlers import run_task_with_timeout
 
 
 class StreamWorker:
@@ -80,41 +80,54 @@ class StreamWorker:
 
         try:
             payload = json.loads(fields.get("payload", "{}"))
-            result = await run_task(task_type, payload)
+            result = await run_task_with_timeout(task_type, payload, config.PREDICTION_TIMEOUT_SECONDS)
+            prediction_id = await persist_prediction(job_id, result) if task_type == "diabetes_incidence" else None
             completed_at = datetime.now(config.TIMEZONE)
             completed_event = {
                 "job_id": job_id,
-                "status": "completed",
-                "result": result,
+                "status": "succeeded",
+                "prediction_id": prediction_id,
                 "worker_name": self.consumer,
                 "attempts": attempt,
                 "completed_at": completed_at.isoformat(),
             }
             await update_job(
                 job_id,
-                status="completed",
+                status="succeeded",
                 worker_name=self.consumer,
                 attempts=attempt,
                 result=result,
                 completed_at=completed_at,
+                prediction_id=prediction_id,
             )
             await self.set_status(job_id, completed_event)
             await self.publish(job_id, completed_event)
             await self.redis.xack(config.REDIS_STREAM, config.REDIS_CONSUMER_GROUP, message_id)
+            await self.redis.xdel(config.REDIS_STREAM, message_id)
+        except TimeoutError as exc:
+            await self.handle_failure(message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="TIMEOUT")
         except Exception as exc:
             await self.handle_failure(message_id, fields, attempt, exc)
 
-    async def handle_failure(self, message_id: str, fields: dict[str, str], attempt: int, exc: Exception) -> None:
+    async def handle_failure(
+        self,
+        message_id: str,
+        fields: dict[str, str],
+        attempt: int,
+        exc: Exception,
+        error_code: str | None = None,
+    ) -> None:
         job_id = fields["job_id"]
         if attempt < config.AI_JOB_MAX_ATTEMPTS:
             retry_fields = dict(fields)
             retry_fields["attempt"] = str(attempt)
             await self.redis.xadd(config.REDIS_STREAM, retry_fields)
             await self.redis.xack(config.REDIS_STREAM, config.REDIS_CONSUMER_GROUP, message_id)
-            retry_event = {"job_id": job_id, "status": "retrying", "attempts": attempt}
+            await self.redis.xdel(config.REDIS_STREAM, message_id)
+            retry_event = {"job_id": job_id, "status": "running", "attempts": attempt}
             await update_job(
                 job_id,
-                status="retrying",
+                status="running",
                 worker_name=self.consumer,
                 attempts=attempt,
                 error=str(exc),
@@ -128,6 +141,9 @@ class StreamWorker:
             "job_id": job_id,
             "status": "failed",
             "error": str(exc),
+            "error_code": error_code or "INFERENCE_FAILED",
+            "retryable": error_code == "TIMEOUT",
+            "retry_after_seconds": 30 if error_code == "TIMEOUT" else None,
             "attempts": attempt,
             "completed_at": completed_at.isoformat(),
         }
@@ -138,10 +154,14 @@ class StreamWorker:
             attempts=attempt,
             error=str(exc),
             completed_at=completed_at,
+            error_code=error_code or "INFERENCE_FAILED",
+            retryable=error_code == "TIMEOUT",
+            retry_after_seconds=30 if error_code == "TIMEOUT" else None,
         )
         await self.set_status(job_id, failed_event)
         await self.publish(job_id, failed_event)
         await self.redis.xack(config.REDIS_STREAM, config.REDIS_CONSUMER_GROUP, message_id)
+        await self.redis.xdel(config.REDIS_STREAM, message_id)
 
     async def reclaim_pending(self) -> None:
         claimed = await self.redis.xautoclaim(

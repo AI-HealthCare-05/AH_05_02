@@ -1,10 +1,16 @@
 from fastapi import APIRouter
 
-from app.apis.v1.ai_job_routers import ai_job_router
 from app.apis.v1.auth_routers import auth_router
+from app.apis.v1.challenge_routers import challenge_router
+from app.apis.v1.dashboard_routers import dashboard_router
+from app.apis.v1.health_routers import health_router
+from app.apis.v1.prediction_routers import prediction_router
 from app.apis.v1.user_routers import user_router
 
 v1_routers = APIRouter(prefix="/api/v1")
-v1_routers.include_router(ai_job_router)
 v1_routers.include_router(auth_router)
 v1_routers.include_router(user_router)
+v1_routers.include_router(health_router)
+v1_routers.include_router(prediction_router)
+v1_routers.include_router(challenge_router)
+v1_routers.include_router(dashboard_router)

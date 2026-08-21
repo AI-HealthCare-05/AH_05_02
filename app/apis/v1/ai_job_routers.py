@@ -41,7 +41,7 @@ async def stream_job_events(job_id: str) -> AsyncIterator[str]:
             return
         initial = to_response(current).model_dump(mode="json")
         yield f"event: status\ndata: {json.dumps(initial, ensure_ascii=False)}\n\n"
-        if current.status in {"completed", "failed"}:
+        if current.status in {"succeeded", "failed"}:
             return
 
         while True:
@@ -52,7 +52,7 @@ async def stream_job_events(job_id: str) -> AsyncIterator[str]:
             data = message["data"]
             event = json.loads(data)
             yield f"event: status\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
-            if event.get("status") in {"completed", "failed"}:
+            if event.get("status") in {"succeeded", "failed"}:
                 return
     finally:
         await pubsub.unsubscribe(job_channel(job_id))
