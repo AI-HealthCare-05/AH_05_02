@@ -9,10 +9,12 @@ from pydantic import ValidationError
 from ai_worker.handlers import run_task
 from app.apis.v1.prediction_routers import prediction_payload
 from app.dtos.auth import SignUpRequest
+from app.dtos.engagement import InvitationCreateRequest, SharedChallengeCreateRequest
 from app.dtos.health import FeedbackCreateRequest
 from app.main import app
 from app.prediction.contracts import ACTIVE_MODEL, KLOSA_FEATURE_SCHEMA, PredictionFeatures, input_schema_document
 from app.prediction.providers import DevelopmentPredictionProvider
+from app.services.engagement import BARRIER_SUGGESTIONS, EDUCATION_CATALOG, ENCOURAGEMENT_TEXT
 from app.services.health import eligibility_reason_codes
 
 VALID_FEATURES = {
@@ -38,6 +40,41 @@ def test_share_documents_endpoints_are_exposed() -> None:
     visible_paths = set(app.openapi()["paths"])
     assert "/api/v1/health-checkups/{checkup_id}" in visible_paths
     assert "/api/v1/feedback" in visible_paths
+
+
+def test_behavior_change_and_together_endpoints_are_exposed() -> None:
+    visible_paths = set(app.openapi()["paths"])
+    assert "/api/v1/weekly-reports/current" in visible_paths
+    assert "/api/v1/education-contents" in visible_paths
+    assert "/api/v1/invitations" in visible_paths
+    assert "/api/v1/connections" in visible_paths
+    assert "/api/v1/shared-challenge-groups" in visible_paths
+
+
+def test_shared_challenge_rejects_invalid_period_and_duplicate_members() -> None:
+    with pytest.raises(ValidationError, match="종료일"):
+        SharedChallengeCreateRequest.model_validate(
+            {
+                "title": "가족 걷기",
+                "challenge_id": 1,
+                "start_date": "2026-08-22",
+                "end_date": "2026-08-21",
+                "common_goal": "각자 주 5일 실천",
+                "owner_goal": "하루 30분 걷기",
+                "members": [{"user_id": 2, "personal_goal": "하루 10분 걷기"}],
+            }
+        )
+
+
+def test_invitation_and_social_templates_do_not_share_health_data() -> None:
+    invitation = InvitationCreateRequest(invitee_email="family@example.com", relation_type="family")
+    assert invitation.relation_type == "family"
+    assert set(ENCOURAGEMENT_TEXT) == {"cheer", "great_job", "keep_going", "together"}
+
+
+def test_behavior_change_templates_are_bounded_and_medically_safe() -> None:
+    assert len(EDUCATION_CATALOG) == 4
+    assert "의료진" in BARRIER_SUGGESTIONS["physical_discomfort"][1]
 
 
 def test_signup_minimizes_optional_identity_collection() -> None:

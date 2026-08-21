@@ -41,6 +41,26 @@ CHALLENGE_CATALOG = (
         "source_title": "질병관리청 국가건강정보포털 당뇨병",
         "source_url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5305",
     },
+    {
+        "code": "weekly_weight_log",
+        "title": "일주일에 한 번 체중 기록하기",
+        "category": "tracking",
+        "daily_goal": "주 1회 기록",
+        "description": "같은 조건에서 체중을 기록하고 장기적인 생활습관 변화를 확인합니다.",
+        "safety_copy": "단기간의 체중 변화만으로 건강 상태나 치료 효과를 판단하지 마세요.",
+        "source_title": "CDC PreventT2 Curriculum",
+        "source_url": "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+    },
+    {
+        "code": "two_minute_activity_break",
+        "title": "오래 앉아 있을 때 2분 움직이기",
+        "category": "activity",
+        "daily_goal": "하루 1회",
+        "description": "오래 앉아 있었다면 몸 상태에 맞춰 잠깐 일어나 가볍게 움직입니다.",
+        "safety_copy": "통증·어지럼·호흡곤란이 있으면 중단하고 의료진과 상담하세요.",
+        "source_title": "CDC PreventT2 Curriculum",
+        "source_url": "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+    },
 )
 
 
@@ -73,10 +93,35 @@ class ChallengeService:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
         open_action = await self.repo.open_follow_up(user.id)
         items = await self.ensure_catalog()
+        checkup = await self.repo.latest_checkup(user.id)
+        reasons: dict[str, str] = {}
+        priority_codes: list[str] = []
+        if checkup is not None:
+            if not checkup.regular_exercise:
+                priority_codes.extend(["walk_after_meal_10m", "two_minute_activity_break"])
+                reasons["walk_after_meal_10m"] = (
+                    "최근 입력에서 규칙적인 운동을 하지 않는 것으로 확인되어 우선 제안합니다."
+                )
+                reasons["two_minute_activity_break"] = "작게 시작할 수 있는 활동 목표로 제안합니다."
+            if checkup.meal_count_yesterday != 3:
+                priority_codes.append("regular_meals_log")
+                reasons["regular_meals_log"] = "최근 식사 횟수를 바탕으로 식사 패턴 확인을 제안합니다."
+            if checkup.bmi >= 25:
+                priority_codes.append("weekly_weight_log")
+                reasons["weekly_weight_log"] = "체중 변화가 아닌 생활습관 기록을 위해 주 1회 기록을 제안합니다."
+        item_by_code = {item.code: item for item in items}
+        ordered_codes = list(dict.fromkeys(priority_codes + [item.code for item in items]))
+        ranked = [item_by_code[code] for code in ordered_codes if code in item_by_code][:3]
         return {
-            "items": [challenge_payload(item) for item in items],
-            "recommendation_type": "reviewed_general_template",
-            "personalized": False,
+            "items": [
+                {
+                    **challenge_payload(item),
+                    "recommendation_reason": reasons.get(item.code, "일반 건강 실천 항목입니다."),
+                }
+                for item in ranked
+            ],
+            "recommendation_type": "rule_based_reviewed_template",
+            "personalized": checkup is not None,
             "medical_guidance_required_first": open_action is not None,
             "notice": "치료가 아닌 일반 건강 실천입니다. 몸 상태와 의료진 지침을 우선하세요.",
         }

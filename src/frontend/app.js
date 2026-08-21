@@ -94,7 +94,7 @@ async function loadChallenges() {
   if (result.medical_guidance_required_first) showMessage("의료기관 안내를 먼저 확인한 뒤 챌린지를 선택해 주세요.");
   $("#challenge-list").innerHTML = result.items.map((item, index) => `<label class="challenge-card">
     <input type="checkbox" name="challenge" value="${item.challenge_id}" ${index === 0 ? "checked" : ""}>
-    <span><strong>${item.title}</strong><small>목표: ${item.daily_goal}</small><small>${item.description}</small>
+    <span><strong>${item.title}</strong><small>목표: ${item.daily_goal}</small><small>${item.description}</small><small>추천 이유: ${item.recommendation_reason}</small>
     <small><a href="${item.source.url}" target="_blank" rel="noopener">근거: ${item.source.title}</a></small></span>
   </label>`).join("");
 }
@@ -102,6 +102,28 @@ function renderCycle(cycle) {
   state.cycle = cycle;
   $("#dashboard-cycle").textContent = `${cycle.cycle_number}회차 · 4주`;
   $("#daily-log-list").innerHTML = cycle.user_challenges.map((item) => `<label class="daily-item"><input type="checkbox" name="daily" value="${item.user_challenge_id}"><span>${item.title}</span></label>`).join("");
+  $("#barrier-challenge").innerHTML = cycle.user_challenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
+}
+async function loadWeeklyReport() {
+  const report = await api("/weekly-reports/current");
+  if (report.status === "empty") {
+    $("#weekly-report").innerHTML = `<article><strong>기록 없음</strong><p>${report.message}</p></article>`;
+    return;
+  }
+  $("#weekly-report").innerHTML = `<article><small>최근 7일 달성률</small><strong>${report.completion.rate}%</strong><p>${report.completion.completed}/${report.completion.planned}회</p></article>
+    <article><small>가장 잘 실천한 습관</small><strong>${report.best_habit?.title || "기록 없음"}</strong><p>${report.best_habit?.completion_rate || 0}%</p></article>
+    <article><small>다음 목표 조정</small><strong>${report.next_adjustment.message}</strong><p>${report.disclaimer}</p></article>`;
+}
+async function loadEducation() {
+  const contents = await api("/education-contents");
+  $("#education-list").innerHTML = contents.items.map((item) => {
+    const noAnswer = item.quiz_question.includes("진단") || item.quiz_question.includes("치료") || item.quiz_question.includes("포기");
+    return `<article class="challenge-card"><span><strong>${item.week_number}주차 · ${item.title}</strong><small>${item.summary}</small><small>${item.quiz_question}</small><button class="secondary education-complete" type="button" data-id="${item.content_id}" data-answer="${noAnswer ? "아니요" : "네"}">${item.completed ? "다시 확인" : "퀴즈 답변·완료"}</button><small><a href="${item.source.url}" target="_blank" rel="noopener">근거: ${item.source.title}</a></small></span></article>`;
+  }).join("");
+}
+async function loadConnections() {
+  const result = await api("/connections");
+  $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
 }
 async function refreshDashboard() {
   const summary = await api("/dashboard/summary");
@@ -110,6 +132,7 @@ async function refreshDashboard() {
   $("#dashboard-notice").textContent = summary.disclaimer;
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections()]);
 }
 
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
@@ -208,6 +231,44 @@ $("#daily-log-form").addEventListener("submit", async (event) => {
       method: "PUT", body: JSON.stringify({ is_completed: input.checked, source: "self_report", note: null }),
     })));
     await refreshDashboard(); showMessage("오늘 기록을 저장했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#barrier-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const result = await api(`/user-challenges/${$("#barrier-challenge").value}/barriers`, { method: "POST", body: JSON.stringify({
+      log_date: new Date().toISOString().slice(0, 10), reason_code: $("#barrier-reason").value,
+    }) });
+    $("#barrier-suggestion").textContent = result.suggestion;
+    await loadWeeklyReport();
+  } catch (error) { showMessage(error.message); }
+});
+$("#education-list").addEventListener("click", async (event) => {
+  const button = event.target.closest(".education-complete");
+  if (!button) return;
+  try {
+    const result = await api(`/education-contents/${button.dataset.id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: button.dataset.answer }) });
+    showMessage(result.is_correct ? "정답입니다. 교육 콘텐츠를 완료했습니다." : "내용을 다시 확인해 주세요.", result.is_correct ? "success" : "error");
+    await loadEducation();
+  } catch (error) { showMessage(error.message); }
+});
+$("#invite-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const result = await api("/invitations", { method: "POST", body: JSON.stringify({
+      invitee_email: $("#invite-email").value, relation_type: $("#relation-type").value,
+    }) });
+    const box = $("#invite-result");
+    box.hidden = false;
+    box.innerHTML = `<div><strong>초대 코드가 생성되었습니다</strong><p class="invite-code">${result.token}</p><small>${result.notice}</small></div>`;
+  } catch (error) { showMessage(error.message); }
+});
+$("#accept-invite-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await api("/invitations/accept", { method: "POST", body: JSON.stringify({ token: $("#invite-token").value }) });
+    showMessage("가족·친구 연결을 완료했습니다.", "success");
+    await loadConnections();
   } catch (error) { showMessage(error.message); }
 });
 $("#restart").addEventListener("click", () => window.location.reload());

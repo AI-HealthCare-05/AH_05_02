@@ -141,6 +141,18 @@
 | GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-005 |
 | POST | `/feedback` | 예측·추천·서비스 의견 저장 | `feedbacks` | REQ-FEED-001 |
 | GET | `/feedback` | 본인 의견 이력 조회 | `feedbacks` | REQ-FEED-001, NFR-FEED-001 |
+| POST | `/user-challenges/{user_challenge_id}/barriers` | 미실천 원인·목표 조정안 기록 | `challenge_barriers` | REQ-BEH-001 |
+| GET | `/weekly-reports/current` | 최근 7일 수행 요약과 다음 목표 | 집계 조회 | REQ-BEH-002 |
+| GET | `/education-contents` | 4주 교육 콘텐츠·진행 상태 | `education_contents`, `content_progress` | REQ-EDU-001 |
+| PUT | `/education-contents/{content_id}/progress` | 퀴즈 답변·완료 기록 | `content_progress` | REQ-EDU-002 |
+| POST | `/invitations` | 가족·친구 일회용 초대 생성 | `invitations` | REQ-SOC-001 |
+| GET | `/invitations` | 보낸·받은 초대 조회 | `invitations` | REQ-SOC-001 |
+| POST | `/invitations/accept` | 초대 수락·연결 생성 | `invitations`, `connections` | REQ-SOC-002 |
+| GET | `/connections` | 연결 관계·공유 범위 조회 | `connections` | REQ-SOC-003 |
+| POST | `/shared-challenge-groups` | 공동 챌린지 참여 초대 | `shared_challenge_groups`, `shared_challenge_members` | REQ-SOC-004 |
+| POST | `/shared-challenge-groups/{group_id}/accept` | 공동 챌린지 참여 수락 | `shared_challenge_members` | REQ-SOC-004 |
+| GET | `/shared-challenge-groups` | 공동 챌린지 진행 현황 | 공동 챌린지·개인 로그 집계 | REQ-SOC-005 |
+| POST | `/shared-challenge-groups/{group_id}/encouragements` | 검토된 응원 전송 | `encouragements` | REQ-SOC-006 |
 | GET | `/predictions/latest` | 최신 유효 예측 조회 | `predictions` | REQ-PRED-004 |
 | GET | `/predictions` | 질환·검진·기간별 예측 이력 조회 | `predictions` | REQ-DASH-003 |
 | GET | `/predictions/changes` | 내부 분석용 최초·최신 결과 비교 | `predictions` | REQ-DASH-003 |

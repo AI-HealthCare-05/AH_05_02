@@ -45,6 +45,9 @@ class HealthRepository:
     async def list_checkups(self, user_id: int) -> list[HealthCheckup]:
         return await HealthCheckup.filter(user_id=user_id).order_by("-checkup_date", "-id")
 
+    async def latest_checkup(self, user_id: int) -> HealthCheckup | None:
+        return await HealthCheckup.filter(user_id=user_id).order_by("-checkup_date", "-id").first()
+
     async def checkup_has_prediction(self, checkup_id: int, user_id: int) -> bool:
         return await Prediction.filter(health_checkup_id=checkup_id, user_id=user_id).exists()
 

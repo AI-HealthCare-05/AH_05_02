@@ -113,6 +113,38 @@
           <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
         </div>
         <form id="daily-log-form"><fieldset><legend>오늘 실천한 항목</legend><div id="daily-log-list"></div></fieldset><button class="primary" type="submit">오늘 기록 저장</button></form>
+        <section class="dashboard-section" aria-labelledby="barrier-title">
+          <h3 id="barrier-title">실천하지 못한 이유와 목표 조정</h3>
+          <form id="barrier-form" class="two-column">
+            <div class="form-row"><label for="barrier-challenge">챌린지</label><select id="barrier-challenge"></select></div>
+            <div class="form-row"><label for="barrier-reason">이유</label><select id="barrier-reason"><option value="no_time">시간이 없었음</option><option value="forgot">잊어버림</option><option value="physical_discomfort">몸이 불편했음</option><option value="goal_too_hard">목표가 어려웠음</option><option value="environment">환경이 적합하지 않았음</option><option value="other">기타</option></select></div>
+            <button class="secondary full" type="submit">이유 기록하고 조정안 보기</button>
+          </form>
+          <p id="barrier-suggestion" class="lead">실패가 아니라 다음 목표를 조정하기 위한 기록입니다.</p>
+        </section>
+        <section class="dashboard-section" aria-labelledby="weekly-title">
+          <h3 id="weekly-title">이번 주 건강 리포트</h3>
+          <div id="weekly-report" class="dashboard-grid"><article><strong>기록 준비 중</strong></article></div>
+        </section>
+        <section class="dashboard-section" aria-labelledby="education-title">
+          <h3 id="education-title">4주 건강교육</h3>
+          <div id="education-list" class="challenge-grid"></div>
+        </section>
+        <section class="dashboard-section" aria-labelledby="together-title">
+          <h3 id="together-title">가족·친구와 함께하기</h3>
+          <p class="lead">기본적으로 챌린지 수행 상태만 공유합니다. 건강정보와 예측 결과는 공유하지 않습니다.</p>
+          <form id="invite-form" class="two-column">
+            <div class="form-row"><label for="invite-email">초대할 이메일</label><input id="invite-email" type="email" placeholder="family@example.com" required></div>
+            <div class="form-row"><label for="relation-type">관계</label><select id="relation-type"><option value="family">가족</option><option value="friend">친구</option><option value="guardian">보호자</option></select></div>
+            <button class="secondary full" type="submit">일회용 초대 코드 만들기</button>
+          </form>
+          <div id="invite-result" class="notice" hidden></div>
+          <form id="accept-invite-form" class="two-column">
+            <div class="form-row full"><label for="invite-token">받은 초대 코드</label><input id="invite-token" minlength="20" placeholder="초대 코드를 붙여넣으세요"></div>
+            <button class="secondary full" type="submit">초대 수락</button>
+          </form>
+          <div id="connection-list" class="challenge-grid"></div>
+        </section>
         <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
         <button class="secondary" id="restart" type="button">처음부터 다시 보기</button>
       </section>
