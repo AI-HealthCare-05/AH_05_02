@@ -22,22 +22,22 @@
 |---|---|---|---|---|---|
 | REQ-USER-001 | 회원가입 | `POST /auth/signup` | `User` | 중복 이메일·해시 저장 | 구현중 |
 | REQ-USER-002 | 로그인 | `/auth/login`, `/auth/refresh`, `/auth/logout` | `User`, 토큰 저장소 | 성공·실패·만료 | 구현중 |
-| REQ-USER-003 | 건강정보 동의 | `/consents` | `Consent` | 미동의·철회 후 예측 차단 | 구현중 |
-| REQ-USER-004 | 적합성 확인 | `/eligibility-checks` | `EligibilityCheck`, 활성 모델 카드 | 미성년·기진단·경고·모델 범위 밖 | 구현중 |
+| REQ-USER-003 | 건강정보 동의 | `/consents` | `Consent` | 미동의·철회 후 예측 차단 | 완료 |
+| REQ-USER-004 | 적합성 확인 | `/eligibility-checks` | `EligibilityCheck`, 활성 모델 카드 | 미성년·기진단·경고·모델 범위 밖 | 완료 |
 | REQ-HEALTH-001 | 프로필 | `/users/me/profile` | `UserProfile` | 생년월일 기반 만 나이 | 구현중 |
-| REQ-HEALTH-002 | 건강정보 입력 | `POST /health-checkups` | `HealthCheckup`, 입력 계약 | 단위·필수값·누수 제외 | 구현중 |
-| REQ-HEALTH-003 | 검진 이력 | `/health-checkups` | `HealthCheckup` | 덮어쓰기 금지·신규 이력 | 구현중 |
-| REQ-HEALTH-004 | 입력 오류 | 입력 화면·필드 오류 | `422` 공통 오류 | 입력 스키마 | 누락·범위·형식 오류 | 구현중 |
-| REQ-PRED-001 | 예측 대기 | `/prediction-jobs` | `PredictionJob`, Redis Stream | `202`, 정책 차단, 중복 방지 | 구현중 |
-| REQ-PRED-002 | 위험 결과 | `/predictions/{id}` | `Prediction`, 모델·임계값 버전 | 승인 전 확률 비공개 | 구현중 |
-| REQ-PRED-003 | 예측 이력 | `/predictions` | `HealthCheckup 1:N Prediction` | 모델 버전별 재예측 | 구현중 |
-| REQ-PRED-004 | 최신 결과 | `/predictions/latest` | `Prediction` | `predicted_at`, `id` 정렬 | 구현중 |
-| REQ-PRED-005 | 위험·보호 요인 | `/predictions/{id}/risk-factors` | `RiskFactor` | 방향·중요도·수정 가능성 | 구현중 |
-| REQ-PRED-006 | 의료기관 안내 | `/follow-up-actions` | `FollowUpAction` | 고위험 시 챌린지보다 우선 | 구현중 |
-| REQ-CHAL-001 | 챌린지 후보 | `/challenge-recommendations` | 추천 규칙·문구 버전 | 치료·복약 표현 차단 | 구현중 |
-| REQ-CHAL-002~004 | 선택·사이클·기록 | `/challenge-cycles`, `/user-challenges/*/logs` | 챌린지 엔터티 | 최대 3개·일별 중복·미래일 | 구현중 |
-| REQ-CHAL-005 | 기진단 전환 | `/challenge-cycles/{id}/status` | `ChallengeCycle` | 신규 개인화 중단·과거 이력 보존 | 구현중 |
-| REQ-DASH-001~003 | 대시보드 | `/dashboard/*` | 예측·검진·챌린지 집계 | 원시 확률·개선율 비노출 | 구현중 |
+| REQ-HEALTH-002 | 건강정보 입력 | `POST /health-checkups` | `HealthCheckup`, 입력 계약 | 단위·필수값·누수 제외 | 완료 |
+| REQ-HEALTH-003 | 검진 이력 | `/health-checkups` | `HealthCheckup` | 덮어쓰기 금지·신규 이력 | 완료 |
+| REQ-HEALTH-004 | 입력 오류 | 입력 화면·필드 오류 | `422` 공통 오류 | 입력 스키마 | 누락·범위·형식 오류 | 완료 |
+| REQ-PRED-001 | 예측 대기 | `/prediction-jobs` | `PredictionJob`, Redis Stream | `202`, 정책 차단, 중복 방지 | 개발 provider 완료 |
+| REQ-PRED-002 | 위험 결과 | `/predictions/{id}` | `Prediction`, 모델·임계값 버전 | 승인 전 확률 비공개 | 어댑터 완료·모델 승인 대기 |
+| REQ-PRED-003 | 예측 이력 | `/predictions` | `HealthCheckup 1:N Prediction` | 모델 버전별 재예측 | 완료 |
+| REQ-PRED-004 | 최신 결과 | `/predictions/latest` | `Prediction` | `predicted_at`, `id` 정렬 | 완료 |
+| REQ-PRED-005 | 위험·보호 요인 | `/predictions/{id}/risk-factors` | `RiskFactor` | 방향·중요도·수정 가능성 | 안전한 미제공 완료·설명 모델 후속 |
+| REQ-PRED-006 | 의료기관 안내 | `/follow-up-actions` | `FollowUpAction` | 고위험 시 챌린지보다 우선 | 경고·기진단 완료, 승인 고위험 모델 E2E 후속 |
+| REQ-CHAL-001 | 챌린지 후보 | `/challenge-recommendations` | 추천 규칙·문구 버전 | 치료·복약 표현 차단 | 완료 |
+| REQ-CHAL-002~004 | 선택·사이클·기록 | `/challenge-cycles`, `/user-challenges/*/logs` | 챌린지 엔터티 | 최대 3개·일별 중복·미래일 | 완료 |
+| REQ-CHAL-005 | 기진단 전환 | `/challenge-cycles/{id}/status` | `ChallengeCycle` | 신규 개인화 중단·과거 이력 보존 | 완료 |
+| REQ-DASH-001~003 | 대시보드 | `/dashboard/*` | 예측·검진·챌린지 집계 | 원시 확률·개선율 비노출 | 기본 요약 완료·추이 화면 후속 |
 | NFR-SAFE-001~003 | 소개·결과·고위험 안내 | 공통 문구·오류 | 문구·근거 버전 | 진단·처방·약물 변경 표현 0건 | 완료 |
 | NFR-SEC-003 | 철회·탈퇴 | 동의 철회·회원 탈퇴 | 삭제 대기·감사로그 | 처리 차단·30일 정책 검증 | 구현중 |
 | NFR-ML-001~003 | 모델 평가·이력 | 모델 메타데이터 | 파이프라인·모델 카드 | 분할 후 전처리·연령 평가·버전 | 구현중 |

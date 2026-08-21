@@ -428,5 +428,15 @@
 - 다른 사용자의 ID를 사용한 접근, 동의 없는 건강정보 입력, 기진단자의 예측 실행을 통합 테스트한다.
 - 동일 모델 버전과 동일 입력은 반복 실행에서 같은 결과를 반환해야 한다.
 - 고위험·경고 증상 응답에는 생활습관 안내보다 의료기관 안내를 우선 포함한다.
+
+## 7. 2026-08-21 구현 상태
+
+- 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs` 세로 흐름을 구현했다.
+- 작업 상태는 `queued/running/succeeded/failed`, 생성 시각은 `created_at`으로 통일했다.
+- `klosa-diabetes-incident-v1` 입력 계약과 교체 가능한 `PredictionProvider`를 적용했다.
+- 기본 `development` provider는 시스템 연결만 검증하며 위험 범주·내부 점수·확률을 생성하거나 공개하지 않는다.
+- 승인 전 위험요인 API는 `not_available`과 빈 목록을 반환한다.
+- 챌린지·4주 사이클·일일 기록·기본 대시보드와 의료기관 후속조치 API를 연결했다.
+- 구현·테스트 상세는 `SPRINT2_IMPLEMENTATION_REPORT_20260821.md`를 따른다.
 - 예측 실패 시 임의 결과를 생성하거나 실패한 예측 레코드를 저장하지 않는다.
 - OpenAPI 스키마, 요구사항 ID, Figma 화면, ERD 엔터티 간 추적표를 Sprint 종료 전 다시 점검한다.
