@@ -81,18 +81,25 @@ function showStep(step) {
 function syncLifestyleAvatar() {
   const isMale = $("#gender").value === "MALE";
   const avatar = $("#lifestyle-avatar");
+  const birthDate = new Date(`${$("#birth-date").value}T00:00:00`);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
+  if (!Number.isFinite(age)) age = 20;
+  const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
+  const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
   const height = Number($("#height").value || 0);
   const weight = Number($("#weight").value || 0);
   const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
   const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
   const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
   const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
-  avatar.src = isMale ? "/static/assets/lifestyle-avatar-male-v1.png" : "/static/assets/lifestyle-avatar-female-v1.png";
-  avatar.alt = `${isMale ? "남성형" : "여성형"} 3D 생활습관 안내 캐릭터 전신`;
+  avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
+  avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
   avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
   avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
   $("#avatar-profile-summary").textContent = height && bmi
-    ? `${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
+    ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
     : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
 }
 
@@ -426,6 +433,7 @@ $("#connection-list").addEventListener("click", async (event) => {
   } catch (error) { showMessage(error.message); }
 });
 $("#gender").addEventListener("change", syncLifestyleAvatar);
+$("#birth-date").addEventListener("change", syncLifestyleAvatar);
 [$("#height"), $("#weight")].forEach((input) => input.addEventListener("input", syncLifestyleAvatar));
 $("#shared-challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();

@@ -96,8 +96,10 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "건강도구로 돌아가기" in html
     assert "진단 부위나 모델 영향도를 나타내는 그림이 아닙니다." in html
     assert "3D 생활습관 안내 캐릭터" in html
-    assert "lifestyle-avatar-female-v1.png" in html
-    assert "lifestyle-avatar-male-v1.png" in script
+    assert "lifestyle-avatar-female-60.webp" in html
+    assert '"male" : "female"' in script
+    assert "ageBand" in script
+    assert "Math.floor(age / 10) * 10" in script
     assert "syncLifestyleAvatar" in script
     assert "avatar-width-scale" in script
     assert "avatar-height-scale" in script
