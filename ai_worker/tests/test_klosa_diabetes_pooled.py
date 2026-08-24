@@ -5,8 +5,8 @@ from ai_worker.ml.build_klosa_diabetes_cohort import TARGET
 from ai_worker.ml.train_klosa_diabetes_pooled import (
     describe_age_groups,
     logistic_experiment_identity,
-    summarize_calibration,
     split_grouped_cohort,
+    summarize_calibration,
 )
 from ai_worker.ml.train_klosa_diabetes_sample import evaluate, make_logistic_pipeline
 

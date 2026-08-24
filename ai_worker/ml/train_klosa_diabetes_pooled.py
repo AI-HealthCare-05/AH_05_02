@@ -20,12 +20,6 @@ from ai_worker.ml.build_klosa_diabetes_cohort import (
     WEB_MODEL_FEATURES,
     build_cohort,
 )
-from ai_worker.ml.train_klosa_diabetes_sample import (
-    assert_no_leakage,
-    choose_threshold,
-    evaluate,
-    make_logistic_pipeline,
-)
 from ai_worker.ml.infer_klosa_diabetes import (
     CALIBRATION_VERSION,
     FEATURE_SET_VERSION,
@@ -36,7 +30,12 @@ from ai_worker.ml.infer_klosa_diabetes import (
     SUPPORTED_AGE_MINIMUM,
     TARGET_DEFINITION_VERSION,
 )
-
+from ai_worker.ml.train_klosa_diabetes_sample import (
+    assert_no_leakage,
+    choose_threshold,
+    evaluate,
+    make_logistic_pipeline,
+)
 
 ID_COLUMN = "pid"
 AGE_GROUPS = {

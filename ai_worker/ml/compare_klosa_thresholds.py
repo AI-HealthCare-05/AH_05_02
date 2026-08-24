@@ -13,8 +13,8 @@ _matplotlib_config_dir = Path(tempfile.gettempdir()) / "chronic-disease-matplotl
 _matplotlib_config_dir.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(_matplotlib_config_dir))
 
-import joblib
-import matplotlib
+import joblib  # noqa: E402
+import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 
@@ -30,7 +30,6 @@ from ai_worker.ml.build_klosa_diabetes_cohort import (  # noqa: E402
 )
 from ai_worker.ml.train_klosa_diabetes_pooled import split_grouped_cohort  # noqa: E402
 from ai_worker.ml.train_klosa_diabetes_sample import evaluate  # noqa: E402
-
 
 MODEL_SPECS = [
     {

@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,6 @@ import joblib
 import pandas as pd
 
 from ai_worker.ml.build_klosa_diabetes_cohort import WEB_MODEL_FEATURES
-
 
 MODEL_VERSION = "klosa-diabetes-incidence-pooled-logistic-v1"
 TARGET_DEFINITION_VERSION = "klosa-diabetes-incidence-next-wave-v1"
@@ -143,7 +142,7 @@ def predict_single_user(
         raise ValueError("model feature contract mismatch")
     model_frame = build_model_frame(user_input, as_of_date=as_of_date)
     probability = float(bundle["pipeline"].predict_proba(model_frame)[0, 1])
-    completed_at = predicted_at or datetime.now(timezone.utc)
+    completed_at = predicted_at or datetime.now(UTC)
     return {
         "disease_type": "diabetes",
         "task_type": "binary_incidence",
