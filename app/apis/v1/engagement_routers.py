@@ -8,6 +8,7 @@ from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
 from app.dtos.engagement import (
     ChallengeBarrierCreateRequest,
+    ConnectionSharingRequest,
     ContentCompleteRequest,
     EncouragementCreateRequest,
     InvitationAcceptRequest,
@@ -72,6 +73,27 @@ async def accept_invitation(
 @engagement_router.get("/connections")
 async def list_connections(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     return envelope(await EngagementService().connections(user))
+
+
+@engagement_router.patch("/connections/{connection_id}/sharing-scope")
+async def update_connection_sharing(
+    connection_id: int,
+    request: ConnectionSharingRequest,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await EngagementService().update_connection_sharing(user, connection_id, request))
+
+
+@engagement_router.delete("/connections/{connection_id}")
+async def disconnect_connection(
+    connection_id: int, user: Annotated[User, Depends(get_request_user)]
+) -> dict[str, object]:
+    return envelope(await EngagementService().close_connection(user, connection_id))
+
+
+@engagement_router.post("/connections/{connection_id}/block")
+async def block_connection(connection_id: int, user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    return envelope(await EngagementService().close_connection(user, connection_id, blocked=True))
 
 
 @engagement_router.post("/shared-challenge-groups", status_code=status.HTTP_201_CREATED)

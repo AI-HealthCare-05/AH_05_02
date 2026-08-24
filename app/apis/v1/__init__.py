@@ -8,6 +8,7 @@ from app.apis.v1.feedback_routers import feedback_router
 from app.apis.v1.health_routers import health_router
 from app.apis.v1.prediction_routers import prediction_router
 from app.apis.v1.user_routers import user_router
+from app.apis.v1.wellness_routers import wellness_router
 
 v1_routers = APIRouter(prefix="/api/v1")
 v1_routers.include_router(auth_router)
@@ -18,3 +19,4 @@ v1_routers.include_router(challenge_router)
 v1_routers.include_router(dashboard_router)
 v1_routers.include_router(feedback_router)
 v1_routers.include_router(engagement_router)
+v1_routers.include_router(wellness_router)

@@ -56,3 +56,7 @@ class SharedChallengeCreateRequest(BaseModel):
 class EncouragementCreateRequest(BaseModel):
     recipient_user_id: int = Field(gt=0)
     template_code: Literal["cheer", "great_job", "keep_going", "together"]
+
+
+class ConnectionSharingRequest(BaseModel):
+    sharing_scope: list[Literal["challenge_status"]] = Field(default_factory=lambda: ["challenge_status"], max_length=1)

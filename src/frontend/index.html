@@ -150,6 +150,35 @@
           </form>
           <div id="connection-list" class="challenge-grid"></div>
         </section>
+        <section class="dashboard-section" aria-labelledby="wearable-title">
+          <h3 id="wearable-title">워치·웨어러블 기록</h3>
+          <p class="lead">현재는 제조사 계정 대신 개발용 어댑터로 일일 요약을 확인합니다.</p>
+          <form id="wearable-form" class="two-column">
+            <div class="form-row"><label for="wearable-steps">오늘 걸음 수</label><input id="wearable-steps" type="number" min="0" max="200000" value="3500" required></div>
+            <div class="form-row"><label for="wearable-active">활동 시간(분)</label><input id="wearable-active" type="number" min="0" max="1440" value="15"></div>
+            <button class="secondary full" type="submit">개발용 웨어러블 기록 가져오기</button>
+          </form>
+          <div id="wearable-result" class="notice" hidden></div>
+        </section>
+        <section class="dashboard-section" aria-labelledby="rag-title">
+          <h3 id="rag-title">근거를 보여주는 건강교육 Q&amp;A</h3>
+          <form id="rag-form"><div class="form-row"><label for="rag-question">궁금한 생활습관</label><input id="rag-question" maxlength="500" placeholder="예: 걷기 운동은 어떻게 시작하나요?" required></div><button class="secondary" type="submit">근거 자료에서 찾기</button></form>
+          <div id="rag-result" class="notice" hidden></div>
+        </section>
+        <section class="dashboard-section" aria-labelledby="assist-title">
+          <h3 id="assist-title">기록 입력 도우미</h3>
+          <p class="lead">CV·OCR 연동 전 안전한 개발용 어댑터입니다. 결과는 확인 전 자동 저장되지 않습니다.</p>
+          <div class="two-column">
+            <form id="food-form"><div class="form-row"><label for="food-image-name">식단 사진 파일명</label><input id="food-image-name" value="lunch_salad.jpg" required></div><button class="secondary" type="submit">식단 분류 초안</button></form>
+            <form id="ocr-form"><div class="form-row"><label for="ocr-systolic">검진표 수축기 혈압 초안</label><input id="ocr-systolic" type="number" min="60" max="260" value="128" required></div><button class="secondary" type="submit">OCR 입력 초안</button></form>
+          </div>
+          <div id="assist-result" class="notice" hidden></div>
+        </section>
+        <section class="dashboard-section" aria-labelledby="notification-title">
+          <h3 id="notification-title">웹 알림과 리포트 내보내기</h3>
+          <div id="notification-list" class="challenge-grid"></div>
+          <div class="actions"><button class="secondary" id="notification-toggle" type="button">웹 알림 끄기</button><button class="secondary" id="download-report" type="button">주간 리포트 PDF 받기</button></div>
+        </section>
         <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
         <button class="secondary" id="restart" type="button">처음부터 다시 보기</button>
       </section>

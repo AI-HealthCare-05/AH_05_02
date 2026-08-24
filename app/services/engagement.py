@@ -10,6 +10,7 @@ from tortoise.transactions import in_transaction
 
 from app.dtos.engagement import (
     ChallengeBarrierCreateRequest,
+    ConnectionSharingRequest,
     ContentCompleteRequest,
     EncouragementCreateRequest,
     InvitationCreateRequest,
@@ -137,19 +138,32 @@ class EngagementService:
         )
         total_completed = sum(row["completed"] for row in rows)
         total_planned = sum(row["planned"] for row in rows)
+        rate = round(total_completed / total_planned * 100, 1) if total_planned else 0.0
+        if total_planned == 0:
+            record_summary = "이번 주에는 아직 평가할 수 있는 챌린지 기록이 없습니다."
+        elif rate >= 80:
+            record_summary = f"최근 7일 동안 계획한 활동의 {rate}%를 기록했습니다. 현재 실천 목표를 이어가 보세요."
+        elif rate >= 40:
+            record_summary = f"최근 7일 달성률은 {rate}%입니다. 어려웠던 이유를 확인하고 목표를 작게 조정해 보세요."
+        else:
+            record_summary = (
+                f"최근 7일 달성률은 {rate}%입니다. 중단해도 괜찮으니 실천 가능한 한 가지부터 다시 시작해 보세요."
+            )
         return {
             "status": "ready",
             "period": {"start_date": start, "end_date": today},
             "completion": {
                 "completed": total_completed,
                 "planned": total_planned,
-                "rate": round(total_completed / total_planned * 100, 1) if total_planned else 0.0,
+                "rate": rate,
             },
             "best_habit": max(rows, key=lambda row: row["completion_rate"], default=None),
             "needs_support": min(rows, key=lambda row: row["completion_rate"], default=None),
             "challenge_details": rows,
             "barrier_summary": dict(Counter(item.reason_code for item in barriers)),
             "next_adjustment": {"code": suggested_code, "message": suggestion},
+            "record_summary": record_summary,
+            "summary_method": "deterministic_template_v1",
             "disclaimer": "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.",
         }
 
@@ -274,6 +288,30 @@ class EngagementService:
                 for item in items
             ]
         }
+
+    async def update_connection_sharing(
+        self, user: User, connection_id: int, request: ConnectionSharingRequest
+    ) -> dict[str, object]:
+        item = await self.repo.connection_for_user(connection_id, user.id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="활성 연결을 찾을 수 없습니다.")
+        item.sharing_scope = request.sharing_scope
+        await item.save(update_fields=["sharing_scope"])
+        return {
+            "connection_id": item.id,
+            "sharing_scope": item.sharing_scope,
+            "health_data_shared": False,
+            "notice": "건강정보와 예측 결과는 공유할 수 없습니다.",
+        }
+
+    async def close_connection(self, user: User, connection_id: int, blocked: bool = False) -> dict[str, object]:
+        item = await self.repo.connection_for_user(connection_id, user.id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="활성 연결을 찾을 수 없습니다.")
+        item.status = "blocked" if blocked else "disconnected"
+        item.disconnected_at = datetime.now(UTC)
+        await item.save(update_fields=["status", "disconnected_at"])
+        return {"connection_id": item.id, "status": item.status, "past_records_retained": True}
 
     async def create_shared_group(self, user: User, request: SharedChallengeCreateRequest) -> SharedChallengeGroup:
         challenges = await self.health_repo.challenge_map([request.challenge_id])

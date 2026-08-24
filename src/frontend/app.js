@@ -1,7 +1,8 @@
-const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null };
+const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 const eligibilityGuidance = {
   URGENT_MEDICAL_ATTENTION: {
@@ -83,7 +84,10 @@ async function api(path, options = {}) {
   try { payload = await response.json(); } catch { payload = {}; }
   if (!response.ok) {
     const detail = payload.detail;
-    const message = typeof detail === "string" ? detail : detail?.message || payload.error?.message;
+    const validationMessage = Array.isArray(detail)
+      ? detail.map((item) => `${item.loc?.slice(1).join(".") || "입력값"}: ${item.msg}`).join(" / ")
+      : null;
+    const message = typeof detail === "string" ? detail : validationMessage || detail?.message || payload.error?.message;
     throw new Error(message || "요청을 처리하지 못했습니다.");
   }
   return payload.data ?? payload;
@@ -172,7 +176,7 @@ async function loadWeeklyReport() {
   }
   $("#weekly-report").innerHTML = `<article><small>최근 7일 달성률</small><strong>${report.completion.rate}%</strong><p>${report.completion.completed}/${report.completion.planned}회</p></article>
     <article><small>가장 잘 실천한 습관</small><strong>${report.best_habit?.title || "기록 없음"}</strong><p>${report.best_habit?.completion_rate || 0}%</p></article>
-    <article><small>다음 목표 조정</small><strong>${report.next_adjustment.message}</strong><p>${report.disclaimer}</p></article>`;
+    <article><small>기록 요약</small><strong>${report.next_adjustment.message}</strong><p>${report.record_summary}</p></article>`;
 }
 async function loadEducation() {
   const contents = await api("/education-contents");
@@ -183,7 +187,13 @@ async function loadEducation() {
 }
 async function loadConnections() {
   const result = await api("/connections");
-  $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
+  $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small><button class="text-button disconnect-connection" data-id="${item.connection_id}" type="button">연결 해제</button> <button class="text-button block-connection" data-id="${item.connection_id}" type="button">차단</button></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
+}
+async function loadNotifications() {
+  const [preferences, notifications] = await Promise.all([api("/notification-preferences"), api("/notifications")]);
+  state.notificationsEnabled = preferences.in_app_enabled;
+  $("#notification-toggle").textContent = state.notificationsEnabled ? "웹 알림 끄기" : "웹 알림 켜기";
+  $("#notification-list").innerHTML = notifications.items.length ? notifications.items.map((item) => `<article class="challenge-card"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.message)}</small></span></article>`).join("") : `<p class="lead">표시할 웹 알림이 없습니다.</p>`;
 }
 async function refreshDashboard() {
   const summary = await api("/dashboard/summary");
@@ -192,7 +202,7 @@ async function refreshDashboard() {
   $("#dashboard-notice").textContent = summary.disclaimer;
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
-  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections()]);
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadNotifications()]);
 }
 
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
@@ -331,6 +341,65 @@ $("#accept-invite-form").addEventListener("submit", async (event) => {
     await api("/invitations/accept", { method: "POST", body: JSON.stringify({ token: $("#invite-token").value }) });
     showMessage("가족·친구 연결을 완료했습니다.", "success");
     await loadConnections();
+  } catch (error) { showMessage(error.message); }
+});
+$("#connection-list").addEventListener("click", async (event) => {
+  const disconnect = event.target.closest(".disconnect-connection");
+  const block = event.target.closest(".block-connection");
+  if (!disconnect && !block) return;
+  try {
+    const target = disconnect || block;
+    await api(`/connections/${target.dataset.id}${block ? "/block" : ""}`, { method: block ? "POST" : "DELETE" });
+    await loadConnections();
+    showMessage(block ? "연결을 차단했습니다." : "연결을 해제했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#wearable-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    if (!state.wearableConnectionId) {
+      const connection = await api("/wearables/connections", { method: "POST", body: JSON.stringify({ provider: "development_mock", scopes: ["activity"] }) });
+      state.wearableConnectionId = connection.connection_id;
+    }
+    const result = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: state.wearableConnectionId, items: [{ summary_date: new Date().toISOString().slice(0, 10), steps: Number($("#wearable-steps").value), active_minutes: Number($("#wearable-active").value) }] }) });
+    const box = $("#wearable-result"); box.hidden = false; box.textContent = `${result.imported_count}일 기록을 가져왔습니다. 자동 챌린지 기록 ${result.auto_logged_challenges.length}건`;
+    await refreshDashboard();
+  } catch (error) { showMessage(error.message); }
+});
+$("#rag-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const result = await api("/health-education/questions", { method: "POST", body: JSON.stringify({ question: $("#rag-question").value }) });
+    const citations = result.citations.map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a></li>`).join("");
+    const box = $("#rag-result"); box.hidden = false; box.innerHTML = `<div><strong>${escapeHtml(result.answer)}</strong>${citations ? `<ul>${citations}</ul>` : ""}<small>${escapeHtml(result.medical_notice)}</small></div>`;
+  } catch (error) { showMessage(error.message); }
+});
+$("#food-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const result = await api("/food-analyses", { method: "POST", body: JSON.stringify({ image_name: $("#food-image-name").value }) });
+    const box = $("#assist-result"); box.hidden = false; box.textContent = `식단 분류 초안: ${result.predicted_category}. ${result.notice}`;
+  } catch (error) { showMessage(error.message); }
+});
+$("#ocr-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const result = await api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: "checkup-image.jpg", extracted_fields: { systolic_bp: Number($("#ocr-systolic").value) } }) });
+    const box = $("#assist-result"); box.hidden = false; box.textContent = `OCR 초안: 수축기 혈압 ${result.extracted_fields.systolic_bp}. ${result.notice}`;
+  } catch (error) { showMessage(error.message); }
+});
+$("#notification-toggle").addEventListener("click", async () => {
+  try {
+    await api("/notification-preferences", { method: "PUT", body: JSON.stringify({ in_app_enabled: !state.notificationsEnabled, challenge_reminder_enabled: true, weekly_report_enabled: true, quiet_start_hour: 21, quiet_end_hour: 8 }) });
+    await loadNotifications();
+  } catch (error) { showMessage(error.message); }
+});
+$("#download-report").addEventListener("click", async () => {
+  try {
+    const response = await fetch("/api/v1/weekly-reports/current/pdf", { headers: { Authorization: `Bearer ${state.token}` } });
+    if (!response.ok) throw new Error("PDF를 만들지 못했습니다.");
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a"); link.href = url; link.download = "간당간당_주간리포트.pdf"; link.click(); URL.revokeObjectURL(url);
   } catch (error) { showMessage(error.message); }
 });
 $("#restart").addEventListener("click", () => window.location.reload());

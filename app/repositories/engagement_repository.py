@@ -84,6 +84,11 @@ class EngagementRepository:
             "-created_at"
         )
 
+    async def connection_for_user(self, connection_id: int, user_id: int) -> Connection | None:
+        return await Connection.filter(
+            Q(user_a_id=user_id) | Q(user_b_id=user_id), id=connection_id, status="active"
+        ).first()
+
     async def create_shared_group(self, **values: Any) -> SharedChallengeGroup:
         return await SharedChallengeGroup.create(**values)
 

@@ -454,3 +454,18 @@
 - 구현·테스트 상세는 `SPRINT2_IMPLEMENTATION_REPORT_20260821.md`를 따른다.
 - 예측 실패 시 임의 결과를 생성하거나 실패한 예측 레코드를 저장하지 않는다.
 - OpenAPI 스키마, 요구사항 ID, Figma 화면, ERD 엔터티 간 추적표를 Sprint 종료 전 다시 점검한다.
+
+## 8. 2026-08-24 서비스 확장 API
+
+| 영역 | Method | Endpoint | 핵심 안전 기준 |
+|---|---|---|---|
+| 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 실제 제조사 OAuth 전에는 `development_mock` 또는 수동 파일 가져오기로 표시 |
+| 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
+| 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
+| 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
+| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 허용 필드만 반환, 건강검진 기록 자동 저장 금지 |
+| 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
+| 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
+| 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |
+
+주간 리포트의 `record_summary`는 생성형 모델이 사실을 보충하는 방식이 아니라 저장된 수행률과 장벽 기록만 사용하는 `deterministic_template_v1`이다.
