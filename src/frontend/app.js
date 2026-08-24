@@ -74,8 +74,26 @@ function showStep(step) {
   });
   $("#step-current").textContent = state.step;
   $("#progress-bar").style.width = `${(state.step / 8) * 100}%`;
-  if (state.step === 6) updateLifestyleMap(state.mapTopic || "rhythm");
+  if (state.step === 6) { syncLifestyleAvatar(); updateLifestyleMap(state.mapTopic || "rhythm"); }
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function syncLifestyleAvatar() {
+  const isMale = $("#gender").value === "MALE";
+  const avatar = $("#lifestyle-avatar");
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
+  const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
+  const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
+  const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
+  avatar.src = isMale ? "/static/assets/lifestyle-avatar-male-v1.png" : "/static/assets/lifestyle-avatar-female-v1.png";
+  avatar.alt = `${isMale ? "남성형" : "여성형"} 3D 생활습관 안내 캐릭터 전신`;
+  avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
+  avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
+  $("#avatar-profile-summary").textContent = height && bmi
+    ? `${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
+    : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
 }
 
 function lifestyleMapContent(topic) {
@@ -407,6 +425,8 @@ $("#connection-list").addEventListener("click", async (event) => {
     showMessage(block ? "연결을 차단했습니다." : "연결을 해제했습니다.", "success");
   } catch (error) { showMessage(error.message); }
 });
+$("#gender").addEventListener("change", syncLifestyleAvatar);
+[$("#height"), $("#weight")].forEach((input) => input.addEventListener("input", syncLifestyleAvatar));
 $("#shared-challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.cycle?.user_challenges?.length) return showMessage("먼저 개인 챌린지를 시작해 주세요.");

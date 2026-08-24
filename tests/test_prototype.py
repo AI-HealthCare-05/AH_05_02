@@ -95,6 +95,13 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "생활습관 지도 보기" in html
     assert "건강도구로 돌아가기" in html
     assert "진단 부위나 모델 영향도를 나타내는 그림이 아닙니다." in html
+    assert "3D 생활습관 안내 캐릭터" in html
+    assert "lifestyle-avatar-female-v1.png" in html
+    assert "lifestyle-avatar-male-v1.png" in script
+    assert "syncLifestyleAvatar" in script
+    assert "avatar-width-scale" in script
+    assert "avatar-height-scale" in script
+    assert "입력값을 반영한 참고 표현" in script
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
 

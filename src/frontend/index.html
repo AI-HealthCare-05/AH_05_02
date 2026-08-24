@@ -6,8 +6,8 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260824-mvp6">
-  <script src="/static/app.js?v=20260824-mvp6" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260824-mvp7">
+  <script src="/static/app.js?v=20260824-mvp7" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -112,25 +112,12 @@
             <button class="secondary" id="map-back-to-tools" type="button">건강도구로 돌아가기</button>
           </div>
           <div class="map-visual" aria-label="생활습관 항목을 선택할 수 있는 사람 일러스트">
-            <svg viewBox="0 0 320 500" role="img" aria-labelledby="body-illustration-title body-illustration-desc">
-              <title id="body-illustration-title">평면 사람 일러스트</title>
-              <desc id="body-illustration-desc">생활 리듬, 활동, 체형 기록, 걷기 습관을 선택하는 그림입니다.</desc>
-              <circle class="illustration-accent" cx="160" cy="78" r="62"/>
-              <path class="illustration-shadow" d="M88 194c0-54 32-86 72-86s72 32 72 86v105l42 137H46l42-137z"/>
-              <circle class="illustration-skin" cx="160" cy="87" r="43"/>
-              <path class="illustration-hair" d="M119 82c2-35 20-53 43-53 26 0 43 20 43 55-12-10-22-24-26-39-14 18-34 28-60 31z"/>
-              <path class="illustration-shirt" d="M105 174c8-38 31-55 55-55s47 17 55 55l20 139H85z"/>
-              <path class="illustration-skin" d="M106 172 79 289l-25 80 22 7 36-78 24-112zm108 0 27 117 25 80-22 7-36-78-24-112z"/>
-              <path class="illustration-pants" d="M88 301h144l-20 77-19 90h-34l1-137-33 137H93l13-92z"/>
-              <path class="illustration-shoe" d="M91 460h40v19H73c0-10 7-16 18-19zm98 0h34c12 3 20 10 20 19h-58z"/>
-              <circle class="illustration-cheek" cx="143" cy="92" r="3"/><circle class="illustration-cheek" cx="177" cy="92" r="3"/>
-              <path class="illustration-line" d="M151 107q9 7 18 0M122 252q38 18 76 0"/>
-              <path class="illustration-leaf" d="M246 97c29-6 43 13 31 37-27 2-39-13-31-37zm2 1c8 13 17 23 29 33"/>
-            </svg>
+            <img id="lifestyle-avatar" class="lifestyle-avatar" src="/static/assets/lifestyle-avatar-female-v1.png" alt="여성형 3D 생활습관 안내 캐릭터 전신">
             <button class="body-map-point active point-head" type="button" data-map-topic="rhythm" aria-label="1번 생활 리듬 보기">1</button>
             <button class="body-map-point point-torso" type="button" data-map-topic="activity" aria-label="2번 활동 습관 보기">2</button>
             <button class="body-map-point point-waist" type="button" data-map-topic="body" aria-label="3번 체형 기록 보기">3</button>
             <button class="body-map-point point-legs" type="button" data-map-topic="walking" aria-label="4번 걷기 습관 보기">4</button>
+            <p id="avatar-profile-summary" class="avatar-profile-summary">입력한 키·몸무게를 바탕으로 한 참고 표현</p>
           </div>
         </section>
         <form id="feedback-form" class="two-column">
