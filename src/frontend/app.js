@@ -3,6 +3,58 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
+const eligibilityGuidance = {
+  URGENT_MEDICAL_ATTENTION: {
+    code: "E03", title: "즉시 의료 확인이 필요합니다",
+    message: "급한 경고 증상이 있으면 온라인 위험 분석을 진행하지 않습니다.",
+    action: "지체하지 말고 119 또는 가까운 응급의료기관에 연락하세요.",
+  },
+  DIAGNOSED_DIABETES: {
+    code: "D01", title: "당뇨병 기진단자는 예측 대상이 아닙니다",
+    message: "이미 진단받은 분에게 신규 발병 위험 예측을 제공하지 않습니다.",
+    action: "담당 의료진의 치료 지침을 우선하고 일반 건강정보를 확인하세요.",
+  },
+  UNDER_MINIMUM_SERVICE_AGE: {
+    code: "E02", title: "만 19세 미만은 서비스를 이용할 수 없습니다",
+    message: "현재 서비스의 이용 가능 연령은 만 19세 이상입니다.",
+    action: "건강 문제가 있다면 보호자와 함께 의료기관에 상담하세요.",
+  },
+  MODEL_AGE_OUT_OF_RANGE: {
+    code: "E05", title: "현재 모델의 적용 연령 범위가 아닙니다",
+    message: "서비스는 이용할 수 있지만 현재 예측 모델은 만 45세 이상에게만 적용합니다.",
+    action: "예측 대신 일반 건강정보를 확인하고 필요한 경우 건강검진을 받으세요.",
+  },
+  MODEL_POPULATION_OUT_OF_SCOPE: {
+    code: "E05", title: "현재 모델의 적용 대상이 아닙니다",
+    message: "현재 모델이 검증된 대상 범위 밖이므로 개인화 예측을 제공하지 않습니다.",
+    action: "일반 건강정보를 확인하고 필요한 경우 의료진과 상담하세요.",
+  },
+  CONSENT_REQUIRED: {
+    code: "E01", title: "건강정보 처리 동의가 필요합니다",
+    message: "개인화 예측에는 건강정보 수집·이용 동의가 필요합니다.",
+    action: "동의 내용을 다시 확인한 뒤 동의 여부를 선택하세요.",
+  },
+};
+
+function showEligibilityGuidance(reasonCodes) {
+  const priority = [
+    "URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES", "UNDER_MINIMUM_SERVICE_AGE",
+    "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
+  ];
+  const reason = priority.find((code) => reasonCodes.includes(code));
+  const guidance = eligibilityGuidance[reason] || {
+    code: "E00", title: "개인화 예측을 진행할 수 없습니다",
+    message: "현재 입력 조건으로는 개인화 예측을 제공하지 않습니다.",
+    action: "입력정보를 확인하거나 일반 건강정보를 이용하세요.",
+  };
+  $("#eligibility-guidance-code").textContent = guidance.code;
+  $("#eligibility-guidance-title").textContent = guidance.title;
+  $("#eligibility-guidance-message").textContent = guidance.message;
+  $("#eligibility-guidance-action").textContent = guidance.action;
+  $("#eligibility-guidance").hidden = false;
+  $("#eligibility-guidance").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function showMessage(message, kind = "error") {
   const box = $("#message");
   box.textContent = message;
@@ -43,8 +95,9 @@ async function pollPrediction(jobId) {
     $("#job-status").textContent = `분석 상태: ${job.status}`;
     if (job.status === "succeeded") return job.prediction_id;
     if (job.status === "failed") {
-      const suffix = job.error_code === "TIMEOUT" ? " 잠시 후 다시 시도해 주세요." : " 관리자에게 문의해 주세요.";
-      throw new Error(`분석에 실패했습니다 (${job.error_code || "INFERENCE_FAILED"}).${suffix}`);
+      const error = new Error(job.error_message || "분석 작업을 완료하지 못했습니다.");
+      error.code = job.error_code || "INFERENCE_FAILED";
+      throw error;
     }
     await sleep(1000);
   }
@@ -54,12 +107,14 @@ function renderPrediction(prediction, factors) {
   const isPublic = prediction.result_status === "approved" && prediction.risk_category;
   $("#result-stage").textContent = isPublic ? prediction.risk_category_label : "범주 검토 중";
   $("#result-explain").textContent = prediction.disclaimer;
-  $("#model-version").textContent = `${prediction.model_version} · ${prediction.feature_schema_version}`;
   $("#probability-policy").textContent = "검증 전 확률·개선율은 표시하지 않습니다.";
   $("#factor-list").innerHTML = factors.items.length
     ? factors.items.map((item) => `<li><strong>${item.factor_name}</strong><p>${item.description}</p></li>`).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${factors.message}</p></li>`;
-  $("#high-guidance").hidden = prediction.risk_category !== "high";
+  const isHighRisk = prediction.risk_category === "high";
+  $("#high-guidance").hidden = !isHighRisk;
+  $("#medical-guidance-detail").hidden = !isHighRisk;
+  $("#result-next").textContent = isHighRisk ? "검사·의료기관 안내 보기" : "결과 설명 보기";
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
   $("#result-next").disabled = false;
@@ -81,8 +136,13 @@ async function runPrediction() {
     state.prediction = prediction;
     renderPrediction(prediction, factors);
   } catch (error) {
-    $("#job-status").textContent = "분석 상태: 실패";
+    const isTimeout = error.code === "TIMEOUT";
+    $("#job-status").textContent = isTimeout ? "분석 상태: 시간 초과" : "분석 상태: 실패";
     $("#result-stage").textContent = "다시 시도 필요";
+    $("#analysis-failure-title").textContent = isTimeout ? "분석 시간이 초과되었습니다" : "분석을 완료하지 못했습니다";
+    $("#analysis-failure-message").textContent = isTimeout
+      ? "입력정보는 보존되어 있습니다. 잠시 후 같은 정보로 다시 시도해 주세요."
+      : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
     $("#analysis-failure").hidden = false;
     $("#retry-analysis").hidden = false;
     showMessage(error.message);
@@ -145,6 +205,7 @@ $("#font-toggle").addEventListener("click", (event) => {
 $("#signup-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    $("#eligibility-guidance").hidden = true;
     const email = $("#email").value;
     const password = $("#password").value;
     await api("/auth/signup", { method: "POST", body: JSON.stringify({
@@ -160,6 +221,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
 $("#eligibility-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
+    $("#eligibility-guidance").hidden = true;
     const result = await api("/eligibility-checks", { method: "POST", body: JSON.stringify({
       birth_date: $("#birth-date").value,
       has_diabetes_diagnosis: $("#diagnosed-diabetes").checked,
@@ -167,7 +229,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
       population_in_scope: true,
     }) });
     if (!result.model_eligible) {
-      showMessage(`개인화 예측을 진행할 수 없습니다: ${result.reason_codes.join(", ")}. 다음 안내: ${result.next_action}`);
+      showEligibilityGuidance(result.reason_codes);
       return;
     }
     showStep(4);

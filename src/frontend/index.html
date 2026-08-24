@@ -29,7 +29,7 @@
     <section class="content" aria-live="polite">
       <div id="message" class="message" role="alert" hidden></div>
       <section class="screen active" data-step="1" aria-labelledby="intro-title">
-        <p class="eyebrow">약 2년 뒤 신규 당뇨 진단 위험 선별</p>
+        <p class="eyebrow">당뇨병 미래 발병 위험 선별</p>
         <h1 id="intro-title">미래 위험을 살피고<br>건강 습관을 기록하세요</h1>
         <p class="lead">KLoSA 기반 모델 입력 계약으로 분석 작업을 연결하고, 4주 생활습관 실천을 기록하는 개발용 서비스입니다.</p>
         <div class="notice safety"><span aria-hidden="true">ⓘ</span><div><strong>의료 안내</strong><p>당뇨병을 진단하거나 치료·처방하지 않습니다. 약을 임의로 시작·중단하거나 용량을 바꾸지 마세요.</p></div></div>
@@ -54,12 +54,16 @@
       </section>
       <section class="screen" data-step="3" aria-labelledby="eligibility-title">
         <p class="eyebrow">적합성·안전 확인</p><h2 id="eligibility-title">분석 전에 안전 조건을 확인할게요</h2>
-        <p class="lead">당뇨병 기진단자와 급한 경고 증상이 있는 분은 분석보다 의료기관 안내가 우선입니다.</p>
+        <p class="lead">서비스는 만 19세 이상 이용할 수 있으며, 현재 예측 모델은 만 45세 이상 미진단자에게 적용합니다. 기진단자와 급한 경고 증상이 있는 분은 분석보다 의료기관 안내가 우선입니다.</p>
         <form id="eligibility-form">
           <label class="check-card"><input id="diagnosed-diabetes" type="checkbox"><span>당뇨병을 진단받은 적이 있습니다.</span></label>
           <label class="check-card"><input id="urgent-warning" type="checkbox"><span>의식 변화 등 즉시 확인이 필요한 증상이 있습니다.</span></label>
           <div class="actions"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">이용 가능 여부 확인</button></div>
         </form>
+        <div id="eligibility-guidance" class="notice safety" role="status" hidden>
+          <span id="eligibility-guidance-code" aria-hidden="true"></span>
+          <div><strong id="eligibility-guidance-title"></strong><p id="eligibility-guidance-message"></p><p><strong>다음 행동:</strong> <span id="eligibility-guidance-action"></span></p></div>
+        </div>
       </section>
       <section class="screen" data-step="4" aria-labelledby="health-title">
         <p class="eyebrow">KLoSA 입력 계약 v1</p><h2 id="health-title">건강·생활습관 정보를 입력해 주세요</h2>
@@ -81,16 +85,17 @@
       <section class="screen" data-step="5" aria-labelledby="result-title">
         <p class="eyebrow">비동기 예측 작업</p><h2 id="result-title">분석 결과를 확인하세요</h2>
         <p id="job-status" class="lead">분석 상태: 대기</p>
-        <div class="result-card"><div><p>미래 당뇨병 발병 위험 범주</p><strong id="result-stage">분석 중</strong><p id="result-explain"></p><small id="model-version"></small></div></div>
+        <div class="result-card"><div><p>미래 당뇨병 발병 위험 범주</p><strong id="result-stage">분석 중</strong><p id="result-explain"></p></div></div>
         <div id="analysis-failure" class="notice safety" role="alert" hidden>
-          <span>!</span><div><strong>분석을 완료하지 못했습니다</strong><p>입력정보는 보존되어 있습니다. 내용을 확인하거나 같은 정보로 다시 시도할 수 있습니다.</p></div>
+          <span>!</span><div><strong id="analysis-failure-title">분석을 완료하지 못했습니다</strong><p id="analysis-failure-message">입력정보는 보존되어 있습니다. 내용을 확인하거나 같은 정보로 다시 시도할 수 있습니다.</p><p>분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다.</p></div>
         </div>
         <p id="probability-policy" class="lead"></p>
         <div id="high-guidance" class="notice safety" hidden><span>!</span><div><strong>의료기관 확인이 우선입니다</strong><p>챌린지보다 검사·상담을 먼저 권합니다.</p></div></div>
-        <div class="actions"><button class="secondary back" type="button">입력내용 확인</button><button class="secondary" id="retry-analysis" type="button" hidden>분석 다시 시도</button><button class="primary next" id="result-next" type="button" disabled>결과 설명 보기</button></div>
+        <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled>결과 설명 보기</button></div>
       </section>
       <section class="screen" data-step="6" aria-labelledby="factors-title">
         <p class="eyebrow">결과 설명</p><h2 id="factors-title">검증된 설명만 제공합니다</h2>
+        <div id="medical-guidance-detail" class="notice safety" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 범주는 진단 결과가 아닙니다. 챌린지보다 검사를 받고 의료진과 상담하는 것을 우선 권합니다. 급한 증상이 있다면 즉시 의료기관에 연락하세요.</p></div></div>
         <p class="lead">위험요인 설명은 검증된 방법과 출처 메타데이터가 준비된 후 제공합니다. 휴리스틱을 SHAP 결과처럼 표시하지 않습니다.</p>
         <ul class="factor-list" id="factor-list"><li><strong>분석 완료 후 확인할 수 있습니다.</strong></li></ul>
         <form id="feedback-form" class="two-column">
