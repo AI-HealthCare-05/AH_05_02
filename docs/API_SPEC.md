@@ -16,7 +16,7 @@
 
 ### 1.1 API 작성 기준
 
-- 만 19세 이상 서비스 이용 가능 여부, 만 40세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
+- 만 19세 이상 서비스 이용 가능 여부, 만 45세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
 - Sprint 2 활성 예측은 당뇨병 미래 신규 발병 이진분류 하나로 제한한다.
 - KLoSA 단독 모델은 검증 근거가 없는 40~44세에 적용하지 않으며, 실제 예측 범위는 활성 모델 카드의 `min_age`·`max_age`·모집단 조건으로 통제한다.
 - 건강검진 1건에 여러 모델 버전의 예측 결과를 허용한다.
@@ -139,6 +139,20 @@
 | GET | `/prediction-jobs/{job_id}` | 작업 상태·완료된 `prediction_id` 조회 | `prediction_jobs`·Redis | REQ-PRED-001 |
 | GET | `/predictions/{prediction_id}` | 미래 발병 위험 범주·모델 버전 조회 | `predictions` | REQ-PRED-002~004 |
 | GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-005 |
+| POST | `/feedback` | 예측·추천·서비스 의견 저장 | `feedbacks` | REQ-FEED-001 |
+| GET | `/feedback` | 본인 의견 이력 조회 | `feedbacks` | REQ-FEED-001, NFR-FEED-001 |
+| POST | `/user-challenges/{user_challenge_id}/barriers` | 미실천 원인·목표 조정안 기록 | `challenge_barriers` | REQ-BEH-001 |
+| GET | `/weekly-reports/current` | 최근 7일 수행 요약과 다음 목표 | 집계 조회 | REQ-BEH-002 |
+| GET | `/education-contents` | 4주 교육 콘텐츠·진행 상태 | `education_contents`, `content_progress` | REQ-EDU-001 |
+| PUT | `/education-contents/{content_id}/progress` | 퀴즈 답변·완료 기록 | `content_progress` | REQ-EDU-002 |
+| POST | `/invitations` | 가족·친구 일회용 초대 생성 | `invitations` | REQ-SOC-001 |
+| GET | `/invitations` | 보낸·받은 초대 조회 | `invitations` | REQ-SOC-001 |
+| POST | `/invitations/accept` | 초대 수락·연결 생성 | `invitations`, `connections` | REQ-SOC-002 |
+| GET | `/connections` | 연결 관계·공유 범위 조회 | `connections` | REQ-SOC-003 |
+| POST | `/shared-challenge-groups` | 공동 챌린지 참여 초대 | `shared_challenge_groups`, `shared_challenge_members` | REQ-SOC-004 |
+| POST | `/shared-challenge-groups/{group_id}/accept` | 공동 챌린지 참여 수락 | `shared_challenge_members` | REQ-SOC-004 |
+| GET | `/shared-challenge-groups` | 공동 챌린지 진행 현황 | 공동 챌린지·개인 로그 집계 | REQ-SOC-005 |
+| POST | `/shared-challenge-groups/{group_id}/encouragements` | 검토된 응원 전송 | `encouragements` | REQ-SOC-006 |
 | GET | `/predictions/latest` | 최신 유효 예측 조회 | `predictions` | REQ-PRED-004 |
 | GET | `/predictions` | 질환·검진·기간별 예측 이력 조회 | `predictions` | REQ-DASH-003 |
 | GET | `/predictions/changes` | 내부 분석용 최초·최신 결과 비교 | `predictions` | REQ-DASH-003 |
@@ -217,7 +231,7 @@
   "data": {
     "eligibility_check_id": 31,
     "service_eligible": true,
-    "target_segment": "primary_40_plus",
+    "target_segment": "primary_45_plus",
     "model_eligible": true,
     "reason_codes": [],
     "next_action": "health_checkup_input",
@@ -428,5 +442,30 @@
 - 다른 사용자의 ID를 사용한 접근, 동의 없는 건강정보 입력, 기진단자의 예측 실행을 통합 테스트한다.
 - 동일 모델 버전과 동일 입력은 반복 실행에서 같은 결과를 반환해야 한다.
 - 고위험·경고 증상 응답에는 생활습관 안내보다 의료기관 안내를 우선 포함한다.
+
+## 7. 2026-08-21 구현 상태
+
+- 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs`를 포함한 핵심 사용자 흐름(End-to-End)을 구현했다.
+- 작업 상태는 `queued/running/succeeded/failed`, 생성 시각은 `created_at`으로 통일했다.
+- `klosa-diabetes-incident-v1` 입력 계약과 교체 가능한 `PredictionProvider`를 적용했다.
+- 기본 `development` provider는 시스템 연결만 검증하며 위험 범주·내부 점수·확률을 생성하거나 공개하지 않는다.
+- 승인 전 위험요인 API는 `not_available`과 빈 목록을 반환한다.
+- 챌린지·4주 사이클·일일 기록·기본 대시보드와 의료기관 후속조치 API를 연결했다.
+- 구현·테스트 상세는 `SPRINT2_IMPLEMENTATION_REPORT_20260821.md`를 따른다.
 - 예측 실패 시 임의 결과를 생성하거나 실패한 예측 레코드를 저장하지 않는다.
 - OpenAPI 스키마, 요구사항 ID, Figma 화면, ERD 엔터티 간 추적표를 Sprint 종료 전 다시 점검한다.
+
+## 8. 2026-08-24 서비스 확장 API
+
+| 영역 | Method | Endpoint | 핵심 안전 기준 |
+|---|---|---|---|
+| 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 실제 제조사 OAuth 전에는 `development_mock` 또는 수동 파일 가져오기로 표시 |
+| 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
+| 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
+| 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
+| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 허용 필드만 반환, 건강검진 기록 자동 저장 금지 |
+| 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
+| 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
+| 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |
+
+주간 리포트의 `record_summary`는 생성형 모델이 사실을 보충하는 방식이 아니라 저장된 수행률과 장벽 기록만 사용하는 `deterministic_template_v1`이다.

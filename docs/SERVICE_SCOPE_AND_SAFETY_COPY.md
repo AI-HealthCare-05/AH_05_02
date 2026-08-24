@@ -26,10 +26,10 @@
 | 판정 | 의미 | 구현 기준 |
 |---|---|---|
 | `service_eligible` | 계정·공개 건강교육 등 서비스 이용 가능 여부 | 만 19세 이상 및 필수 약관 동의 |
-| `target_segment` | 서비스가 우선 해결하려는 사용자 집단 | 만 40세 이상 당뇨병 미진단자 |
+| `target_segment` | 서비스가 우선 해결하려는 사용자 집단 | 만 45세 이상 당뇨병 미진단자 |
 | `model_eligible` | 현재 활성 모델로 개인화 예측을 실행해도 되는지 | 모델 카드의 연령·모집단·필수 입력·제외 조건 충족 |
 
-> KLoSA 최초 표본은 2006년 당시 만 45세 이상이다. 따라서 KLoSA만으로 학습·검증한 모델은 별도 근거 없이 40~44세에게 적용하지 않는다. `40세 이상`은 서비스의 핵심 타깃이며, 실제 예측 연령은 활성 모델 카드의 `min_age`·`max_age`로 통제한다.
+> KLoSA 최초 표본은 2006년 당시 만 45세 이상이다. 따라서 KLoSA만으로 학습·검증한 모델은 별도 근거 없이 40~44세에게 적용하지 않는다. 서비스의 핵심 타깃과 실제 예측 최소 연령을 만 45세로 맞추고, 활성 모델 카드의 `min_age`·`max_age`로 통제한다.
 
 ### 2-2. 대상·제외 매트릭스
 
@@ -104,7 +104,7 @@ API는 판정 결과와 함께 하나 이상의 `reason_codes`와 하나의 `nex
 ```json
 {
   "service_eligible": true,
-  "target_segment": "primary_40_plus",
+  "target_segment": "primary_45_plus",
   "model_eligible": false,
   "reason_codes": ["MODEL_AGE_OUT_OF_RANGE"],
   "next_action": "general_health_information",

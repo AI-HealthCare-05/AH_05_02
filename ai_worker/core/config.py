@@ -24,6 +24,16 @@ class Config(BaseSettings):
     REDIS_JOB_TTL_SECONDS: int = 86400
     REDIS_CLAIM_IDLE_MS: int = 60000
     AI_JOB_MAX_ATTEMPTS: int = 3
+    PREDICTION_TIMEOUT_SECONDS: int = 30
+
+    PREDICTION_PROVIDER: str = "development"
+    PREDICTION_MODEL_KEY: str = "diabetes_incidence"
+    PREDICTION_MODEL_VERSION: str = "dev-diabetes-incidence-v0"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa-diabetes-incident-v1"
+    PREDICTION_THRESHOLD_VERSION: str = "unapproved"
+    PREDICTION_MODEL_MIN_AGE: int = 45
+    PREDICTION_MODEL_MAX_AGE: int | None = None
+    PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
 
     MODEL_URI: str = ""
     MODEL_CACHE_DIR: str = "/app/storage/models"

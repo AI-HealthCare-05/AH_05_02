@@ -31,4 +31,4 @@ if ($LASTEXITCODE -ne 0) { throw "애플리케이션 컨테이너 교체에 실�
 
 & $docker compose ps
 Write-Host "Swagger: http://localhost/api/docs"
-Write-Host "Smoke test: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-ai-pipeline.ps1"
+Write-Host "Sprint 2 smoke test: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-sprint2-flow.ps1"

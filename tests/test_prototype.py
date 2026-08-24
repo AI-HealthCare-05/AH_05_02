@@ -1,136 +1,90 @@
-from datetime import date
+from pathlib import Path
 
-from fastapi.testclient import TestClient
+from app.main import app
+from app.prediction.contracts import ACTIVE_MODEL
 
-from src.backend.main import app
-
-client = TestClient(app)
-
-
-def signup_headers(email: str = "senior@example.com") -> dict[str, str]:
-    response = client.post(
-        "/api/v1/auth/signup",
-        json={"email": email, "password": "Prototype123!", "terms_agreed": True},
-    )
-    assert response.status_code == 201
-    token = response.json()["data"]["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    consent = client.post(
-        "/api/v1/consents",
-        headers=headers,
-        json={"consent_item": "health_data", "version": "1.0", "is_agreed": True},
-    )
-    assert consent.status_code == 201
-    return headers
+ROOT = Path(__file__).resolve().parents[1]
 
 
-def eligible_senior(headers: dict[str, str]) -> None:
-    response = client.post(
-        "/api/v1/eligibility-checks",
-        headers=headers,
-        json={
-            "birth_date": "1955-04-12",
-            "has_diabetes_diagnosis": False,
-            "has_hypertension_diagnosis": False,
-            "uses_glucose_lowering_drug": False,
-            "has_alarming_symptom": False,
-            "has_exercise_limitation": False,
-        },
-    )
-    assert response.status_code == 201
-    assert response.json()["data"]["target_segment"] == "primary_senior"
-    assert response.json()["data"]["is_eligible"] is True
+def test_legacy_entrypoint_uses_formal_application() -> None:
+    from src.backend.main import app as compatibility_app
 
-
-def test_complete_prototype_flow() -> None:
-    headers = signup_headers()
-    eligible_senior(headers)
-    checkup = client.post(
-        "/api/v1/health-checkups",
-        headers=headers,
-        json={
-            "checkup_type": "initial",
-            "checkup_date": date.today().isoformat(),
-            "gender": "female",
-            "height_cm": 160,
-            "weight_kg": 67.5,
-            "waist_cm": 91,
-            "systolic_bp": 138,
-            "diastolic_bp": 84,
-            "fasting_glucose": 112,
-            "smoking_status": "never",
-            "drinking_frequency": "monthly_or_less",
-            "physical_activity_level": "insufficient",
-            "has_family_history_diabetes": True,
-        },
-    )
-    assert checkup.status_code == 201
-    checkup_id = checkup.json()["data"]["checkup_id"]
-
-    job = client.post(
-        "/api/v1/prediction-jobs",
-        headers=headers,
-        json={"checkup_id": checkup_id, "disease_type": "diabetes"},
-    )
-    assert job.status_code == 202
-    prediction_id = job.json()["data"]["prediction_id"]
-    prediction = client.get(f"/api/v1/predictions/{prediction_id}", headers=headers)
-    result = prediction.json()["data"]
-    assert result["is_mock"] is True
-    assert result["model_version"].startswith("mock-")
-    assert abs(sum(result["probabilities"].values()) - 1) < 1e-9
-    assert "진단" in result["medical_notice"]
-
-    recommendations = client.get(
-        f"/api/v1/challenge-recommendations?prediction_id={prediction_id}",
-        headers=headers,
-    )
-    challenge_id = recommendations.json()["data"]["items"][0]["challenge_id"]
-    cycle = client.post(
-        "/api/v1/challenge-cycles",
-        headers=headers,
-        json={"prediction_id": prediction_id, "challenge_ids": [challenge_id]},
-    )
-    assert cycle.status_code == 201
-    user_challenge_id = cycle.json()["data"]["user_challenges"][0]["user_challenge_id"]
-    log = client.put(
-        f"/api/v1/user-challenges/{user_challenge_id}/logs/{date.today().isoformat()}",
-        headers=headers,
-        json={"is_completed": True},
-    )
-    assert log.status_code == 200
-    dashboard = client.get("/api/v1/dashboard/summary", headers=headers)
-    assert dashboard.json()["data"]["challenge_completion"]["completed_logs"] == 1
-
-
-def test_under_19_and_diagnosed_users_are_not_eligible() -> None:
-    minor_headers = signup_headers("minor@example.com")
-    minor = client.post(
-        "/api/v1/eligibility-checks",
-        headers=minor_headers,
-        json={"birth_date": "2010-01-01"},
-    )
-    assert minor.json()["data"]["is_eligible"] is False
-    assert "만 19세 미만" in minor.json()["data"]["exclusion_reasons"]
-
-    diagnosed_headers = signup_headers("diagnosed@example.com")
-    diagnosed = client.post(
-        "/api/v1/eligibility-checks",
-        headers=diagnosed_headers,
-        json={"birth_date": "1950-01-01", "has_diabetes_diagnosis": True},
-    )
-    assert diagnosed.json()["data"]["next_action"] == "medical_guidance"
+    assert compatibility_app is app
+    paths = app.openapi()["paths"]
+    assert "/api/v1/prediction-jobs" in paths
+    assert "/api/v1/ai-jobs" not in paths
 
 
 def test_home_has_accessibility_and_medical_notice() -> None:
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "본문으로 바로가기" in response.text
-    assert "진단·처방" in response.text
-    assert "MOCK AI" in response.text
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "본문으로 바로가기" in html
+    assert "진단·처방" in html
+    assert "DEVELOPMENT" in html
+    assert "확률 비공개" in html
+    assert "약을 끊으세요" not in html + script
+    assert "약을 시작하세요" not in html + script
 
 
-def test_hypertension_is_explicitly_planned_not_faked() -> None:
-    response = client.get("/api/v1/models/active")
-    models = response.json()["data"]["items"]
-    assert {item["disease_type"]: item["status"] for item in models}["hypertension"] == "planned"
+def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    for screen_code in ("E02", "E03", "D01", "E05"):
+        assert screen_code in script
+    for reason_code in (
+        "UNDER_MINIMUM_SERVICE_AGE",
+        "URGENT_MEDICAL_ATTENTION",
+        "DIAGNOSED_DIABETES",
+        "MODEL_AGE_OUT_OF_RANGE",
+    ):
+        assert reason_code in script
+    assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." in html
+    assert "입력정보 확인하기" in html
+    assert "다시 시도하기" in html
+
+
+def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "검사·의료기관 안내 보기" in script
+    assert "medical-guidance-detail" in html + script
+    assert 'id="model-version"' not in html
+    assert "prediction.model_version" not in script
+    assert "prediction.feature_schema_version" not in script
+    assert "약 2년 뒤" not in html
+
+
+def test_service_and_model_age_are_separately_explained() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+
+    assert "서비스는 만 19세 이상 이용" in html
+    assert "현재 예측 모델은 만 45세 이상" in html
+
+
+def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    for label in (
+        "기존 계정으로 로그인",
+        "공동 챌린지 초대 만들기",
+        "개발용 웨어러블 기록 가져오기",
+        "근거 자료에서 찾기",
+        "식단 분류 초안",
+        "OCR 입력 초안",
+        "주간 리포트 PDF 받기",
+    ):
+        assert label in html
+    assert "accept-shared" in script
+    assert "cheer-shared" in script
+    assert "[hidden]{display:none!important}" in (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+
+def test_only_reviewed_diabetes_contract_is_active() -> None:
+    assert ACTIVE_MODEL.model_key == "diabetes_incidence"
+    assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
+    assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
+    assert ACTIVE_MODEL.threshold_is_approved is False

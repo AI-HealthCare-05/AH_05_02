@@ -30,6 +30,8 @@ class Config(BaseSettings):
     DB_CONNECT_TIMEOUT: int = 5
     DB_CONNECTION_POOL_MAXSIZE: int = 10
     DB_GENERATE_SCHEMAS: bool = False
+    DATABASE_URL: str | None = None
+    DEMO_MODE: bool = False
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -37,6 +39,17 @@ class Config(BaseSettings):
     REDIS_STREAM: str = "ai:jobs"
     REDIS_CONSUMER_GROUP: str = "ai-workers"
     REDIS_JOB_TTL_SECONDS: int = 86400
+
+    PREDICTION_PROVIDER: str = "development"
+    PREDICTION_TIMEOUT_SECONDS: int = 30
+    PREDICTION_MODEL_KEY: str = "diabetes_incidence"
+    PREDICTION_MODEL_VERSION: str = "dev-diabetes-incidence-v0"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa-diabetes-incident-v1"
+    PREDICTION_THRESHOLD_VERSION: str = "unapproved"
+    PREDICTION_MODEL_MIN_AGE: int = 45
+    PREDICTION_MODEL_MAX_AGE: int | None = None
+    PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
+    SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     COOKIE_DOMAIN: str = "localhost"
 

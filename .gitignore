@@ -52,6 +52,7 @@ models/**/*.onnx
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite3-*
 *.log
 
 # Frontend and build outputs
