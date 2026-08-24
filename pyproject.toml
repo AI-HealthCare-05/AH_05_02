@@ -18,11 +18,17 @@ dependencies = [
 ai = [
     "asyncmy>=0.2.11",
     "boto3>=1.42.0",
+    "joblib>=1.4,<2",
+    "matplotlib>=3.9,<4",
+    "pandas>=2.2,<3",
+    "pyreadstat>=1.2,<2",
+    "pyyaml>=6,<7",
     "scikit-learn>=1.8.0",
     "torch",
     "torchvision",
     "torchaudio",
-    "sentence-transformers>=5.2.0"
+    "sentence-transformers>=5.2.0",
+    "xgboost>=3,<4",
 ]
 app = [
     "aerich>=0.9.3,<0.10",
