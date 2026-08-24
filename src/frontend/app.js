@@ -123,7 +123,11 @@ function updateLifestyleMap(topic) {
   $("#map-detail-title").textContent = content.title;
   $("#map-detail-value").textContent = content.value;
   $("#map-detail-action").textContent = content.action;
-  $$(".body-map-point").forEach((button) => button.classList.toggle("active", button.dataset.mapTopic === topic));
+  $$(".body-map-point").forEach((button) => {
+    const selected = button.dataset.mapTopic === topic;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 }
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -150,32 +154,42 @@ async function pollPrediction(jobId) {
     if (job.status === "failed") {
       const error = new Error(job.error_message || "분석 작업을 완료하지 못했습니다.");
       error.code = job.error_code || "INFERENCE_FAILED";
+      error.retryable = job.retryable;
+      error.retryAfterSeconds = job.retry_after_seconds;
       throw error;
     }
     await sleep(1000);
   }
-  throw new Error("상태 확인 시간이 초과되었습니다. 작업 이력에서 다시 확인해 주세요.");
+  const error = new Error("상태 확인 시간이 초과되었습니다. 작업 이력에서 다시 확인해 주세요.");
+  error.code = "TIMEOUT";
+  error.retryable = true;
+  error.retryAfterSeconds = 30;
+  throw error;
 }
 function renderPrediction(prediction, factors) {
-  const isPublic = prediction.result_status === "approved" && prediction.risk_category;
-  $("#result-stage").textContent = isPublic ? prediction.risk_category_label : "범주 검토 중";
+  const isApprovedRisk = prediction.result_status === "approved"
+    && prediction.promotion_status === "approved"
+    && Boolean(prediction.risk_category);
+  $("#result-stage").textContent = isApprovedRisk ? prediction.risk_category_label : "모델 검증 중";
   $("#result-explain").textContent = prediction.disclaimer;
   $("#probability-policy").textContent = "검증 전 확률·개선율은 표시하지 않습니다.";
-  $("#factor-list").innerHTML = factors.items.length
+  $("#factor-list").innerHTML = isApprovedRisk && factors.items.length
     ? factors.items.map((item) => `<li><strong>${item.factor_name}</strong><p>${item.description}</p></li>`).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${factors.message}</p></li>`;
-  const isHighRisk = prediction.risk_category === "high";
+  const isHighRisk = isApprovedRisk && prediction.risk_category === "high";
   $("#high-guidance").hidden = !isHighRisk;
   $("#medical-guidance-detail").hidden = !isHighRisk;
   $("#result-next").textContent = isHighRisk ? "검사·의료기관 안내 보기" : "결과 설명 보기";
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
-  $("#result-next").disabled = false;
+  $("#result-next").hidden = !isApprovedRisk;
+  $("#result-next").disabled = !isApprovedRisk;
 }
 async function runPrediction() {
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
   $("#result-next").disabled = true;
+  $("#result-next").hidden = true;
   $("#job-status").textContent = "분석 상태: queued";
   try {
     const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
@@ -194,10 +208,10 @@ async function runPrediction() {
     $("#result-stage").textContent = "다시 시도 필요";
     $("#analysis-failure-title").textContent = isTimeout ? "분석 시간이 초과되었습니다" : "분석을 완료하지 못했습니다";
     $("#analysis-failure-message").textContent = isTimeout
-      ? "입력정보는 보존되어 있습니다. 잠시 후 같은 정보로 다시 시도해 주세요."
+      ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
       : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
     $("#analysis-failure").hidden = false;
-    $("#retry-analysis").hidden = false;
+    $("#retry-analysis").hidden = !error.retryable;
     showMessage(error.message);
   }
 }
@@ -239,18 +253,22 @@ async function loadConnections() {
   $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small><button class="text-button disconnect-connection" data-id="${item.connection_id}" type="button">연결 해제</button> <button class="text-button block-connection" data-id="${item.connection_id}" type="button">차단</button></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
 }
 
-function showWorkspace(name) {
+function showWorkspace(name, { moveFocus = true } = {}) {
   $$(".workspace-tab").forEach((button) => {
     const selected = button.dataset.workspace === name;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-selected", String(selected));
+    button.setAttribute("tabindex", selected ? "0" : "-1");
   });
+  let selectedPanel = null;
   $$("[data-workspace-panel]").forEach((panel) => {
     const selected = panel.dataset.workspacePanel === name;
     panel.hidden = !selected;
     panel.classList.toggle("active", selected);
+    if (selected) selectedPanel = panel;
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
+  if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
 }
 async function loadSharedGroups() {
   const result = await api("/shared-challenge-groups");
@@ -282,6 +300,18 @@ async function refreshDashboard() {
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", () => showStep(state.step - 1)));
 $$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
+$$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("keydown", (event) => {
+  let nextIndex = null;
+  if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+  if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = tabs.length - 1;
+  if (nextIndex === null) return;
+  event.preventDefault();
+  const nextTab = tabs[nextIndex];
+  showWorkspace(nextTab.dataset.workspace, { moveFocus: false });
+  nextTab.focus();
+}));
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#open-lifestyle-map").addEventListener("click", () => showStep(6));
 $("#map-back-to-tools").addEventListener("click", () => { showStep(8); showWorkspace("tools"); });

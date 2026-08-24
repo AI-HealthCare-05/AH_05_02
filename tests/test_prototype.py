@@ -50,6 +50,10 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "검사·의료기관 안내 보기" in script
+    assert 'prediction.result_status === "approved"' in script
+    assert 'prediction.promotion_status === "approved"' in script
+    assert '$("#result-next").hidden = !isApprovedRisk' in script
+    assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
     assert 'id="model-version"' not in html
     assert "prediction.model_version" not in script
@@ -106,6 +110,12 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "입력값을 반영한 참고 표현" in script
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
+    assert 'role="tablist"' in html
+    assert html.count('role="tab"') == 5
+    assert html.count('role="tabpanel"') == 5
+    assert 'aria-pressed="true"' in html
+    assert 'button.setAttribute("aria-pressed", String(selected))' in script
+    assert 'selectedPanel.focus({ preventScroll: true })' in script
 
 
 def test_only_reviewed_diabetes_contract_is_active() -> None:

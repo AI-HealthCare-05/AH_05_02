@@ -92,7 +92,7 @@
         </div>
         <p id="probability-policy" class="lead"></p>
         <div id="high-guidance" class="notice safety" hidden><span>!</span><div><strong>의료기관 확인이 우선입니다</strong><p>챌린지보다 검사·상담을 먼저 권합니다.</p></div></div>
-        <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled>결과 설명 보기</button></div>
+        <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled hidden>결과 설명 보기</button></div>
       </section>
       <section class="screen" data-step="6" aria-labelledby="factors-title">
         <p class="eyebrow">결과 설명</p><h2 id="factors-title">검증된 설명만 제공합니다</h2>
@@ -113,10 +113,10 @@
           </div>
           <div class="map-visual" aria-label="생활습관 항목을 선택할 수 있는 사람 일러스트">
             <img id="lifestyle-avatar" class="lifestyle-avatar" src="/static/assets/lifestyle-avatar-female-60.webp" alt="여성형 60대 3D 생활습관 안내 캐릭터 전신" decoding="async">
-            <button class="body-map-point active point-head" type="button" data-map-topic="rhythm" aria-label="1번 생활 리듬 보기">1</button>
-            <button class="body-map-point point-torso" type="button" data-map-topic="activity" aria-label="2번 활동 습관 보기">2</button>
-            <button class="body-map-point point-waist" type="button" data-map-topic="body" aria-label="3번 체형 기록 보기">3</button>
-            <button class="body-map-point point-legs" type="button" data-map-topic="walking" aria-label="4번 걷기 습관 보기">4</button>
+            <button class="body-map-point active point-head" type="button" data-map-topic="rhythm" aria-label="1번 생활 리듬 보기" aria-pressed="true">1</button>
+            <button class="body-map-point point-torso" type="button" data-map-topic="activity" aria-label="2번 활동 습관 보기" aria-pressed="false">2</button>
+            <button class="body-map-point point-waist" type="button" data-map-topic="body" aria-label="3번 체형 기록 보기" aria-pressed="false">3</button>
+            <button class="body-map-point point-legs" type="button" data-map-topic="walking" aria-label="4번 걷기 습관 보기" aria-pressed="false">4</button>
             <p id="avatar-profile-summary" class="avatar-profile-summary">입력한 키·몸무게를 바탕으로 한 참고 표현</p>
           </div>
         </section>
@@ -136,15 +136,15 @@
         <div class="dashboard-hero">
           <div><p class="eyebrow">나의 건강 홈</p><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2><p class="lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
         </div>
-        <nav class="workspace-nav" aria-label="건강관리 메뉴">
-          <button class="workspace-tab active" type="button" data-workspace="home" aria-selected="true">홈</button>
-          <button class="workspace-tab" type="button" data-workspace="challenge" aria-selected="false">챌린지</button>
-          <button class="workspace-tab" type="button" data-workspace="report" aria-selected="false">리포트</button>
-          <button class="workspace-tab" type="button" data-workspace="together" aria-selected="false">함께하기</button>
-          <button class="workspace-tab" type="button" data-workspace="tools" aria-selected="false">건강도구</button>
+        <nav class="workspace-nav" aria-label="건강관리 메뉴" role="tablist">
+          <button class="workspace-tab active" id="workspace-tab-home" type="button" role="tab" data-workspace="home" aria-controls="workspace-panel-home" aria-selected="true" tabindex="0">홈</button>
+          <button class="workspace-tab" id="workspace-tab-challenge" type="button" role="tab" data-workspace="challenge" aria-controls="workspace-panel-challenge" aria-selected="false" tabindex="-1">챌린지</button>
+          <button class="workspace-tab" id="workspace-tab-report" type="button" role="tab" data-workspace="report" aria-controls="workspace-panel-report" aria-selected="false" tabindex="-1">리포트</button>
+          <button class="workspace-tab" id="workspace-tab-together" type="button" role="tab" data-workspace="together" aria-controls="workspace-panel-together" aria-selected="false" tabindex="-1">함께하기</button>
+          <button class="workspace-tab" id="workspace-tab-tools" type="button" role="tab" data-workspace="tools" aria-controls="workspace-panel-tools" aria-selected="false" tabindex="-1">건강도구</button>
         </nav>
 
-        <section class="workspace-panel active" data-workspace-panel="home" aria-labelledby="home-summary-title">
+        <section class="workspace-panel active" id="workspace-panel-home" role="tabpanel" tabindex="-1" data-workspace-panel="home" aria-labelledby="workspace-tab-home">
           <h3 id="home-summary-title" class="sr-only">오늘의 건강 요약</h3>
           <div class="dashboard-grid summary-grid">
             <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
@@ -165,7 +165,7 @@
           <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
         </section>
 
-        <section class="workspace-panel" data-workspace-panel="challenge" aria-labelledby="challenge-manage-title" hidden>
+        <section class="workspace-panel" id="workspace-panel-challenge" role="tabpanel" tabindex="-1" data-workspace-panel="challenge" aria-labelledby="workspace-tab-challenge" hidden>
           <div class="section-heading"><p class="eyebrow">오늘의 실천</p><h3 id="challenge-manage-title">챌린지 기록</h3><p>오늘 한 항목만 체크해 저장하세요.</p></div>
           <form id="daily-log-form" class="focus-card"><fieldset><legend>오늘 실천한 항목</legend><div id="daily-log-list"></div></fieldset><button class="primary" type="submit">오늘 기록 저장</button></form>
           <section class="dashboard-section" aria-labelledby="barrier-title">
@@ -179,7 +179,7 @@
           </section>
         </section>
 
-        <section class="workspace-panel" data-workspace-panel="report" aria-labelledby="report-panel-title" hidden>
+        <section class="workspace-panel" id="workspace-panel-report" role="tabpanel" tabindex="-1" data-workspace-panel="report" aria-labelledby="workspace-tab-report" hidden>
           <div class="section-heading"><p class="eyebrow">나의 변화</p><h3 id="report-panel-title">주간 리포트</h3><p>위험도의 변화가 아니라 생활습관 기록을 요약합니다.</p></div>
           <section class="dashboard-section first-section" aria-labelledby="weekly-title">
           <h3 id="weekly-title">이번 주 건강 리포트</h3>
@@ -196,7 +196,7 @@
           </section>
         </section>
 
-        <section class="workspace-panel" data-workspace-panel="together" aria-labelledby="together-title" hidden>
+        <section class="workspace-panel" id="workspace-panel-together" role="tabpanel" tabindex="-1" data-workspace-panel="together" aria-labelledby="workspace-tab-together" hidden>
           <section class="dashboard-section first-section">
           <h3 id="together-title">가족·친구와 함께하기</h3>
           <p class="lead">기본적으로 챌린지 수행 상태만 공유합니다. 건강정보와 예측 결과는 공유하지 않습니다.</p>
@@ -220,10 +220,10 @@
           </section>
         </section>
 
-        <section class="workspace-panel" data-workspace-panel="tools" aria-labelledby="tools-panel-title" hidden>
+        <section class="workspace-panel" id="workspace-panel-tools" role="tabpanel" tabindex="-1" data-workspace-panel="tools" aria-labelledby="workspace-tab-tools" hidden>
           <div class="section-heading"><p class="eyebrow">선택 기능</p><h3 id="tools-panel-title">건강도구</h3><p>필요한 도구만 골라 사용하세요.</p></div>
           <section class="tool-feature-card" aria-labelledby="map-entry-title">
-            <div><p class="eyebrow">2D 일러스트 기능</p><h3 id="map-entry-title">내 생활습관 지도</h3><p>생활 리듬·활동·체형 기록·걷기 습관을 평면 캐릭터에서 확인합니다.</p></div>
+            <div><p class="eyebrow">맞춤형 3D 일러스트 기능</p><h3 id="map-entry-title">내 생활습관 지도</h3><p>생활 리듬·활동·체형 기록·걷기 습관을 입력값에 맞춘 3D 캐릭터에서 확인합니다.</p></div>
             <button class="primary" id="open-lifestyle-map" type="button">생활습관 지도 보기</button>
           </section>
           <section class="dashboard-section first-section" aria-labelledby="wearable-title">

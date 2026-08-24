@@ -174,6 +174,7 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
     )
     public = prediction_payload(item)
     assert public["risk_category"] is None
+    assert public["promotion_status"] == "development_only"
     assert public["raw_probability_exposed"] is False
     assert "internal_score" not in public
     assert "probability" not in public
