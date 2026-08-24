@@ -64,6 +64,25 @@ def test_service_and_model_age_are_separately_explained() -> None:
     assert "현재 예측 모델은 만 45세 이상" in html
 
 
+def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    for label in (
+        "기존 계정으로 로그인",
+        "공동 챌린지 초대 만들기",
+        "개발용 웨어러블 기록 가져오기",
+        "근거 자료에서 찾기",
+        "식단 분류 초안",
+        "OCR 입력 초안",
+        "주간 리포트 PDF 받기",
+    ):
+        assert label in html
+    assert "accept-shared" in script
+    assert "cheer-shared" in script
+    assert "[hidden]{display:none!important}" in (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+
 def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.model_key == "diabetes_incidence"
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"

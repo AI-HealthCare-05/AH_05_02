@@ -7,15 +7,18 @@ from fastapi.staticfiles import StaticFiles
 from tortoise import connections
 
 from app.apis.v1 import v1_routers
+from app.core import config
 from app.core.db.databases import initialize_tortoise
 from app.core.redis import close_redis, redis_client
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await redis_client.ping()
+    if not config.DEMO_MODE:
+        await redis_client.ping()
     yield
-    await close_redis()
+    if not config.DEMO_MODE:
+        await close_redis()
 
 
 app = FastAPI(
@@ -47,20 +50,30 @@ async def liveness() -> dict[str, str]:
 @app.get("/api/health", tags=["Health"])
 @app.get("/api/v1/health", tags=["Health"])
 async def health() -> dict[str, str]:
-    await redis_client.ping()
+    if not config.DEMO_MODE:
+        await redis_client.ping()
     await connections.get("default").execute_query("SELECT 1")
-    return {"status": "ok", "database": "ok", "redis": "ok"}
+    return {
+        "status": "ok",
+        "database": "ok",
+        "redis": "embedded-demo" if config.DEMO_MODE else "ok",
+    }
 
 
 @app.get("/api/v1/ready", tags=["Health"])
 async def ready() -> dict[str, object]:
-    await redis_client.ping()
+    if not config.DEMO_MODE:
+        await redis_client.ping()
     await connections.get("default").execute_query("SELECT 1")
     from app.prediction.contracts import ACTIVE_MODEL
 
     return {
         "status": "ready",
-        "dependencies": {"database": "ready", "redis": "ready", "prediction_provider": "configured"},
+        "dependencies": {
+            "database": "ready",
+            "redis": "embedded-demo" if config.DEMO_MODE else "ready",
+            "prediction_provider": "configured",
+        },
         "active_model": {
             "model_key": ACTIVE_MODEL.model_key,
             "version": ACTIVE_MODEL.version,

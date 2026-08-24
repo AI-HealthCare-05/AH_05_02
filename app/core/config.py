@@ -30,6 +30,8 @@ class Config(BaseSettings):
     DB_CONNECT_TIMEOUT: int = 5
     DB_CONNECTION_POOL_MAXSIZE: int = 10
     DB_GENERATE_SCHEMAS: bool = False
+    DATABASE_URL: str | None = None
+    DEMO_MODE: bool = False
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379

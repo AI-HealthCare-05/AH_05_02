@@ -1,4 +1,4 @@
-const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true };
+const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -189,6 +189,17 @@ async function loadConnections() {
   const result = await api("/connections");
   $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small><button class="text-button disconnect-connection" data-id="${item.connection_id}" type="button">연결 해제</button> <button class="text-button block-connection" data-id="${item.connection_id}" type="button">차단</button></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
 }
+async function loadSharedGroups() {
+  const result = await api("/shared-challenge-groups");
+  $("#shared-group-list").innerHTML = result.items.length ? result.items.map((group) => {
+    const me = group.members.find((member) => member.is_me);
+    const partner = group.members.find((member) => !member.is_me && member.status === "active");
+    const action = me?.status === "pending"
+      ? `<button class="text-button accept-shared" data-id="${group.group_id}" type="button">공동 챌린지 수락</button>`
+      : partner ? `<button class="text-button cheer-shared" data-id="${group.group_id}" data-user="${partner.user_id}" type="button">응원 보내기</button>` : "";
+    return `<article class="challenge-card"><span><strong>${escapeHtml(group.title)}</strong><small>${escapeHtml(group.common_goal)}</small><small>참여자 ${group.members.length}명 · 수행 상태만 공유</small>${action}</span></article>`;
+  }).join("") : `<p class="lead">아직 공동 챌린지가 없습니다.</p>`;
+}
 async function loadNotifications() {
   const [preferences, notifications] = await Promise.all([api("/notification-preferences"), api("/notifications")]);
   state.notificationsEnabled = preferences.in_app_enabled;
@@ -202,7 +213,7 @@ async function refreshDashboard() {
   $("#dashboard-notice").textContent = summary.disclaimer;
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
-  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadNotifications()]);
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadNotifications()]);
 }
 
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
@@ -354,6 +365,57 @@ $("#connection-list").addEventListener("click", async (event) => {
     showMessage(block ? "연결을 차단했습니다." : "연결을 해제했습니다.", "success");
   } catch (error) { showMessage(error.message); }
 });
+$("#shared-challenge-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.cycle?.user_challenges?.length) return showMessage("먼저 개인 챌린지를 시작해 주세요.");
+  const start = new Date();
+  const end = new Date(); end.setDate(end.getDate() + 6);
+  try {
+    await api("/shared-challenge-groups", { method: "POST", body: JSON.stringify({
+      title: "함께하는 생활습관 챌린지", challenge_id: state.cycle.user_challenges[0].challenge_id,
+      start_date: start.toISOString().slice(0, 10), end_date: end.toISOString().slice(0, 10),
+      common_goal: "서로 응원하며 일주일 실천", owner_goal: "하루 한 번 실천",
+      members: [{ user_id: Number($("#shared-member-id").value), personal_goal: $("#shared-goal").value }],
+    }) });
+    await loadSharedGroups(); showMessage("공동 챌린지 초대를 만들었습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#login-existing").addEventListener("click", async () => {
+  try {
+    const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#email").value, password: $("#password").value }) });
+    state.token = login.access_token;
+    const consents = await api("/consents");
+    if (!consents.items.some((item) => item.is_agreed && !item.withdrawn_at)) {
+      showMessage("활성 건강정보 동의가 없습니다. 새 동의 절차를 진행해 주세요.");
+      return;
+    }
+    try {
+      const cycle = await api("/challenge-cycles/current");
+      renderCycle(cycle);
+      await refreshDashboard();
+      showStep(8);
+      return;
+    } catch (cycleError) {
+      if (!cycleError.message.includes("진행 중인 챌린지가 없습니다")) throw cycleError;
+    }
+    showStep(3);
+  } catch (error) { showMessage(error.message); }
+});
+$("#shared-group-list").addEventListener("click", async (event) => {
+  const accept = event.target.closest(".accept-shared");
+  const cheer = event.target.closest(".cheer-shared");
+  if (!accept && !cheer) return;
+  try {
+    if (accept) {
+      await api(`/shared-challenge-groups/${accept.dataset.id}/accept`, { method: "POST" });
+      showMessage("공동 챌린지에 참여했습니다.", "success");
+    } else {
+      await api(`/shared-challenge-groups/${cheer.dataset.id}/encouragements`, { method: "POST", body: JSON.stringify({ recipient_user_id: Number(cheer.dataset.user), template_code: "together" }) });
+      showMessage("함께하는 사람에게 응원을 보냈습니다.", "success");
+    }
+    await loadSharedGroups();
+  } catch (error) { showMessage(error.message); }
+});
 $("#wearable-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -378,6 +440,9 @@ $("#food-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     const result = await api("/food-analyses", { method: "POST", body: JSON.stringify({ image_name: $("#food-image-name").value }) });
+    state.foodAnalysisId = result.analysis_id;
+    state.foodCategory = result.predicted_category;
+    $("#confirm-food").hidden = false;
     const box = $("#assist-result"); box.hidden = false; box.textContent = `식단 분류 초안: ${result.predicted_category}. ${result.notice}`;
   } catch (error) { showMessage(error.message); }
 });
@@ -385,7 +450,25 @@ $("#ocr-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     const result = await api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: "checkup-image.jpg", extracted_fields: { systolic_bp: Number($("#ocr-systolic").value) } }) });
+    state.ocrDraftId = result.draft_id;
+    $("#confirm-ocr").hidden = false;
     const box = $("#assist-result"); box.hidden = false; box.textContent = `OCR 초안: 수축기 혈압 ${result.extracted_fields.systolic_bp}. ${result.notice}`;
+  } catch (error) { showMessage(error.message); }
+});
+$("#confirm-food").addEventListener("click", async () => {
+  if (!state.foodAnalysisId) return;
+  try {
+    const result = await api(`/food-analyses/${state.foodAnalysisId}/confirm`, { method: "PATCH", body: JSON.stringify({ confirmed_category: state.foodCategory || "확인불가" }) });
+    $("#assist-result").textContent = `식단 기록을 ${result.confirmed_category}로 확인했습니다.`;
+    $("#confirm-food").hidden = true;
+  } catch (error) { showMessage(error.message); }
+});
+$("#confirm-ocr").addEventListener("click", async () => {
+  if (!state.ocrDraftId) return;
+  try {
+    const result = await api(`/ocr-drafts/${state.ocrDraftId}/confirm`, { method: "POST" });
+    $("#assist-result").textContent = `${result.next_action} 건강검진 기록에는 아직 저장되지 않았습니다.`;
+    $("#confirm-ocr").hidden = true;
   } catch (error) { showMessage(error.message); }
 });
 $("#notification-toggle").addEventListener("click", async () => {

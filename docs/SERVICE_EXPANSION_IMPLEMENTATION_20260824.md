@@ -58,3 +58,7 @@ node --check src/frontend/app.js
 - 알림: 사용자 별도 동의를 전제로 한 푸시 제공자
 
 실제 제공자를 연결할 때도 기존 API 응답의 `provider`, `status`, `requires_user_confirmation`, `citations` 계약은 유지한다.
+
+## 6. 전체 기능 MVP 실행
+
+Docker 없이도 전체 흐름을 확인할 수 있도록 SQLite와 인프로세스 안전 추론을 사용하는 명시적 `DEMO_MODE`를 추가했다. 실행과 검증 방법은 `MVP_DEMO_GUIDE_20260824.md`를 따른다. 운영 기본값은 `DEMO_MODE=false`이며 MySQL·Redis·별도 Worker 구조는 유지한다.

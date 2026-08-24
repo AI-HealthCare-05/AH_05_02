@@ -7,8 +7,10 @@ from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
 from app.models.ai_jobs import AIJob
+from app.models.health import Prediction
 from app.models.users import User
 from app.prediction.contracts import ACTIVE_MODEL
+from app.prediction.providers import get_prediction_provider
 from app.repositories.health_repository import HealthRepository
 from app.services.health import HealthService
 
@@ -107,6 +109,9 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         "attempt": "0",
         "created_at": now.isoformat(),
     }
+    if config.DEMO_MODE:
+        await _complete_demo_prediction(job, features)
+        return job
     try:
         await redis_client.hset(
             job_cache_key(job_id),
@@ -123,6 +128,45 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         await job.save(update_fields=["status", "error", "error_code", "completed_at", "updated_at"])
         raise RuntimeError("Redis 작업 큐에 연결할 수 없습니다.") from exc
     return job
+
+
+async def _complete_demo_prediction(job: AIJob, features: dict[str, object]) -> None:
+    """Complete the formal job contract without Redis only in explicit demo mode."""
+    from app.prediction.contracts import PredictionFeatures
+
+    job.status = "running"
+    job.started_at = datetime.now(UTC)
+    job.worker_name = "embedded-demo-worker"
+    job.attempts = 1
+    await job.save(update_fields=["status", "started_at", "worker_name", "attempts", "updated_at"])
+    provider = get_prediction_provider()
+    result = await provider.predict(PredictionFeatures.model_validate(features))
+    prediction = await Prediction.create(
+        job_id=job.job_id,
+        user_id=job.user_id,
+        health_checkup_id=job.health_checkup_id,
+        model_key=ACTIVE_MODEL.model_key,
+        outcome_definition=ACTIVE_MODEL.outcome_definition,
+        result_status="development_only",
+        risk_category=None,
+        internal_score=None,
+        model_version=result.model_version,
+        feature_schema_version=result.feature_schema_version,
+        threshold_version=result.threshold_version,
+        model_population=ACTIVE_MODEL.model_population,
+        explanation_status=result.explanation_status,
+        disclaimer="이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
+    )
+    job.status = "succeeded"
+    job.prediction_id = prediction.id
+    job.completed_at = datetime.now(UTC)
+    job.result = {
+        "promotion_status": "development_only",
+        "risk_category": None,
+        "internal_score": None,
+        "medical_notice": "개발용 연결 결과이며 진단·처방이 아닙니다.",
+    }
+    await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
 
 
 async def get_prediction_job(job_id: str, user_id: int) -> AIJob | None:
