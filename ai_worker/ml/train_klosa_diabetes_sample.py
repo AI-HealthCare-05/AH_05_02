@@ -110,10 +110,7 @@ def build_wave_9_10_cohort(wave9: pd.DataFrame, wave10: pd.DataFrame) -> pd.Data
     )
 
     # 1=yes, 5=no. Missing or unobserved t1 is never assigned to class 0.
-    eligible = merged.loc[
-        merged["w09chronic_b"].eq(5)
-        & merged["w10chronic_b"].isin([1, 5])
-    ].copy()
+    eligible = merged.loc[merged["w09chronic_b"].eq(5) & merged["w10chronic_b"].isin([1, 5])].copy()
     eligible[TARGET] = eligible["w10chronic_b"].eq(1).astype("int8")
 
     height_cm = _replace_special_missing(eligible["w09C107"])
@@ -124,22 +121,14 @@ def build_wave_9_10_cohort(wave9: pd.DataFrame, wave10: pd.DataFrame) -> pd.Data
     eligible["age"] = _replace_special_missing(eligible["w09A002_age"])
     eligible["bmi"] = plausible_weight / (plausible_height / 100) ** 2
     eligible["sex"] = _replace_special_missing(eligible["w09gender1"]).astype("Int64")
-    eligible["smoking_status"] = _replace_special_missing(
-        eligible["w09smoke"]
-    ).astype("Int64")
-    eligible["current_drinker"] = _replace_special_missing(
-        eligible["w09alc"]
-    ).astype("Int64")
-    eligible["regular_exercise"] = _replace_special_missing(
-        eligible["w09C108"]
-    ).astype("Int64")
+    eligible["smoking_status"] = _replace_special_missing(eligible["w09smoke"]).astype("Int64")
+    eligible["current_drinker"] = _replace_special_missing(eligible["w09alc"]).astype("Int64")
+    eligible["regular_exercise"] = _replace_special_missing(eligible["w09C108"]).astype("Int64")
 
     exercise_days = _replace_special_missing(eligible["w09C111"])
     exercise_minutes = _replace_special_missing(eligible["w09C112"])
     no_regular_exercise = eligible["regular_exercise"].eq(5)
-    eligible["exercise_days_per_week"] = exercise_days.mask(
-        no_regular_exercise, 0
-    )
+    eligible["exercise_days_per_week"] = exercise_days.mask(no_regular_exercise, 0)
     eligible["exercise_minutes"] = exercise_minutes.mask(no_regular_exercise, 0)
 
     return eligible[[ID_COLUMN, *FEATURES, TARGET]].reset_index(drop=True)
@@ -171,14 +160,10 @@ def make_logistic_pipeline(class_weight: str | None = "balanced") -> Pipeline:
         max_iter=2_000,
         random_state=42,
     )
-    return Pipeline(
-        steps=[("preprocessing", preprocessing), ("classifier", classifier)]
-    )
+    return Pipeline(steps=[("preprocessing", preprocessing), ("classifier", classifier)])
 
 
-def split_cohort(
-    cohort: pd.DataFrame, random_state: int
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def split_cohort(cohort: pd.DataFrame, random_state: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Create reproducible person-level 70/15/15 splits."""
 
     train, remainder = train_test_split(
@@ -200,9 +185,7 @@ def split_cohort(
     return train, validation, test
 
 
-def choose_threshold(
-    y_true: pd.Series, probabilities: np.ndarray, minimum_recall: float = 0.80
-) -> float:
+def choose_threshold(y_true: pd.Series, probabilities: np.ndarray, minimum_recall: float = 0.80) -> float:
     """Choose the most specific validation threshold meeting target recall."""
 
     candidates = np.unique(np.r_[0.0, probabilities, 1.0])
@@ -219,9 +202,7 @@ def choose_threshold(
     return selected
 
 
-def evaluate(
-    y_true: pd.Series, probabilities: np.ndarray, threshold: float
-) -> dict[str, Any]:
+def evaluate(y_true: pd.Series, probabilities: np.ndarray, threshold: float) -> dict[str, Any]:
     predicted = (probabilities >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, predicted, labels=[0, 1]).ravel()
     sensitivity = float(recall_score(y_true, predicted, zero_division=0))
@@ -241,9 +222,7 @@ def evaluate(
     }
 
 
-def run_training(
-    data_dir: Path, output_dir: Path, random_state: int = 42
-) -> dict[str, Any]:
+def run_training(data_dir: Path, output_dir: Path, random_state: int = 42) -> dict[str, Any]:
     assert_no_leakage(FEATURES)
 
     wave9_path = data_dir / "Lt09_20260413.dta"
@@ -252,12 +231,8 @@ def run_training(
         if not path.exists():
             raise FileNotFoundError(f"Required KLoSA file not found: {path}")
 
-    wave9 = pd.read_stata(
-        wave9_path, columns=WAVE9_COLUMNS, convert_categoricals=False
-    )
-    wave10 = pd.read_stata(
-        wave10_path, columns=WAVE10_COLUMNS, convert_categoricals=False
-    )
+    wave9 = pd.read_stata(wave9_path, columns=WAVE9_COLUMNS, convert_categoricals=False)
+    wave10 = pd.read_stata(wave10_path, columns=WAVE10_COLUMNS, convert_categoricals=False)
     cohort = build_wave_9_10_cohort(wave9, wave10)
     train, validation, test = split_cohort(cohort, random_state=random_state)
 

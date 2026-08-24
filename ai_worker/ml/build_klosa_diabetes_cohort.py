@@ -103,9 +103,7 @@ def load_transition(
     return t0, t1
 
 
-def build_transition(
-    t0: pd.DataFrame, t1: pd.DataFrame, baseline_wave: int
-) -> pd.DataFrame:
+def build_transition(t0: pd.DataFrame, t1: pd.DataFrame, baseline_wave: int) -> pd.DataFrame:
     outcome_wave = baseline_wave + 1
     t0_prefix = f"w{baseline_wave:02d}"
     t1_prefix = f"w{outcome_wave:02d}"
@@ -139,35 +137,20 @@ def build_transition(
         }
     )
     linked = left.merge(right, on="pid", how="inner", validate="one_to_one")
-    cohort = linked.loc[
-        linked["diabetes_status_t0"].eq(5)
-        & linked["diabetes_status_t1"].isin([1, 5])
-    ].copy()
+    cohort = linked.loc[linked["diabetes_status_t0"].eq(5) & linked["diabetes_status_t1"].isin([1, 5])].copy()
 
     cohort["baseline_wave"] = baseline_wave
     cohort["outcome_wave"] = outcome_wave
-    cohort["follow_up_days"] = (
-        cohort["interview_date_t1"] - cohort["interview_date_t0"]
-    ).dt.days
+    cohort["follow_up_days"] = (cohort["interview_date_t1"] - cohort["interview_date_t0"]).dt.days
     cohort[TARGET] = cohort["diabetes_status_t1"].eq(1).astype("int8")
 
     cohort["sex"] = cohort["sex_code"].map({1: "male", 5: "female"})
-    cohort["smoking_status"] = cohort["smoking_code"].map(
-        {0: "never", 1: "former", 2: "current"}
-    )
-    cohort["current_drinker"] = cohort["alcohol_code"].map(
-        {1: True, 2: False, 3: False}
-    )
-    cohort["regular_exercise"] = cohort["exercise_code"].map(
-        {1: True, 5: False}
-    )
+    cohort["smoking_status"] = cohort["smoking_code"].map({0: "never", 1: "former", 2: "current"})
+    cohort["current_drinker"] = cohort["alcohol_code"].map({1: True, 2: False, 3: False})
+    cohort["regular_exercise"] = cohort["exercise_code"].map({1: True, 5: False})
 
-    plausible_height = cohort["height_cm"].where(
-        cohort["height_cm"].between(120, 220)
-    )
-    plausible_weight = cohort["weight_kg"].where(
-        cohort["weight_kg"].between(25, 250)
-    )
+    plausible_height = cohort["height_cm"].where(cohort["height_cm"].between(120, 220))
+    plausible_weight = cohort["weight_kg"].where(cohort["weight_kg"].between(25, 250))
     cohort["bmi"] = plausible_weight / (plausible_height / 100) ** 2
 
     no_regular_exercise = cohort["regular_exercise"].eq(False)  # noqa: E712
@@ -177,9 +160,7 @@ def build_transition(
         ~cohort["exercise_days_per_week"].between(0, 7),
         "exercise_days_per_week",
     ] = pd.NA
-    cohort.loc[
-        ~cohort["exercise_minutes"].between(0, 720), "exercise_minutes"
-    ] = pd.NA
+    cohort.loc[~cohort["exercise_minutes"].between(0, 720), "exercise_minutes"] = pd.NA
 
     columns = [
         "pid",
@@ -203,9 +184,7 @@ def assert_model_matrix_is_safe(feature_names: list[str]) -> None:
     forbidden = sorted(set(feature_names) & FORBIDDEN_MODEL_COLUMNS)
     unknown = sorted(set(feature_names) - set(WEB_MODEL_FEATURES))
     if forbidden or unknown:
-        raise ValueError(
-            f"Unsafe model matrix; forbidden={forbidden}, outside_allowlist={unknown}"
-        )
+        raise ValueError(f"Unsafe model matrix; forbidden={forbidden}, outside_allowlist={unknown}")
 
 
 def build_cohort(data_dir: Path) -> pd.DataFrame:
@@ -232,9 +211,7 @@ def summarize(cohort: pd.DataFrame) -> dict:
         }
 
     transitions = []
-    for (baseline_wave, outcome_wave), frame in cohort.groupby(
-        ["baseline_wave", "outcome_wave"], sort=True
-    ):
+    for (baseline_wave, outcome_wave), frame in cohort.groupby(["baseline_wave", "outcome_wave"], sort=True):
         events = int(frame[TARGET].sum())
         transitions.append(
             {

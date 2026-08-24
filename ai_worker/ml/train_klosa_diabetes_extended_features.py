@@ -38,9 +38,7 @@ def make_extended_pipeline(
     additional_numeric_features: list[str] | None = None,
     additional_categorical_features: list[str] | None = None,
 ) -> Pipeline:
-    numeric_steps: list[tuple[str, Any]] = [
-        ("imputer", SimpleImputer(strategy="median", add_indicator=True))
-    ]
+    numeric_steps: list[tuple[str, Any]] = [("imputer", SimpleImputer(strategy="median", add_indicator=True))]
     if model_name == "logistic_regression":
         numeric_steps.append(("scaler", StandardScaler()))
     numeric = Pipeline(numeric_steps)
@@ -103,9 +101,7 @@ def make_extended_pipeline(
         )
     else:
         raise ValueError(f"Unsupported model: {model_name}")
-    return Pipeline(
-        [("preprocessing", preprocessing), ("classifier", classifier)]
-    )
+    return Pipeline([("preprocessing", preprocessing), ("classifier", classifier)])
 
 
 def run_experiment(
@@ -120,12 +116,8 @@ def run_experiment(
     for model_name in MODEL_NAMES:
         model = make_extended_pipeline(model_name, random_state)
         model.fit(train[EXTENDED_MODEL_FEATURES], train[TARGET])
-        validation_probabilities = model.predict_proba(
-            validation[EXTENDED_MODEL_FEATURES]
-        )[:, 1]
-        test_probabilities = model.predict_proba(
-            test[EXTENDED_MODEL_FEATURES]
-        )[:, 1]
+        validation_probabilities = model.predict_proba(validation[EXTENDED_MODEL_FEATURES])[:, 1]
+        test_probabilities = model.predict_proba(test[EXTENDED_MODEL_FEATURES])[:, 1]
         threshold = choose_threshold_for_recall(
             validation[TARGET],
             validation_probabilities,
@@ -142,22 +134,15 @@ def run_experiment(
                     "threshold": threshold,
                     "status": "research_only_not_operational",
                 },
-                "validation": evaluate(
-                    validation[TARGET], validation_probabilities, threshold
-                ),
+                "validation": evaluate(validation[TARGET], validation_probabilities, threshold),
                 "test": evaluate(test[TARGET], test_probabilities, threshold),
             }
         )
 
-    missing = {
-        feature: float(cohort[feature].isna().mean())
-        for feature in COMORBIDITY_FEATURES
-    }
+    missing = {feature: float(cohort[feature].isna().mean()) for feature in COMORBIDITY_FEATURES}
     result = {
         "status": "research_feature_expansion_not_for_deployment",
-        "comparison_policy": (
-            "same_pid_split_and_fixed_model_settings; test_reporting_only"
-        ),
+        "comparison_policy": ("same_pid_split_and_fixed_model_settings; test_reporting_only"),
         "base_features": WEB_MODEL_FEATURES,
         "added_features": COMORBIDITY_FEATURES,
         "extended_features": EXTENDED_MODEL_FEATURES,

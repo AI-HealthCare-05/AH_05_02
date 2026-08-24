@@ -50,9 +50,7 @@ def build_extended_cohort(data_dir: Path) -> pd.DataFrame:
     transitions = []
     for baseline_wave in range(1, 10):
         prefix = f"w{baseline_wave:02d}"
-        extra_columns = [
-            f"{prefix}{suffix}" for suffix in COMORBIDITY_SOURCES.values()
-        ]
+        extra_columns = [f"{prefix}{suffix}" for suffix in COMORBIDITY_SOURCES.values()]
         t0, t1 = load_transition(
             data_dir,
             baseline_wave,

@@ -32,9 +32,7 @@ SOCIOECONOMIC_EXTENDED_FEATURES = [
 
 def _code_category(series: pd.Series) -> pd.Series:
     numeric = _numeric(series)
-    return numeric.map(
-        lambda value: f"code_{int(value)}" if pd.notna(value) else np.nan
-    )
+    return numeric.map(lambda value: f"code_{int(value)}" if pd.notna(value) else np.nan)
 
 
 def build_socioeconomic_transition(
@@ -53,11 +51,7 @@ def build_socioeconomic_transition(
             "marital_status": _code_category(t0[f"{prefix}marital"]),
             "household_structure": household_size.map(
                 lambda value: (
-                    "single_person"
-                    if value == 1
-                    else "multi_person"
-                    if pd.notna(value) and value > 1
-                    else np.nan
+                    "single_person" if value == 1 else "multi_person" if pd.notna(value) and value > 1 else np.nan
                 )
             ),
             "log_household_income": np.log1p(household_income),

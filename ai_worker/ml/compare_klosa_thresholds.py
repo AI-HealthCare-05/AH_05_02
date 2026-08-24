@@ -35,49 +35,37 @@ MODEL_SPECS = [
     {
         "model": "Logistic Regression",
         "weighting": "none",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_pooled/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_pooled/model.joblib"),
         "primary": True,
     },
     {
         "model": "Random Forest",
         "weighting": "none",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_random_forest_unweighted/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_random_forest_unweighted/model.joblib"),
         "primary": True,
     },
     {
         "model": "XGBoost",
         "weighting": "none",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_xgboost_unweighted/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_xgboost_unweighted/model.joblib"),
         "primary": True,
     },
     {
         "model": "Logistic Regression",
         "weighting": "balanced",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_logistic_balanced/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_logistic_balanced/model.joblib"),
         "primary": False,
     },
     {
         "model": "Random Forest",
         "weighting": "balanced_subsample",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_random_forest/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_random_forest/model.joblib"),
         "primary": False,
     },
     {
         "model": "XGBoost",
         "weighting": "scale_pos_weight",
-        "path": Path(
-            "models/baselines/klosa_diabetes_incidence_xgboost/model.joblib"
-        ),
+        "path": Path("models/baselines/klosa_diabetes_incidence_xgboost/model.joblib"),
         "primary": False,
     },
 ]
@@ -165,9 +153,7 @@ def run_comparison(
         if bundle["metadata"].get("features") != WEB_MODEL_FEATURES:
             raise ValueError(f"Feature contract mismatch: {spec['path']}")
         pipeline = bundle["pipeline"]
-        validation_probabilities = pipeline.predict_proba(
-            validation[WEB_MODEL_FEATURES]
-        )[:, 1]
+        validation_probabilities = pipeline.predict_proba(validation[WEB_MODEL_FEATURES])[:, 1]
         test_probabilities = pipeline.predict_proba(test[WEB_MODEL_FEATURES])[:, 1]
         model_key = f"{spec['model']}__{spec['weighting']}"
         versions[model_key] = bundle["metadata"]["model_version"]

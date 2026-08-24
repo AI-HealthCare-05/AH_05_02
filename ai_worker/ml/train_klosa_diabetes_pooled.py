@@ -64,11 +64,7 @@ def split_grouped_cohort(
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Split 70/15/15 by PID, stratified by whether a PID ever has an event."""
 
-    pid_labels = (
-        cohort.groupby(ID_COLUMN, as_index=False)[TARGET]
-        .max()
-        .rename(columns={TARGET: "pid_has_event"})
-    )
+    pid_labels = cohort.groupby(ID_COLUMN, as_index=False)[TARGET].max().rename(columns={TARGET: "pid_has_event"})
     train_pids, remainder_pids = train_test_split(
         pid_labels,
         test_size=0.30,
@@ -109,15 +105,10 @@ def describe_frame(frame: pd.DataFrame) -> dict[str, Any]:
 
 
 def describe_age_groups(frame: pd.DataFrame) -> dict[str, dict[str, Any]]:
-    return {
-        name: describe_frame(frame.loc[selector(frame)])
-        for name, selector in AGE_GROUPS.items()
-    }
+    return {name: describe_frame(frame.loc[selector(frame)]) for name, selector in AGE_GROUPS.items()}
 
 
-def evaluate_age_groups(
-    frame: pd.DataFrame, probabilities, threshold: float
-) -> dict[str, dict[str, Any]]:
+def evaluate_age_groups(frame: pd.DataFrame, probabilities, threshold: float) -> dict[str, dict[str, Any]]:
     results = {}
     probability_series = pd.Series(probabilities, index=frame.index)
     for name, selector in AGE_GROUPS.items():
@@ -137,9 +128,7 @@ def evaluate_age_groups(
     return results
 
 
-def summarize_calibration(
-    y_true: pd.Series, probabilities, n_bins: int = 10
-) -> dict[str, Any]:
+def summarize_calibration(y_true: pd.Series, probabilities, n_bins: int = 10) -> dict[str, Any]:
     """Summarize a quantile-binned reliability curve and ECE on held-out data."""
 
     probability_array = np.asarray(probabilities, dtype=float)
@@ -159,9 +148,7 @@ def summarize_calibration(
     if len(non_empty_counts) != len(observed):
         raise AssertionError("Calibration bin counts do not match curve points.")
     absolute_gaps = np.abs(observed - predicted)
-    expected_calibration_error = float(
-        np.average(absolute_gaps, weights=non_empty_counts)
-    )
+    expected_calibration_error = float(np.average(absolute_gaps, weights=non_empty_counts))
     return {
         "dataset": "test",
         "strategy": "quantile",
@@ -191,9 +178,7 @@ def run_training(
     model = make_logistic_pipeline(class_weight=class_weight)
     model.fit(train[WEB_MODEL_FEATURES], train[TARGET])
 
-    validation_probabilities = model.predict_proba(
-        validation[WEB_MODEL_FEATURES]
-    )[:, 1]
+    validation_probabilities = model.predict_proba(validation[WEB_MODEL_FEATURES])[:, 1]
     threshold = choose_threshold(
         validation[TARGET],
         validation_probabilities,
@@ -224,11 +209,7 @@ def run_training(
         "model": {
             "type": "LogisticRegression",
             "class_weight": class_weight,
-            "class_weight_source": (
-                "train_inverse_class_frequency"
-                if class_weight == "balanced"
-                else "not_applied"
-            ),
+            "class_weight_source": ("train_inverse_class_frequency" if class_weight == "balanced" else "not_applied"),
             "preprocessing_fit": "train_only",
             "probability_calibration": "none",
         },
@@ -248,14 +229,10 @@ def run_training(
             "selected_threshold": threshold,
             "status": "evaluation_only_not_operational",
         },
-        "validation": evaluate(
-            validation[TARGET], validation_probabilities, threshold
-        ),
+        "validation": evaluate(validation[TARGET], validation_probabilities, threshold),
         "test": evaluate(test[TARGET], test_probabilities, threshold),
         "test_by_age": evaluate_age_groups(test, test_probabilities, threshold),
-        "test_calibration": summarize_calibration(
-            test[TARGET], test_probabilities, n_bins=10
-        ),
+        "test_calibration": summarize_calibration(test[TARGET], test_probabilities, n_bins=10),
         "random_state": random_state,
         "versions": {
             "pandas": pd.__version__,

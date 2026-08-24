@@ -46,9 +46,7 @@ class DiabetesIncidenceInput:
 
 
 def _age_on(birth_date: date, as_of_date: date) -> int:
-    return as_of_date.year - birth_date.year - (
-        (as_of_date.month, as_of_date.day) < (birth_date.month, birth_date.day)
-    )
+    return as_of_date.year - birth_date.year - ((as_of_date.month, as_of_date.day) < (birth_date.month, birth_date.day))
 
 
 def _require_number_between(name: str, value: Any, minimum: float, maximum: float) -> float:
@@ -68,17 +66,14 @@ def build_model_frame(
     """Validate service inputs and derive the exact eight-feature model row."""
 
     if user_input.previously_diagnosed_diabetes:
-        raise ValueError(
-            "previously diagnosed users are ineligible for an incident-diagnosis model"
-        )
+        raise ValueError("previously diagnosed users are ineligible for an incident-diagnosis model")
     if user_input.birth_date > as_of_date:
         raise ValueError("birth_date cannot be in the future")
 
     age = _age_on(user_input.birth_date, as_of_date)
     if not SUPPORTED_AGE_MINIMUM <= age <= SUPPORTED_AGE_MAXIMUM:
         raise ValueError(
-            f"age {age} is outside the model-supported range "
-            f"{SUPPORTED_AGE_MINIMUM}-{SUPPORTED_AGE_MAXIMUM}"
+            f"age {age} is outside the model-supported range {SUPPORTED_AGE_MINIMUM}-{SUPPORTED_AGE_MAXIMUM}"
         )
     if user_input.sex not in {"male", "female"}:
         raise ValueError("sex must be 'male' or 'female'")
@@ -91,12 +86,8 @@ def build_model_frame(
 
     height_cm = _require_number_between("height_cm", user_input.height_cm, 120, 220)
     weight_kg = _require_number_between("weight_kg", user_input.weight_kg, 25, 250)
-    days = _require_number_between(
-        "exercise_days_per_week", user_input.exercise_days_per_week, 0, 7
-    )
-    minutes = _require_number_between(
-        "exercise_minutes", user_input.exercise_minutes, 0, 720
-    )
+    days = _require_number_between("exercise_days_per_week", user_input.exercise_days_per_week, 0, 7)
+    minutes = _require_number_between("exercise_minutes", user_input.exercise_minutes, 0, 720)
     if not user_input.regular_exercise:
         days = 0.0
         minutes = 0.0

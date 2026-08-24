@@ -21,12 +21,10 @@ def test_operating_points_select_on_validation_and_report_test_confusion() -> No
     assert rows[0]["threshold"] >= rows[1]["threshold"]
     for row in rows:
         assert row["test_recall"] == pytest.approx(
-            row["test_true_positives"]
-            / (row["test_true_positives"] + row["test_false_negatives"])
+            row["test_true_positives"] / (row["test_true_positives"] + row["test_false_negatives"])
         )
         assert row["test_specificity"] == pytest.approx(
-            row["test_true_negatives"]
-            / (row["test_true_negatives"] + row["test_false_positives"])
+            row["test_true_negatives"] / (row["test_true_negatives"] + row["test_false_positives"])
         )
 
 
