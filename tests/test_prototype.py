@@ -92,6 +92,8 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
         assert f'data-workspace-panel="{workspace}"' in html
     assert "오늘 할 일부터 확인하세요" in html
     assert "내 생활습관 지도" in html
+    assert "생활습관 지도 보기" in html
+    assert "건강도구로 돌아가기" in html
     assert "진단 부위나 모델 영향도를 나타내는 그림이 아닙니다." in html
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script

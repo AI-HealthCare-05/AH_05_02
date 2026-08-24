@@ -258,6 +258,8 @@ $$('.next').forEach((button) => button.addEventListener("click", () => showStep(
 $$('.back').forEach((button) => button.addEventListener("click", () => showStep(state.step - 1)));
 $$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
+$("#open-lifestyle-map").addEventListener("click", () => showStep(6));
+$("#map-back-to-tools").addEventListener("click", () => { showStep(8); showWorkspace("tools"); });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
   event.currentTarget.setAttribute("aria-pressed", String(enabled));

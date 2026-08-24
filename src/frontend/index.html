@@ -109,6 +109,7 @@
               <div><strong id="map-detail-title">생활 리듬</strong><p id="map-detail-value">웨어러블 연결 후 수면 기록을 확인할 수 있어요.</p><small id="map-detail-action">건강도구에서 수면 기록을 연결해 보세요.</small></div>
             </div>
             <div class="notice compact"><span>ⓘ</span><div><strong>그림 해석 안내</strong><p>진단 부위나 모델 영향도를 나타내는 그림이 아닙니다. 사용자가 입력한 생활습관을 쉽게 찾아보기 위한 안내입니다.</p></div></div>
+            <button class="secondary" id="map-back-to-tools" type="button">건강도구로 돌아가기</button>
           </div>
           <div class="map-visual" aria-label="생활습관 항목을 선택할 수 있는 사람 일러스트">
             <svg viewBox="0 0 320 500" role="img" aria-labelledby="body-illustration-title body-illustration-desc">
@@ -234,6 +235,10 @@
 
         <section class="workspace-panel" data-workspace-panel="tools" aria-labelledby="tools-panel-title" hidden>
           <div class="section-heading"><p class="eyebrow">선택 기능</p><h3 id="tools-panel-title">건강도구</h3><p>필요한 도구만 골라 사용하세요.</p></div>
+          <section class="tool-feature-card" aria-labelledby="map-entry-title">
+            <div><p class="eyebrow">2D 일러스트 기능</p><h3 id="map-entry-title">내 생활습관 지도</h3><p>생활 리듬·활동·체형 기록·걷기 습관을 평면 캐릭터에서 확인합니다.</p></div>
+            <button class="primary" id="open-lifestyle-map" type="button">생활습관 지도 보기</button>
+          </section>
           <section class="dashboard-section first-section" aria-labelledby="wearable-title">
           <h3 id="wearable-title">워치·웨어러블 기록</h3>
           <p class="lead">현재는 제조사 계정 대신 개발용 어댑터로 일일 요약을 확인합니다.</p>
