@@ -74,7 +74,31 @@ function showStep(step) {
   });
   $("#step-current").textContent = state.step;
   $("#progress-bar").style.width = `${(state.step / 8) * 100}%`;
+  if (state.step === 6) updateLifestyleMap(state.mapTopic || "rhythm");
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function lifestyleMapContent(topic) {
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? (weight / ((height / 100) ** 2)).toFixed(1) : null;
+  const waist = $("#waist").value;
+  return {
+    rhythm: { number: "1", title: "생활 리듬", value: "현재 건강입력에는 수면 정보가 포함되지 않았어요.", action: "웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다." },
+    activity: { number: "2", title: "활동 습관", value: $("#regular-exercise").checked ? "규칙적으로 운동한다고 기록했어요." : "규칙적인 운동을 하지 않는다고 기록했어요.", action: "몸 상태에 맞는 작은 활동 챌린지를 직접 선택할 수 있습니다." },
+    body: { number: "3", title: "체형 기록", value: bmi ? `입력값으로 계산한 BMI는 ${bmi}${waist ? `, 허리둘레는 ${waist}cm` : ""}입니다.` : "키와 몸무게 기록이 필요합니다.", action: "수치는 위험 판정이 아니라 입력한 건강정보를 다시 확인하기 위한 표시입니다." },
+    walking: { number: "4", title: "걷기 습관", value: "아직 걸음 수 기록을 연결하지 않았어요.", action: "챌린지에서 걷기 목표를 고르거나 건강도구에서 워치 기록을 연결해 보세요." },
+  }[topic];
+}
+
+function updateLifestyleMap(topic) {
+  state.mapTopic = topic;
+  const content = lifestyleMapContent(topic);
+  $("#map-detail-number").textContent = content.number;
+  $("#map-detail-title").textContent = content.title;
+  $("#map-detail-value").textContent = content.value;
+  $("#map-detail-action").textContent = content.action;
+  $$(".body-map-point").forEach((button) => button.classList.toggle("active", button.dataset.mapTopic === topic));
 }
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -189,6 +213,20 @@ async function loadConnections() {
   const result = await api("/connections");
   $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small><button class="text-button disconnect-connection" data-id="${item.connection_id}" type="button">연결 해제</button> <button class="text-button block-connection" data-id="${item.connection_id}" type="button">차단</button></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
 }
+
+function showWorkspace(name) {
+  $$(".workspace-tab").forEach((button) => {
+    const selected = button.dataset.workspace === name;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+  });
+  $$("[data-workspace-panel]").forEach((panel) => {
+    const selected = panel.dataset.workspacePanel === name;
+    panel.hidden = !selected;
+    panel.classList.toggle("active", selected);
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 async function loadSharedGroups() {
   const result = await api("/shared-challenge-groups");
   $("#shared-group-list").innerHTML = result.items.length ? result.items.map((group) => {
@@ -218,6 +256,8 @@ async function refreshDashboard() {
 
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", () => showStep(state.step - 1)));
+$$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
+$$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
   event.currentTarget.setAttribute("aria-pressed", String(enabled));

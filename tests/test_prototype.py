@@ -83,6 +83,20 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
     assert "[hidden]{display:none!important}" in (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
 
 
+def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    for workspace in ("home", "challenge", "report", "together", "tools"):
+        assert f'data-workspace="{workspace}"' in html
+        assert f'data-workspace-panel="{workspace}"' in html
+    assert "오늘 할 일부터 확인하세요" in html
+    assert "내 생활습관 지도" in html
+    assert "진단 부위나 모델 영향도를 나타내는 그림이 아닙니다." in html
+    assert "updateLifestyleMap" in script
+    assert "체형 기록" in html + script
+
+
 def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.model_key == "diabetes_incidence"
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"

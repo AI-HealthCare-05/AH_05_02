@@ -6,8 +6,8 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260824-mvp3">
-  <script src="/static/app.js?v=20260824-mvp3" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260824-mvp5">
+  <script src="/static/app.js?v=20260824-mvp5" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -99,6 +99,39 @@
         <div id="medical-guidance-detail" class="notice safety" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 범주는 진단 결과가 아닙니다. 챌린지보다 검사를 받고 의료진과 상담하는 것을 우선 권합니다. 급한 증상이 있다면 즉시 의료기관에 연락하세요.</p></div></div>
         <p class="lead">위험요인 설명은 검증된 방법과 출처 메타데이터가 준비된 후 제공합니다. 휴리스틱을 SHAP 결과처럼 표시하지 않습니다.</p>
         <ul class="factor-list" id="factor-list"><li><strong>분석 완료 후 확인할 수 있습니다.</strong></li></ul>
+        <section class="lifestyle-map" aria-labelledby="lifestyle-map-title">
+          <div class="map-copy">
+            <p class="eyebrow">일러스트로 보는 나의 기록</p>
+            <h3 id="lifestyle-map-title">내 생활습관 지도</h3>
+            <p>그림의 번호를 눌러 입력한 정보와 연결된 생활습관을 확인하세요.</p>
+            <div class="map-detail" aria-live="polite">
+              <span id="map-detail-number">1</span>
+              <div><strong id="map-detail-title">생활 리듬</strong><p id="map-detail-value">웨어러블 연결 후 수면 기록을 확인할 수 있어요.</p><small id="map-detail-action">건강도구에서 수면 기록을 연결해 보세요.</small></div>
+            </div>
+            <div class="notice compact"><span>ⓘ</span><div><strong>그림 해석 안내</strong><p>진단 부위나 모델 영향도를 나타내는 그림이 아닙니다. 사용자가 입력한 생활습관을 쉽게 찾아보기 위한 안내입니다.</p></div></div>
+          </div>
+          <div class="map-visual" aria-label="생활습관 항목을 선택할 수 있는 사람 일러스트">
+            <svg viewBox="0 0 320 500" role="img" aria-labelledby="body-illustration-title body-illustration-desc">
+              <title id="body-illustration-title">평면 사람 일러스트</title>
+              <desc id="body-illustration-desc">생활 리듬, 활동, 체형 기록, 걷기 습관을 선택하는 그림입니다.</desc>
+              <circle class="illustration-accent" cx="160" cy="78" r="62"/>
+              <path class="illustration-shadow" d="M88 194c0-54 32-86 72-86s72 32 72 86v105l42 137H46l42-137z"/>
+              <circle class="illustration-skin" cx="160" cy="87" r="43"/>
+              <path class="illustration-hair" d="M119 82c2-35 20-53 43-53 26 0 43 20 43 55-12-10-22-24-26-39-14 18-34 28-60 31z"/>
+              <path class="illustration-shirt" d="M105 174c8-38 31-55 55-55s47 17 55 55l20 139H85z"/>
+              <path class="illustration-skin" d="M106 172 79 289l-25 80 22 7 36-78 24-112zm108 0 27 117 25 80-22 7-36-78-24-112z"/>
+              <path class="illustration-pants" d="M88 301h144l-20 77-19 90h-34l1-137-33 137H93l13-92z"/>
+              <path class="illustration-shoe" d="M91 460h40v19H73c0-10 7-16 18-19zm98 0h34c12 3 20 10 20 19h-58z"/>
+              <circle class="illustration-cheek" cx="143" cy="92" r="3"/><circle class="illustration-cheek" cx="177" cy="92" r="3"/>
+              <path class="illustration-line" d="M151 107q9 7 18 0M122 252q38 18 76 0"/>
+              <path class="illustration-leaf" d="M246 97c29-6 43 13 31 37-27 2-39-13-31-37zm2 1c8 13 17 23 29 33"/>
+            </svg>
+            <button class="body-map-point active point-head" type="button" data-map-topic="rhythm" aria-label="1번 생활 리듬 보기">1</button>
+            <button class="body-map-point point-torso" type="button" data-map-topic="activity" aria-label="2번 활동 습관 보기">2</button>
+            <button class="body-map-point point-waist" type="button" data-map-topic="body" aria-label="3번 체형 기록 보기">3</button>
+            <button class="body-map-point point-legs" type="button" data-map-topic="walking" aria-label="4번 걷기 습관 보기">4</button>
+          </div>
+        </section>
         <form id="feedback-form" class="two-column">
           <div class="form-row"><label for="feedback-rating">결과 안내가 이해하기 쉬웠나요?</label><select id="feedback-rating"><option value="5">매우 쉬움</option><option value="4">쉬움</option><option value="3" selected>보통</option><option value="2">어려움</option><option value="1">매우 어려움</option></select></div>
           <div class="form-row"><label for="feedback-comment">의견 (선택)</label><input id="feedback-comment" maxlength="500" placeholder="개선할 점을 적어 주세요"></div>
@@ -112,14 +145,42 @@
         <form id="challenge-form"><div class="challenge-grid" id="challenge-list"></div><div class="actions"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">4주 챌린지 시작</button></div></form>
       </section>
       <section class="screen" data-step="8" aria-labelledby="dashboard-title">
-        <p class="eyebrow">추적 대시보드</p><h2 id="dashboard-title">위험 범주와 실천 기록을 확인하세요</h2>
-        <div class="dashboard-grid">
-          <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
-          <article><small>4주 챌린지</small><strong id="dashboard-cycle">-</strong><p>현재 사이클</p></article>
-          <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
+        <div class="dashboard-hero">
+          <div><p class="eyebrow">나의 건강 홈</p><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2><p class="lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
         </div>
-        <form id="daily-log-form"><fieldset><legend>오늘 실천한 항목</legend><div id="daily-log-list"></div></fieldset><button class="primary" type="submit">오늘 기록 저장</button></form>
-        <section class="dashboard-section" aria-labelledby="barrier-title">
+        <nav class="workspace-nav" aria-label="건강관리 메뉴">
+          <button class="workspace-tab active" type="button" data-workspace="home" aria-selected="true">홈</button>
+          <button class="workspace-tab" type="button" data-workspace="challenge" aria-selected="false">챌린지</button>
+          <button class="workspace-tab" type="button" data-workspace="report" aria-selected="false">리포트</button>
+          <button class="workspace-tab" type="button" data-workspace="together" aria-selected="false">함께하기</button>
+          <button class="workspace-tab" type="button" data-workspace="tools" aria-selected="false">건강도구</button>
+        </nav>
+
+        <section class="workspace-panel active" data-workspace-panel="home" aria-labelledby="home-summary-title">
+          <h3 id="home-summary-title" class="sr-only">오늘의 건강 요약</h3>
+          <div class="dashboard-grid summary-grid">
+            <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
+            <article><small>현재 챌린지</small><strong id="dashboard-cycle">-</strong><p>4주 실천 과정</p></article>
+            <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
+          </div>
+          <div class="today-card">
+            <p class="eyebrow">오늘의 할 일</p>
+            <h3>챌린지 실천을 기록해 주세요</h3>
+            <p>기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
+            <button class="primary workspace-shortcut" type="button" data-workspace="challenge">오늘 기록하기</button>
+          </div>
+          <div class="quick-grid" aria-label="다른 기능 바로가기">
+            <button class="quick-link workspace-shortcut" type="button" data-workspace="report"><span>주간 리포트</span><small>이번 주 실천을 요약해서 보기</small></button>
+            <button class="quick-link workspace-shortcut" type="button" data-workspace="together"><span>함께하기</span><small>가족·친구와 챌린지하기</small></button>
+            <button class="quick-link workspace-shortcut" type="button" data-workspace="tools"><span>건강도구</span><small>워치 기록과 근거 Q&amp;A</small></button>
+          </div>
+          <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
+        </section>
+
+        <section class="workspace-panel" data-workspace-panel="challenge" aria-labelledby="challenge-manage-title" hidden>
+          <div class="section-heading"><p class="eyebrow">오늘의 실천</p><h3 id="challenge-manage-title">챌린지 기록</h3><p>오늘 한 항목만 체크해 저장하세요.</p></div>
+          <form id="daily-log-form" class="focus-card"><fieldset><legend>오늘 실천한 항목</legend><div id="daily-log-list"></div></fieldset><button class="primary" type="submit">오늘 기록 저장</button></form>
+          <section class="dashboard-section" aria-labelledby="barrier-title">
           <h3 id="barrier-title">실천하지 못한 이유와 목표 조정</h3>
           <form id="barrier-form" class="two-column">
             <div class="form-row"><label for="barrier-challenge">챌린지</label><select id="barrier-challenge"></select></div>
@@ -127,16 +188,28 @@
             <button class="secondary full" type="submit">이유 기록하고 조정안 보기</button>
           </form>
           <p id="barrier-suggestion" class="lead">실패가 아니라 다음 목표를 조정하기 위한 기록입니다.</p>
+          </section>
         </section>
-        <section class="dashboard-section" aria-labelledby="weekly-title">
+
+        <section class="workspace-panel" data-workspace-panel="report" aria-labelledby="report-panel-title" hidden>
+          <div class="section-heading"><p class="eyebrow">나의 변화</p><h3 id="report-panel-title">주간 리포트</h3><p>위험도의 변화가 아니라 생활습관 기록을 요약합니다.</p></div>
+          <section class="dashboard-section first-section" aria-labelledby="weekly-title">
           <h3 id="weekly-title">이번 주 건강 리포트</h3>
           <div id="weekly-report" class="dashboard-grid"><article><strong>기록 준비 중</strong></article></div>
-        </section>
-        <section class="dashboard-section" aria-labelledby="education-title">
+          </section>
+          <section class="dashboard-section" aria-labelledby="education-title">
           <h3 id="education-title">4주 건강교육</h3>
           <div id="education-list" class="challenge-grid"></div>
+          </section>
+          <section class="dashboard-section" aria-labelledby="notification-title">
+            <h3 id="notification-title">웹 알림과 리포트 내보내기</h3>
+            <div id="notification-list" class="challenge-grid"></div>
+            <div class="actions"><button class="secondary" id="notification-toggle" type="button">웹 알림 끄기</button><button class="secondary" id="download-report" type="button">주간 리포트 PDF 받기</button></div>
+          </section>
         </section>
-        <section class="dashboard-section" aria-labelledby="together-title">
+
+        <section class="workspace-panel" data-workspace-panel="together" aria-labelledby="together-title" hidden>
+          <section class="dashboard-section first-section">
           <h3 id="together-title">가족·친구와 함께하기</h3>
           <p class="lead">기본적으로 챌린지 수행 상태만 공유합니다. 건강정보와 예측 결과는 공유하지 않습니다.</p>
           <form id="invite-form" class="two-column">
@@ -156,8 +229,12 @@
             <button class="secondary full" type="submit">공동 챌린지 초대 만들기</button>
           </form>
           <div id="shared-group-list" class="challenge-grid"></div>
+          </section>
         </section>
-        <section class="dashboard-section" aria-labelledby="wearable-title">
+
+        <section class="workspace-panel" data-workspace-panel="tools" aria-labelledby="tools-panel-title" hidden>
+          <div class="section-heading"><p class="eyebrow">선택 기능</p><h3 id="tools-panel-title">건강도구</h3><p>필요한 도구만 골라 사용하세요.</p></div>
+          <section class="dashboard-section first-section" aria-labelledby="wearable-title">
           <h3 id="wearable-title">워치·웨어러블 기록</h3>
           <p class="lead">현재는 제조사 계정 대신 개발용 어댑터로 일일 요약을 확인합니다.</p>
           <form id="wearable-form" class="two-column">
@@ -166,13 +243,13 @@
             <button class="secondary full" type="submit">개발용 웨어러블 기록 가져오기</button>
           </form>
           <div id="wearable-result" class="notice" hidden></div>
-        </section>
-        <section class="dashboard-section" aria-labelledby="rag-title">
+          </section>
+          <section class="dashboard-section" aria-labelledby="rag-title">
           <h3 id="rag-title">근거를 보여주는 건강교육 Q&amp;A</h3>
           <form id="rag-form"><div class="form-row"><label for="rag-question">궁금한 생활습관</label><input id="rag-question" maxlength="500" placeholder="예: 걷기 운동은 어떻게 시작하나요?" required></div><button class="secondary" type="submit">근거 자료에서 찾기</button></form>
           <div id="rag-result" class="notice" hidden></div>
-        </section>
-        <section class="dashboard-section" aria-labelledby="assist-title">
+          </section>
+          <section class="dashboard-section" aria-labelledby="assist-title">
           <h3 id="assist-title">기록 입력 도우미</h3>
           <p class="lead">CV·OCR 연동 전 안전한 개발용 어댑터입니다. 결과는 확인 전 자동 저장되지 않습니다.</p>
           <div class="two-column">
@@ -181,13 +258,8 @@
           </div>
           <div id="assist-result" class="notice" hidden></div>
           <div class="actions"><button class="secondary" id="confirm-food" type="button" hidden>식단 분류 확인</button><button class="secondary" id="confirm-ocr" type="button" hidden>OCR 초안 확인</button></div>
+          </section>
         </section>
-        <section class="dashboard-section" aria-labelledby="notification-title">
-          <h3 id="notification-title">웹 알림과 리포트 내보내기</h3>
-          <div id="notification-list" class="challenge-grid"></div>
-          <div class="actions"><button class="secondary" id="notification-toggle" type="button">웹 알림 끄기</button><button class="secondary" id="download-report" type="button">주간 리포트 PDF 받기</button></div>
-        </section>
-        <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
         <button class="secondary" id="restart" type="button">처음부터 다시 보기</button>
       </section>
     </section>
