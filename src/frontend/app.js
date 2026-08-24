@@ -74,7 +74,60 @@ function showStep(step) {
   });
   $("#step-current").textContent = state.step;
   $("#progress-bar").style.width = `${(state.step / 8) * 100}%`;
+  if (state.step === 6) { syncLifestyleAvatar(); updateLifestyleMap(state.mapTopic || "rhythm"); }
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function syncLifestyleAvatar() {
+  const isMale = $("#gender").value === "MALE";
+  const avatar = $("#lifestyle-avatar");
+  const birthDate = new Date(`${$("#birth-date").value}T00:00:00`);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
+  if (!Number.isFinite(age)) age = 20;
+  const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
+  const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
+  const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
+  const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
+  const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
+  avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
+  avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
+  avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
+  avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
+  $("#avatar-profile-summary").textContent = height && bmi
+    ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
+    : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
+}
+
+function lifestyleMapContent(topic) {
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? (weight / ((height / 100) ** 2)).toFixed(1) : null;
+  const waist = $("#waist").value;
+  return {
+    rhythm: { number: "1", title: "생활 리듬", value: "현재 건강입력에는 수면 정보가 포함되지 않았어요.", action: "웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다." },
+    activity: { number: "2", title: "활동 습관", value: $("#regular-exercise").checked ? "규칙적으로 운동한다고 기록했어요." : "규칙적인 운동을 하지 않는다고 기록했어요.", action: "몸 상태에 맞는 작은 활동 챌린지를 직접 선택할 수 있습니다." },
+    body: { number: "3", title: "체형 기록", value: bmi ? `입력값으로 계산한 BMI는 ${bmi}${waist ? `, 허리둘레는 ${waist}cm` : ""}입니다.` : "키와 몸무게 기록이 필요합니다.", action: "수치는 위험 판정이 아니라 입력한 건강정보를 다시 확인하기 위한 표시입니다." },
+    walking: { number: "4", title: "걷기 습관", value: "아직 걸음 수 기록을 연결하지 않았어요.", action: "챌린지에서 걷기 목표를 고르거나 건강도구에서 워치 기록을 연결해 보세요." },
+  }[topic];
+}
+
+function updateLifestyleMap(topic) {
+  state.mapTopic = topic;
+  const content = lifestyleMapContent(topic);
+  $("#map-detail-number").textContent = content.number;
+  $("#map-detail-title").textContent = content.title;
+  $("#map-detail-value").textContent = content.value;
+  $("#map-detail-action").textContent = content.action;
+  $$(".body-map-point").forEach((button) => {
+    const selected = button.dataset.mapTopic === topic;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 }
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -101,32 +154,42 @@ async function pollPrediction(jobId) {
     if (job.status === "failed") {
       const error = new Error(job.error_message || "분석 작업을 완료하지 못했습니다.");
       error.code = job.error_code || "INFERENCE_FAILED";
+      error.retryable = job.retryable;
+      error.retryAfterSeconds = job.retry_after_seconds;
       throw error;
     }
     await sleep(1000);
   }
-  throw new Error("상태 확인 시간이 초과되었습니다. 작업 이력에서 다시 확인해 주세요.");
+  const error = new Error("상태 확인 시간이 초과되었습니다. 작업 이력에서 다시 확인해 주세요.");
+  error.code = "TIMEOUT";
+  error.retryable = true;
+  error.retryAfterSeconds = 30;
+  throw error;
 }
 function renderPrediction(prediction, factors) {
-  const isPublic = prediction.result_status === "approved" && prediction.risk_category;
-  $("#result-stage").textContent = isPublic ? prediction.risk_category_label : "범주 검토 중";
+  const isApprovedRisk = prediction.result_status === "approved"
+    && prediction.promotion_status === "approved"
+    && Boolean(prediction.risk_category);
+  $("#result-stage").textContent = isApprovedRisk ? prediction.risk_category_label : "모델 검증 중";
   $("#result-explain").textContent = prediction.disclaimer;
   $("#probability-policy").textContent = "검증 전 확률·개선율은 표시하지 않습니다.";
-  $("#factor-list").innerHTML = factors.items.length
+  $("#factor-list").innerHTML = isApprovedRisk && factors.items.length
     ? factors.items.map((item) => `<li><strong>${item.factor_name}</strong><p>${item.description}</p></li>`).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${factors.message}</p></li>`;
-  const isHighRisk = prediction.risk_category === "high";
+  const isHighRisk = isApprovedRisk && prediction.risk_category === "high";
   $("#high-guidance").hidden = !isHighRisk;
   $("#medical-guidance-detail").hidden = !isHighRisk;
   $("#result-next").textContent = isHighRisk ? "검사·의료기관 안내 보기" : "결과 설명 보기";
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
-  $("#result-next").disabled = false;
+  $("#result-next").hidden = !isApprovedRisk;
+  $("#result-next").disabled = !isApprovedRisk;
 }
 async function runPrediction() {
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
   $("#result-next").disabled = true;
+  $("#result-next").hidden = true;
   $("#job-status").textContent = "분석 상태: queued";
   try {
     const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
@@ -145,10 +208,10 @@ async function runPrediction() {
     $("#result-stage").textContent = "다시 시도 필요";
     $("#analysis-failure-title").textContent = isTimeout ? "분석 시간이 초과되었습니다" : "분석을 완료하지 못했습니다";
     $("#analysis-failure-message").textContent = isTimeout
-      ? "입력정보는 보존되어 있습니다. 잠시 후 같은 정보로 다시 시도해 주세요."
+      ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
       : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
     $("#analysis-failure").hidden = false;
-    $("#retry-analysis").hidden = false;
+    $("#retry-analysis").hidden = !error.retryable;
     showMessage(error.message);
   }
 }
@@ -189,6 +252,24 @@ async function loadConnections() {
   const result = await api("/connections");
   $("#connection-list").innerHTML = result.items.length ? result.items.map((item) => `<article class="challenge-card"><span><strong>연결 사용자 #${item.connected_user_id}</strong><small>${item.relation_type} · 공유: 챌린지 수행 상태</small><small>건강정보 공유: 안 함</small><button class="text-button disconnect-connection" data-id="${item.connection_id}" type="button">연결 해제</button> <button class="text-button block-connection" data-id="${item.connection_id}" type="button">차단</button></span></article>`).join("") : `<p class="lead">아직 연결된 가족·친구가 없습니다.</p>`;
 }
+
+function showWorkspace(name, { moveFocus = true } = {}) {
+  $$(".workspace-tab").forEach((button) => {
+    const selected = button.dataset.workspace === name;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+    button.setAttribute("tabindex", selected ? "0" : "-1");
+  });
+  let selectedPanel = null;
+  $$("[data-workspace-panel]").forEach((panel) => {
+    const selected = panel.dataset.workspacePanel === name;
+    panel.hidden = !selected;
+    panel.classList.toggle("active", selected);
+    if (selected) selectedPanel = panel;
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
+}
 async function loadSharedGroups() {
   const result = await api("/shared-challenge-groups");
   $("#shared-group-list").innerHTML = result.items.length ? result.items.map((group) => {
@@ -218,6 +299,22 @@ async function refreshDashboard() {
 
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", () => showStep(state.step - 1)));
+$$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
+$$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("keydown", (event) => {
+  let nextIndex = null;
+  if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+  if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = tabs.length - 1;
+  if (nextIndex === null) return;
+  event.preventDefault();
+  const nextTab = tabs[nextIndex];
+  showWorkspace(nextTab.dataset.workspace, { moveFocus: false });
+  nextTab.focus();
+}));
+$$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
+$("#open-lifestyle-map").addEventListener("click", () => showStep(6));
+$("#map-back-to-tools").addEventListener("click", () => { showStep(8); showWorkspace("tools"); });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
   event.currentTarget.setAttribute("aria-pressed", String(enabled));
@@ -365,6 +462,9 @@ $("#connection-list").addEventListener("click", async (event) => {
     showMessage(block ? "연결을 차단했습니다." : "연결을 해제했습니다.", "success");
   } catch (error) { showMessage(error.message); }
 });
+$("#gender").addEventListener("change", syncLifestyleAvatar);
+$("#birth-date").addEventListener("change", syncLifestyleAvatar);
+[$("#height"), $("#weight")].forEach((input) => input.addEventListener("input", syncLifestyleAvatar));
 $("#shared-challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.cycle?.user_challenges?.length) return showMessage("먼저 개인 챌린지를 시작해 주세요.");

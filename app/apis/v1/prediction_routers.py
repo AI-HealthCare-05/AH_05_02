@@ -76,13 +76,19 @@ async def read_prediction_job(
 
 
 def prediction_payload(item: Prediction) -> dict[str, object]:
-    public_category = item.risk_category if item.result_status == "approved" else None
+    promotion_status = (
+        "approved"
+        if item.result_status == "approved" and item.threshold_version != "unapproved"
+        else "development_only"
+    )
+    public_category = item.risk_category if promotion_status == "approved" else None
     return {
         "prediction_id": item.id,
         "checkup_id": item.health_checkup_id,
         "model_key": item.model_key,
         "outcome_definition": item.outcome_definition,
         "result_status": item.result_status,
+        "promotion_status": promotion_status,
         "risk_category": public_category,
         "risk_category_label": RISK_LABELS.get(public_category, "검토 중"),
         "model_version": item.model_version,

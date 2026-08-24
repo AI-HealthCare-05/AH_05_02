@@ -335,6 +335,8 @@
     "checkup_id": 501,
     "model_key": "diabetes_incidence",
     "outcome_definition": "next_observation_new_diabetes_diagnosis",
+    "result_status": "approved",
+    "promotion_status": "approved",
     "risk_category": "caution",
     "risk_category_label": "주의",
     "model_version": "v1.0.0",
@@ -345,6 +347,10 @@
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
 }
 ```
+
+`risk_category`와 결과 화면 CTA는 `result_status`, `promotion_status`가 모두 `approved`이고
+`risk_category`가 존재할 때만 공개한다. 그 전에는 `모델 검증 중`으로 표시하며 내부 점수와
+위험 범주를 공개하지 않는다.
 
 ### 4.6 4주 챌린지 시작
 
