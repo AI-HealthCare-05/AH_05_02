@@ -231,7 +231,7 @@ function renderPrediction(prediction, factors) {
     && Boolean(prediction.risk_category);
   $("#result-stage").textContent = isApprovedRisk ? getRiskCategoryLabel(prediction) : "모델 검증 중";
   $("#result-explain").textContent = prediction.disclaimer || "이 화면은 당뇨병을 진단하거나 처방을 대신하지 않습니다.";
-  $("#probability-policy").textContent = "승인 전에는 숫자 점수와 내부 모델값을 표시하지 않습니다.";
+  $("#probability-policy").textContent = "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
   const factorItems = Array.isArray(factors?.items) ? factors.items : [];
   $("#factor-list").innerHTML = isApprovedRisk && factorItems.length
     ? factorItems.map((item) => {
