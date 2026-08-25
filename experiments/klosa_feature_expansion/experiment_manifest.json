@@ -1,0 +1,269 @@
+{
+  "experiment_id": "klosa-feature-expansion-20260824",
+  "source_file": "klosa_panel_cleaned_1_10.csv",
+  "source_sha256": "d4f720d92333a292bb7b80f47d4bd02f061539ccdcc4fb6da33b951e4af061b9",
+  "target_definition": "t0 미진단자의 다음 인접 조사 신규 당뇨 진단 여부",
+  "split_summary": {
+    "train": {
+      "n": 36273,
+      "positive_n": 917,
+      "positive_rate": 0.025280511675350812
+    },
+    "validation": {
+      "n": 7678,
+      "positive_n": 187,
+      "positive_rate": 0.024355300859598854
+    },
+    "test": {
+      "n": 7856,
+      "positive_n": 195,
+      "positive_rate": 0.024821792260692463
+    }
+  },
+  "feature_bundles": {
+    "core_8": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker"
+      ]
+    },
+    "core_8_plus_hypertension": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "baseline_hypertension_history"
+      ]
+    },
+    "core_8_plus_bmi_history": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_bmi",
+        "bmi_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available"
+      ]
+    },
+    "core_8_plus_health_history": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_self_rated_health",
+        "self_rated_health_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available"
+      ]
+    },
+    "core_8_plus_meal_history": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_meal_count_yesterday",
+        "meal_count_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available"
+      ]
+    },
+    "core_8_plus_behavior_history": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available",
+        "prior_regular_exercise",
+        "regular_exercise_changed",
+        "prior_current_smoker",
+        "current_smoker_changed",
+        "prior_current_drinker",
+        "current_drinker_changed"
+      ]
+    },
+    "core_8_plus_bmi_history_hypertension": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_bmi",
+        "bmi_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available",
+        "baseline_hypertension_history"
+      ]
+    },
+    "core_8_plus_longitudinal": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_bmi",
+        "bmi_change",
+        "prior_self_rated_health",
+        "self_rated_health_change",
+        "prior_meal_count_yesterday",
+        "meal_count_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available",
+        "prior_regular_exercise",
+        "regular_exercise_changed",
+        "prior_current_smoker",
+        "current_smoker_changed",
+        "prior_current_drinker",
+        "current_drinker_changed"
+      ]
+    },
+    "core_8_plus_longitudinal_hypertension": {
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday",
+        "prior_wave_gap",
+        "prior_bmi",
+        "bmi_change",
+        "prior_self_rated_health",
+        "self_rated_health_change",
+        "prior_meal_count_yesterday",
+        "meal_count_change"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker",
+        "prior_observation_available",
+        "prior_regular_exercise",
+        "regular_exercise_changed",
+        "prior_current_smoker",
+        "current_smoker_changed",
+        "prior_current_drinker",
+        "current_drinker_changed",
+        "baseline_hypertension_history"
+      ]
+    }
+  },
+  "selected_candidate_validation": {
+    "bundle": "core_8_plus_bmi_history_hypertension",
+    "feature_count": 13,
+    "selected_c": 0.01,
+    "threshold_version": "thr-b842d011d108",
+    "n": 7678,
+    "positive_n": 187,
+    "prevalence": 0.024355300859598854,
+    "threshold": 0.021239244919707703,
+    "auroc": 0.6727384804724671,
+    "auprc": 0.04581944988017633,
+    "auprc_lift": 1.881292706844887,
+    "recall": 0.7807486631016043,
+    "specificity": 0.5070084100921105,
+    "precision": 0.038030737171138314,
+    "f1": 0.07252856433184302,
+    "brier": 0.023567516549111663,
+    "predicted_positive_rate": 0.5,
+    "tn": 3798,
+    "fp": 3693,
+    "fn": 41,
+    "tp": 146,
+    "constraints_passed": true,
+    "null_probability_train_prevalence": 0.025280511675350812,
+    "null_model_brier": 0.023762976194690862,
+    "brier_skill_score": 0.008225385741995939,
+    "expected_calibration_error": 0.005724620604309874,
+    "recall_gain_vs_core": 0.03743315508021394,
+    "expansion_acceptance_passed": true
+  },
+  "selected_candidate_test": {
+    "bundle": "core_8_plus_bmi_history_hypertension",
+    "feature_count": 13,
+    "threshold_source": "validation",
+    "n": 7856,
+    "positive_n": 195,
+    "prevalence": 0.024821792260692463,
+    "threshold": 0.021239244919707703,
+    "auroc": 0.6403636132392169,
+    "auprc": 0.04653303857264324,
+    "auprc_lift": 1.8746848770599245,
+    "recall": 0.717948717948718,
+    "specificity": 0.48622895183396425,
+    "precision": 0.03434739941118744,
+    "f1": 0.06555841723249825,
+    "brier": 0.02403825632138708,
+    "predicted_positive_rate": 0.5188391038696538,
+    "tn": 3725,
+    "fp": 3936,
+    "fn": 55,
+    "tp": 140,
+    "null_probability_train_prevalence": 0.025280511675350812,
+    "null_model_brier": 0.024205881313160878,
+    "brier_skill_score": 0.006924969580953011,
+    "expected_calibration_error": 0.0037036750954920514,
+    "constraints_passed": false
+  },
+  "test_used_for_selection": false,
+  "disease_specific_feature_rule": {
+    "baseline_hypertension_history": "allowed_for_future_diabetes_only; forbidden_for_hypertension_target"
+  },
+  "local_model_path": "models\\candidate\\klosa_feature_expansion\\diabetes-klosa-feature-expansion-v0.5.0.joblib",
+  "promotion_status": "candidate_internal_not_for_personal_probability_display"
+}

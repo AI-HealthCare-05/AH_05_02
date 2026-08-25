@@ -1,0 +1,9 @@
+﻿dataset,asset_kind,path,present,size_bytes,sha256,status,note
+KLoSA,semantic_columns,local://Downloads/klosa_semantic_columns.csv,True,1729207,d079837df2c46b58604705e3c71a1a8222e1430a41208fc9fefe7c4d822b89d4,available_metadata_only,변수 목록이며 응답자 행 데이터가 아님
+KNHANES,semantic_columns,local://Downloads/knhanes_semantic_columns.csv,True,565704,f43e746eb5cd9af4ab67e25f2c4ba7aa4cc3cb95c6c0c58f81f110bcd10e3c84,available_metadata_only,변수 목록이며 응답자 행 데이터가 아님
+KLoSA,all_columns,local://Downloads/klosa_all_columns.csv,True,6637429,26f6f75f04ff4adae228a5de792d5bd3cb0d0961cac851ac2faeb592384f7fa2,available_metadata_only,변수 목록이며 응답자 행 데이터가 아님
+KNHANES,all_columns,local://Downloads/knhanes_all_columns.csv,True,1485582,9d80b7261223a419f1172f2c4ba7aa4cc3cb95c6c0c58f81f110bcd10e3c84,available_metadata_only,변수 목록이며 응답자 행 데이터가 아님
+KLoSA,respondent_raw_data,data\raw\klosa,False,,,missing,공식 자료 확보 필요
+KLoSA,official_codebook,data\codebooks\klosa,False,,,missing,공식 자료 확보 필요
+KNHANES,respondent_raw_data,data\raw\knhanes,False,,,missing,공식 자료 확보 필요
+KNHANES,official_codebook,data\codebooks\knhanes,False,,,missing,공식 자료 확보 필요

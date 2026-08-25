@@ -1,0 +1,33 @@
+{
+  "experiment_id": "klosa-full-retrain-calibration-20260821",
+  "seed": 20260821,
+  "cv_folds": 5,
+  "c_values": [0.01, 0.1, 1.0, 10.0],
+  "reliability_bins": 10,
+  "selection_constraints": {
+    "minimum_specificity": 0.5,
+    "minimum_auprc_lift": 1.05
+  },
+  "threshold_grid": {
+    "minimum": 0.01,
+    "maximum": 0.99,
+    "points": 99
+  },
+  "dataset": {
+    "feature_schema_version": "klosa-diabetes-incident-v1",
+    "model_version": "diabetes-klosa-full-calibrated-v0.4.0",
+    "target_type": "future_incident_next_wave",
+    "numeric_features": [
+      "age",
+      "bmi",
+      "self_rated_health",
+      "meal_count_yesterday"
+    ],
+    "categorical_features": [
+      "sex",
+      "regular_exercise",
+      "current_smoker",
+      "current_drinker"
+    ]
+  }
+}
