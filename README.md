@@ -62,6 +62,8 @@
 - [Sprint 2 요구사항 추적성·누락 QA](docs/TRACEABILITY_AND_GAP_QA_20260819.md)
 - [Sprint 2 기능 구현 백로그](docs/SPRINT2_BACKLOG.md)
 - [Sprint 2 주간 QA 및 2주 과업 종합](docs/SPRINT2_WEEKLY_QA_AND_TEAM_AUDIT_20260821.md)
+- [KLoSA·KNHANES 공통 전처리 프로토콜](docs/DATA_PREPROCESSING_PROTOCOL.md)
+- [전처리 결과 공유용 요약](docs/NOTION_PREPROCESSING_SHARE.md)
 
 ## 로컬 실행
 
