@@ -8,29 +8,29 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ai_worker.ml.build_klosa_diabetes_cohort import TARGET
-from ai_worker.ml.build_klosa_diabetes_mental_rhythm_cohort import (
+from src.ml.evaluation.compare_klosa_thresholds import choose_threshold_for_recall
+from src.ml.modeling.train_klosa_diabetes_extended_features import (
+    make_extended_pipeline,
+)
+from src.ml.modeling.train_klosa_diabetes_pooled import split_grouped_cohort
+from src.ml.modeling.train_klosa_diabetes_sample import assert_no_leakage, evaluate
+from src.ml.preprocessing.build_klosa_diabetes_cohort import TARGET
+from src.ml.preprocessing.build_klosa_diabetes_mental_rhythm_cohort import (
     MENTAL_RHYTHM_CATEGORICAL_FEATURES,
     MENTAL_RHYTHM_EXTENDED_FEATURES,
     MENTAL_RHYTHM_NUMERIC_FEATURES,
 )
-from ai_worker.ml.build_klosa_diabetes_physical_function_cohort import (
+from src.ml.preprocessing.build_klosa_diabetes_physical_function_cohort import (
     PHYSICAL_FUNCTION_CATEGORICAL_FEATURES,
     PHYSICAL_FUNCTION_EXTENDED_FEATURES,
     PHYSICAL_FUNCTION_NUMERIC_FEATURES,
     build_physical_function_cohort,
 )
-from ai_worker.ml.build_klosa_diabetes_socioeconomic_cohort import (
+from src.ml.preprocessing.build_klosa_diabetes_socioeconomic_cohort import (
     SOCIOECONOMIC_CATEGORICAL_FEATURES,
     SOCIOECONOMIC_EXTENDED_FEATURES,
     SOCIOECONOMIC_NUMERIC_FEATURES,
 )
-from ai_worker.ml.compare_klosa_thresholds import choose_threshold_for_recall
-from ai_worker.ml.train_klosa_diabetes_extended_features import (
-    make_extended_pipeline,
-)
-from ai_worker.ml.train_klosa_diabetes_pooled import split_grouped_cohort
-from ai_worker.ml.train_klosa_diabetes_sample import assert_no_leakage, evaluate
 
 
 @dataclass(frozen=True)
@@ -272,12 +272,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("experiments/klosa_top_balanced_model_weights"),
+        default=Path("experiments/diabetes_incidence/candidates/klosa_top_balanced_model_weights"),
     )
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--minimum-validation-recall", type=float, default=0.80)

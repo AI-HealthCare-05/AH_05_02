@@ -244,7 +244,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output",

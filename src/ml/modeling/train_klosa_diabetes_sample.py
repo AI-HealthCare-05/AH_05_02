@@ -297,12 +297,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("models/samples/klosa_diabetes_incidence_9_10"),
+        default=Path("models/artifacts/samples/klosa_diabetes_incidence_9_10"),
     )
     parser.add_argument("--random-state", type=int, default=42)
     return parser.parse_args()

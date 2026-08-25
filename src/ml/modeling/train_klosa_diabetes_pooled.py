@@ -15,12 +15,7 @@ import sklearn
 from sklearn.calibration import calibration_curve
 from sklearn.model_selection import train_test_split
 
-from ai_worker.ml.build_klosa_diabetes_cohort import (
-    TARGET,
-    WEB_MODEL_FEATURES,
-    build_cohort,
-)
-from ai_worker.ml.infer_klosa_diabetes import (
+from src.ml.inference.diabetes import (
     CALIBRATION_VERSION,
     FEATURE_SET_VERSION,
     INPUT_SCHEMA_VERSION,
@@ -30,11 +25,16 @@ from ai_worker.ml.infer_klosa_diabetes import (
     SUPPORTED_AGE_MINIMUM,
     TARGET_DEFINITION_VERSION,
 )
-from ai_worker.ml.train_klosa_diabetes_sample import (
+from src.ml.modeling.train_klosa_diabetes_sample import (
     assert_no_leakage,
     choose_threshold,
     evaluate,
     make_logistic_pipeline,
+)
+from src.ml.preprocessing.build_klosa_diabetes_cohort import (
+    TARGET,
+    WEB_MODEL_FEATURES,
+    build_cohort,
 )
 
 ID_COLUMN = "pid"
@@ -270,7 +270,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output-dir",
@@ -298,14 +298,14 @@ def main() -> None:
     class_weight = None if args.class_weight == "none" else args.class_weight
     weighted = class_weight == "balanced"
     output_dir = args.output_dir or Path(
-        "experiments/klosa_diabetes_logistic_balanced_pooled"
+        "experiments/diabetes_incidence/baselines/klosa_diabetes_logistic_balanced_pooled"
         if weighted
-        else "experiments/klosa_diabetes_logistic_pooled"
+        else "experiments/diabetes_incidence/baselines/klosa_diabetes_logistic_pooled"
     )
     model_dir = args.model_dir or Path(
-        "models/baselines/klosa_diabetes_incidence_logistic_balanced"
+        "models/artifacts/baselines/klosa_diabetes_incidence_logistic_balanced"
         if weighted
-        else "models/baselines/klosa_diabetes_incidence_pooled"
+        else "models/artifacts/baselines/klosa_diabetes_incidence_pooled"
     )
     metrics = run_training(
         args.data_dir,

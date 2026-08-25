@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from ai_worker.ml.build_klosa_diabetes_socioeconomic_cohort import (
+from src.ml.modeling.train_klosa_diabetes_extended_features import (
+    make_extended_pipeline,
+)
+from src.ml.preprocessing.build_klosa_diabetes_socioeconomic_cohort import (
     SOCIOECONOMIC_EXTENDED_FEATURES,
     build_socioeconomic_transition,
-)
-from ai_worker.ml.train_klosa_diabetes_extended_features import (
-    make_extended_pipeline,
 )
 
 
