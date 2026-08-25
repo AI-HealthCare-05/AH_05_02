@@ -4,6 +4,18 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
+class ApiError extends Error {
+  constructor(message, options = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.code = options.code || "REQUEST_FAILED";
+    this.status = options.status || 0;
+    this.retryable = options.retryable ?? false;
+    this.retryAfterSeconds = Number(options.retryAfterSeconds || 0);
+    this.details = options.details || null;
+  }
+}
+
 const eligibilityGuidance = {
   URGENT_MEDICAL_ATTENTION: {
     code: "E03", title: "즉시 의료 확인이 필요합니다",
@@ -37,9 +49,33 @@ const eligibilityGuidance = {
   },
 };
 
+const jobStatusLabels = {
+  queued: "접수·대기",
+  running: "분석 중",
+  succeeded: "완료",
+  failed: "실패",
+};
+const riskCategoryLabels = {
+  low: "낮음",
+  moderate: "주의",
+  caution: "주의",
+  high: "높음",
+  diabetes_screening_advised: "높음",
+};
+
+function getRiskCategoryLabel(prediction) {
+  return prediction?.risk_category_label || riskCategoryLabels[prediction?.risk_category] || "확인 필요";
+}
+
+function isHighRiskPrediction(prediction) {
+  return prediction?.risk_category === "high"
+    || prediction?.risk_category === "diabetes_screening_advised"
+    || prediction?.risk_category_label === "높음";
+}
+
 function showEligibilityGuidance(reasonCodes) {
   const priority = [
-    "URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES", "UNDER_MINIMUM_SERVICE_AGE",
+    "URGENT_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
   ];
   const reason = priority.find((code) => reasonCodes.includes(code));
@@ -141,7 +177,20 @@ async function api(path, options = {}) {
       ? detail.map((item) => `${item.loc?.slice(1).join(".") || "입력값"}: ${item.msg}`).join(" / ")
       : null;
     const message = typeof detail === "string" ? detail : validationMessage || detail?.message || payload.error?.message;
-    throw new Error(message || "요청을 처리하지 못했습니다.");
+    const fallbackCode = response.status === 401
+      ? "UNAUTHENTICATED"
+      : response.status === 422
+        ? "VALIDATION_ERROR"
+        : response.status === 503
+          ? "MODEL_NOT_READY"
+          : "REQUEST_FAILED";
+    throw new ApiError(message || "요청을 처리하지 못했습니다.", {
+      code: detail?.error_code || payload.error_code || payload.error?.code || detail?.code || payload.code || fallbackCode,
+      status: response.status,
+      retryable: detail?.retryable ?? payload.retryable ?? payload.error?.retryable ?? response.status >= 500,
+      retryAfterSeconds: detail?.retry_after_seconds ?? payload.retry_after_seconds ?? payload.error?.retry_after_seconds,
+      details: Array.isArray(detail) ? detail : null,
+    });
   }
   return payload.data ?? payload;
 }
@@ -149,8 +198,16 @@ async function pollPrediction(jobId) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 35000) {
     const job = await api(`/prediction-jobs/${jobId}`);
-    $("#job-status").textContent = `분석 상태: ${job.status}`;
-    if (job.status === "succeeded") return job.prediction_id;
+    $("#job-status").textContent = `분석 상태: ${jobStatusLabels[job.status] || job.status}`;
+    if (job.status === "succeeded") {
+      if (!job.prediction_id) {
+        throw new ApiError("완료된 분석 결과 번호를 받지 못했습니다.", {
+          code: "MISSING_PREDICTION_ID",
+          retryable: true,
+        });
+      }
+      return job.prediction_id;
+    }
     if (job.status === "failed") {
       const error = new Error(job.error_message || "분석 작업을 완료하지 못했습니다.");
       error.code = job.error_code || "INFERENCE_FAILED";
@@ -169,17 +226,24 @@ async function pollPrediction(jobId) {
 function renderPrediction(prediction, factors) {
   const isApprovedRisk = prediction.result_status === "approved"
     && prediction.promotion_status === "approved"
+    && prediction.output_status !== "uncalibrated_research_probability_only"
+    && prediction.raw_probability_exposed !== true
     && Boolean(prediction.risk_category);
-  $("#result-stage").textContent = isApprovedRisk ? prediction.risk_category_label : "모델 검증 중";
-  $("#result-explain").textContent = prediction.disclaimer;
-  $("#probability-policy").textContent = "검증 전 확률·개선율은 표시하지 않습니다.";
-  $("#factor-list").innerHTML = isApprovedRisk && factors.items.length
-    ? factors.items.map((item) => `<li><strong>${item.factor_name}</strong><p>${item.description}</p></li>`).join("")
-    : `<li><strong>설명 결과 준비 중</strong><p>${factors.message}</p></li>`;
-  const isHighRisk = isApprovedRisk && prediction.risk_category === "high";
+  $("#result-stage").textContent = isApprovedRisk ? getRiskCategoryLabel(prediction) : "모델 검증 중";
+  $("#result-explain").textContent = prediction.disclaimer || "이 화면은 당뇨병을 진단하거나 처방을 대신하지 않습니다.";
+  $("#probability-policy").textContent = "승인 전에는 숫자 점수와 내부 모델값을 표시하지 않습니다.";
+  const factorItems = Array.isArray(factors?.items) ? factors.items : [];
+  $("#factor-list").innerHTML = isApprovedRisk && factorItems.length
+    ? factorItems.map((item) => {
+      const factorName = item.display_name || item.factor_name || "확인된 요인";
+      const factorDescription = item.message || item.description || "검증된 설명만 표시합니다.";
+      return `<li><strong>${escapeHtml(factorName)}</strong><p>${escapeHtml(factorDescription)}</p></li>`;
+    }).join("")
+    : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
+  const isHighRisk = isApprovedRisk && isHighRiskPrediction(prediction);
   $("#high-guidance").hidden = !isHighRisk;
   $("#medical-guidance-detail").hidden = !isHighRisk;
-  $("#result-next").textContent = isHighRisk ? "검사·의료기관 안내 보기" : "결과 설명 보기";
+  $("#result-next").textContent = isHighRisk ? "검사·의료기관 안내 보기" : "내 위험·보호 요인 확인하기";
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
   $("#result-next").hidden = !isApprovedRisk;
@@ -190,7 +254,7 @@ async function runPrediction() {
   $("#retry-analysis").hidden = true;
   $("#result-next").disabled = true;
   $("#result-next").hidden = true;
-  $("#job-status").textContent = "분석 상태: queued";
+  $("#job-status").textContent = `분석 상태: ${jobStatusLabels.queued}`;
   try {
     const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
       checkup_id: state.checkupId, model_key: "diabetes_incidence",
@@ -204,12 +268,19 @@ async function runPrediction() {
     renderPrediction(prediction, factors);
   } catch (error) {
     const isTimeout = error.code === "TIMEOUT";
+    const isModelNotReady = error.code === "MODEL_NOT_READY";
     $("#job-status").textContent = isTimeout ? "분석 상태: 시간 초과" : "분석 상태: 실패";
-    $("#result-stage").textContent = "다시 시도 필요";
-    $("#analysis-failure-title").textContent = isTimeout ? "분석 시간이 초과되었습니다" : "분석을 완료하지 못했습니다";
+    $("#result-stage").textContent = isModelNotReady ? "모델 준비 중" : "다시 시도 필요";
+    $("#analysis-failure-title").textContent = isTimeout
+      ? "분석 시간이 초과되었습니다"
+      : isModelNotReady
+        ? "현재 모델을 검증하고 있습니다"
+        : "분석을 완료하지 못했습니다";
     $("#analysis-failure-message").textContent = isTimeout
       ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
-      : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
+      : isModelNotReady
+        ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다. 준비가 완료된 뒤 다시 확인해 주세요."
+        : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
     $("#analysis-failure").hidden = false;
     $("#retry-analysis").hidden = !error.retryable;
     showMessage(error.message);
