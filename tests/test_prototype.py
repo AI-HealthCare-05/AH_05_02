@@ -115,7 +115,7 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert html.count('role="tabpanel"') == 5
     assert 'aria-pressed="true"' in html
     assert 'button.setAttribute("aria-pressed", String(selected))' in script
-    assert 'selectedPanel.focus({ preventScroll: true })' in script
+    assert "selectedPanel.focus({ preventScroll: true })" in script
 
 
 def test_only_reviewed_diabetes_contract_is_active() -> None:
