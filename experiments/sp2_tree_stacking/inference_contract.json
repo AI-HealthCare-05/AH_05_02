@@ -1,0 +1,27 @@
+{
+  "request": {
+    "job_type": "model_inference",
+    "disease_type": "diabetes",
+    "dataset_model": "klosa|knhanes",
+    "model_version": "required",
+    "feature_schema_version": "required",
+    "threshold_version": "required",
+    "features": "object keyed by the exact feature schema"
+  },
+  "prediction_job": {
+    "status": "pending|running|done|failed",
+    "prediction_id": "set only after successful inference"
+  },
+  "prediction": {
+    "risk_score_internal": "0..1; internal candidate output, not a validated personal probability",
+    "risk_category": "low|moderate|high only after a reviewed mapping is approved",
+    "model_version": "echoed",
+    "feature_schema_version": "echoed",
+    "threshold_version": "echoed",
+    "disclaimer": "진단·처방이 아닌 내부 위험 선별 후보 결과"
+  },
+  "risk_factor": {
+    "status": "not_implemented_in_this_experiment",
+    "requirement": "Derive only from a validated explanation method and expose source feature metadata."
+  }
+}

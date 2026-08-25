@@ -1,0 +1,11 @@
+﻿rule_id,name,acceptance_criterion,severity
+Q01,원본 불변,원자료 해시를 기록하고 raw 파일을 덮어쓰지 않음,block
+Q02,코드북 승인,approved가 아닌 변수는 모델 입력에 사용하지 않음,block
+Q03,결측코드,변수별 공식 결측코드만 NA로 변환,block
+Q04,누수 차단,target/target_component/진단/약물 변수를 입력에서 제외,block
+Q05,분할 선행,대치·인코딩·스케일링은 학습 분할에서만 적합,block
+Q06,KLoSA 개인 분리,동일 PID가 둘 이상의 split에 존재하지 않음,block
+Q07,KNHANES 설계,가중치·층·PSU를 보존하고 모집단 추정 시 복합표본 반영,warn
+Q08,코호트 중복,19+/40+/65+ 표본 동일 여부와 실제 최소 연령 보고,warn
+Q09,연도·차수,"KLoSA 차수와 연도, KNHANES 연도별 문항변경을 명시",block
+Q10,공통 평가,세 모델을 동일 65+ 테스트셋에서도 비교,block

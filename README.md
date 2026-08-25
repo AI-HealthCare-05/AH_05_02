@@ -33,6 +33,8 @@
 ```text
 .
 ├── .github/          # CI, Issue/PR 템플릿
+├── app/              # 정식 FastAPI 백엔드
+├── ai_worker/        # Redis 비동기 AI Worker
 ├── configs/          # 모델·서비스 설정
 ├── data/             # 데이터 위치와 사용 안내
 ├── docs/             # 팀 룰, 회의록, API·설계 문서
@@ -40,28 +42,38 @@
 ├── models/           # 모델 메타데이터와 저장 위치 안내
 ├── notebooks/        # EDA와 빠른 검증
 ├── src/
-│   ├── backend/      # FastAPI 애플리케이션
+│   ├── backend/      # 과거 프로토타입 호환용
 │   ├── frontend/     # 프론트엔드 애플리케이션
 │   ├── ml/           # 예측 모델 학습·평가·추론
 │   └── rag/          # 검색 증강 생성
 └── tests/            # 자동 테스트
 ```
 
+팀원이 파일을 넣을 정확한 위치와 모델 조립 방법은 [저장소 구조 및 파일 저장 위치 가이드](docs/REPOSITORY_STRUCTURE_GUIDE.md)를 따릅니다.
+
 ## 협업 문서
 
+- [저장소 구조 및 파일 저장 위치](docs/REPOSITORY_STRUCTURE_GUIDE.md)
 - [팀 룰](docs/TEAM_RULES.md)
 - [기여 및 Git Flow](CONTRIBUTING.md)
 - [프로젝트 작업 규칙](AGENTS.md)
+- [요구사항 정의서 v2.0](docs/REQUIREMENTS.md)
+- [서비스 대상·제외 범위 및 의료 안전 문구](docs/SERVICE_SCOPE_AND_SAFETY_COPY.md)
+- [Sprint 2 요구사항 추적성·누락 QA](docs/TRACEABILITY_AND_GAP_QA_20260819.md)
+- [Sprint 2 기능 구현 백로그](docs/SPRINT2_BACKLOG.md)
+- [Sprint 2 주간 QA 및 2주 과업 종합](docs/SPRINT2_WEEKLY_QA_AND_TEAM_AUDIT_20260821.md)
+- [KLoSA·KNHANES 공통 전처리 프로토콜](docs/DATA_PREPROCESSING_PROTOCOL.md)
+- [전처리 결과 공유용 요약](docs/NOTION_PREPROCESSING_SHARE.md)
 
 ## 로컬 실행
 
 ```bash
-python -m venv .venv
-pip install -r requirements.txt
-uvicorn src.backend.main:app --reload
+uv python install 3.13
+uv sync --all-groups --frozen
+uv run uvicorn app.main:app --reload
 ```
 
-API 상태 확인: `GET http://localhost:8000/health`
+API 문서 확인: `GET http://localhost:8000/api/docs`
 
 ## 환경변수
 
@@ -74,4 +86,3 @@ API 상태 확인: `GET http://localhost:8000/health`
 - 생성형 AI: OpenAI API
 - OCR: CLOVA OCR
 - CI: GitHub Actions
-
