@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "experiment_id": "rf_25features_v001",
+  "owner": "양준혁",
+  "kind": "candidate",
+  "model_type": "RandomForestClassifier",
+  "problem": "diabetes_incidence_next_observation",
+  "dataset_path": "data/processed/official_v1/",
+  "dataset_version": "official_v1",
+  "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "entrypoint": "pipeline.py:run_experiment",
+  "primary_metric": "recall",
+  "minimum_specificity": 0.3,
+  "feature_schema_version": "klosa_stage3_25features_v1",
+  "safety": {
+    "participant_level_split": true,
+    "exclude_future_information": true,
+    "exclude_diagnosis_and_treatment_features": true,
+    "fit_preprocessing_on_train_only": true,
+    "select_threshold_on_validation_only": true,
+    "use_test_for_final_evaluation_only": true
+  },
+  "notes": "비가중 RF 표준 재현 실험. 기존 metrics.json 점수는 historical reference이며, 이 manifest로 생성된 outputs/ml의 run.json만 common-split rerun으로 취급한다."
+}
