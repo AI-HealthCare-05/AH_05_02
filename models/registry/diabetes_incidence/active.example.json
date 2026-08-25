@@ -1,0 +1,10 @@
+{
+  "model_key": "diabetes_incidence",
+  "promotion_status": "approved",
+  "model_version": "replace-after-review",
+  "feature_schema_version": "klosa-diabetes-incident-v1",
+  "threshold_version": "replace-after-review",
+  "artifact_uri": "s3://bucket/models/diabetes_incidence/model.joblib",
+  "artifact_sha256": "replace-after-review",
+  "approved_by": ["ml", "backend", "pm_qa"]
+}

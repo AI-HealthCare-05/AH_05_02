@@ -35,6 +35,7 @@ data/processed/
 data/external/
 data/private/
 outputs/
+output/
 tmp/
 
 # Local data/document archives
@@ -47,6 +48,8 @@ models/**/*.joblib
 models/**/*.pkl
 models/**/*.pt
 models/**/*.onnx
+models/artifacts/
+models/cache/
 
 # Local databases and logs
 *.db
