@@ -1,0 +1,146 @@
+{
+  "experiment_id": "klosa-comorbidity-threshold-20260824",
+  "target": "t0 미진단자의 다음 인접 조사 신규 당뇨 진단",
+  "selection_split": "validation",
+  "test_used_for_selection": false,
+  "primary_policy": "maximize recall subject to validation specificity >= 0.40",
+  "selected_validation": {
+    "feature_set": "core_8",
+    "feature_count": 8,
+    "model": "xgboost",
+    "minimum_specificity_policy": 0.4,
+    "threshold": 0.0217374749498998,
+    "n": 7678,
+    "positive_n": 187,
+    "prevalence": 0.024355300859598854,
+    "auroc": 0.6636891185643805,
+    "auprc": 0.04847341048129904,
+    "auprc_lift": 1.9902612068203958,
+    "recall": 0.8235294117647058,
+    "specificity": 0.4088906688025631,
+    "precision": 0.03360977738978612,
+    "f1": 0.06458377018242818,
+    "brier": 0.023590670073891498,
+    "predicted_positive_rate": 0.596769992185465,
+    "tn": 3063,
+    "fp": 4428,
+    "fn": 33,
+    "tp": 154
+  },
+  "selected_test": {
+    "feature_set": "core_8",
+    "feature_count": 8,
+    "model": "xgboost",
+    "minimum_specificity_policy": 0.4,
+    "threshold": 0.0217374749498998,
+    "n": 7856,
+    "positive_n": 195,
+    "prevalence": 0.024821792260692463,
+    "auroc": 0.6521137697093838,
+    "auprc": 0.04321595941218565,
+    "auprc_lift": 1.7410491135493873,
+    "recall": 0.8102564102564103,
+    "specificity": 0.40216681895313927,
+    "precision": 0.03334740396791895,
+    "f1": 0.06405838232312994,
+    "brier": 0.024041327132913844,
+    "predicted_positive_rate": 0.6031059063136456,
+    "tn": 3081,
+    "fp": 4580,
+    "fn": 37,
+    "tp": 158,
+    "null_probability_train_prevalence": 0.025280511675350812,
+    "null_model_brier": 0.024205881313160878,
+    "brier_skill_score": 0.006798107373911844,
+    "false_alerts_per_1000_negatives": 597.8331810468607,
+    "test_constraint_passed": true
+  },
+  "specificity_lower_95_one_sided": 0.3849841819992002,
+  "specificity_0_40_supported_on_test_ci": false,
+  "split_summary": {
+    "train": {
+      "n": 36273,
+      "positive_n": 917
+    },
+    "validation": {
+      "n": 7678,
+      "positive_n": 187
+    },
+    "test": {
+      "n": 7856,
+      "positive_n": 195
+    }
+  },
+  "raw_sources": [
+    {
+      "wave": 1,
+      "file": "w01_20260413.sav",
+      "sha256": "baa83b8ca4bfa904af22bbf7302f361536c87a90eab9ddf465769ea65ccd7209",
+      "rows": 10254
+    },
+    {
+      "wave": 2,
+      "file": "w02_20260413.sav",
+      "sha256": "cc16ed239bb97ceb41c42f1f3a40004c7dd8ea31df1fd83481a56de3054fcad5",
+      "rows": 8688
+    },
+    {
+      "wave": 3,
+      "file": "w03_20260413.sav",
+      "sha256": "e50e6b2984b8848d01c844f9ae8e851a5730401a3cbd6540843bec561d8ec752",
+      "rows": 7920
+    },
+    {
+      "wave": 4,
+      "file": "w04_20260413.sav",
+      "sha256": "bc7055ecbb51c3753377230f3fec3d2b90cb3b8ae1df2dffe38f2d0b4c5b7c2c",
+      "rows": 7486
+    },
+    {
+      "wave": 5,
+      "file": "w05_20260413.sav",
+      "sha256": "d0f6025a860ded2ab419dc8183aa13926a4edfa47bc6d7329b0ee782a121dd59",
+      "rows": 7029
+    },
+    {
+      "wave": 6,
+      "file": "w06_20260413.sav",
+      "sha256": "917b01ddaa215bd66792ea85aaa73d050e21ccc5d49b559c389aa62e44a139f3",
+      "rows": 7490
+    },
+    {
+      "wave": 7,
+      "file": "w07_20260413.sav",
+      "sha256": "1caa7c35f11b0137884ecd4b85abcc1e5d3f2ea13069c533d5133c460f8a0d14",
+      "rows": 6940
+    },
+    {
+      "wave": 8,
+      "file": "w08_20260413.sav",
+      "sha256": "421c9c788adc9ce7908678e9f4626543472e9326ac9563afb814f61c0cc2807b",
+      "rows": 6488
+    },
+    {
+      "wave": 9,
+      "file": "w09_20260413.sav",
+      "sha256": "d973c454ef0ee59726ff30eb8293a72d0a0888112349d883fa5df236600fd8f3",
+      "rows": 6057
+    },
+    {
+      "wave": 10,
+      "file": "w10_20260413.sav",
+      "sha256": "2509520543170a53c446cc2afc91b384c69b8faa7fdc04358a5ae92b51c74144",
+      "rows": 5562
+    }
+  ],
+  "panel_sha256": "d4f720d92333a292bb7b80f47d4bd02f061539ccdcc4fb6da33b951e4af061b9",
+  "leakage_exclusions": [
+    "diabetes diagnosis",
+    "future-wave predictors",
+    "treatment/medication",
+    "diagnosis timing",
+    "chronic disease count"
+  ],
+  "cerebrovascular_code_3_rule": "not counted as confirmed diagnosis; retained as missing unless code 1 or 5 observed",
+  "promotion_status": "candidate_internal_not_for_personal_probability_display"
+}

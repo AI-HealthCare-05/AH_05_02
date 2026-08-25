@@ -1,0 +1,109 @@
+{
+  "experiment_id": "knhanes-full-model-comparison-20260821",
+  "source_file": "knhanes_diabetes_undiagnosed_19plus.csv",
+  "source_sha256": "ee8411b67f14495fca47e980c75282d25c3d0d5dfb22cc17795f9b5f58bb414c",
+  "target_definition": "현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부",
+  "split_summary": {
+    "train": {
+      "n": 26005,
+      "positive_n": 1140,
+      "positive_rate": 0.04383772351470871
+    },
+    "validation": {
+      "n": 9132,
+      "positive_n": 415,
+      "positive_rate": 0.045444590451160755
+    },
+    "test": {
+      "n": 9691,
+      "positive_n": 390,
+      "positive_rate": 0.040243524920028896
+    }
+  },
+  "null_model_definition": "constant probability equal to train positive prevalence",
+  "comparison_scope": {
+    "baseline_models": [
+      "logistic_regression",
+      "random_forest",
+      "xgboost",
+      "lightgbm"
+    ],
+    "ensemble_models": [
+      "soft_voting_equal",
+      "oof_blending",
+      "stacking",
+      "tree_soft_voting_equal",
+      "tree_oof_blending",
+      "tree_stacking"
+    ],
+    "postprocessing": [
+      "raw_fixed_0.5",
+      "raw_threshold_tuned",
+      "sigmoid_threshold_tuned",
+      "isotonic_threshold_tuned"
+    ]
+  },
+  "final_candidate_validation": {
+    "model": "stacking",
+    "model_group": "ensemble",
+    "postprocessing": "sigmoid_threshold_tuned",
+    "candidate": "stacking__sigmoid_threshold_tuned",
+    "selection_eligible": true,
+    "threshold_version": "thr-c55c3a82cbe8",
+    "n": 9132,
+    "positive_n": 415,
+    "prevalence": 0.045444590451160755,
+    "threshold": 0.027911241464998716,
+    "auroc": 0.7853414806409301,
+    "auprc": 0.1485976050887583,
+    "auprc_lift": 3.2698634449892547,
+    "recall": 0.9012048192771084,
+    "specificity": 0.5033841918091086,
+    "precision": 0.07952370827131618,
+    "f1": 0.14615084017194216,
+    "brier": 0.04118189612075616,
+    "predicted_positive_rate": 0.5150021901007447,
+    "tn": 4388,
+    "fp": 4329,
+    "fn": 41,
+    "tp": 374,
+    "constraints_passed": true,
+    "null_probability_train_prevalence": 0.04383772351470871,
+    "null_model_brier": 0.043381961671238485,
+    "brier_skill_score": 0.050713832794263336,
+    "expected_calibration_error": 0.006114173784046598
+  },
+  "final_candidate_test": {
+    "model": "stacking",
+    "model_group": "ensemble",
+    "postprocessing": "sigmoid_threshold_tuned",
+    "candidate": "stacking__sigmoid_threshold_tuned",
+    "threshold_source": "validation",
+    "n": 9691,
+    "positive_n": 390,
+    "prevalence": 0.040243524920028896,
+    "threshold": 0.027911241464998716,
+    "auroc": 0.7680536143067054,
+    "auprc": 0.11158542821888406,
+    "auprc_lift": 2.7727548329979625,
+    "recall": 0.8897435897435897,
+    "specificity": 0.4956456295022041,
+    "precision": 0.06887653830885272,
+    "f1": 0.12785556374355195,
+    "brier": 0.03748380161359184,
+    "predicted_positive_rate": 0.5198637911464246,
+    "tn": 4610,
+    "fp": 4691,
+    "fn": 43,
+    "tp": 347,
+    "null_probability_train_prevalence": 0.04383772351470871,
+    "null_model_brier": 0.0386369018855779,
+    "brier_skill_score": 0.029844532447268368,
+    "expected_calibration_error": 0.011931255646304801,
+    "constraints_passed": false
+  },
+  "model_version": "diabetes-knhanes-full-comparison-v0.4.0",
+  "feature_schema_version": "knhanes-diabetes-screening-v1",
+  "local_model_path": "models\\candidate\\knhanes_full_comparison\\diabetes-knhanes-full-comparison-v0.4.0.joblib",
+  "promotion_status": "candidate_internal_not_for_personal_probability_display"
+}

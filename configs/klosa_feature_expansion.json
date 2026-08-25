@@ -1,0 +1,24 @@
+{
+  "experiment_id": "klosa-feature-expansion-20260824",
+  "seed": 20260824,
+  "cv_folds": 5,
+  "c_values": [0.01, 0.1, 1.0, 10.0],
+  "reliability_bins": 10,
+  "selection_constraints": {
+    "minimum_specificity": 0.50,
+    "minimum_auprc_lift": 1.05
+  },
+  "threshold_grid": {
+    "minimum": 0.001,
+    "maximum": 0.30,
+    "points": 300
+  },
+  "exploratory_specificity_targets": [0.50, 0.55, 0.60],
+  "acceptance": {
+    "minimum_validation_recall_gain": 0.02,
+    "require_non_decreasing_validation_auprc": true,
+    "require_non_decreasing_validation_bss": true
+  },
+  "model_version": "diabetes-klosa-feature-expansion-v0.5.0",
+  "feature_schema_version": "klosa-diabetes-incident-expanded-v1"
+}

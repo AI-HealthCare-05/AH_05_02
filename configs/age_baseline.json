@@ -1,0 +1,26 @@
+{
+  "seed": 20260819,
+  "sample_limits": {
+    "train": 6000,
+    "validation": 2000,
+    "test": 3000
+  },
+  "features": [
+    "age",
+    "female",
+    "bmi",
+    "current_smoker",
+    "physically_active"
+  ],
+  "models": [
+    "dummy",
+    "logistic_regression",
+    "random_forest"
+  ],
+  "decision_threshold": 0.5,
+  "age_groups": [
+    "19-44",
+    "45-64",
+    "65+"
+  ]
+}
