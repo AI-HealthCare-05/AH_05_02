@@ -25,6 +25,7 @@ coverage.xml
 htmlcov/
 
 # IDE settings
+.DS_Store
 .idea/
 .vscode/
 
