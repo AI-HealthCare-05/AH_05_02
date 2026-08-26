@@ -267,9 +267,7 @@ def _diagnosis(value: Any, name: str) -> str | float:
 
 
 def _age_on(birth_date: date, as_of_date: date) -> int:
-    return as_of_date.year - birth_date.year - (
-        (as_of_date.month, as_of_date.day) < (birth_date.month, birth_date.day)
-    )
+    return as_of_date.year - birth_date.year - ((as_of_date.month, as_of_date.day) < (birth_date.month, birth_date.day))
 
 
 def build_standard_model_frame(
@@ -286,15 +284,12 @@ def build_standard_model_frame(
     if not isinstance(user_input.previously_diagnosed_diabetes, bool):
         raise ValueError("previously_diagnosed_diabetes must be boolean")
     if user_input.previously_diagnosed_diabetes:
-        raise ValueError(
-            "previously diagnosed users are ineligible for an incidence screening model"
-        )
+        raise ValueError("previously diagnosed users are ineligible for an incidence screening model")
 
     age = _age_on(user_input.birth_date, as_of_date)
     if not SUPPORTED_AGE_MINIMUM <= age <= SUPPORTED_AGE_MAXIMUM:
         raise ValueError(
-            f"age {age} is outside the model-supported range "
-            f"{SUPPORTED_AGE_MINIMUM}-{SUPPORTED_AGE_MAXIMUM}"
+            f"age {age} is outside the model-supported range {SUPPORTED_AGE_MINIMUM}-{SUPPORTED_AGE_MAXIMUM}"
         )
     sex = _required_category("sex", user_input.sex, {"female", "male"})
     smoking = _required_category(
@@ -311,9 +306,7 @@ def build_standard_model_frame(
     bmi = weight / (height / 100) ** 2
     if not 10 <= bmi <= 70:
         raise ValueError("derived bmi must be between 10 and 70 kg/m2")
-    days = _number(
-        "exercise_days_per_week", user_input.exercise_days_per_week, 0, 7
-    )
+    days = _number("exercise_days_per_week", user_input.exercise_days_per_week, 0, 7)
     minutes = _number("exercise_minutes", user_input.exercise_minutes, 0, 720)
     if not user_input.regular_exercise:
         days = 0.0

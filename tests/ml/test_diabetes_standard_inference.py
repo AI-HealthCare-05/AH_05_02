@@ -73,9 +73,7 @@ def test_api_contract_defines_required_optional_units_and_ranges() -> None:
     assert API_INPUT_CONTRACT["height_cm"]["unit"] == "cm"
     assert API_INPUT_CONTRACT["exercise_days_per_week"]["range"] == [0, 7]
     assert API_INPUT_CONTRACT["health_satisfaction_score"]["required"] is False
-    assert API_INPUT_CONTRACT["hypertension_diagnosis"]["type"] == (
-        "boolean|null"
-    )
+    assert API_INPUT_CONTRACT["hypertension_diagnosis"]["type"] == ("boolean|null")
 
 
 def test_model_frame_has_training_order_and_safe_missing_values() -> None:
@@ -170,20 +168,11 @@ def test_json_input_parsing_accepts_iso_birth_date() -> None:
 
 
 def test_candidate_manifest_records_metrics_contract_and_reproduction() -> None:
-    path = Path(
-        "models/registry/diabetes_incidence/candidates/"
-        "rf_25features_v001-20260825T045054926974Z.json"
-    )
+    path = Path("models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json")
     manifest = json.loads(path.read_text(encoding="utf-8"))
 
     assert manifest["features"] == list(STANDARD_MODEL_FEATURES)
-    assert {"recall", "specificity", "auroc", "auprc"} <= set(
-        manifest["metrics"]
-    )
+    assert {"recall", "specificity", "auroc", "auprc"} <= set(manifest["metrics"])
     assert manifest["artifact_local_path"].startswith("outputs/ml/")
-    assert manifest["artifact_git_policy"] == (
-        "local_only_do_not_commit_model_binary"
-    )
-    assert manifest["reproduce"]["run"] == (
-        "./scripts/ml-experiment.sh run rf_25features_v001"
-    )
+    assert manifest["artifact_git_policy"] == ("local_only_do_not_commit_model_binary")
+    assert manifest["reproduce"]["run"] == ("./scripts/ml-experiment.sh run rf_25features_v001")

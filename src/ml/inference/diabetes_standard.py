@@ -27,8 +27,7 @@ from src.ml.preprocessing.diabetes_api_features import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CANDIDATE_MANIFEST = REPOSITORY_ROOT / (
-    "models/registry/diabetes_incidence/candidates/"
-    "rf_25features_v001-20260825T045054926974Z.json"
+    "models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json"
 )
 
 
@@ -58,9 +57,7 @@ def _load_candidate_manifest(path: Path) -> dict[str, Any]:
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise ModelArtifactUnavailableError(
-            f"model candidate manifest is missing: {path}"
-        ) from exc
+        raise ModelArtifactUnavailableError(f"model candidate manifest is missing: {path}") from exc
     except (OSError, json.JSONDecodeError) as exc:
         raise ModelContractError(f"invalid model candidate manifest: {path}") from exc
     if not isinstance(manifest, dict):
@@ -172,10 +169,6 @@ def predict_diabetes_risk(
 ) -> dict[str, Any]:
     """Standard web-service callable for one diabetes risk-screening request."""
 
-    user_input = (
-        payload
-        if isinstance(payload, DiabetesRiskInput)
-        else parse_diabetes_risk_input(dict(payload))
-    )
+    user_input = payload if isinstance(payload, DiabetesRiskInput) else parse_diabetes_risk_input(dict(payload))
     loaded = load_standard_model(manifest_path=manifest_path, model_path=model_path)
     return predict_with_loaded_model(loaded, user_input, as_of_date=as_of_date)
