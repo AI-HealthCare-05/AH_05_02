@@ -20,11 +20,12 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
     await Tortoise.generate_schemas()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            birth_date = "1965-04-12"
             signup = {
+                "name": "MVP 사용자",
                 "email": "mvp-flow@example.com",
                 "password": "Password123!",
-                "gender": "FEMALE",
-                "birth_date": "1965-04-12",
+                "terms_agreed": True,
             }
             assert (await client.post("/api/v1/auth/signup", json=signup)).status_code == status.HTTP_201_CREATED
             login = await client.post(
@@ -43,7 +44,7 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                 "/api/v1/eligibility-checks",
                 headers=headers,
                 json={
-                    "birth_date": signup["birth_date"],
+                    "birth_date": birth_date,
                     "has_diabetes_diagnosis": False,
                     "has_urgent_warning_sign": False,
                     "population_in_scope": True,
