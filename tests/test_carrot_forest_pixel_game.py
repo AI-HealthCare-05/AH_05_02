@@ -59,3 +59,16 @@ def test_pixel_game_accessibility_and_excluded_features() -> None:
     assert "min-height:48px" in css
     for excluded in ("유료 가챠", "현금 결제", "건강정보 공개", "아이템 등급은 희소성"):
         assert excluded not in combined
+
+
+def test_world_studio_workspace_controls_are_explicit() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    for label in ("당근의 숲 작업실", "작업 도구", "ASSET LIBRARY", "SCENE OBJECTS"):
+        assert label in html
+    for control_id in ("reset-position", "zoom-toggle", "avatar-coordinate", "object-count"):
+        assert f'id="{control_id}"' in html
+    assert html.count("data-workspace-target=") == 4
+    assert "scrollIntoView" in script
+    assert 'classList.toggle("is-zoomed")' in script

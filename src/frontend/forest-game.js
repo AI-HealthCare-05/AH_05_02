@@ -204,7 +204,12 @@
     context.fillText(avatar.name, x, y - 40);
   }
 
-  function renderCanvas() { context.clearRect(0, 0, canvas.width, canvas.height); drawMap(); drawAvatar(); }
+  function renderCanvas() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    drawMap();
+    drawAvatar();
+    $("#avatar-coordinate").textContent = `X ${Math.round(state.avatar.x)} · Y ${Math.round(state.avatar.y)}`;
+  }
 
   function blocked(x, y) {
     if (x < 28 || x > canvas.width - 28 || y < 42 || y > canvas.height - 38) return true;
@@ -228,11 +233,13 @@
     const completed = personalCompleted();
     state.members.find((member) => member.me).completed = completed;
     $("#personal-progress").textContent = `${completed}/3`;
+    $("#heading-personal-progress").textContent = `${completed} / 3`;
   }
 
   function renderGroup() {
     const completed = groupCompleted();
     $("#group-progress").textContent = `${completed}/15`;
+    $("#heading-group-progress").textContent = `${completed} / 15`;
     const progressbar = $(".progress-track[role='progressbar']");
     progressbar.setAttribute("aria-valuenow", String(completed));
     $("#group-progress-bar").style.width = `${completed / 15 * 100}%`;
@@ -254,6 +261,7 @@
   }
 
   function renderPlaced() {
+    $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
       ? state.placed.map((item, index) => `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
@@ -353,6 +361,46 @@
     const enabled = document.body.classList.toggle("large-text");
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
     event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
+  });
+
+  document.querySelectorAll("[data-workspace-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-workspace-target]").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      const target = document.getElementById(button.dataset.workspaceTarget);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.classList.add("workspace-focus");
+      window.setTimeout(() => target?.classList.remove("workspace-focus"), 700);
+    });
+  });
+
+  document.querySelectorAll("[data-inspector-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-inspector-tab]").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+      document.getElementById(button.dataset.inspectorTab)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
+
+  $("#zoom-toggle").addEventListener("click", (event) => {
+    const zoomed = $(".canvas-frame").classList.toggle("is-zoomed");
+    event.currentTarget.setAttribute("aria-pressed", String(zoomed));
+    event.currentTarget.textContent = zoomed ? "화면 맞춤" : "확대 보기";
+    setStatus(zoomed ? "월드 화면을 확대했습니다. 아래와 오른쪽으로 이동해 살펴보세요." : "월드 화면을 작업 영역에 맞췄습니다.");
+  });
+
+  $("#reset-position").addEventListener("click", async () => {
+    state.avatar.x = 384;
+    state.avatar.y = 352;
+    renderCanvas();
+    await persist("아바타를 시작 위치로 이동했습니다.");
+    canvas.focus();
   });
 
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
