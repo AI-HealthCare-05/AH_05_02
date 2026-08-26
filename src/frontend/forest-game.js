@@ -5,6 +5,9 @@
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
+  const WORLD_WIDTH = 768;
+  const WORLD_HEIGHT = 512;
+  const RENDER_SCALE = 2;
   const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
 
@@ -104,6 +107,7 @@
   let placementCode = null;
   let running = false;
   let musicEngine = null;
+  let animationFrame = 0;
   const canvas = $("#forest-canvas");
   const context = canvas.getContext("2d");
   context.imageSmoothingEnabled = false;
@@ -160,65 +164,148 @@
   }
 
   function drawTree(x, y, scale = 1) {
-    fillPixelRect(x + 13 * scale, y + 25 * scale, 10 * scale, 22 * scale, "#6b4027");
-    fillPixelRect(x + 16 * scale, y + 25 * scale, 4 * scale, 18 * scale, "#98613a");
-    fillPixelRect(x + 3 * scale, y + 9 * scale, 30 * scale, 25 * scale, "#21623a");
-    fillPixelRect(x, y + 16 * scale, 36 * scale, 13 * scale, "#2e8248");
-    fillPixelRect(x + 9 * scale, y, 20 * scale, 15 * scale, "#5ab85a");
-    fillPixelRect(x + 8 * scale, y + 10 * scale, 7 * scale, 6 * scale, "#78cf67");
+    const sway = animationFrame % 2 ? 1 : 0;
+    fillPixelRect(x + 7 * scale, y + 40 * scale, 25 * scale, 7 * scale, "rgba(34,63,40,.2)");
+    fillPixelRect(x + 13 * scale, y + 23 * scale, 11 * scale, 23 * scale, "#54321f");
+    fillPixelRect(x + 16 * scale, y + 24 * scale, 5 * scale, 18 * scale, "#99613a");
+    fillPixelRect(x + 18 * scale, y + 29 * scale, 3 * scale, 5 * scale, "#c0824e");
+    fillPixelRect(x + (3 + sway) * scale, y + 8 * scale, 31 * scale, 25 * scale, "#174e31");
+    fillPixelRect(x + sway * scale, y + 15 * scale, 37 * scale, 14 * scale, "#236d3e");
+    fillPixelRect(x + (8 + sway) * scale, y + 1 * scale, 22 * scale, 17 * scale, "#3e9950");
+    fillPixelRect(x + (11 + sway) * scale, y + 4 * scale, 15 * scale, 8 * scale, "#68bd5d");
+    fillPixelRect(x + (5 + sway) * scale, y + 17 * scale, 8 * scale, 5 * scale, "#55ac54");
+    fillPixelRect(x + (25 + sway) * scale, y + 13 * scale, 6 * scale, 5 * scale, "#0f4029");
+  }
+
+  function drawFlower(x, y, petal = "#fff0a1") {
+    fillPixelRect(x, y + 4, 2, 7, "#347b3f");
+    fillPixelRect(x - 3, y, 3, 4, petal);
+    fillPixelRect(x + 2, y, 3, 4, petal);
+    fillPixelRect(x, y - 2, 2, 4, "#ffd04a");
+  }
+
+  function drawFence(x, y, length) {
+    fillPixelRect(x, y + 5, length, 5, "#9a663f");
+    fillPixelRect(x, y + 7, length, 2, "#d49a5e");
+    for (let post = 0; post <= length; post += 24) {
+      fillPixelRect(x + post, y, 6, 18, "#70472e");
+      fillPixelRect(x + post + 1, y - 3, 4, 4, "#b77b48");
+    }
+  }
+
+  function drawHouse() {
+    fillPixelRect(42, 188, 204, 12, "rgba(45,58,37,.22)");
+    fillPixelRect(48, 70, 192, 122, "#b57c45");
+    fillPixelRect(56, 78, 176, 114, "#ffe6ae");
+    for (let y = 84; y < 188; y += 12) fillPixelRect(58, y, 172, 2, "#edc67e");
+    fillPixelRect(36, 70, 216, 24, "#71302b");
+    fillPixelRect(48, 54, 192, 25, "#b83f36");
+    for (let x = 52; x < 238; x += 20) {
+      fillPixelRect(x, 57, 16, 6, "#da6453");
+      fillPixelRect(x + 4, 67, 15, 5, "#8e302c");
+    }
+    fillPixelRect(68, 94, 152, 10, "#d8a954");
+    fillPixelRect(122, 128, 50, 64, "#5b3524");
+    fillPixelRect(130, 136, 34, 56, "#8f5935");
+    fillPixelRect(157, 161, 5, 5, "#ffdc65");
+    [[76, 112], [178, 112]].forEach(([x, y]) => {
+      fillPixelRect(x, y, 40, 40, "#366f88");
+      fillPixelRect(x + 5, y + 5, 30, 30, "#95d9ec");
+      fillPixelRect(x + 8, y + 7, 9, 10, "#d9f5f7");
+      fillPixelRect(x + 19, y + 5, 3, 30, "#4d8fa6");
+      fillPixelRect(x + 5, y + 19, 30, 3, "#4d8fa6");
+    });
+    fillPixelRect(60, 188, 168, 8, "#a56e3f");
+    fillPixelRect(132, 196, 31, 8, "#c69b64");
+    drawFlower(72, 181, "#ff8d9b");
+    drawFlower(214, 182, "#b99cff");
+  }
+
+  function drawCarrotPlot() {
+    fillPixelRect(492, 46, 236, 188, "#493121");
+    fillPixelRect(500, 54, 220, 172, "#835334");
+    for (let row = 0; row < 4; row += 1) {
+      fillPixelRect(507, 63 + row * 39, 206, 28, row % 2 ? "#6f4028" : "#75452b");
+      fillPixelRect(509, 65 + row * 39, 202, 3, "#a46c42");
+      for (let column = 0; column < 6; column += 1) {
+        const x = 516 + column * 32;
+        const y = 75 + row * 39;
+        fillPixelRect(x + 7, y + 6, 8, 16, "#e86d29");
+        fillPixelRect(x + 9, y + 17, 4, 6, "#c55122");
+        fillPixelRect(x + 8, y, 5, 10, "#317841");
+        fillPixelRect(x + 3, y - 3, 7, 7, "#48994c");
+        fillPixelRect(x + 12, y - 4, 7, 8, "#65b75b");
+        fillPixelRect(x + 16, y, 4, 5, "#2e713b");
+      }
+    }
+    drawFence(490, 36, 238);
+    drawFence(490, 226, 238);
+  }
+
+  function drawSharedTree() {
+    fillPixelRect(326, 255, 116, 17, "rgba(28,57,35,.23)");
+    fillPixelRect(361, 162, 30, 92, "#50301f");
+    fillPixelRect(370, 165, 12, 82, "#9b6038");
+    fillPixelRect(382, 183, 29, 10, "#694027");
+    fillPixelRect(342, 117, 77, 75, "#154a2e");
+    fillPixelRect(321, 139, 118, 52, "#1f6a3b");
+    fillPixelRect(337, 105, 89, 55, "#31894a");
+    fillPixelRect(354, 94 + (animationFrame % 2), 56, 40, "#53a952");
+    fillPixelRect(346, 116, 22, 13, "#73c566");
+    fillPixelRect(399, 130, 16, 10, "#0f4228");
+    [[344, 155], [370, 120], [410, 158], [390, 108]].forEach(([x, y], index) => fillPixelRect(x, y + (index % 2 ? animationFrame % 2 : 0), 6, 6, "#f4b24a"));
+  }
+
+  function drawPond() {
+    fillPixelRect(248, 424, 87, 50, "#3c7e88");
+    fillPixelRect(254, 419, 75, 57, "#66b4b8");
+    fillPixelRect(263, 425, 58, 43, "#8ad2cd");
+    fillPixelRect(276 + animationFrame * 2, 432, 24, 3, "#d8f4e7");
+    fillPixelRect(304 - animationFrame * 2, 455, 13, 3, "#d8f4e7");
+    fillPixelRect(246, 434, 10, 8, "#4d9a54");
+    fillPixelRect(327, 444, 9, 8, "#4d9a54");
   }
 
   function drawVehicle() {
     const x = 470;
     const y = 376;
-    fillPixelRect(x - 17, y + 9, 12, 12, "#243c3a");
-    fillPixelRect(x + 9, y + 9, 12, 12, "#243c3a");
-    fillPixelRect(x - 13, y + 13, 4, 4, "#b9d5cf");
-    fillPixelRect(x + 13, y + 13, 4, 4, "#b9d5cf");
-    fillPixelRect(x - 8, y, 23, 7, "#e76535");
-    fillPixelRect(x - 1, y - 8, 14, 9, "#f49839");
+    fillPixelRect(x - 21, y + 18, 46, 6, "rgba(31,57,45,.2)");
+    fillPixelRect(x - 19, y + 7, 15, 15, "#1f3434");
+    fillPixelRect(x + 9, y + 7, 15, 15, "#1f3434");
+    fillPixelRect(x - 15, y + 11, 7, 7, "#a9c7c2");
+    fillPixelRect(x + 13, y + 11, 7, 7, "#a9c7c2");
+    fillPixelRect(x - 11, y - 1, 28, 10, "#c84e30");
+    fillPixelRect(x - 3, y - 10, 18, 11, "#f58e38");
+    fillPixelRect(x, y - 8, 11, 4, "#ffbd5f");
     fillPixelRect(x + 13, y - 12, 4, 14, "#384e4b");
     fillPixelRect(x + 9, y - 13, 13, 4, "#384e4b");
+    fillPixelRect(x + 19, y - 15, 5, 5, "#ffdf78");
   }
 
   function drawMap() {
-    fillPixelRect(0, 0, canvas.width, canvas.height, "#75b965");
+    fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
     for (let y = 0; y < MAP_HEIGHT; y += 1) {
       for (let x = 0; x < MAP_WIDTH; x += 1) {
-        if ((x + y) % 3 === 0) fillPixelRect(x * TILE + 6, y * TILE + 7, 4, 4, "#9ad175");
+        const px = x * TILE;
+        const py = y * TILE;
+        if ((x + y) % 2 === 0) fillPixelRect(px + 6, py + 7, 3, 3, "#8bc76c");
+        if ((x * 3 + y) % 5 === 0) fillPixelRect(px + 21, py + 19, 2, 5, "#438d4c");
+        if ((x + y * 2) % 7 === 0) fillPixelRect(px + 13, py + 24, 4, 2, "#acd77d");
       }
     }
-    fillPixelRect(0, 330, canvas.width, 86, "#d8b472");
-    fillPixelRect(352, 0, 72, canvas.height, "#e2c689");
-    fillPixelRect(496, 48, 228, 182, "#71462e");
-    fillPixelRect(504, 56, 212, 166, "#9a643e");
-    for (let row = 0; row < 4; row += 1) {
-      for (let column = 0; column < 6; column += 1) {
-        const x = 515 + column * 32;
-        const y = 72 + row * 36;
-        fillPixelRect(x, y, 20, 24, "#633720");
-        fillPixelRect(x + 2, y + 2, 16, 4, "#855035");
-        fillPixelRect(x + 8, y - 7, 5, 12, "#f4812d");
-        fillPixelRect(x + 5, y - 11, 5, 9, "#3b914a");
-        fillPixelRect(x + 12, y - 12, 5, 10, "#62bd60");
-      }
-    }
-    fillPixelRect(48, 66, 192, 126, "#d7ab58");
-    fillPixelRect(58, 78, 172, 118, "#ffe6aa");
-    fillPixelRect(38, 72, 212, 22, "#8f352d");
-    fillPixelRect(50, 56, 188, 24, "#c84b3c");
-    fillPixelRect(70, 94, 148, 9, "#f4c96e");
-    fillPixelRect(124, 130, 46, 66, "#6d4029");
-    fillPixelRect(132, 140, 30, 56, "#8c5734");
-    fillPixelRect(155, 162, 5, 5, "#f5cf58");
-    fillPixelRect(78, 112, 36, 38, "#4f91aa");
-    fillPixelRect(83, 117, 26, 28, "#a7e3ed");
-    fillPixelRect(178, 112, 36, 38, "#4f91aa");
-    fillPixelRect(183, 117, 26, 28, "#a7e3ed");
-    fillPixelRect(58, 188, 170, 8, "#be914b");
-    drawTree(330, 116, 2.15);
-    for (let x = 0; x < canvas.width; x += 96) { drawTree(x, 0, .85); drawTree(x + 30, 445, .75); }
+    fillPixelRect(0, 328, WORLD_WIDTH, 90, "#ba965e");
+    fillPixelRect(0, 335, WORLD_WIDTH, 70, "#d9b779");
+    fillPixelRect(352, 0, 72, WORLD_HEIGHT, "#c8a86b");
+    fillPixelRect(360, 0, 56, WORLD_HEIGHT, "#e2c78f");
+    for (let x = 12; x < WORLD_WIDTH; x += 36) fillPixelRect(x, 345 + (x % 3), 12, 3, "#efd39d");
+    for (let y = 14; y < WORLD_HEIGHT; y += 38) fillPixelRect(371 + (y % 4), y, 18, 3, "#f0d7a5");
+    drawPond();
+    drawHouse();
+    drawCarrotPlot();
+    drawSharedTree();
+    for (let x = 0; x < WORLD_WIDTH; x += 96) { drawTree(x, 0, .85); drawTree(x + 30, 445, .75); }
     for (let y = 70; y < 420; y += 100) { drawTree(4, y, .72); drawTree(725, y, .72); }
+    [[275, 302, "#fff0a1"], [458, 284, "#ff9db0"], [690, 292, "#bba4ff"], [106, 285, "#fff0a1"]].forEach(([x, y, color]) => drawFlower(x, y, color));
     drawVehicle();
     drawPlacedObjects();
   }
@@ -249,50 +336,98 @@
     const avatar = state.avatar;
     const style = presets[avatar.preset] || presets.sprout;
     const x = Math.round(avatar.x / 4) * 4;
-    const y = Math.round(avatar.y / 4) * 4;
-    const sittingOffset = avatar.sitting ? 9 : 0;
-    fillPixelRect(x - (avatar.mounted ? 22 : 15), y + 26, avatar.mounted ? 44 : 30, 7, "rgba(33,65,44,.25)");
+    const bob = avatar.sitting || avatar.mounted ? 0 : animationFrame;
+    const y = Math.round(avatar.y / 4) * 4 - bob;
+    fillPixelRect(x - (avatar.mounted ? 25 : 17), y + 31, avatar.mounted ? 50 : 34, 7, "rgba(24,55,37,.26)");
     if (avatar.mounted) {
-      fillPixelRect(x - 20, y + 12, 12, 12, "#243c3a");
-      fillPixelRect(x + 10, y + 12, 12, 12, "#243c3a");
-      fillPixelRect(x - 14, y + 5, 30, 9, "#e76535");
-      fillPixelRect(x + 14, y - 4, 4, 15, "#384e4b");
+      fillPixelRect(x - 23, y + 15, 17, 17, "#1d3030");
+      fillPixelRect(x + 10, y + 15, 17, 17, "#1d3030");
+      fillPixelRect(x - 18, y + 20, 8, 8, "#a8c7c1");
+      fillPixelRect(x + 14, y + 20, 8, 8, "#a8c7c1");
+      fillPixelRect(x - 16, y + 7, 35, 12, "#bd472c");
+      fillPixelRect(x - 6, y, 23, 10, "#ee8235");
+      fillPixelRect(x + 15, y - 8, 4, 18, "#314845");
+      fillPixelRect(x + 11, y - 10, 16, 4, "#314845");
     }
-    fillPixelRect(x - 10, y - 19, 20, 19, "#f0b98e");
+    fillPixelRect(x - 12, y - 22, 24, 24, "#c98465");
+    fillPixelRect(x - 10, y - 21, 20, 21, "#f2bd92");
+    fillPixelRect(x - 13, y - 14, 3, 8, "#dfa27c");
+    fillPixelRect(x + 10, y - 14, 3, 8, "#dfa27c");
     if (avatar.gender === "female") {
-      fillPixelRect(x - 14, y - 24, 28, 10, style.hair); fillPixelRect(x - 14, y - 14, 6, 21, style.hair); fillPixelRect(x + 8, y - 14, 6, 21, style.hair);
+      fillPixelRect(x - 15, y - 29, 30, 11, style.hair);
+      fillPixelRect(x - 16, y - 20, 7, 25, style.hair);
+      fillPixelRect(x + 9, y - 20, 7, 25, style.hair);
+      fillPixelRect(x - 10, y - 25, 8, 5, "rgba(255,255,255,.15)");
     } else if (avatar.gender === "male") {
-      fillPixelRect(x - 12, y - 24, 24, 9, style.hair); fillPixelRect(x - 14, y - 19, 7, 10, style.hair);
+      fillPixelRect(x - 14, y - 28, 28, 10, style.hair);
+      fillPixelRect(x - 16, y - 22, 8, 12, style.hair);
+      fillPixelRect(x + 8, y - 23, 6, 7, style.hair);
+      fillPixelRect(x - 7, y - 27, 10, 4, "rgba(255,255,255,.14)");
     } else {
-      fillPixelRect(x - 13, y - 24, 26, 10, style.hair); fillPixelRect(x + 8, y - 15, 6, 14, style.hair);
+      fillPixelRect(x - 15, y - 28, 30, 11, style.hair);
+      fillPixelRect(x - 16, y - 20, 7, 17, style.hair);
+      fillPixelRect(x + 9, y - 20, 7, 17, style.hair);
     }
-    fillPixelRect(x - 13, y, 26, 22, style.outfit); fillPixelRect(x - 18, y + 3, 6, 17, "#f0b98e"); fillPixelRect(x + 12, y + 3, 6, 17, "#f0b98e");
+    fillPixelRect(x - 8, y - 13, 4, 5, "#f9fbec");
+    fillPixelRect(x + 4, y - 13, 4, 5, "#f9fbec");
+    fillPixelRect(x - 7, y - 12, 2, 3, "#24322f");
+    fillPixelRect(x + 5, y - 12, 2, 3, "#24322f");
+    fillPixelRect(x - 4, y - 5, 8, 2, "#b96c67");
+    fillPixelRect(x - 15, y, 30, 25, "#203b34");
+    fillPixelRect(x - 13, y + 1, 26, 22, style.outfit);
+    fillPixelRect(x - 9, y + 4, 18, 5, style.accent);
+    fillPixelRect(x - 20, y + 3, 7, 19, "#d79672");
+    fillPixelRect(x - 18, y + 3, 5, 17, "#f0b98e");
+    fillPixelRect(x + 13, y + 3, 7, 19, "#d79672");
+    fillPixelRect(x + 13, y + 3, 5, 17, "#f0b98e");
     if (avatar.sitting) {
-      fillPixelRect(x - 12, y + 19, 11, 9, "#334b5e"); fillPixelRect(x + 1, y + 19, 11, 9, "#334b5e");
-      fillPixelRect(x - 17, y + 25, 16, 7, "#263946"); fillPixelRect(x + 1, y + 25, 16, 7, "#263946");
+      fillPixelRect(x - 13, y + 21, 13, 10, "#334b5e");
+      fillPixelRect(x, y + 21, 13, 10, "#334b5e");
+      fillPixelRect(x - 19, y + 28, 19, 7, "#263946");
+      fillPixelRect(x, y + 28, 19, 7, "#263946");
     } else if (!avatar.mounted) {
-      fillPixelRect(x - 11, y + 22 + sittingOffset, 9, 13, "#334b5e"); fillPixelRect(x + 2, y + 22 + sittingOffset, 9, 13, "#334b5e");
+      fillPixelRect(x - 12, y + 23, 10, 14, "#334b5e");
+      fillPixelRect(x + 2, y + 23, 10, 14, "#334b5e");
+      fillPixelRect(x - 14, y + 35, 12, 5, "#253846");
+      fillPixelRect(x + 2, y + 35, 12, 5, "#253846");
     }
-    fillPixelRect(x - 7, y - 11, 3, 3, "#2d2a28"); fillPixelRect(x + 4, y - 11, 3, 3, "#2d2a28");
-    fillPixelRect(x - 3, y - 5, 6, 2, "#c47d68");
-    fillPixelRect(x - 9, y + 3, 18, 5, style.accent);
     if (avatar.equipped === "red_scarf") fillPixelRect(x - 13, y - 1, 26, 6, "#d93432");
-    if (avatar.equipped === "sprout_hat") { fillPixelRect(x - 15, y - 28, 30, 6, "#4a9b46"); fillPixelRect(x - 2, y - 36, 5, 9, "#2f7f3c"); }
-    if (avatar.equipped === "carrot_bag") fillPixelRect(x + 13, y + 7, 9, 14, "#ec7a2f");
-    context.font = "bold 15px sans-serif";
+    if (avatar.equipped === "sprout_hat") {
+      fillPixelRect(x - 16, y - 32, 32, 7, "#347f3d");
+      fillPixelRect(x - 3, y - 42, 6, 11, "#216a34");
+      fillPixelRect(x + 2, y - 42, 9, 6, "#5fb85d");
+    }
+    if (avatar.equipped === "carrot_bag") {
+      fillPixelRect(x + 13, y + 6, 11, 17, "#b94f25");
+      fillPixelRect(x + 15, y + 8, 8, 13, "#ee7d32");
+    }
+    context.font = "bold 13px sans-serif";
     context.textAlign = "center";
     context.fillStyle = "rgba(255,255,255,.94)";
-    context.fillRect(x - Math.max(30, avatar.name.length * 8), y - 56, Math.max(60, avatar.name.length * 16), 22);
+    context.fillRect(x - Math.max(28, avatar.name.length * 7), y - 58, Math.max(56, avatar.name.length * 14), 19);
     context.fillStyle = "#18382d";
-    context.fillText(avatar.name, x, y - 40);
+    context.fillText(avatar.name, x, y - 44);
   }
 
   function renderCanvas() {
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
+    context.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+    context.imageSmoothingEnabled = false;
     drawMap();
     drawAvatar();
     $("#avatar-coordinate").textContent = `X ${Math.round(state.avatar.x)} · Y ${Math.round(state.avatar.y)}`;
     updateInteractionPrompt();
+  }
+
+  let lastAnimationAt = 0;
+  function animateWorld(timestamp) {
+    if (!document.hidden && timestamp - lastAnimationAt > 420) {
+      animationFrame = (animationFrame + 1) % 2;
+      renderCanvas();
+      lastAnimationAt = timestamp;
+    }
+    window.requestAnimationFrame(animateWorld);
   }
 
   function distanceTo(x, y) {
@@ -334,7 +469,7 @@
   }
 
   function blocked(x, y) {
-    if (x < 28 || x > canvas.width - 28 || y < 42 || y > canvas.height - 38) return true;
+    if (x < 28 || x > WORLD_WIDTH - 28 || y < 42 || y > WORLD_HEIGHT - 38) return true;
     if (x > 38 && x < 250 && y > 45 && y < 215) return true;
     if (x > 500 && x < 730 && y > 45 && y < 230) return true;
     if (x > 315 && x < 440 && y > 85 && y < 265) return true;
@@ -453,8 +588,8 @@
 
   canvas.addEventListener("click", async (event) => {
     const bounds = canvas.getBoundingClientRect();
-    const x = Math.round((event.clientX - bounds.left) * canvas.width / bounds.width / 8) * 8;
-    const y = Math.round((event.clientY - bounds.top) * canvas.height / bounds.height / 8) * 8;
+    const x = Math.round((event.clientX - bounds.left) * WORLD_WIDTH / bounds.width / 4) * 4;
+    const y = Math.round((event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height / 4) * 4;
     if (!placementCode) {
       canvas.focus();
       if (x >= 38 && x <= 250 && y >= 45 && y <= 215) interact("home");
@@ -677,5 +812,10 @@
   }
 
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
-  adapter.load().then((loaded) => { state = loaded; renderAll(); setStatus("당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요."); });
+  adapter.load().then((loaded) => {
+    state = loaded;
+    renderAll();
+    setStatus("당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);
+  });
 })();

@@ -26,7 +26,7 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
     for key in ("ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", 'w: "up"', 'a: "left"'):
         assert key in script
     assert html.count('data-move="') == 4
-    assert 'width="768" height="512"' in html
+    assert 'width="1536" height="1024"' in html
     assert "image-rendering:pixelated" in (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
 
 
@@ -94,6 +94,23 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
     for behavior in ("CozyForestMusic", "toggleRide", "toggleSit", "openWorldDialog"):
         assert behavior in script
     assert "fillPixelRect(x - 14, y - 15, 28, 14" in script
+
+
+def test_world_uses_high_resolution_pixel_renderer_and_detail_layers() -> None:
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    assert "const RENDER_SCALE = 2" in script
+    assert "context.setTransform(RENDER_SCALE" in script
+    for renderer in (
+        "drawHouse",
+        "drawCarrotPlot",
+        "drawSharedTree",
+        "drawPond",
+        "drawFence",
+        "drawFlower",
+    ):
+        assert f"function {renderer}" in script
+    assert "requestAnimationFrame(animateWorld)" in script
 
 
 def test_pixel_game_is_installable_pwa() -> None:
