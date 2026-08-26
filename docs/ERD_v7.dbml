@@ -1,0 +1,273 @@
+// Chronic Disease Lifestyle Challenge - ERD_v7
+// 기준: API v2 / Sprint 2 / 2026-08-25
+
+Table users {
+  id integer [pk]
+  email varchar [not null, unique]
+  password_hash varchar [not null]
+  created_at timestamp [not null]
+}
+
+Table consents {
+  id integer [pk]
+  user_id integer [not null]
+  consent_item varchar [not null]
+  consent_version varchar [not null]
+  is_agreed boolean [not null]
+  agreed_at timestamp [not null]
+  withdrawn_at timestamp
+  created_at timestamp [not null]
+  Indexes {
+    (user_id, consent_item, consent_version)
+    (user_id, consent_item, created_at)
+  }
+}
+
+Table eligibility_checks {
+  id integer [pk]
+  user_id integer [not null]
+  model_registry_id integer
+  checked_at timestamp [not null]
+  age integer
+  has_diabetes_diagnosis boolean
+  uses_glucose_lowering_drug boolean
+  is_pregnant boolean
+  has_alarming_symptom boolean
+  has_exercise_limitation boolean
+  service_eligible boolean [not null]
+  target_segment varchar [not null]
+  model_eligible boolean [not null]
+  reason_codes json [not null]
+  next_action varchar [not null]
+  safety_copy_version varchar [not null]
+  is_referred_to_medical boolean [not null, default: false]
+}
+
+Table health_data_disposal_audits {
+  id uuid [pk]
+  user_id integer
+  consent_id integer
+  trigger_type varchar [not null]
+  requested_at timestamp [not null]
+  due_at timestamp [not null]
+  processing_status varchar [not null]
+  disposal_method varchar
+  completed_at timestamp
+  policy_version varchar [not null]
+}
+
+Table user_profiles {
+  id integer [pk]
+  user_id integer [not null, unique]
+  gender varchar
+  birth_date date
+  height_cm float
+}
+
+Table health_checkups {
+  id integer [pk]
+  user_id integer [not null]
+  checkup_type varchar
+  checkup_date date
+  weight_kg float
+  waist_cm float
+  bmi float
+  systolic_bp float
+  diastolic_bp float
+  fasting_glucose float
+  hba1c float
+  total_cholesterol float
+  hdl_cholesterol float
+  triglyceride float
+  has_family_history_diabetes boolean
+  has_hypertension boolean
+  has_dyslipidemia boolean
+  has_cardiovascular_disease boolean
+  has_stroke_history boolean
+  smoking_status varchar
+  current_drinker boolean
+  regular_exercise boolean
+  exercise_days_per_week integer
+  exercise_minutes integer
+  drinking_frequency varchar
+  monthly_drinking boolean
+  moderate_activity_minutes_per_week float
+  vigorous_activity_minutes_per_week float
+  physical_activity_level varchar
+  meets_aerobic_guideline boolean
+  stress_level varchar
+  energy_kcal float
+  sodium_mg float
+  sugar_g float
+  created_at timestamp
+  updated_at timestamp
+  Indexes {
+    (user_id, checkup_date) [unique]
+  }
+}
+
+Table model_registry {
+  id integer [pk]
+  model_key varchar [not null]
+  model_version varchar [not null]
+  model_type varchar [not null]
+  data_source varchar [not null]
+  target_horizon varchar [not null]
+  feature_schema_version varchar [not null]
+  target_definition_version varchar [not null]
+  calibration_version varchar [not null]
+  threshold_version varchar [not null]
+  model_population_version varchar [not null]
+  min_age integer [not null]
+  max_age integer
+  population_description varchar [not null]
+  excluded_populations json [not null]
+  outcome_definition text [not null]
+  evaluation_date date [not null]
+  is_active boolean [not null, default: false]
+  created_at timestamp [not null]
+  Indexes {
+    (model_key, model_version) [unique]
+    (model_type, data_source, target_horizon)
+  }
+}
+
+Table feature_metadata {
+  id integer [pk]
+  standard_name varchar [not null, unique]
+  definition text [not null]
+  unit varchar
+  standard_coding json
+  model_role varchar [not null]
+  time_role varchar [not null]
+  user_input_allowed boolean [not null]
+  applicable_model_types json [not null]
+  safety_note text
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Table feature_source_mappings {
+  id integer [pk]
+  feature_metadata_id integer [not null]
+  data_source varchar [not null]
+  source_variable_name varchar [not null]
+  source_definition text [not null]
+  source_unit varchar
+  source_coding json
+  missing_codes json
+  mapping_level varchar [not null]
+  preprocessing_rule text
+  min_age integer
+  max_age integer
+  Indexes {
+    (feature_metadata_id, data_source, source_variable_name) [unique]
+  }
+}
+
+Table prediction_jobs {
+  id uuid [pk]
+  user_id integer [not null]
+  model_registry_id integer [not null]
+  condition varchar [not null, default: 'diabetes']
+  model_key varchar [not null]
+  request_key varchar [not null, unique]
+  status varchar [not null]
+  input_schema_version varchar [not null]
+  input_fingerprint varchar [not null]
+  consent_to_store_input boolean [not null, default: false]
+  input_payload json
+  attempt_count integer [not null, default: 0]
+  error_code varchar
+  retryable boolean
+  retry_after_seconds integer
+  observation_start_date date [not null]
+  observation_end_date date [not null]
+  prediction_horizon_months integer
+  created_at timestamp [not null]
+  started_at timestamp
+  completed_at timestamp
+  expires_at timestamp
+  Indexes {
+    input_fingerprint
+    (user_id, created_at)
+    (user_id, status)
+  }
+}
+
+Table prediction_job_checkups {
+  prediction_job_id uuid [not null]
+  checkup_id integer [not null]
+  sequence_order integer [not null]
+  Indexes {
+    (prediction_job_id, checkup_id) [pk]
+    (prediction_job_id, sequence_order) [unique]
+  }
+}
+
+Table predictions {
+  id uuid [pk]
+  job_id uuid [not null]
+  user_id integer [not null]
+  model_registry_id integer [not null]
+  condition varchar [not null, default: 'diabetes']
+  model_type varchar [not null]
+  data_source varchar [not null]
+  target_horizon varchar [not null]
+  risk_score float [not null]
+  risk_category varchar [not null]
+  predicted_class varchar [not null]
+  class_probabilities json [not null]
+  model_version varchar [not null]
+  feature_schema_version varchar [not null]
+  target_definition_version varchar [not null]
+  calibration_version varchar [not null]
+  threshold_version varchar [not null]
+  model_population_version varchar [not null]
+  model_min_age integer [not null]
+  model_max_age integer
+  prediction_horizon_months integer
+  observation_start_date date [not null]
+  observation_end_date date [not null]
+  sequence_length integer [not null]
+  explanation_version varchar
+  prediction_purpose varchar [not null]
+  safety_notice_version varchar [not null]
+  predicted_at timestamp [not null]
+  Indexes {
+    (user_id, condition, model_type, data_source, target_horizon, predicted_at)
+  }
+}
+
+Table risk_factors {
+  id integer [pk]
+  prediction_id uuid [not null]
+  factor_name varchar [not null]
+  display_name varchar [not null]
+  impact_direction varchar [not null]
+  importance_score float [not null]
+  display_order integer [not null]
+  is_modifiable boolean [not null]
+  message varchar [not null]
+  Indexes {
+    (prediction_id, factor_name) [unique]
+    (prediction_id, display_order) [unique]
+  }
+}
+
+Ref: consents.user_id > users.id
+Ref: eligibility_checks.user_id > users.id
+Ref: eligibility_checks.model_registry_id > model_registry.id
+Ref: health_data_disposal_audits.user_id > users.id
+Ref: health_data_disposal_audits.consent_id > consents.id
+Ref: user_profiles.user_id - users.id
+Ref: health_checkups.user_id > users.id
+Ref: feature_source_mappings.feature_metadata_id > feature_metadata.id
+Ref: prediction_jobs.user_id > users.id
+Ref: prediction_jobs.model_registry_id > model_registry.id
+Ref: prediction_job_checkups.prediction_job_id > prediction_jobs.id
+Ref: prediction_job_checkups.checkup_id > health_checkups.id
+Ref: predictions.job_id > prediction_jobs.id
+Ref: predictions.user_id > users.id
+Ref: predictions.model_registry_id > model_registry.id
+Ref: risk_factors.prediction_id > predictions.id
