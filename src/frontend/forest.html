@@ -12,8 +12,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-5">
-  <script src="/static/forest-game.js?v=20260826-5" defer></script>
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-6">
+  <script src="/static/forest-game.js?v=20260826-6" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
@@ -63,7 +63,8 @@
             <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
             <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
             <label>외형 프리셋<select id="avatar-preset"><option value="sprout">새싹 정원사</option><option value="carrot">당근 탐험가</option><option value="moon">달빛 산책가</option><option value="berry">산딸기 수집가</option></select></label>
-            <button class="primary-button" type="submit">아바타 저장</button>
+            <button class="primary-button" type="submit">기본 정보 저장</button>
+            <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
           </form>
         </section>
       </aside>
@@ -157,6 +158,34 @@
       <code>GET /api/v1/challenge-cycles/current · PUT /api/v1/user-challenges/{id}/logs/{date} · GET /api/v1/forest/spaces/{group_id}</code>
     </details>
   </main>
+
+  <dialog id="avatar-studio" class="avatar-studio" aria-labelledby="avatar-studio-title">
+    <header class="avatar-studio-header">
+      <div><p class="eyebrow">PIXEL AVATAR STUDIO</p><h2 id="avatar-studio-title">아바타 꾸미기</h2></div>
+      <button id="avatar-studio-close" class="avatar-studio-close" type="button" aria-label="아바타 꾸미기 닫기">×</button>
+    </header>
+    <div class="avatar-studio-layout">
+      <nav id="avatar-category-nav" class="avatar-category-nav" aria-label="아바타 꾸미기 카테고리"></nav>
+      <section class="avatar-item-browser" aria-labelledby="avatar-category-title">
+        <div class="avatar-browser-heading"><div><p class="section-kicker">COLLECTION</p><h3 id="avatar-category-title">피부</h3></div><span id="avatar-item-count">0개</span></div>
+        <div id="avatar-item-grid" class="avatar-item-grid"></div>
+      </section>
+      <aside class="avatar-preview-panel" aria-label="아바타 미리보기">
+        <div class="avatar-preview-toolbar">
+          <button id="avatar-undo" type="button" title="마지막 변경 취소" aria-label="마지막 변경 취소">↶</button>
+          <button id="avatar-randomize" type="button" title="무작위 코디" aria-label="무작위 코디">⤨</button>
+          <span class="preview-carrots" aria-label="보유 당근"><span aria-hidden="true">🥕</span><strong id="preview-carrot-balance">100</strong></span>
+        </div>
+        <div class="avatar-preview-stage">
+          <span class="preview-grid-label">2× PIXEL PREVIEW</span>
+          <canvas id="avatar-preview-canvas" width="560" height="640" aria-label="선택한 아바타 코디 미리보기"></canvas>
+          <p id="avatar-preview-name">세준</p>
+        </div>
+        <div class="avatar-selection-summary"><span>현재 코디</span><strong id="avatar-selection-name">새싹 정원사</strong></div>
+        <button id="avatar-studio-save" class="avatar-studio-save" type="button">이 코디로 저장</button>
+      </aside>
+    </div>
+  </dialog>
 
   <dialog id="world-dialog" class="world-dialog" aria-labelledby="world-dialog-title">
     <button id="world-dialog-close" class="dialog-close" type="button" aria-label="창 닫기">×</button>

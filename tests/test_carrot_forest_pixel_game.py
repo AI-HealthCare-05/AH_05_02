@@ -113,6 +113,23 @@ def test_world_uses_high_resolution_pixel_renderer_and_detail_layers() -> None:
     assert "requestAnimationFrame(animateWorld)" in script
 
 
+def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert 'id="avatar-studio"' in html
+    assert 'id="avatar-preview-canvas" width="560" height="640"' in html
+    assert 'id="avatar-item-grid"' in html
+    for label in ("피부", "의상", "헤어", "얼굴", "액세서리", "아우라", "이펙트", "탈것", "펫", "말풍선"):
+        assert f'label: "{label}"' in script
+    assert 'label: "찌르기"' not in script
+    for behavior in ("renderAvatarStudio", "renderAvatarPreview", "avatarDraftHistory", "avatar-studio-save"):
+        assert behavior in script
+    assert ".avatar-studio-layout" in css
+    assert '.avatar-item-card[aria-pressed="true"]' in css
+
+
 def test_pixel_game_is_installable_pwa() -> None:
     paths = {route.path for route in app.routes if hasattr(route, "path")}
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")

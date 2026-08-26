@@ -32,11 +32,81 @@
     bench: { name: "나무 벤치", kind: "object", icon: "🪵" },
   };
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
+  const avatarCategories = [
+    { id: "skin", label: "피부", icon: "◉" },
+    { id: "outfit", label: "의상", icon: "♜" },
+    { id: "hair", label: "헤어", icon: "♟" },
+    { id: "face", label: "얼굴", icon: "☺" },
+    { id: "accessory", label: "액세서리", icon: "◇" },
+    { id: "aura", label: "아우라", icon: "✦" },
+    { id: "effect", label: "이펙트", icon: "✧" },
+    { id: "vehicle", label: "탈것", icon: "◈" },
+    { id: "pet", label: "펫", icon: "♧" },
+    { id: "speech", label: "말풍선", icon: "▢" },
+  ];
+  const avatarCatalog = {
+    skin: [
+      { id: "peach", name: "복숭아빛", visual: "#f2bd92", color: "#f2bd92" },
+      { id: "rose", name: "장밋빛", visual: "#eaa68e", color: "#eaa68e" },
+      { id: "warm", name: "따뜻한 갈색", visual: "#c98263", color: "#c98263" },
+      { id: "deep", name: "깊은 갈색", visual: "#89503e", color: "#89503e", isNew: true },
+      { id: "olive", name: "올리브", visual: "#a87f63", color: "#a87f63" },
+      { id: "porcelain", name: "밝은 도자기빛", visual: "#f5cbb4", color: "#f5cbb4" },
+    ],
+    outfit: [
+      { id: "forest", name: "숲지기 작업복", visual: "🧥" }, { id: "denim", name: "데님 산책복", visual: "👕" },
+      { id: "carrot", name: "당근 탐험복", visual: "🦺" }, { id: "moon", name: "달빛 정장", visual: "👔", isNew: true },
+      { id: "berry", name: "산딸기 후드", visual: "👚" }, { id: "yellow", name: "햇살 우비", visual: "🧶" },
+      { id: "violet", name: "보랏빛 재킷", visual: "🥋" }, { id: "black", name: "밤숲 코트", visual: "🕴️" },
+    ],
+    hair: [
+      { id: "soft", name: "포근한 단발", visual: "💇" }, { id: "wave", name: "물결 장발", visual: "👩‍🦱", isNew: true },
+      { id: "crop", name: "산뜻한 숏컷", visual: "🧑" }, { id: "twin", name: "양갈래 머리", visual: "👧" },
+      { id: "silver", name: "은빛 웨이브", visual: "🧓" }, { id: "orange", name: "당근빛 웨이브", visual: "🧑‍🦰" },
+    ],
+    face: [
+      { id: "calm", name: "차분한 표정", visual: "🙂" }, { id: "smile", name: "환한 미소", visual: "😊" },
+      { id: "sparkle", name: "반짝이는 눈", visual: "🤩", isNew: true }, { id: "blush", name: "수줍은 볼", visual: "☺️" },
+      { id: "wink", name: "윙크", visual: "😉" }, { id: "cool", name: "도도한 표정", visual: "😌" },
+    ],
+    accessory: [
+      { id: "none", name: "착용 안 함", visual: "—" }, { id: "red_scarf", name: "빨간 목도리", visual: "🧣" },
+      { id: "sprout_hat", name: "새싹 모자", visual: "🌱" }, { id: "carrot_bag", name: "당근 가방", visual: "🎒" },
+      { id: "round_glasses", name: "둥근 안경", visual: "👓", isNew: true }, { id: "star_glasses", name: "별빛 안경", visual: "🤓" },
+    ],
+    aura: [
+      { id: "none", name: "아우라 없음", visual: "—" }, { id: "wings", name: "하늘빛 날개", visual: "🪽" },
+      { id: "halo", name: "햇살 고리", visual: "😇" }, { id: "rainbow", name: "무지개 아치", visual: "🌈" },
+      { id: "hearts", name: "마음의 온기", visual: "💞" }, { id: "forest", name: "숲의 숨결", visual: "🍃", isNew: true },
+    ],
+    effect: [
+      { id: "none", name: "이펙트 없음", visual: "—" }, { id: "bubble", name: "비눗방울", visual: "🫧" },
+      { id: "spark", name: "별빛 반짝임", visual: "✨" }, { id: "heart", name: "마음 보내기", visual: "💗" },
+      { id: "carrot", name: "당근 팡", visual: "🥕" }, { id: "leaf", name: "나뭇잎 톡", visual: "🍂", isNew: true },
+    ],
+    vehicle: [
+      { id: "none", name: "걸어서 이동", visual: "👟" }, { id: "scooter", name: "숲 스쿠터", visual: "🛵" },
+      { id: "bicycle", name: "산책 자전거", visual: "🚲" }, { id: "balloon", name: "구름 열기구", visual: "🎈", isNew: true },
+    ],
+    pet: [
+      { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
+      { id: "brown_pup", name: "밤톨이", visual: "🐕" }, { id: "cat", name: "구름이", visual: "🐈" },
+      { id: "fox", name: "단풍이", visual: "🦊" },
+    ],
+    speech: [
+      { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
+      { id: "leaf", name: "네잎클로버", visual: "🍀" }, { id: "window", name: "파란 창문", visual: "🪟", isNew: true },
+    ],
+  };
+  const defaultCosmetics = {
+    skin: "peach", outfit: "forest", hair: "soft", face: "calm", accessory: "none",
+    aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
+  };
 
   function defaultState() {
     return {
       dateKey: TODAY,
-      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, equipped: null, sitting: false, mounted: false },
+      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -58,6 +128,7 @@
     if (!value || value.dateKey !== TODAY) return fallback;
     const state = { ...fallback, ...value };
     state.avatar = { ...fallback.avatar, ...(value.avatar || {}) };
+    state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
     state.inventory = [...new Set(Array.isArray(value.inventory) ? value.inventory : fallback.inventory)]
@@ -108,6 +179,9 @@
   let running = false;
   let musicEngine = null;
   let animationFrame = 0;
+  let activeAvatarCategory = "skin";
+  let avatarDraft = { ...defaultCosmetics };
+  let avatarDraftHistory = [];
   const canvas = $("#forest-canvas");
   const context = canvas.getContext("2d");
   context.imageSmoothingEnabled = false;
@@ -335,9 +409,31 @@
   function drawAvatar() {
     const avatar = state.avatar;
     const style = presets[avatar.preset] || presets.sprout;
+    const cosmetics = { ...defaultCosmetics, ...(avatar.cosmetics || {}) };
+    const skin = avatarCatalog.skin.find((item) => item.id === cosmetics.skin)?.color || "#f2bd92";
+    const skinShadow = cosmetics.skin === "deep" ? "#6d392f" : cosmetics.skin === "warm" ? "#a7654f" : "#d99978";
+    const hairStyles = { soft: style.hair, wave: "#3b2b34", crop: "#263b43", twin: "#54313e", silver: "#8992a4", orange: "#bd6236" };
+    const outfitStyles = {
+      forest: ["#4f9e63", "#c8f06a"], denim: ["#4879a5", "#c8e3f8"], carrot: ["#e87531", "#ffe078"],
+      moon: ["#4b527f", "#d9e3ff"], berry: ["#b44f78", "#ffd2df"], yellow: ["#e7b737", "#fff1a8"],
+      violet: ["#7055af", "#d8c8ff"], black: ["#2f3441", "#9da6bc"],
+    };
+    const [outfitColor, outfitAccent] = outfitStyles[cosmetics.outfit] || [style.outfit, style.accent];
+    const equipped = cosmetics.accessory !== "none" ? cosmetics.accessory : avatar.equipped;
     const x = Math.round(avatar.x / 4) * 4;
     const bob = avatar.sitting || avatar.mounted ? 0 : animationFrame;
     const y = Math.round(avatar.y / 4) * 4 - bob;
+    if (cosmetics.aura === "wings") {
+      [[-27, -13], [-34, -6], [24, -13], [31, -6]].forEach(([dx, dy], index) => fillPixelRect(x + dx, y + dy, index % 2 ? 9 : 12, 18, index % 2 ? "#bff8ff" : "#65ddea"));
+    } else if (cosmetics.aura === "halo") {
+      fillPixelRect(x - 13, y - 40, 26, 4, "#ffd951"); fillPixelRect(x - 9, y - 43, 18, 3, "#fff2a4");
+    } else if (cosmetics.aura === "rainbow") {
+      ["#e95a62", "#f4a542", "#f1d75a", "#5cc176", "#5b8ee7"].forEach((color, index) => { context.strokeStyle = color; context.lineWidth = 3; context.beginPath(); context.arc(x, y - 2, 29 + index * 3, Math.PI, Math.PI * 2); context.stroke(); });
+    } else if (cosmetics.aura === "hearts") {
+      context.fillStyle = "#f56f9b"; context.font = "16px sans-serif"; context.fillText("♥", x - 25, y - 14); context.fillText("♥", x + 22, y - 2);
+    } else if (cosmetics.aura === "forest") {
+      context.fillStyle = "#69bd5a"; context.font = "15px sans-serif"; context.fillText("❧", x - 27, y - 8); context.fillText("❧", x + 25, y - 18);
+    }
     fillPixelRect(x - (avatar.mounted ? 25 : 17), y + 31, avatar.mounted ? 50 : 34, 7, "rgba(24,55,37,.26)");
     if (avatar.mounted) {
       fillPixelRect(x - 23, y + 15, 17, 17, "#1d3030");
@@ -349,37 +445,39 @@
       fillPixelRect(x + 15, y - 8, 4, 18, "#314845");
       fillPixelRect(x + 11, y - 10, 16, 4, "#314845");
     }
-    fillPixelRect(x - 12, y - 22, 24, 24, "#c98465");
-    fillPixelRect(x - 10, y - 21, 20, 21, "#f2bd92");
-    fillPixelRect(x - 13, y - 14, 3, 8, "#dfa27c");
-    fillPixelRect(x + 10, y - 14, 3, 8, "#dfa27c");
+    fillPixelRect(x - 12, y - 22, 24, 24, skinShadow);
+    fillPixelRect(x - 10, y - 21, 20, 21, skin);
+    fillPixelRect(x - 13, y - 14, 3, 8, skinShadow);
+    fillPixelRect(x + 10, y - 14, 3, 8, skinShadow);
     if (avatar.gender === "female") {
-      fillPixelRect(x - 15, y - 29, 30, 11, style.hair);
-      fillPixelRect(x - 16, y - 20, 7, 25, style.hair);
-      fillPixelRect(x + 9, y - 20, 7, 25, style.hair);
+      fillPixelRect(x - 15, y - 29, 30, 11, hairStyles[cosmetics.hair]);
+      fillPixelRect(x - 16, y - 20, 7, cosmetics.hair === "wave" ? 31 : 25, hairStyles[cosmetics.hair]);
+      fillPixelRect(x + 9, y - 20, 7, cosmetics.hair === "wave" ? 31 : 25, hairStyles[cosmetics.hair]);
       fillPixelRect(x - 10, y - 25, 8, 5, "rgba(255,255,255,.15)");
     } else if (avatar.gender === "male") {
-      fillPixelRect(x - 14, y - 28, 28, 10, style.hair);
-      fillPixelRect(x - 16, y - 22, 8, 12, style.hair);
-      fillPixelRect(x + 8, y - 23, 6, 7, style.hair);
+      fillPixelRect(x - 14, y - 28, 28, 10, hairStyles[cosmetics.hair]);
+      fillPixelRect(x - 16, y - 22, 8, 12, hairStyles[cosmetics.hair]);
+      fillPixelRect(x + 8, y - 23, 6, 7, hairStyles[cosmetics.hair]);
       fillPixelRect(x - 7, y - 27, 10, 4, "rgba(255,255,255,.14)");
     } else {
-      fillPixelRect(x - 15, y - 28, 30, 11, style.hair);
-      fillPixelRect(x - 16, y - 20, 7, 17, style.hair);
-      fillPixelRect(x + 9, y - 20, 7, 17, style.hair);
+      fillPixelRect(x - 15, y - 28, 30, 11, hairStyles[cosmetics.hair]);
+      fillPixelRect(x - 16, y - 20, 7, 17, hairStyles[cosmetics.hair]);
+      fillPixelRect(x + 9, y - 20, 7, 17, hairStyles[cosmetics.hair]);
     }
     fillPixelRect(x - 8, y - 13, 4, 5, "#f9fbec");
     fillPixelRect(x + 4, y - 13, 4, 5, "#f9fbec");
     fillPixelRect(x - 7, y - 12, 2, 3, "#24322f");
     fillPixelRect(x + 5, y - 12, 2, 3, "#24322f");
-    fillPixelRect(x - 4, y - 5, 8, 2, "#b96c67");
+    if (cosmetics.face === "wink") fillPixelRect(x + 4, y - 10, 5, 2, "#24322f");
+    if (cosmetics.face === "blush" || cosmetics.face === "sparkle") { fillPixelRect(x - 10, y - 7, 4, 3, "#ed8490"); fillPixelRect(x + 6, y - 7, 4, 3, "#ed8490"); }
+    fillPixelRect(x - (cosmetics.face === "smile" ? 5 : 4), y - 5, cosmetics.face === "smile" ? 10 : 8, 2, cosmetics.face === "cool" ? "#6c5c65" : "#b96c67");
     fillPixelRect(x - 15, y, 30, 25, "#203b34");
-    fillPixelRect(x - 13, y + 1, 26, 22, style.outfit);
-    fillPixelRect(x - 9, y + 4, 18, 5, style.accent);
-    fillPixelRect(x - 20, y + 3, 7, 19, "#d79672");
-    fillPixelRect(x - 18, y + 3, 5, 17, "#f0b98e");
-    fillPixelRect(x + 13, y + 3, 7, 19, "#d79672");
-    fillPixelRect(x + 13, y + 3, 5, 17, "#f0b98e");
+    fillPixelRect(x - 13, y + 1, 26, 22, outfitColor);
+    fillPixelRect(x - 9, y + 4, 18, 5, outfitAccent);
+    fillPixelRect(x - 20, y + 3, 7, 19, skinShadow);
+    fillPixelRect(x - 18, y + 3, 5, 17, skin);
+    fillPixelRect(x + 13, y + 3, 7, 19, skinShadow);
+    fillPixelRect(x + 13, y + 3, 5, 17, skin);
     if (avatar.sitting) {
       fillPixelRect(x - 13, y + 21, 13, 10, "#334b5e");
       fillPixelRect(x, y + 21, 13, 10, "#334b5e");
@@ -391,15 +489,28 @@
       fillPixelRect(x - 14, y + 35, 12, 5, "#253846");
       fillPixelRect(x + 2, y + 35, 12, 5, "#253846");
     }
-    if (avatar.equipped === "red_scarf") fillPixelRect(x - 13, y - 1, 26, 6, "#d93432");
-    if (avatar.equipped === "sprout_hat") {
+    if (equipped === "red_scarf") fillPixelRect(x - 13, y - 1, 26, 6, "#d93432");
+    if (equipped === "sprout_hat") {
       fillPixelRect(x - 16, y - 32, 32, 7, "#347f3d");
       fillPixelRect(x - 3, y - 42, 6, 11, "#216a34");
       fillPixelRect(x + 2, y - 42, 9, 6, "#5fb85d");
     }
-    if (avatar.equipped === "carrot_bag") {
+    if (equipped === "carrot_bag") {
       fillPixelRect(x + 13, y + 6, 11, 17, "#b94f25");
       fillPixelRect(x + 15, y + 8, 8, 13, "#ee7d32");
+    }
+    if (equipped === "round_glasses" || equipped === "star_glasses") {
+      const glassColor = equipped === "star_glasses" ? "#e75e99" : "#354751";
+      context.strokeStyle = glassColor; context.lineWidth = 2; context.strokeRect(x - 10, y - 15, 8, 7); context.strokeRect(x + 2, y - 15, 8, 7); fillPixelRect(x - 2, y - 13, 4, 2, glassColor);
+    }
+    if (cosmetics.effect !== "none") {
+      const effects = { bubble: ["○", "#7edcf2"], spark: ["✦", "#ffd85a"], heart: ["♥", "#f15f8b"], carrot: ["◆", "#ed7a31"], leaf: ["❧", "#64ac4b"] };
+      const [glyph, color] = effects[cosmetics.effect] || effects.spark;
+      context.fillStyle = color; context.font = "bold 13px sans-serif"; context.fillText(glyph, x - 25, y - 28); context.fillText(glyph, x + 25, y + 2);
+    }
+    if (cosmetics.pet !== "none") {
+      const petGlyphs = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" };
+      context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet], x + 34, y + 34);
     }
     context.font = "bold 13px sans-serif";
     context.textAlign = "center";
@@ -407,6 +518,10 @@
     context.fillRect(x - Math.max(28, avatar.name.length * 7), y - 58, Math.max(56, avatar.name.length * 14), 19);
     context.fillStyle = "#18382d";
     context.fillText(avatar.name, x, y - 44);
+    if (cosmetics.speech !== "none") {
+      const speechText = cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요";
+      context.font = "bold 9px sans-serif"; context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x + 26, y - 48, 68, 22); context.fillStyle = "#31343f"; context.fillText(speechText, x + 60, y - 34);
+    }
   }
 
   function renderCanvas() {
@@ -528,6 +643,80 @@
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
 
+  function selectedAvatarItem(category, id = avatarDraft[category]) {
+    return avatarCatalog[category].find((item) => item.id === id) || avatarCatalog[category][0];
+  }
+
+  function renderAvatarPreview() {
+    const preview = $("#avatar-preview-canvas");
+    const previewContext = preview.getContext("2d");
+    previewContext.setTransform(1, 0, 0, 1, 0, 0);
+    previewContext.clearRect(0, 0, preview.width, preview.height);
+    previewContext.setTransform(2, 0, 0, 2, 0, 0);
+    previewContext.imageSmoothingEnabled = false;
+    const rect = (x, y, width, height, color) => { previewContext.fillStyle = color; previewContext.fillRect(Math.round(x), Math.round(y), Math.round(width), Math.round(height)); };
+    const x = 140;
+    const y = 153;
+    const skin = selectedAvatarItem("skin").color;
+    const skinShadow = avatarDraft.skin === "deep" ? "#6d392f" : avatarDraft.skin === "warm" ? "#a7654f" : "#d99978";
+    const hairColors = { soft: "#303c4e", wave: "#3b2b34", crop: "#263b43", twin: "#54313e", silver: "#8992a4", orange: "#bd6236" };
+    const outfitColors = { forest: ["#4f9e63", "#c8f06a"], denim: ["#4879a5", "#c8e3f8"], carrot: ["#e87531", "#ffe078"], moon: ["#4b527f", "#d9e3ff"], berry: ["#b44f78", "#ffd2df"], yellow: ["#e7b737", "#fff1a8"], violet: ["#7055af", "#d8c8ff"], black: ["#2f3441", "#9da6bc"] };
+    const [outfit, accent] = outfitColors[avatarDraft.outfit] || outfitColors.forest;
+
+    previewContext.textAlign = "center";
+    if (avatarDraft.aura === "wings") {
+      rect(x - 74, y - 32, 30, 48, "#5bdde9"); rect(x - 82, y - 20, 28, 37, "#bff8ff");
+      rect(x + 44, y - 32, 30, 48, "#5bdde9"); rect(x + 54, y - 20, 28, 37, "#bff8ff");
+    } else if (avatarDraft.aura === "halo") { rect(x - 29, y - 87, 58, 7, "#ffd951"); rect(x - 19, y - 92, 38, 5, "#fff3a6"); }
+    else if (avatarDraft.aura !== "none") { previewContext.font = "42px sans-serif"; previewContext.fillStyle = avatarDraft.aura === "rainbow" ? "#e45e84" : avatarDraft.aura === "forest" ? "#58a952" : "#f471a0"; previewContext.fillText(avatarDraft.aura === "forest" ? "❧  ❧" : avatarDraft.aura === "rainbow" ? "⌒" : "♥  ♥", x, y - 28); }
+
+    rect(x - 45, y + 80, 90, 13, "rgba(35,39,50,.18)");
+    rect(x - 36, y - 48, 72, 66, skinShadow); rect(x - 31, y - 46, 62, 61, skin);
+    const hair = hairColors[avatarDraft.hair] || hairColors.soft;
+    rect(x - 42, y - 69, 84, 31, hair); rect(x - 44, y - 45, 15, avatarDraft.hair === "wave" ? 72 : 50, hair); rect(x + 29, y - 45, 15, avatarDraft.hair === "wave" ? 72 : 50, hair);
+    if (avatarDraft.hair === "twin") { rect(x - 59, y - 21, 18, 49, hair); rect(x + 41, y - 21, 18, 49, hair); }
+    rect(x - 22, y - 24, 10, 13, "#fff"); rect(x + 12, y - 24, 10, 13, "#fff"); rect(x - 19, y - 20, 5, 8, "#27313c"); rect(x + 15, y - 20, 5, 8, "#27313c");
+    if (["blush", "sparkle"].includes(avatarDraft.face)) { rect(x - 29, y - 7, 12, 7, "#ef8793"); rect(x + 17, y - 7, 12, 7, "#ef8793"); }
+    if (avatarDraft.face === "wink") rect(x + 10, y - 17, 15, 4, "#27313c");
+    rect(x - (avatarDraft.face === "smile" ? 15 : 10), y + 4, avatarDraft.face === "smile" ? 30 : 20, 5, "#b9656d");
+    rect(x - 42, y + 16, 84, 66, "#243b3a"); rect(x - 37, y + 18, 74, 59, outfit); rect(x - 26, y + 26, 52, 12, accent);
+    rect(x - 58, y + 21, 16, 54, skinShadow); rect(x - 54, y + 23, 12, 48, skin); rect(x + 42, y + 21, 16, 54, skinShadow); rect(x + 42, y + 23, 12, 48, skin);
+    rect(x - 34, y + 75, 26, 37, "#344a62"); rect(x + 8, y + 75, 26, 37, "#344a62"); rect(x - 37, y + 108, 29, 11, "#222d3e"); rect(x + 8, y + 108, 29, 11, "#222d3e");
+    if (avatarDraft.accessory === "red_scarf") rect(x - 39, y + 12, 78, 14, "#d93432");
+    if (avatarDraft.accessory === "sprout_hat") { rect(x - 45, y - 78, 90, 17, "#347f3d"); rect(x - 7, y - 103, 14, 26, "#216a34"); rect(x + 4, y - 101, 24, 14, "#63bb5f"); }
+    if (avatarDraft.accessory === "carrot_bag") { rect(x + 38, y + 33, 27, 47, "#bd542a"); rect(x + 43, y + 39, 18, 34, "#ef8438"); }
+    if (["round_glasses", "star_glasses"].includes(avatarDraft.accessory)) { previewContext.strokeStyle = avatarDraft.accessory === "star_glasses" ? "#e75e99" : "#354751"; previewContext.lineWidth = 4; previewContext.strokeRect(x - 30, y - 28, 26, 21); previewContext.strokeRect(x + 4, y - 28, 26, 21); rect(x - 4, y - 21, 8, 4, previewContext.strokeStyle); }
+    if (avatarDraft.effect !== "none") { const glyphs = { bubble: "○", spark: "✦", heart: "♥", carrot: "◆", leaf: "❧" }; previewContext.font = "bold 30px sans-serif"; previewContext.fillStyle = "#8b73ed"; previewContext.fillText(glyphs[avatarDraft.effect], x - 77, y - 60); previewContext.fillText(glyphs[avatarDraft.effect], x + 77, y + 8); }
+    if (avatarDraft.pet !== "none") { const pets = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" }; previewContext.font = "45px sans-serif"; previewContext.fillText(pets[avatarDraft.pet], x + 82, y + 103); }
+    if (avatarDraft.vehicle !== "none") { const vehicles = { scooter: "🛵", bicycle: "🚲", balloon: "🎈" }; previewContext.font = "35px sans-serif"; previewContext.fillText(vehicles[avatarDraft.vehicle], x - 83, y + 106); }
+    if (avatarDraft.speech !== "none") { previewContext.fillStyle = "rgba(255,255,255,.96)"; previewContext.strokeStyle = "#5d6170"; previewContext.lineWidth = 2; previewContext.fillRect(x + 43, y - 108, 86, 48); previewContext.strokeRect(x + 43, y - 108, 86, 48); previewContext.fillStyle = "#30323b"; previewContext.font = "bold 11px sans-serif"; previewContext.fillText(avatarDraft.speech === "cat" ? "안녕하세요!" : avatarDraft.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요", x + 86, y - 80); }
+  }
+
+  function renderAvatarStudio() {
+    $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
+    const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
+    const items = avatarCatalog[activeAvatarCategory];
+    $("#avatar-category-title").textContent = category.label;
+    $("#avatar-item-count").textContent = `${items.length}개`;
+    $("#avatar-item-grid").innerHTML = items.map((item) => {
+      const visual = activeAvatarCategory === "skin" ? `<span class="color-chip" style="background:${item.color}"></span>` : `<span class="item-visual" aria-hidden="true">${item.visual}</span>`;
+      return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${avatarDraft[activeAvatarCategory] === item.id}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${avatarDraft[activeAvatarCategory] === item.id ? "선택됨" : "보유 아이템"}</small></button>`;
+    }).join("");
+    $("#preview-carrot-balance").textContent = state.carrots;
+    $("#avatar-preview-name").textContent = state.avatar.name;
+    $("#avatar-selection-name").textContent = selectedAvatarItem(activeAvatarCategory).name;
+    $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
+    renderAvatarPreview();
+  }
+
+  function openAvatarStudio() {
+    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
+    avatarDraftHistory = [];
+    activeAvatarCategory = "skin";
+    renderAvatarStudio();
+    $("#avatar-studio").showModal();
+  }
+
   function renderAll() {
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
@@ -559,12 +748,54 @@
     renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
   });
 
+  $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
+  $("#avatar-studio-close").addEventListener("click", () => $("#avatar-studio").close());
+  $("#avatar-studio").addEventListener("click", (event) => {
+    if (event.target === $("#avatar-studio")) $("#avatar-studio").close();
+  });
+  $("#avatar-category-nav").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-avatar-category]");
+    if (!button) return;
+    activeAvatarCategory = button.dataset.avatarCategory;
+    renderAvatarStudio();
+  });
+  $("#avatar-item-grid").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-avatar-item]");
+    if (!button || avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
+    avatarDraftHistory.push({ ...avatarDraft });
+    avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
+    renderAvatarStudio();
+  });
+  $("#avatar-undo").addEventListener("click", () => {
+    const previous = avatarDraftHistory.pop();
+    if (!previous) return;
+    avatarDraft = previous;
+    renderAvatarStudio();
+  });
+  $("#avatar-randomize").addEventListener("click", () => {
+    avatarDraftHistory.push({ ...avatarDraft });
+    avatarCategories.forEach(({ id }) => {
+      const choices = avatarCatalog[id];
+      avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
+    });
+    renderAvatarStudio();
+  });
+  $("#avatar-studio-save").addEventListener("click", async () => {
+    state.avatar.cosmetics = { ...avatarDraft };
+    state.avatar.equipped = avatarDraft.accessory === "none" ? null : avatarDraft.accessory;
+    renderInventory();
+    renderCanvas();
+    $("#avatar-studio").close();
+    await persist(`${state.avatar.name}님의 새 코디를 저장했습니다.`);
+  });
+
   $("#asset-dock").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-item]");
     if (!button) return;
     const code = button.dataset.item;
     if (button.dataset.kind === "accessory") {
       state.avatar.equipped = state.avatar.equipped === code ? null : code;
+      state.avatar.cosmetics.accessory = state.avatar.equipped || "none";
       placementCode = null;
       renderInventory(); renderCanvas(); await persist(`${itemCatalog[code].name} ${state.avatar.equipped === code ? "장착" : "해제"} 완료.`);
       return;
@@ -575,7 +806,7 @@
   });
 
   $("#unequip-button").addEventListener("click", async () => {
-    state.avatar.equipped = null; renderInventory(); renderCanvas(); await persist("액세서리를 해제했습니다.");
+    state.avatar.equipped = null; state.avatar.cosmetics.accessory = "none"; renderInventory(); renderCanvas(); await persist("액세서리를 해제했습니다.");
   });
   $("#cancel-placement").addEventListener("click", () => { placementCode = null; renderInventory(); setStatus("오브젝트 배치를 취소했습니다."); });
 
@@ -727,7 +958,7 @@
     }
     if (action === "wardrobe") {
       $("#world-dialog").close();
-      $("#wardrobe-list").scrollIntoView({ behavior: "smooth", block: "center" });
+      openAvatarStudio();
     }
     if (action === "water" && !state.gardenWatered) {
       state.gardenWatered = true;
