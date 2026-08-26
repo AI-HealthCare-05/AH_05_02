@@ -26,7 +26,7 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
     for key in ("ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", 'w: "up"', 'a: "left"'):
         assert key in script
     assert html.count('data-move="') == 4
-    assert "width=\"768\" height=\"512\"" in html
+    assert 'width="768" height="512"' in html
     assert "image-rendering:pixelated" in (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
 
 

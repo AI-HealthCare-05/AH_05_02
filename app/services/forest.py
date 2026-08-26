@@ -48,7 +48,9 @@ class ForestService:
         group = await self.repo.group(group_id)
         member = await self.repo.active_member(group_id, user.id)
         if group is None or member is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="참여 중인 공동 챌린지를 찾을 수 없습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="참여 중인 공동 챌린지를 찾을 수 없습니다."
+            )
         return group, member
 
     async def _space_for_user(self, user: User, group_id: int) -> ForestSpace:
@@ -152,10 +154,14 @@ class ForestService:
 
     async def update_avatar(self, user: User, request: ForestAvatarUpdateRequest) -> dict[str, object]:
         if request.hair_code not in HAIR_CATALOG or request.outfit_code not in OUTFIT_CATALOG:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="선택할 수 없는 아바타 항목입니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="선택할 수 없는 아바타 항목입니다."
+            )
         accessory = ACCESSORY_CATALOG.get(request.accessory_code)
         if accessory is None:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="선택할 수 없는 액세서리입니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="선택할 수 없는 액세서리입니다."
+            )
         if not accessory["default"] and not await self.repo.has_item(user.id, request.accessory_code):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="아직 획득하지 않은 액세서리입니다.")
         avatar = await self.repo.avatar(user)
@@ -170,7 +176,9 @@ class ForestService:
         space = await self._space_for_user(user, group_id)
         _, completed, target = await self._progress(group_id)
         if target == 0 or completed < target:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="모든 구성원이 오늘 3개를 완료하면 보상 상자가 열립니다.")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="모든 구성원이 오늘 3개를 완료하면 보상 상자가 열립니다."
+            )
         source_key = f"group-daily:{group_id}:{date.today().isoformat()}:{user.id}"
         if await self.repo.reward(source_key) is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="오늘의 그룹 보상을 이미 받았습니다.")
@@ -199,9 +207,7 @@ class ForestService:
             "notice": "활동 완료에 따른 무료 보상입니다. 결제 또는 현금성 가치가 없습니다.",
         }
 
-    async def place_object(
-        self, user: User, group_id: int, request: ForestObjectCreateRequest
-    ) -> dict[str, object]:
+    async def place_object(self, user: User, group_id: int, request: ForestObjectCreateRequest) -> dict[str, object]:
         space = await self._space_for_user(user, group_id)
         catalog_item = OBJECT_CATALOG[request.object_code]
         avatar = await self.repo.avatar(user)
