@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_forest_has_independent_web_route() -> None:
-    paths = {route.path for route in app.routes}
+    paths = {route.path for route in app.routes if hasattr(route, "path")}
     response = asyncio.run(carrot_forest())
     html = Path(response.path).read_text(encoding="utf-8")
     assert "/forest" in paths
