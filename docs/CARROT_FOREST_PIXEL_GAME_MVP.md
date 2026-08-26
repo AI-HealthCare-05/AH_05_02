@@ -21,6 +21,8 @@
 - 유료 상품·현금 결제·아이템 거래·건강정보 공개 기능 제외
 - 게임 제작 도구를 닮은 월드 스튜디오 UI: 좌측 작업 도구, 중앙 Canvas, 우측 퀘스트 인스펙터, 하단 에셋 라이브러리
 - 작업 영역 바로가기, 월드 확대·화면 맞춤, 위치 초기화, 실시간 좌표 HUD
+- PWA 설치: 지원 브라우저에서 바탕화면·홈 화면 앱으로 추가하고 독립 창으로 실행
+- 오프라인 앱 셸: 화면·스크립트·스타일·아이콘만 캐시하며 `/api/` 건강·사용자 데이터는 캐시하지 않음
 
 ## 3. 실행 방법
 
@@ -35,6 +37,8 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 - 메인 MVP: `http://127.0.0.1:8000/`
 - 당근의 숲: `http://127.0.0.1:8000/forest`
 - API 문서: `http://127.0.0.1:8000/api/docs`
+
+`localhost` 또는 HTTPS 환경에서 `/forest`를 연 뒤 브라우저의 **앱 설치** 또는 **홈 화면에 추가**를 선택한다. 설치 이벤트를 지원하는 브라우저에서는 상단에 `앱으로 설치` 버튼이 표시된다.
 
 ## 4. 프론트엔드 상태와 어댑터 경계
 
@@ -73,6 +77,9 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | 독립 게임 화면 | `src/frontend/forest.html` |
 | 픽셀 게임·상태·어댑터 | `src/frontend/forest-game.js` |
 | 반응형·접근성 스타일 | `src/frontend/forest-game.css` |
+| PWA 설치 정보 | `src/frontend/forest.webmanifest` |
+| 오프라인 앱 셸 | `src/frontend/forest-sw.js` |
+| 앱 아이콘 | `src/frontend/icons/forest-icon-192.png`, `forest-icon-512.png` |
 | FastAPI 독립 경로 | `app/main.py` |
 | 숲 API | `app/apis/v1/forest_routers.py` |
 | 서비스 규칙 | `app/services/forest.py` |

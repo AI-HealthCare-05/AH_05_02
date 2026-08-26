@@ -403,6 +403,40 @@
     canvas.focus();
   });
 
+  const installButton = $("#install-pwa");
+  let deferredInstallPrompt = null;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (!standalone) {
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      installButton.hidden = false;
+    });
+  }
+  installButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) {
+      setStatus("브라우저 메뉴에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택해 주세요.");
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installButton.hidden = true;
+    setStatus(choice.outcome === "accepted" ? "당근의 숲 앱 설치를 시작합니다." : "설치를 취소했습니다.");
+  });
+  window.addEventListener("appinstalled", () => {
+    installButton.hidden = true;
+    setStatus("당근의 숲이 앱으로 설치되었습니다.");
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/forest-sw.js", { scope: "/forest" }).catch(() => {
+        setStatus("오프라인 준비에 실패했습니다. 온라인 게임은 계속 이용할 수 있습니다.");
+      });
+    });
+  }
+
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
   adapter.load().then((loaded) => { state = loaded; renderAll(); setStatus("당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요."); });
 })();

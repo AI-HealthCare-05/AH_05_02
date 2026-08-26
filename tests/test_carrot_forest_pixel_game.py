@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
 
-from app.main import app, carrot_forest
+from app.main import app, carrot_forest, forest_manifest, forest_service_worker
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -72,3 +72,31 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
     assert html.count("data-workspace-target=") == 4
     assert "scrollIntoView" in script
     assert 'classList.toggle("is-zoomed")' in script
+
+
+def test_pixel_game_is_installable_pwa() -> None:
+    paths = {route.path for route in app.routes if hasattr(route, "path")}
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    manifest = (ROOT / "src/frontend/forest.webmanifest").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    assert {"/manifest.webmanifest", "/forest-sw.js"}.issubset(paths)
+    assert 'rel="manifest" href="/manifest.webmanifest"' in html
+    assert 'id="install-pwa"' in html
+    assert '"display": "standalone"' in manifest
+    assert '"sizes": "192x192"' in manifest
+    assert '"sizes": "512x512"' in manifest
+    assert "beforeinstallprompt" in script
+    assert 'serviceWorker.register("/forest-sw.js", { scope: "/forest" })' in script
+    assert 'url.pathname.startsWith("/api/")' in worker
+
+
+def test_pwa_route_response_contracts() -> None:
+    manifest_response = asyncio.run(forest_manifest())
+    worker_response = asyncio.run(forest_service_worker())
+
+    assert manifest_response.media_type == "application/manifest+json"
+    assert manifest_response.headers["cache-control"] == "no-cache"
+    assert worker_response.media_type == "text/javascript"
+    assert worker_response.headers["service-worker-allowed"] == "/forest"

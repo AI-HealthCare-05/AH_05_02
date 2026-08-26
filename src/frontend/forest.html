@@ -3,9 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2f7e46">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="당근의 숲">
   <title>당근의 숲 (Beta) 월드 스튜디오 | 간당간당</title>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-2">
-  <script src="/static/forest-game.js?v=20260826-2" defer></script>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-3">
+  <script src="/static/forest-game.js?v=20260826-3" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
@@ -16,6 +24,7 @@
     <div class="topbar-actions">
       <span class="sync-state"><i aria-hidden="true"></i> 오늘 기록 연결됨</span>
       <div class="carrot-balance" aria-label="보유 당근"><span aria-hidden="true">🥕</span><strong id="carrot-balance">100</strong></div>
+      <button id="install-pwa" class="install-button" type="button" hidden>앱으로 설치</button>
       <button id="large-text-toggle" class="icon-button" type="button" aria-pressed="false">글자 크게</button>
     </div>
   </header>
