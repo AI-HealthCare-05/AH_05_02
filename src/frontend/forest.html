@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>당근의 숲 (Beta) | 간당간당</title>
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-1">
+  <script src="/static/forest-game.js?v=20260826-1" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
+  <header class="forest-topbar">
+    <a class="forest-brand" href="/"><span aria-hidden="true">🥕</span> 간당간당</a>
+    <span class="beta-badge">선택 기능 · Beta</span>
+    <button id="large-text-toggle" class="plain-button" type="button" aria-pressed="false">글자 크게</button>
+  </header>
+
+  <main id="forest-main" class="forest-shell">
+    <section class="forest-intro" aria-labelledby="forest-title">
+      <div><p class="eyebrow">CARROT FOREST</p><h1 id="forest-title">당근의 숲</h1><p>오늘의 생활습관 퀘스트를 완료하고 다섯 명이 함께 숲을 가꿔보세요.</p></div>
+      <div class="carrot-balance" aria-label="보유 당근"><span aria-hidden="true">🥕</span> <strong id="carrot-balance">100</strong></div>
+    </section>
+
+    <p id="game-status" class="game-status" role="status" aria-live="polite">게임을 준비하고 있습니다.</p>
+
+    <div class="game-layout">
+      <section class="game-card" aria-labelledby="map-title">
+        <div class="card-heading"><div><p class="eyebrow">PIXEL MAP</p><h2 id="map-title">우리의 작은 숲</h2></div><span id="adapter-badge" class="adapter-badge">Demo Adapter</span></div>
+        <div class="canvas-frame">
+          <canvas id="forest-canvas" width="768" height="512" tabindex="0" aria-label="숲, 당근밭, 공동 나무와 집이 있는 픽셀 맵. 방향키나 WASD로 아바타를 움직일 수 있습니다." aria-describedby="movement-help"></canvas>
+        </div>
+        <p id="movement-help" class="help-text">키보드 방향키 또는 W·A·S·D로 이동하세요. 화면에서는 아래 큰 방향 버튼을 사용할 수 있습니다.</p>
+        <div class="touch-controls" aria-label="아바타 이동 버튼">
+          <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
+          <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
+          <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
+          <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="panel" aria-labelledby="quest-title">
+          <div class="panel-title"><div><p class="eyebrow">TODAY QUEST</p><h2 id="quest-title">오늘의 퀘스트</h2></div><strong id="personal-progress">0/3</strong></div>
+          <div id="quest-list" class="quest-list"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="group-title">
+          <div class="panel-title"><div><p class="eyebrow">TOGETHER</p><h2 id="group-title">5명 공동 목표</h2></div><strong id="group-progress">12/15</strong></div>
+          <div class="progress-track" role="progressbar" aria-label="공동 목표 진행률" aria-valuemin="0" aria-valuemax="15" aria-valuenow="12"><span id="group-progress-bar"></span></div>
+          <ul id="member-list" class="member-list" aria-label="구성원별 퀘스트 진행 상태"></ul>
+          <button id="reward-button" class="reward-button" type="button" disabled>15개 완료 후 무료 보물상자 열기</button>
+        </section>
+      </aside>
+    </div>
+
+    <div class="customize-layout">
+      <section class="panel" aria-labelledby="avatar-title">
+        <p class="eyebrow">AVATAR</p><h2 id="avatar-title">내 픽셀 아바타</h2>
+        <form id="avatar-form" class="avatar-form">
+          <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
+          <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
+          <label>외형 프리셋<select id="avatar-preset"><option value="sprout">새싹 정원사</option><option value="carrot">당근 탐험가</option><option value="moon">달빛 산책가</option><option value="berry">산딸기 수집가</option></select></label>
+          <button class="primary-button" type="submit">아바타 저장</button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="inventory-title">
+        <p class="eyebrow">WARDROBE · STORAGE</p><h2 id="inventory-title">옷장과 창고</h2>
+        <p class="help-text">아바타 아이템은 장착·해제하고, 숲 오브젝트는 선택한 뒤 맵을 눌러 배치할 수 있습니다.</p>
+        <div id="inventory-list" class="inventory-list"></div>
+        <button id="unequip-button" class="plain-button" type="button">액세서리 해제</button>
+        <button id="cancel-placement" class="plain-button" type="button" hidden>배치 취소</button>
+      </section>
+    </div>
+
+    <section class="panel placed-panel" aria-labelledby="placed-title">
+      <div class="panel-title"><div><p class="eyebrow">FOREST OBJECTS</p><h2 id="placed-title">배치한 오브젝트</h2></div><span id="placement-mode">배치할 아이템 없음</span></div>
+      <div id="placed-list" class="placed-list"></div>
+    </section>
+
+    <details class="adapter-details">
+      <summary>기존 챌린지 API 연결 정보</summary>
+      <p>현재 화면은 명시적인 Demo Adapter로 동작합니다. 실제 연결 시 같은 인터페이스에서 공동 챌린지·일일 기록·숲 API로 교체합니다.</p>
+      <code>GET /api/v1/challenge-cycles/current · PUT /api/v1/user-challenges/{id}/logs/{date} · GET /api/v1/forest/spaces/{group_id}</code>
+    </details>
+  </main>
+
+  <footer>당근의 숲은 간당간당의 선택형 생활습관 참여 기능입니다.</footer>
+</body>
+</html>
