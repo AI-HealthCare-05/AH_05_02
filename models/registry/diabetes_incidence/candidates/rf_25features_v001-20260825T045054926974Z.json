@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_incidence",
+  "model_version": "rf-25features-v001-run-20260825T045054926974Z",
+  "promotion_status": "candidate_only",
+  "operational_model_activated": false,
+  "experiment_id": "rf_25features_v001",
+  "run_id": "20260825T045054926974Z",
+  "artifact_local_path": "outputs/ml/rf_25features_v001/20260825T045054926974Z/model.joblib",
+  "artifact_sha256": "7c07625d5bc4cb89203bfe34612b72655e709e7849f7f5ed00638af1c09a9c73",
+  "artifact_git_policy": "local_only_do_not_commit_model_binary",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "feature_schema_version": "klosa_stage3_25features_v1",
+  "threshold_version": "validation-recall-090-080-v1",
+  "thresholds": {
+    "low": 0.0,
+    "moderate": 0.016719708895315412,
+    "high": 0.022410835788097848,
+    "selection_data": "validation_only",
+    "moderate_target_recall": 0.9,
+    "high_target_recall": 0.8
+  },
+  "risk_categories": [
+    "low",
+    "moderate",
+    "high"
+  ],
+  "features": [
+    "age",
+    "sex",
+    "bmi",
+    "smoking_status",
+    "current_drinker",
+    "regular_exercise",
+    "exercise_days_per_week",
+    "exercise_minutes",
+    "hypertension_diagnosis",
+    "cancer_diagnosis",
+    "chronic_lung_disease_diagnosis",
+    "liver_disease_diagnosis",
+    "heart_disease_diagnosis",
+    "cerebrovascular_disease_diagnosis",
+    "psychiatric_disease_diagnosis",
+    "arthritis_rheumatism_diagnosis",
+    "log_household_income",
+    "education_level",
+    "marital_status",
+    "household_structure",
+    "health_satisfaction_score",
+    "economic_satisfaction_score",
+    "overall_quality_of_life_score",
+    "depressed_feeling_last_week",
+    "sleep_difficulty_last_week"
+  ],
+  "missing_value_policy": {
+    "required_api_fields": "reject_missing",
+    "optional_numeric": "NaN_then_train_median_and_missing_indicator",
+    "optional_categorical": "NaN_then_train_mode",
+    "unknown_diagnosis": "missing_never_assume_no",
+    "preprocessing_fit_scope": "train_only"
+  },
+  "reproduce": {
+    "validate": "./scripts/ml-experiment.sh validate",
+    "run": "./scripts/ml-experiment.sh run rf_25features_v001",
+    "register": "./scripts/ml-experiment.sh register-candidate outputs/ml/rf_25features_v001/<UTC_RUN_ID>",
+    "test": ".venv/bin/pytest -q tests/ml"
+  },
+  "metrics": {
+    "recall": 0.8,
+    "specificity": 0.4741826673585885,
+    "auroc": 0.6596316846965524,
+    "auprc": 0.05113990568226345,
+    "f1": 0.07084468664850137,
+    "brier_score": 0.023886931936107463,
+    "confusion_matrix": {
+      "true_positive": 156,
+      "false_positive": 4053,
+      "true_negative": 3655,
+      "false_negative": 39
+    },
+    "threshold": 0.022410835788097848
+  },
+  "medical_review_required": true,
+  "intended_use": "diabetes incidence risk screening and health education research only",
+  "prohibited_use": [
+    "diagnosis",
+    "prescription",
+    "medication_start_stop_or_dose_change"
+  ]
+}

@@ -84,6 +84,29 @@ Train 학습 완료 후 Validation Recall 0.80 이상을 만족하는 후보 중
 
 최초 실행 시 `official_v1` 코호트가 없으면 Git 제외 원자료에서 정답 노출 없는 t0 입력 코호트를 생성해 `data/processed/official_v1/`에 저장한다. 모델 파일과 실행 기록은 Git 제외 경로인 `outputs/ml/`에만 생성한다.
 
+## 표준 단건 추론
+
+웹 입력 변환과 추론 진입점은
+`src.ml.inference.diabetes_standard.predict_diabetes_risk`다. 기본 건강정보 10개는
+필수이며, 기저질환·사회경제·주관적 웰빙 17개는 선택값이다. 선택 수치값은 미입력
+시 `NaN`으로 전달되어 Train 중앙값과 결측 indicator로 처리되고, 선택 범주값은
+Train 최빈값으로 처리된다. 진단 상태 `null`은 `no`로 바꾸지 않는다.
+
+```bash
+.venv/bin/python -c 'from datetime import date; import json; from src.ml.inference.diabetes_standard import predict_diabetes_risk; payload=json.load(open("experiments/diabetes_incidence/candidates/rf_25features_v001/inference_request.example.json")); print(predict_diabetes_risk(payload, as_of_date=date(2026, 8, 26)))'
+```
+
+위험 범주는 Validation에서만 산출한 작동점을 사용한다.
+
+- `low`: 점수 < `0.01671971`
+- `moderate`: `0.01671971` 이상, `0.02241084` 미만
+- `high`: `0.02241084` 이상
+
+`moderate`와 `high` 경계는 각각 Validation Recall 0.90과 0.80 작동점이다. 이는
+연구용 위험 선별 등급이며 진단·처방 또는 약물 변경 근거가 아니다. 후보 Manifest는
+`models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json`에
+체크섬, 특성 순서, 버전과 재현 명령을 기록한다.
+
 ## 한계와 다음 실험
 
 - 표적은 생물학적 발병 시점이 아니라 다음 조사에서 새로 보고된 당뇨·고혈당 진단이다.
