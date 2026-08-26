@@ -33,6 +33,13 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
+            profile = await client.patch(
+                "/api/v1/users/me/profile",
+                headers=headers,
+                json={"birthday": birth_date, "gender": "FEMALE"},
+            )
+            assert profile.status_code == status.HTTP_200_OK
+
             consent = await client.post(
                 "/api/v1/consents",
                 headers=headers,

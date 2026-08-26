@@ -88,7 +88,7 @@ def test_signup_minimizes_optional_identity_collection() -> None:
         }
     )
     assert request.name == "최소 수집 사용자"
-    assert request.phone_number is None
+    assert "phone_number" not in SignUpRequest.model_fields
 
 
 def test_fastapi_container_applies_migrations_before_serving() -> None:
