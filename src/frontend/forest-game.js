@@ -9,9 +9,9 @@
   const $ = (selector) => document.querySelector(selector);
 
   const quests = [
-    { id: "walk", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인" },
-    { id: "meal", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기" },
-    { id: "check", title: "건강 기록 확인하기", description: "입력한 생활습관 다시 보기" },
+    { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
+    { id: "meal", icon: "🥗", category: "식사 돌아보기", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기", reward: 20 },
+    { id: "check", icon: "📝", category: "건강 기록", title: "건강 기록 확인하기", description: "입력한 생활습관 다시 보기", reward: 15 },
   ];
   const presets = {
     sprout: { label: "새싹 정원사", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
@@ -33,7 +33,7 @@
   function defaultState() {
     return {
       dateKey: TODAY,
-      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, equipped: null },
+      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, equipped: null, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -46,6 +46,7 @@
       inventory: ["red_scarf", "flower_patch", "bench"],
       placed: [],
       rewardClaimed: false,
+      gardenWatered: false,
     };
   }
 
@@ -101,9 +102,49 @@
   const adapter = new DemoForestAdapter();
   let state = defaultState();
   let placementCode = null;
+  let running = false;
+  let musicEngine = null;
   const canvas = $("#forest-canvas");
   const context = canvas.getContext("2d");
   context.imageSmoothingEnabled = false;
+
+  class CozyForestMusic {
+    constructor() {
+      this.audioContext = null;
+      this.timer = null;
+      this.step = 0;
+      this.notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
+    }
+    playNote(frequency, when) {
+      const oscillator = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001, when);
+      gain.gain.exponentialRampToValueAtTime(.055, when + .04);
+      gain.gain.exponentialRampToValueAtTime(.0001, when + .7);
+      oscillator.connect(gain).connect(this.audioContext.destination);
+      oscillator.start(when);
+      oscillator.stop(when + .75);
+    }
+    async start() {
+      this.audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+      await this.audioContext.resume();
+      const playStep = () => {
+        const now = this.audioContext.currentTime;
+        this.playNote(this.notes[this.step % this.notes.length], now);
+        if (this.step % 2 === 0) this.playNote(this.notes[(this.step + 2) % this.notes.length] / 2, now);
+        this.step += 1;
+      };
+      playStep();
+      this.timer = window.setInterval(playStep, 760);
+    }
+    stop() {
+      window.clearInterval(this.timer);
+      this.timer = null;
+      this.audioContext?.suspend();
+    }
+  }
 
   function setStatus(message) { $("#game-status").textContent = message; }
   function personalCompleted() { return Object.values(state.quests).filter(Boolean).length; }
@@ -119,10 +160,25 @@
   }
 
   function drawTree(x, y, scale = 1) {
-    fillPixelRect(x + 12 * scale, y + 24 * scale, 10 * scale, 20 * scale, "#75462a");
-    fillPixelRect(x + 4 * scale, y + 8 * scale, 28 * scale, 24 * scale, "#236b3b");
-    fillPixelRect(x, y + 14 * scale, 36 * scale, 12 * scale, "#2f7e46");
-    fillPixelRect(x + 10 * scale, y, 18 * scale, 12 * scale, "#55a94e");
+    fillPixelRect(x + 13 * scale, y + 25 * scale, 10 * scale, 22 * scale, "#6b4027");
+    fillPixelRect(x + 16 * scale, y + 25 * scale, 4 * scale, 18 * scale, "#98613a");
+    fillPixelRect(x + 3 * scale, y + 9 * scale, 30 * scale, 25 * scale, "#21623a");
+    fillPixelRect(x, y + 16 * scale, 36 * scale, 13 * scale, "#2e8248");
+    fillPixelRect(x + 9 * scale, y, 20 * scale, 15 * scale, "#5ab85a");
+    fillPixelRect(x + 8 * scale, y + 10 * scale, 7 * scale, 6 * scale, "#78cf67");
+  }
+
+  function drawVehicle() {
+    const x = 470;
+    const y = 376;
+    fillPixelRect(x - 17, y + 9, 12, 12, "#243c3a");
+    fillPixelRect(x + 9, y + 9, 12, 12, "#243c3a");
+    fillPixelRect(x - 13, y + 13, 4, 4, "#b9d5cf");
+    fillPixelRect(x + 13, y + 13, 4, 4, "#b9d5cf");
+    fillPixelRect(x - 8, y, 23, 7, "#e76535");
+    fillPixelRect(x - 1, y - 8, 14, 9, "#f49839");
+    fillPixelRect(x + 13, y - 12, 4, 14, "#384e4b");
+    fillPixelRect(x + 9, y - 13, 13, 4, "#384e4b");
   }
 
   function drawMap() {
@@ -134,26 +190,36 @@
     }
     fillPixelRect(0, 330, canvas.width, 86, "#d8b472");
     fillPixelRect(352, 0, 72, canvas.height, "#e2c689");
-    fillPixelRect(500, 54, 220, 170, "#9a643e");
+    fillPixelRect(496, 48, 228, 182, "#71462e");
+    fillPixelRect(504, 56, 212, 166, "#9a643e");
     for (let row = 0; row < 4; row += 1) {
       for (let column = 0; column < 6; column += 1) {
         const x = 515 + column * 32;
         const y = 72 + row * 36;
-        fillPixelRect(x, y, 20, 24, "#6f3f27");
+        fillPixelRect(x, y, 20, 24, "#633720");
+        fillPixelRect(x + 2, y + 2, 16, 4, "#855035");
         fillPixelRect(x + 8, y - 7, 5, 12, "#f4812d");
-        fillPixelRect(x + 5, y - 10, 4, 8, "#3b914a");
-        fillPixelRect(x + 12, y - 10, 4, 8, "#51aa58");
+        fillPixelRect(x + 5, y - 11, 5, 9, "#3b914a");
+        fillPixelRect(x + 12, y - 12, 5, 10, "#62bd60");
       }
     }
-    fillPixelRect(54, 58, 180, 128, "#f3cc6d");
-    fillPixelRect(42, 74, 204, 32, "#b64a35");
-    fillPixelRect(66, 98, 156, 102, "#f8e2a4");
-    fillPixelRect(126, 136, 42, 64, "#7a4b2e");
-    fillPixelRect(82, 118, 30, 34, "#8ad0e8");
-    fillPixelRect(180, 118, 30, 34, "#8ad0e8");
+    fillPixelRect(48, 66, 192, 126, "#d7ab58");
+    fillPixelRect(58, 78, 172, 118, "#ffe6aa");
+    fillPixelRect(38, 72, 212, 22, "#8f352d");
+    fillPixelRect(50, 56, 188, 24, "#c84b3c");
+    fillPixelRect(70, 94, 148, 9, "#f4c96e");
+    fillPixelRect(124, 130, 46, 66, "#6d4029");
+    fillPixelRect(132, 140, 30, 56, "#8c5734");
+    fillPixelRect(155, 162, 5, 5, "#f5cf58");
+    fillPixelRect(78, 112, 36, 38, "#4f91aa");
+    fillPixelRect(83, 117, 26, 28, "#a7e3ed");
+    fillPixelRect(178, 112, 36, 38, "#4f91aa");
+    fillPixelRect(183, 117, 26, 28, "#a7e3ed");
+    fillPixelRect(58, 188, 170, 8, "#be914b");
     drawTree(330, 116, 2.15);
     for (let x = 0; x < canvas.width; x += 96) { drawTree(x, 0, .85); drawTree(x + 30, 445, .75); }
     for (let y = 70; y < 420; y += 100) { drawTree(4, y, .72); drawTree(725, y, .72); }
+    drawVehicle();
     drawPlacedObjects();
   }
 
@@ -170,7 +236,11 @@
       } else if (item.code === "lantern") {
         fillPixelRect(x - 3, y - 18, 6, 34, "#49362e"); fillPixelRect(x - 10, y - 20, 20, 18, "#ffd456"); fillPixelRect(x - 6, y - 16, 12, 10, "#ff9340");
       } else {
-        fillPixelRect(x - 10, y - 4, 20, 12, "#eee4d2"); fillPixelRect(x - 7, y - 16, 14, 13, "#e34e42");
+        fillPixelRect(x - 6, y - 2, 12, 16, "#eee4d2");
+        fillPixelRect(x - 14, y - 15, 28, 14, "#e34e42");
+        fillPixelRect(x - 9, y - 18, 18, 5, "#f26959");
+        fillPixelRect(x - 7, y - 12, 4, 4, "#fff2d1");
+        fillPixelRect(x + 4, y - 9, 4, 4, "#fff2d1");
       }
     });
   }
@@ -180,7 +250,14 @@
     const style = presets[avatar.preset] || presets.sprout;
     const x = Math.round(avatar.x / 4) * 4;
     const y = Math.round(avatar.y / 4) * 4;
-    fillPixelRect(x - 15, y + 26, 30, 7, "rgba(33,65,44,.25)");
+    const sittingOffset = avatar.sitting ? 9 : 0;
+    fillPixelRect(x - (avatar.mounted ? 22 : 15), y + 26, avatar.mounted ? 44 : 30, 7, "rgba(33,65,44,.25)");
+    if (avatar.mounted) {
+      fillPixelRect(x - 20, y + 12, 12, 12, "#243c3a");
+      fillPixelRect(x + 10, y + 12, 12, 12, "#243c3a");
+      fillPixelRect(x - 14, y + 5, 30, 9, "#e76535");
+      fillPixelRect(x + 14, y - 4, 4, 15, "#384e4b");
+    }
     fillPixelRect(x - 10, y - 19, 20, 19, "#f0b98e");
     if (avatar.gender === "female") {
       fillPixelRect(x - 14, y - 24, 28, 10, style.hair); fillPixelRect(x - 14, y - 14, 6, 21, style.hair); fillPixelRect(x + 8, y - 14, 6, 21, style.hair);
@@ -190,8 +267,14 @@
       fillPixelRect(x - 13, y - 24, 26, 10, style.hair); fillPixelRect(x + 8, y - 15, 6, 14, style.hair);
     }
     fillPixelRect(x - 13, y, 26, 22, style.outfit); fillPixelRect(x - 18, y + 3, 6, 17, "#f0b98e"); fillPixelRect(x + 12, y + 3, 6, 17, "#f0b98e");
-    fillPixelRect(x - 11, y + 22, 9, 13, "#334b5e"); fillPixelRect(x + 2, y + 22, 9, 13, "#334b5e");
+    if (avatar.sitting) {
+      fillPixelRect(x - 12, y + 19, 11, 9, "#334b5e"); fillPixelRect(x + 1, y + 19, 11, 9, "#334b5e");
+      fillPixelRect(x - 17, y + 25, 16, 7, "#263946"); fillPixelRect(x + 1, y + 25, 16, 7, "#263946");
+    } else if (!avatar.mounted) {
+      fillPixelRect(x - 11, y + 22 + sittingOffset, 9, 13, "#334b5e"); fillPixelRect(x + 2, y + 22 + sittingOffset, 9, 13, "#334b5e");
+    }
     fillPixelRect(x - 7, y - 11, 3, 3, "#2d2a28"); fillPixelRect(x + 4, y - 11, 3, 3, "#2d2a28");
+    fillPixelRect(x - 3, y - 5, 6, 2, "#c47d68");
     fillPixelRect(x - 9, y + 3, 18, 5, style.accent);
     if (avatar.equipped === "red_scarf") fillPixelRect(x - 13, y - 1, 26, 6, "#d93432");
     if (avatar.equipped === "sprout_hat") { fillPixelRect(x - 15, y - 28, 30, 6, "#4a9b46"); fillPixelRect(x - 2, y - 36, 5, 9, "#2f7f3c"); }
@@ -209,6 +292,45 @@
     drawMap();
     drawAvatar();
     $("#avatar-coordinate").textContent = `X ${Math.round(state.avatar.x)} · Y ${Math.round(state.avatar.y)}`;
+    updateInteractionPrompt();
+  }
+
+  function distanceTo(x, y) {
+    return Math.hypot(state.avatar.x - x, state.avatar.y - y);
+  }
+
+  function nearbyInteraction() {
+    if (distanceTo(147, 225) < 90) return "home";
+    if (distanceTo(610, 260) < 105) return "garden";
+    if (distanceTo(470, 376) < 72) return "vehicle";
+    return null;
+  }
+
+  function updateInteractionPrompt() {
+    const target = nearbyInteraction();
+    const prompt = $("#interaction-prompt");
+    prompt.hidden = !target;
+    if (target) prompt.querySelector("span").textContent = { home: "우리 집", garden: "공동 당근밭", vehicle: "숲 스쿠터" }[target];
+  }
+
+  function openWorldDialog(target) {
+    const dialog = $("#world-dialog");
+    const content = {
+      home: { icon: "🏠", title: "우리 집", copy: "잠시 쉬거나 옷장을 열어 캐릭터를 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button><button type="button" data-world-action="wardrobe">옷장 열기</button>' },
+      garden: { icon: "🥕", title: "공동 당근밭", copy: `우리 모임은 오늘 ${groupCompleted()}/15개의 퀘스트를 완료했어요. 함께 돌본 만큼 당근밭이 풍성해져요.`, actions: `<button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근밭 물주기"}</button><button type="button" data-world-action="team">공동 진행 보기</button>` },
+      vehicle: { icon: "🛵", title: "숲 스쿠터", copy: "스쿠터를 타면 숲길을 더 빠르게 이동할 수 있어요.", actions: `<button type="button" data-world-action="ride">${state.avatar.mounted ? "스쿠터에서 내리기" : "스쿠터 타기"}</button>` },
+    }[target];
+    if (!content) { setStatus("상호작용할 대상 가까이 이동해 주세요."); return; }
+    $("#world-dialog-icon").textContent = content.icon;
+    $("#world-dialog-title").textContent = content.title;
+    $("#world-dialog-copy").textContent = content.copy;
+    $("#world-dialog-actions").innerHTML = content.actions;
+    dialog.showModal();
+  }
+
+  function interact(target = nearbyInteraction()) {
+    if (!target) { setStatus("집, 공동 당근밭 또는 스쿠터 가까이에서 Q를 눌러 주세요."); return; }
+    openWorldDialog(target);
   }
 
   function blocked(x, y) {
@@ -220,8 +342,10 @@
   }
 
   async function moveAvatar(direction) {
-    const delta = { up: [0, -12], down: [0, 12], left: [-12, 0], right: [12, 0] }[direction];
+    const step = state.avatar.mounted ? 28 : running ? 22 : 12;
+    const delta = { up: [0, -step], down: [0, step], left: [-step, 0], right: [step, 0] }[direction];
     if (!delta) return;
+    state.avatar.sitting = false;
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
     if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
@@ -229,7 +353,7 @@
   }
 
   function renderQuests() {
-    $("#quest-list").innerHTML = quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span><strong>${quest.title}</strong><small>${quest.description}</small></span></label>`).join("");
+    $("#quest-list").innerHTML = quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("");
     const completed = personalCompleted();
     state.members.find((member) => member.me).completed = completed;
     $("#personal-progress").textContent = `${completed}/3`;
@@ -250,12 +374,14 @@
   }
 
   function renderInventory() {
-    $("#inventory-list").innerHTML = state.inventory.map((code) => {
+    const renderItems = (kind) => state.inventory.filter((code) => itemCatalog[code].kind === kind).map((code) => {
       const item = itemCatalog[code];
       const equipped = item.kind === "accessory" && state.avatar.equipped === code;
       const selected = item.kind === "object" && placementCode === code;
       return `<button class="inventory-item" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
+    $("#wardrobe-list").innerHTML = renderItems("accessory") || "<p class=\"empty-assets\">획득한 의상이 없습니다.</p>";
+    $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
     $("#cancel-placement").hidden = !placementCode;
     $("#placement-mode").textContent = placementCode ? `${itemCatalog[placementCode].name} 배치 위치를 맵에서 선택하세요` : "배치할 아이템 없음";
   }
@@ -298,7 +424,7 @@
     renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
   });
 
-  $("#inventory-list").addEventListener("click", async (event) => {
+  $("#asset-dock").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-item]");
     if (!button) return;
     const code = button.dataset.item;
@@ -326,10 +452,17 @@
   });
 
   canvas.addEventListener("click", async (event) => {
-    if (!placementCode) { canvas.focus(); return; }
     const bounds = canvas.getBoundingClientRect();
     const x = Math.round((event.clientX - bounds.left) * canvas.width / bounds.width / 8) * 8;
     const y = Math.round((event.clientY - bounds.top) * canvas.height / bounds.height / 8) * 8;
+    if (!placementCode) {
+      canvas.focus();
+      if (x >= 38 && x <= 250 && y >= 45 && y <= 215) interact("home");
+      else if (x >= 496 && x <= 724 && y >= 48 && y <= 230) interact("garden");
+      else if (x >= 440 && x <= 505 && y >= 345 && y <= 410) interact("vehicle");
+      else setStatus("집·공동 당근밭·스쿠터를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      return;
+    }
     if (blocked(x, y)) { setStatus("그 위치에는 오브젝트를 놓을 수 없습니다."); return; }
     const existing = state.placed.findIndex((item) => item.code === placementCode);
     if (existing >= 0) state.placed.splice(existing, 1);
@@ -349,13 +482,56 @@
     await persist(reward ? `${itemCatalog[reward].name}과 당근 50개를 받았습니다!` : "당근 50개를 받았습니다!");
   });
 
+  function toggleChat(force) {
+    const panel = $("#chat-panel");
+    panel.hidden = force === undefined ? !panel.hidden : !force;
+    if (!panel.hidden) window.setTimeout(() => $("#chat-input").focus(), 0);
+    else canvas.focus();
+  }
+
+  async function toggleSit() {
+    if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
+    state.avatar.sitting = !state.avatar.sitting;
+    renderCanvas();
+    await persist(state.avatar.sitting ? "풀밭에 앉아 잠시 쉬고 있어요." : "자리에서 일어났습니다.");
+  }
+
+  async function toggleRide(requireNearby = true) {
+    if (!state.avatar.mounted && requireNearby && distanceTo(470, 376) >= 72) {
+      setStatus("숲 스쿠터 가까이 이동한 뒤 E를 눌러 주세요.");
+      return;
+    }
+    state.avatar.mounted = !state.avatar.mounted;
+    state.avatar.sitting = false;
+    if (!state.avatar.mounted) { state.avatar.x = 470; state.avatar.y = 410; }
+    renderCanvas();
+    await persist(state.avatar.mounted ? "숲 스쿠터에 탔습니다. 이동 속도가 빨라졌어요." : "숲 스쿠터에서 내렸습니다.");
+  }
+
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E"].includes(event.key)) event.preventDefault();
+    if (event.key === "q" || event.key === "Q") { interact(); return; }
+    if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
+    if (event.key === "c" || event.key === "C") { toggleChat(); return; }
+    if (event.key === "x" || event.key === "X") { toggleSit(); return; }
+    if (event.key === "e" || event.key === "E") { toggleRide(); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
     event.preventDefault(); moveAvatar(direction);
   });
+  document.addEventListener("keyup", (event) => {
+    if (event.key === "r" || event.key === "R") { running = false; setStatus("달리기를 멈췄습니다."); }
+  });
   document.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("pointerdown", (event) => { event.preventDefault(); moveAvatar(button.dataset.move); }));
+  document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
+    const action = button.dataset.action;
+    if (action === "interact") interact();
+    if (action === "run") { running = !running; button.setAttribute("aria-pressed", String(running)); setStatus(running ? "달리기 모드가 켜졌습니다." : "달리기 모드를 껐습니다."); }
+    if (action === "chat") toggleChat();
+    if (action === "sit") await toggleSit();
+    if (action === "ride") await toggleRide();
+  }));
 
   $("#large-text-toggle").addEventListener("click", (event) => {
     const enabled = document.body.classList.toggle("large-text");
@@ -401,6 +577,69 @@
     renderCanvas();
     await persist("아바타를 시작 위치로 이동했습니다.");
     canvas.focus();
+  });
+
+  $("#world-dialog-close").addEventListener("click", () => $("#world-dialog").close());
+  $("#world-dialog-actions").addEventListener("click", async (event) => {
+    const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
+    if (!action) return;
+    if (action === "rest") {
+      state.avatar.sitting = true;
+      state.avatar.mounted = false;
+      $("#world-dialog").close();
+      renderCanvas();
+      await persist("우리 집 소파에서 편안하게 쉬고 있어요.");
+    }
+    if (action === "wardrobe") {
+      $("#world-dialog").close();
+      $("#wardrobe-list").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (action === "water" && !state.gardenWatered) {
+      state.gardenWatered = true;
+      state.carrots += 10;
+      $("#carrot-balance").textContent = state.carrots;
+      $("#world-dialog").close();
+      await persist("공동 당근밭에 물을 주고 당근 10개를 받았습니다.");
+    }
+    if (action === "team") {
+      $("#world-dialog").close();
+      $("#team-inspector").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (action === "ride") {
+      $("#world-dialog").close();
+      await toggleRide(false);
+    }
+  });
+
+  $("#chat-close").addEventListener("click", () => toggleChat(false));
+  $("#chat-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = $("#chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+    const row = document.createElement("p");
+    const author = document.createElement("strong");
+    const copy = document.createElement("span");
+    author.textContent = state.avatar.name;
+    copy.textContent = message;
+    row.append(author, copy);
+    $("#chat-messages").append(row);
+    input.value = "";
+    $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
+  });
+
+  $("#music-toggle").addEventListener("click", async (event) => {
+    musicEngine ||= new CozyForestMusic();
+    const enabled = event.currentTarget.getAttribute("aria-pressed") !== "true";
+    try {
+      if (enabled) await musicEngine.start(); else musicEngine.stop();
+    } catch {
+      setStatus("이 브라우저에서는 배경음악을 재생할 수 없습니다. 다른 기능은 계속 이용할 수 있어요.");
+      return;
+    }
+    event.currentTarget.setAttribute("aria-pressed", String(enabled));
+    event.currentTarget.textContent = enabled ? "Ⅱ 음악 끄기" : "♪ 숲 음악 켜기";
+    setStatus(enabled ? "오리지널 숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
   });
 
   const installButton = $("#install-pwa");

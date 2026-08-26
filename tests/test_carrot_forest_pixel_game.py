@@ -19,7 +19,7 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    for label in ("오늘의 퀘스트", "5명 공동 목표", "옷장과 창고", "배치한 오브젝트"):
+    for label in ("오늘의 퀘스트", "5명 공동 목표", "옷장 · 창고", "배치한 오브젝트"):
         assert label in html
     for landmark in ("drawMap", "drawTree", "당근밭", "공동 나무"):
         assert landmark in html + script
@@ -72,6 +72,28 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
     assert html.count("data-workspace-target=") == 4
     assert "scrollIntoView" in script
     assert 'classList.toggle("is-zoomed")' in script
+
+
+def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    for control_id in ("music-toggle", "interaction-prompt", "world-dialog", "chat-panel"):
+        assert f'id="{control_id}"' in html
+    assert 'id="wardrobe-list"' in html
+    assert 'id="storage-list"' in html
+    assert html.count("data-action=") == 5
+    for key in (
+        'event.key === "q"',
+        'event.key === "r"',
+        'event.key === "c"',
+        'event.key === "x"',
+        'event.key === "e"',
+    ):
+        assert key in script
+    for behavior in ("CozyForestMusic", "toggleRide", "toggleSit", "openWorldDialog"):
+        assert behavior in script
+    assert "fillPixelRect(x - 14, y - 15, 28, 14" in script
 
 
 def test_pixel_game_is_installable_pwa() -> None:
