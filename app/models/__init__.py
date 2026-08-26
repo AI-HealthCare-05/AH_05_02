@@ -1,4 +1,5 @@
 from app.models.ai_jobs import AIJob
+from app.models.forest import ForestAvatar, ForestInventory, ForestObject, ForestReward, ForestSpace
 from app.models.health import (
     Challenge,
     ChallengeCycle,
@@ -24,4 +25,9 @@ __all__ = [
     "Prediction",
     "User",
     "UserChallenge",
+    "ForestAvatar",
+    "ForestInventory",
+    "ForestObject",
+    "ForestReward",
+    "ForestSpace",
 ]

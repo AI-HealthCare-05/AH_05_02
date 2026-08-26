@@ -141,6 +141,7 @@
           <button class="workspace-tab" id="workspace-tab-challenge" type="button" role="tab" data-workspace="challenge" aria-controls="workspace-panel-challenge" aria-selected="false" tabindex="-1">챌린지</button>
           <button class="workspace-tab" id="workspace-tab-report" type="button" role="tab" data-workspace="report" aria-controls="workspace-panel-report" aria-selected="false" tabindex="-1">리포트</button>
           <button class="workspace-tab" id="workspace-tab-together" type="button" role="tab" data-workspace="together" aria-controls="workspace-panel-together" aria-selected="false" tabindex="-1">함께하기</button>
+          <button class="workspace-tab" id="workspace-tab-forest" type="button" role="tab" data-workspace="forest" aria-controls="workspace-panel-forest" aria-selected="false" tabindex="-1">당근의 숲 (Beta)</button>
           <button class="workspace-tab" id="workspace-tab-tools" type="button" role="tab" data-workspace="tools" aria-controls="workspace-panel-tools" aria-selected="false" tabindex="-1">건강도구</button>
         </nav>
 
@@ -160,6 +161,7 @@
           <div class="quick-grid" aria-label="다른 기능 바로가기">
             <button class="quick-link workspace-shortcut" type="button" data-workspace="report"><span>주간 리포트</span><small>이번 주 실천을 요약해서 보기</small></button>
             <button class="quick-link workspace-shortcut" type="button" data-workspace="together"><span>함께하기</span><small>가족·친구와 챌린지하기</small></button>
+            <button class="quick-link workspace-shortcut" type="button" data-workspace="forest"><span>당근의 숲</span><small>퀘스트 보상으로 아바타와 숲 꾸미기</small></button>
             <button class="quick-link workspace-shortcut" type="button" data-workspace="tools"><span>건강도구</span><small>워치 기록과 근거 Q&amp;A</small></button>
           </div>
           <div class="notice"><span>ⓘ</span><div><strong>해석 주의</strong><p id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</p></div></div>
@@ -218,6 +220,54 @@
           </form>
           <div id="shared-group-list" class="challenge-grid"></div>
           </section>
+        </section>
+
+        <section class="workspace-panel" id="workspace-panel-forest" role="tabpanel" tabindex="-1" data-workspace-panel="forest" aria-labelledby="workspace-tab-forest" hidden>
+          <div class="section-heading forest-lite-heading">
+            <div><p class="eyebrow">OPTIONAL PACKAGE · BETA</p><h3>당근의 숲</h3><p>함께 퀘스트를 완료하고 픽셀 아바타와 숲을 꾸며보세요.</p><a class="primary forest-game-link" href="/forest">픽셀 게임 전체화면으로 열기</a></div>
+            <div class="forest-lite-balance">🥕 <strong id="forest-carrot-balance">0</strong></div>
+          </div>
+          <div class="forest-lite-picker">
+            <label for="forest-group-select">공동 챌린지</label>
+            <select id="forest-group-select"><option value="">공동 챌린지를 먼저 만들어 주세요</option></select>
+            <button class="secondary" id="forest-start" type="button">이 그룹으로 숲 시작</button>
+          </div>
+          <div class="notice" id="forest-empty"><span>🌱</span><div><strong>시작할 공동 챌린지를 골라주세요</strong><p>‘함께하기’에서 가족·친구를 초대한 다음 숲을 열 수 있습니다.</p></div></div>
+
+          <div id="forest-content" hidden>
+            <div class="forest-lite-grid">
+              <article class="forest-lite-scene-card">
+                <div class="forest-lite-title"><div><p class="eyebrow">우리 미니홈피</p><h3 id="forest-name">당근의 숲</h3></div><button class="secondary" id="forest-reward" type="button">보상 상자 열기</button></div>
+                <div class="forest-lite-scene" id="forest-scene">
+                  <div class="forest-pixel-preview" aria-label="집, 공동 나무와 당근밭이 있는 픽셀 숲 미리보기"><span>🏠</span><span>🌳</span><span>🥕🥕🥕</span><strong>웹 픽셀 게임</strong></div>
+                  <div id="forest-object-layer" aria-label="배치한 숲 장식"></div>
+                </div>
+              </article>
+              <aside class="forest-lite-side">
+                <article class="focus-card">
+                  <p class="eyebrow">오늘의 공동 목표</p>
+                  <div class="forest-lite-progress-title"><h3>다 같이 퀘스트 완료</h3><strong id="forest-progress-count">0/0</strong></div>
+                  <div class="progress-track"><span id="forest-progress-bar" style="width:0"></span></div>
+                </article>
+                <article class="focus-card"><h3>숲 구성원</h3><ul class="forest-lite-members" id="forest-member-list"></ul></article>
+              </aside>
+            </div>
+
+            <div class="forest-lite-controls">
+              <form class="focus-card" id="forest-avatar-form">
+                <p class="eyebrow">AVATAR</p><h3>내 아바타 꾸미기</h3>
+                <div class="form-row"><label for="forest-display-name">표시 이름</label><input id="forest-display-name" maxlength="20" required></div>
+                <div class="form-row"><label for="forest-hair">헤어</label><select id="forest-hair"></select></div>
+                <div class="form-row"><label for="forest-outfit">상의</label><select id="forest-outfit"></select></div>
+                <div class="form-row"><label for="forest-accessory">액세서리</label><select id="forest-accessory"></select></div>
+                <button class="primary" type="submit">코디 저장</button>
+              </form>
+              <article class="focus-card">
+                <p class="eyebrow">FOREST OBJECT</p><h3>숲 꾸미기</h3>
+                <div class="forest-lite-shop" id="forest-object-shop"></div>
+              </article>
+            </div>
+          </div>
         </section>
 
         <section class="workspace-panel" id="workspace-panel-tools" role="tabpanel" tabindex="-1" data-workspace-panel="tools" aria-labelledby="workspace-tab-tools" hidden>

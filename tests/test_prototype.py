@@ -91,7 +91,7 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    for workspace in ("home", "challenge", "report", "together", "tools"):
+    for workspace in ("home", "challenge", "report", "together", "forest", "tools"):
         assert f'data-workspace="{workspace}"' in html
         assert f'data-workspace-panel="{workspace}"' in html
     assert "오늘 할 일부터 확인하세요" in html
@@ -111,8 +111,8 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
     assert 'role="tablist"' in html
-    assert html.count('role="tab"') == 5
-    assert html.count('role="tabpanel"') == 5
+    assert html.count('role="tab"') == 6
+    assert html.count('role="tabpanel"') == 6
     assert 'aria-pressed="true"' in html
     assert 'button.setAttribute("aria-pressed", String(selected))' in script
     assert "selectedPanel.focus({ preventScroll: true })" in script

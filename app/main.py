@@ -42,6 +42,11 @@ async def home() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
+@app.get("/forest", include_in_schema=False)
+async def carrot_forest() -> FileResponse:
+    return FileResponse(FRONTEND_DIR / "forest.html")
+
+
 @app.get("/health", tags=["Health"])
 async def liveness() -> dict[str, str]:
     return {"status": "ok"}
