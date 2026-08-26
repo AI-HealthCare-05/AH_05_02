@@ -185,6 +185,12 @@
   const canvas = $("#forest-canvas");
   const context = canvas.getContext("2d");
   context.imageSmoothingEnabled = false;
+  const avatarSpriteAtlas = new Image();
+  const cosmeticSpriteAtlas = new Image();
+  avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
+  cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
+  avatarSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
+  cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
 
   class CozyForestMusic {
     constructor() {
@@ -406,6 +412,68 @@
     });
   }
 
+  function avatarSpriteIndex(cosmetics) {
+    if (cosmetics.skin === "deep") return 9;
+    if (cosmetics.hair === "silver") return 10;
+    if (cosmetics.hair === "orange") return 2;
+    if (cosmetics.hair === "wave") return cosmetics.outfit === "moon" ? 5 : 1;
+    if (cosmetics.hair === "twin") return 7;
+    if (cosmetics.outfit === "denim") return cosmetics.skin === "warm" ? 6 : 4;
+    if (cosmetics.outfit === "carrot") return 9;
+    if (cosmetics.outfit === "moon" || cosmetics.outfit === "violet") return 10;
+    if (cosmetics.outfit === "berry") return 5;
+    if (cosmetics.outfit === "yellow") return 3;
+    if (cosmetics.accessory === "sprout_hat") return 8;
+    return cosmetics.accessory === "round_glasses" ? 2 : cosmetics.accessory === "carrot_bag" ? 11 : 0;
+  }
+
+  function cosmeticSpriteIndex(category, itemId) {
+    const indexes = {
+      aura: { wings: 0, halo: 1, rainbow: 2, forest: 3, hearts: 4 },
+      effect: { bubble: 5, spark: 6, heart: 7, carrot: 8, leaf: 9 },
+      vehicle: { scooter: 10, bicycle: 11, balloon: 12 },
+      pet: { white_pup: 15, brown_pup: 16, cat: 17, fox: 18 },
+      speech: { cat: 19, leaf: 19, window: 19 },
+    };
+    return indexes[category]?.[itemId] ?? null;
+  }
+
+  function drawAtlasCell(target, image, index, columns, rows, x, y, width, height) {
+    if (!image.complete || !image.naturalWidth || index == null) return false;
+    const cellWidth = image.naturalWidth / columns;
+    const cellHeight = image.naturalHeight / rows;
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    target.drawImage(image, column * cellWidth, row * cellHeight, cellWidth, cellHeight, x, y, width, height);
+    return true;
+  }
+
+  function drawGeneratedWorldAvatar(avatar, cosmetics, x, y) {
+    if (!avatarSpriteAtlas.complete || !avatarSpriteAtlas.naturalWidth) return false;
+    const auraIndex = cosmeticSpriteIndex("aura", cosmetics.aura);
+    drawAtlasCell(context, cosmeticSpriteAtlas, auraIndex, 5, 4, x - 45, y - 49, 90, 90);
+    const spriteIndex = avatarSpriteIndex(cosmetics);
+    drawAtlasCell(context, avatarSpriteAtlas, spriteIndex, 4, 3, x - 31, y - 48, 62, 78);
+    const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
+    drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
+    const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
+    drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
+    if (avatar.mounted) {
+      const vehicleIndex = cosmeticSpriteIndex("vehicle", cosmetics.vehicle === "none" ? "scooter" : cosmetics.vehicle);
+      drawAtlasCell(context, cosmeticSpriteAtlas, vehicleIndex, 5, 4, x - 38, y + 14, 76, 52);
+    }
+    if (cosmetics.speech !== "none") {
+      const speechIndex = cosmeticSpriteIndex("speech", cosmetics.speech);
+      drawAtlasCell(context, cosmeticSpriteAtlas, speechIndex, 5, 4, x + 25, y - 60, 62, 45);
+      context.font = "bold 7px sans-serif"; context.textAlign = "center"; context.fillStyle = "#31343f";
+      context.fillText(cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "한 걸음" : "같이 걸어요", x + 56, y - 36);
+    }
+    context.font = "bold 11px sans-serif"; context.textAlign = "center";
+    context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x - Math.max(25, avatar.name.length * 6), y - 63, Math.max(50, avatar.name.length * 12), 17);
+    context.fillStyle = "#18382d"; context.fillText(avatar.name, x, y - 50);
+    return true;
+  }
+
   function drawAvatar() {
     const avatar = state.avatar;
     const style = presets[avatar.preset] || presets.sprout;
@@ -423,6 +491,7 @@
     const x = Math.round(avatar.x / 4) * 4;
     const bob = avatar.sitting || avatar.mounted ? 0 : animationFrame;
     const y = Math.round(avatar.y / 4) * 4 - bob;
+    if (drawGeneratedWorldAvatar(avatar, cosmetics, x, y)) return;
     if (cosmetics.aura === "wings") {
       [[-27, -13], [-34, -6], [24, -13], [31, -6]].forEach(([dx, dy], index) => fillPixelRect(x + dx, y + dy, index % 2 ? 9 : 12, 18, index % 2 ? "#bff8ff" : "#65ddea"));
     } else if (cosmetics.aura === "halo") {
@@ -654,42 +723,20 @@
     previewContext.clearRect(0, 0, preview.width, preview.height);
     previewContext.setTransform(2, 0, 0, 2, 0, 0);
     previewContext.imageSmoothingEnabled = false;
-    const rect = (x, y, width, height, color) => { previewContext.fillStyle = color; previewContext.fillRect(Math.round(x), Math.round(y), Math.round(width), Math.round(height)); };
-    const x = 140;
-    const y = 153;
-    const skin = selectedAvatarItem("skin").color;
-    const skinShadow = avatarDraft.skin === "deep" ? "#6d392f" : avatarDraft.skin === "warm" ? "#a7654f" : "#d99978";
-    const hairColors = { soft: "#303c4e", wave: "#3b2b34", crop: "#263b43", twin: "#54313e", silver: "#8992a4", orange: "#bd6236" };
-    const outfitColors = { forest: ["#4f9e63", "#c8f06a"], denim: ["#4879a5", "#c8e3f8"], carrot: ["#e87531", "#ffe078"], moon: ["#4b527f", "#d9e3ff"], berry: ["#b44f78", "#ffd2df"], yellow: ["#e7b737", "#fff1a8"], violet: ["#7055af", "#d8c8ff"], black: ["#2f3441", "#9da6bc"] };
-    const [outfit, accent] = outfitColors[avatarDraft.outfit] || outfitColors.forest;
-
-    previewContext.textAlign = "center";
-    if (avatarDraft.aura === "wings") {
-      rect(x - 74, y - 32, 30, 48, "#5bdde9"); rect(x - 82, y - 20, 28, 37, "#bff8ff");
-      rect(x + 44, y - 32, 30, 48, "#5bdde9"); rect(x + 54, y - 20, 28, 37, "#bff8ff");
-    } else if (avatarDraft.aura === "halo") { rect(x - 29, y - 87, 58, 7, "#ffd951"); rect(x - 19, y - 92, 38, 5, "#fff3a6"); }
-    else if (avatarDraft.aura !== "none") { previewContext.font = "42px sans-serif"; previewContext.fillStyle = avatarDraft.aura === "rainbow" ? "#e45e84" : avatarDraft.aura === "forest" ? "#58a952" : "#f471a0"; previewContext.fillText(avatarDraft.aura === "forest" ? "❧  ❧" : avatarDraft.aura === "rainbow" ? "⌒" : "♥  ♥", x, y - 28); }
-
-    rect(x - 45, y + 80, 90, 13, "rgba(35,39,50,.18)");
-    rect(x - 36, y - 48, 72, 66, skinShadow); rect(x - 31, y - 46, 62, 61, skin);
-    const hair = hairColors[avatarDraft.hair] || hairColors.soft;
-    rect(x - 42, y - 69, 84, 31, hair); rect(x - 44, y - 45, 15, avatarDraft.hair === "wave" ? 72 : 50, hair); rect(x + 29, y - 45, 15, avatarDraft.hair === "wave" ? 72 : 50, hair);
-    if (avatarDraft.hair === "twin") { rect(x - 59, y - 21, 18, 49, hair); rect(x + 41, y - 21, 18, 49, hair); }
-    rect(x - 22, y - 24, 10, 13, "#fff"); rect(x + 12, y - 24, 10, 13, "#fff"); rect(x - 19, y - 20, 5, 8, "#27313c"); rect(x + 15, y - 20, 5, 8, "#27313c");
-    if (["blush", "sparkle"].includes(avatarDraft.face)) { rect(x - 29, y - 7, 12, 7, "#ef8793"); rect(x + 17, y - 7, 12, 7, "#ef8793"); }
-    if (avatarDraft.face === "wink") rect(x + 10, y - 17, 15, 4, "#27313c");
-    rect(x - (avatarDraft.face === "smile" ? 15 : 10), y + 4, avatarDraft.face === "smile" ? 30 : 20, 5, "#b9656d");
-    rect(x - 42, y + 16, 84, 66, "#243b3a"); rect(x - 37, y + 18, 74, 59, outfit); rect(x - 26, y + 26, 52, 12, accent);
-    rect(x - 58, y + 21, 16, 54, skinShadow); rect(x - 54, y + 23, 12, 48, skin); rect(x + 42, y + 21, 16, 54, skinShadow); rect(x + 42, y + 23, 12, 48, skin);
-    rect(x - 34, y + 75, 26, 37, "#344a62"); rect(x + 8, y + 75, 26, 37, "#344a62"); rect(x - 37, y + 108, 29, 11, "#222d3e"); rect(x + 8, y + 108, 29, 11, "#222d3e");
-    if (avatarDraft.accessory === "red_scarf") rect(x - 39, y + 12, 78, 14, "#d93432");
-    if (avatarDraft.accessory === "sprout_hat") { rect(x - 45, y - 78, 90, 17, "#347f3d"); rect(x - 7, y - 103, 14, 26, "#216a34"); rect(x + 4, y - 101, 24, 14, "#63bb5f"); }
-    if (avatarDraft.accessory === "carrot_bag") { rect(x + 38, y + 33, 27, 47, "#bd542a"); rect(x + 43, y + 39, 18, 34, "#ef8438"); }
-    if (["round_glasses", "star_glasses"].includes(avatarDraft.accessory)) { previewContext.strokeStyle = avatarDraft.accessory === "star_glasses" ? "#e75e99" : "#354751"; previewContext.lineWidth = 4; previewContext.strokeRect(x - 30, y - 28, 26, 21); previewContext.strokeRect(x + 4, y - 28, 26, 21); rect(x - 4, y - 21, 8, 4, previewContext.strokeStyle); }
-    if (avatarDraft.effect !== "none") { const glyphs = { bubble: "○", spark: "✦", heart: "♥", carrot: "◆", leaf: "❧" }; previewContext.font = "bold 30px sans-serif"; previewContext.fillStyle = "#8b73ed"; previewContext.fillText(glyphs[avatarDraft.effect], x - 77, y - 60); previewContext.fillText(glyphs[avatarDraft.effect], x + 77, y + 8); }
-    if (avatarDraft.pet !== "none") { const pets = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" }; previewContext.font = "45px sans-serif"; previewContext.fillText(pets[avatarDraft.pet], x + 82, y + 103); }
-    if (avatarDraft.vehicle !== "none") { const vehicles = { scooter: "🛵", bicycle: "🚲", balloon: "🎈" }; previewContext.font = "35px sans-serif"; previewContext.fillText(vehicles[avatarDraft.vehicle], x - 83, y + 106); }
-    if (avatarDraft.speech !== "none") { previewContext.fillStyle = "rgba(255,255,255,.96)"; previewContext.strokeStyle = "#5d6170"; previewContext.lineWidth = 2; previewContext.fillRect(x + 43, y - 108, 86, 48); previewContext.strokeRect(x + 43, y - 108, 86, 48); previewContext.fillStyle = "#30323b"; previewContext.font = "bold 11px sans-serif"; previewContext.fillText(avatarDraft.speech === "cat" ? "안녕하세요!" : avatarDraft.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요", x + 86, y - 80); }
+    const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
+    drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
+    drawAtlasCell(previewContext, avatarSpriteAtlas, avatarSpriteIndex(avatarDraft), 4, 3, 58, 38, 164, 205);
+    const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
+    drawAtlasCell(previewContext, cosmeticSpriteAtlas, effectIndex, 5, 4, 16, 50, 80, 80);
+    const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
+    drawAtlasCell(previewContext, cosmeticSpriteAtlas, vehicleIndex, 5, 4, 18, 213, 82, 65);
+    const petIndex = cosmeticSpriteIndex("pet", avatarDraft.pet);
+    drawAtlasCell(previewContext, cosmeticSpriteAtlas, petIndex, 5, 4, 190, 205, 72, 72);
+    const speechIndex = cosmeticSpriteIndex("speech", avatarDraft.speech);
+    if (drawAtlasCell(previewContext, cosmeticSpriteAtlas, speechIndex, 5, 4, 175, 8, 96, 70)) {
+      previewContext.textAlign = "center"; previewContext.font = "bold 9px sans-serif"; previewContext.fillStyle = "#30323b";
+      previewContext.fillText(avatarDraft.speech === "cat" ? "안녕하세요!" : avatarDraft.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요", 223, 42);
+    }
   }
 
   function renderAvatarStudio() {
@@ -699,7 +746,21 @@
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
-      const visual = activeAvatarCategory === "skin" ? `<span class="color-chip" style="background:${item.color}"></span>` : `<span class="item-visual" aria-hidden="true">${item.visual}</span>`;
+      const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
+      let visual;
+      if (["skin", "outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
+        const previewCosmetics = { ...avatarDraft, [activeAvatarCategory]: item.id };
+        const index = avatarSpriteIndex(previewCosmetics);
+        const x = index % 4 * 100 / 3;
+        const y = Math.floor(index / 4) * 50;
+        visual = `<span class="item-visual sprite-thumb avatar-sprite-thumb" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+      } else if (cosmeticIndex != null) {
+        const x = cosmeticIndex % 5 * 25;
+        const y = Math.floor(cosmeticIndex / 5) * 100 / 3;
+        visual = `<span class="item-visual sprite-thumb cosmetic-sprite-thumb" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+      } else {
+        visual = '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>';
+      }
       return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${avatarDraft[activeAvatarCategory] === item.id}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${avatarDraft[activeAvatarCategory] === item.id ? "선택됨" : "보유 아이템"}</small></button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;

@@ -130,6 +130,23 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert '.avatar-item-card[aria-pressed="true"]' in css
 
 
+def test_avatar_studio_uses_original_pixel_sprite_atlases_instead_of_emoji_previews() -> None:
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+    avatar_atlas = ROOT / "src/frontend/assets/carrot-forest-avatar-atlas-v1.png"
+    cosmetics_atlas = ROOT / "src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png"
+
+    for asset in (avatar_atlas, cosmetics_atlas):
+        assert asset.exists()
+        assert asset.stat().st_size > 100_000
+        assert asset.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert "drawAtlasCell" in script
+    assert "avatarSpriteIndex" in script
+    assert "drawGeneratedWorldAvatar" in script
+    assert "carrot-forest-avatar-atlas-v1.png" in css
+    assert "carrot-forest-cosmetics-atlas-v1.png" in css
+
+
 def test_pixel_game_is_installable_pwa() -> None:
     paths = {route.path for route in app.routes if hasattr(route, "path")}
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
@@ -146,6 +163,8 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'serviceWorker.register("/forest-sw.js", { scope: "/forest" })' in script
     assert 'url.pathname.startsWith("/api/")' in worker
+    assert "carrot-forest-avatar-atlas-v1.png" in worker
+    assert "carrot-forest-cosmetics-atlas-v1.png" in worker
 
 
 def test_pwa_route_response_contracts() -> None:
