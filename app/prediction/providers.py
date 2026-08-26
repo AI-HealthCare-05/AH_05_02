@@ -15,7 +15,13 @@ class ProviderResult:
     risk_category: RiskCategory | None
     model_version: str
     feature_schema_version: str
+    input_schema_version: str
+    preprocessing_version: str
+    target_definition_version: str
+    calibration_version: str
+    model_artifact_digest: str | None
     threshold_version: str
+    decision_threshold: float | None
     promotion_status: str
     explanation_status: str = "not_available"
 
@@ -39,7 +45,13 @@ class DevelopmentPredictionProvider:
             risk_category=None,
             model_version=ACTIVE_MODEL.version,
             feature_schema_version=ACTIVE_MODEL.feature_schema_version,
+            input_schema_version=ACTIVE_MODEL.input_schema_version,
+            preprocessing_version=ACTIVE_MODEL.preprocessing_version,
+            target_definition_version=ACTIVE_MODEL.target_definition_version,
+            calibration_version=ACTIVE_MODEL.calibration_version,
+            model_artifact_digest=ACTIVE_MODEL.model_artifact_digest,
             threshold_version=ACTIVE_MODEL.threshold_version,
+            decision_threshold=None,
             promotion_status="development_only",
         )
 

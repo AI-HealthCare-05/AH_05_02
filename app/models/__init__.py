@@ -1,4 +1,3 @@
-from app.models.ai_jobs import AIJob
 from app.models.health import (
     Challenge,
     ChallengeCycle,
@@ -8,12 +7,14 @@ from app.models.health import (
     FollowUpAction,
     HealthCheckup,
     Prediction,
+    RiskFactor,
     UserChallenge,
 )
+from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
 
 __all__ = [
-    "AIJob",
+    "PredictionJob",
     "Challenge",
     "ChallengeCycle",
     "ChallengeLog",

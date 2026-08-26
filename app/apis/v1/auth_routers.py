@@ -1,11 +1,15 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse as Response
 
+from app.apis.responses import envelope
 from app.core import config
 from app.core.config import Env
+from app.dependencies.security import get_request_user
 from app.dtos.auth import LoginRequest, LoginResponse, SignUpRequest, TokenRefreshResponse
+from app.models.users import User
 from app.services.auth import AuthService
 from app.services.jwt import JwtService
 
@@ -17,8 +21,11 @@ async def signup(
     request: SignUpRequest,
     auth_service: Annotated[AuthService, Depends(AuthService)],
 ) -> Response:
-    await auth_service.signup(request)
-    return Response(content={"detail": "회원가입이 성공적으로 완료되었습니다."}, status_code=status.HTTP_201_CREATED)
+    user = await auth_service.signup(request)
+    return Response(
+        content=jsonable_encoder(envelope({"user_id": user.id, "email": user.email, "created_at": user.created_at})),
+        status_code=status.HTTP_201_CREATED,
+    )
 
 
 @auth_router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
@@ -42,7 +49,7 @@ async def login(
     return resp
 
 
-@auth_router.get("/token/refresh", response_model=TokenRefreshResponse, status_code=status.HTTP_200_OK)
+@auth_router.post("/refresh", response_model=TokenRefreshResponse, status_code=status.HTTP_200_OK)
 async def token_refresh(
     jwt_service: Annotated[JwtService, Depends(JwtService)],
     refresh_token: Annotated[str | None, Cookie()] = None,
@@ -53,3 +60,10 @@ async def token_refresh(
     return Response(
         content=TokenRefreshResponse(access_token=str(access_token)).model_dump(), status_code=status.HTTP_200_OK
     )
+
+
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(_: Annotated[User, Depends(get_request_user)]) -> Response:
+    response = Response(content=None, status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(key="refresh_token", domain=config.COOKIE_DOMAIN or None)
+    return response

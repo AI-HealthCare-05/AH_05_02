@@ -45,7 +45,13 @@ class Config(BaseSettings):
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
     PREDICTION_MODEL_VERSION: str = "dev-diabetes-incidence-v0"
     PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa-diabetes-incident-v1"
+    PREDICTION_INPUT_SCHEMA_VERSION: str = "klosa-diabetes-input-v1"
+    PREDICTION_PREPROCESSING_VERSION: str = "unapproved"
+    PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
+    PREDICTION_CALIBRATION_VERSION: str = "unapproved"
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = ""
     PREDICTION_THRESHOLD_VERSION: str = "unapproved"
+    PREDICTION_DECISION_THRESHOLD: float | None = None
     PREDICTION_MODEL_MIN_AGE: int = 45
     PREDICTION_MODEL_MAX_AGE: int | None = None
     PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"

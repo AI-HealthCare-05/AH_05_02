@@ -6,8 +6,8 @@ from app.core import config
 from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
-from app.models.ai_jobs import AIJob
 from app.models.health import Prediction
+from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
 from app.prediction.contracts import ACTIVE_MODEL
 from app.prediction.providers import get_prediction_provider
@@ -27,9 +27,9 @@ async def publish_job_event(job_id: str, event: dict[str, object]) -> None:
     await redis_client.publish(job_channel(job_id), json.dumps(event, ensure_ascii=False, default=str))
 
 
-async def create_ai_job(request: AIJobCreateRequest) -> AIJob:
+async def create_ai_job(request: AIJobCreateRequest) -> PredictionJob:
     job_id = str(uuid4())
-    job = await AIJob.create(
+    job = await PredictionJob.create(
         job_id=job_id,
         task_type=request.task_type,
         status="queued",
@@ -62,11 +62,11 @@ async def create_ai_job(request: AIJobCreateRequest) -> AIJob:
     return job
 
 
-async def get_ai_job(job_id: str) -> AIJob | None:
-    return await AIJob.get_or_none(job_id=job_id)
+async def get_ai_job(job_id: str) -> PredictionJob | None:
+    return await PredictionJob.get_or_none(job_id=job_id)
 
 
-async def create_prediction_job(user: User, request: PredictionJobCreateRequest) -> AIJob:
+async def create_prediction_job(user: User, request: PredictionJobCreateRequest) -> PredictionJob:
     repo = HealthRepository()
     checkup = await repo.get_checkup(request.checkup_id, user.id)
     if checkup is None:
@@ -82,7 +82,7 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     features = HealthService.features_for(checkup).as_model_record()
     job_id = str(uuid4())
     now = datetime.now(UTC)
-    job = await AIJob.create(
+    job = await PredictionJob.create(
         job_id=job_id,
         task_type="diabetes_incidence",
         status="queued",
@@ -94,6 +94,11 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         model_key=ACTIVE_MODEL.model_key,
         model_version=ACTIVE_MODEL.version,
         feature_schema_version=ACTIVE_MODEL.feature_schema_version,
+        input_schema_version=ACTIVE_MODEL.input_schema_version,
+        preprocessing_version=ACTIVE_MODEL.preprocessing_version,
+        target_definition_version=ACTIVE_MODEL.target_definition_version,
+        calibration_version=ACTIVE_MODEL.calibration_version,
+        model_artifact_digest=ACTIVE_MODEL.model_artifact_digest,
         threshold_version=ACTIVE_MODEL.threshold_version,
         user_id=user.id,
         health_checkup_id=checkup.id,
@@ -105,6 +110,11 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         "payload": json.dumps({"features": features}, ensure_ascii=False),
         "model_version": ACTIVE_MODEL.version,
         "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
+        "input_schema_version": ACTIVE_MODEL.input_schema_version,
+        "preprocessing_version": ACTIVE_MODEL.preprocessing_version,
+        "target_definition_version": ACTIVE_MODEL.target_definition_version,
+        "calibration_version": ACTIVE_MODEL.calibration_version,
+        "model_artifact_digest": ACTIVE_MODEL.model_artifact_digest or "",
         "threshold_version": ACTIVE_MODEL.threshold_version,
         "attempt": "0",
         "created_at": now.isoformat(),
@@ -130,7 +140,7 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     return job
 
 
-async def _complete_demo_prediction(job: AIJob, features: dict[str, object]) -> None:
+async def _complete_demo_prediction(job: PredictionJob, features: dict[str, object]) -> None:
     """Complete the formal job contract without Redis only in explicit demo mode."""
     from app.prediction.contracts import PredictionFeatures
 
@@ -152,7 +162,15 @@ async def _complete_demo_prediction(job: AIJob, features: dict[str, object]) -> 
         internal_score=None,
         model_version=result.model_version,
         feature_schema_version=result.feature_schema_version,
+        input_schema_version=result.input_schema_version,
+        preprocessing_version=result.preprocessing_version,
+        target_definition_version=result.target_definition_version,
+        calibration_version=result.calibration_version,
+        model_artifact_digest=result.model_artifact_digest,
         threshold_version=result.threshold_version,
+        decision_threshold=None,
+        class_probabilities=None,
+        output_status="uncalibrated_research_probability_only",
         model_population=ACTIVE_MODEL.model_population,
         explanation_status=result.explanation_status,
         disclaimer="이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
@@ -169,8 +187,8 @@ async def _complete_demo_prediction(job: AIJob, features: dict[str, object]) -> 
     await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
 
 
-async def get_prediction_job(job_id: str, user_id: int) -> AIJob | None:
-    job = await AIJob.get_or_none(job_id=job_id, user_id=user_id, task_type="diabetes_incidence")
+async def get_prediction_job(job_id: str, user_id: int) -> PredictionJob | None:
+    job = await PredictionJob.get_or_none(job_id=job_id, user_id=user_id, task_type="diabetes_incidence")
     if job is None:
         return None
     now = datetime.now(UTC)

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, ORJSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
 
@@ -22,7 +22,6 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    default_response_class=ORJSONResponse,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",

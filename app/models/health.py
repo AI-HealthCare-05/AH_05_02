@@ -32,7 +32,15 @@ class EligibilityCheck(Model):
     model_key = fields.CharField(max_length=100)
     model_version = fields.CharField(max_length=100)
     feature_schema_version = fields.CharField(max_length=100)
+    input_schema_version = fields.CharField(max_length=100)
+    preprocessing_version = fields.CharField(max_length=100)
+    target_definition_version = fields.CharField(max_length=100)
+    calibration_version = fields.CharField(max_length=100)
+    model_artifact_digest = fields.CharField(max_length=128, null=True)
     threshold_version = fields.CharField(max_length=100)
+    decision_threshold = fields.FloatField(null=True)
+    class_probabilities = fields.JSONField(null=True)
+    output_status = fields.CharField(max_length=80, default="uncalibrated_research_probability_only")
     safety_copy_version = fields.CharField(max_length=50)
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -87,6 +95,23 @@ class Prediction(Model):
 
     class Meta:
         table = "predictions"
+
+
+class RiskFactor(Model):
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    factor_name = fields.CharField(max_length=100)
+    display_name = fields.CharField(max_length=100)
+    impact_direction = fields.CharField(max_length=20)
+    importance_score = fields.FloatField()
+    display_order = fields.IntField()
+    is_modifiable = fields.BooleanField(default=False)
+    message = fields.TextField()
+    explanation_version = fields.CharField(max_length=100)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "risk_factors"
 
 
 class Challenge(Model):
