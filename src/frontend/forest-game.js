@@ -562,7 +562,8 @@
 
   function drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y) {
     const presetAtlas = presetSpriteAtlases[avatar.preset];
-    if (!presetAtlas && (avatar.preset !== "sprout" || !isAnimatedBasicPreset(cosmetics))) return false;
+    const usesHighResolutionBasic = avatar.preset === "custom" || (avatar.preset === "sprout" && isAnimatedBasicPreset(cosmetics));
+    if (!presetAtlas && !usesHighResolutionBasic) return false;
     const direction = avatar.direction || "down";
     const moving = performance.now() < walkingUntil;
     if (!avatar.mounted) {
@@ -1120,7 +1121,7 @@
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
     const previewPreset = avatarDraft.preset || "sprout";
     const previewAtlas = presetSpriteAtlases[previewPreset];
-    if (previewPreset === "sprout" && basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
+    if (["sprout", "custom"].includes(previewPreset) && basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
       drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
     } else if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth) {
       drawAtlasCell(previewContext, previewAtlas.image, 0, 4, previewAtlas.rows, 58, 38, 164, 205);

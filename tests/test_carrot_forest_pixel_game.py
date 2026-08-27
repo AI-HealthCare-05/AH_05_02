@@ -178,6 +178,8 @@ def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers()
     assert "drawAnimatedAccessoryOverlay" in script
     assert "drawPreviewAccessoryOverlay" in script
     assert 'avatarDraft.preset = "custom"' in script
+    assert 'avatar.preset === "custom"' in script
+    assert '["sprout", "custom"].includes(previewPreset)' in script
     assert "motionRow * 4 + directionColumn" in script
 
 
