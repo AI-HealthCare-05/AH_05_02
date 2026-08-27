@@ -55,6 +55,7 @@
       this.load.image("world-bg", "/static/assets/carrot-forest-world-v2.png");
       this.load.image("home-bg", "/static/assets/carrot-forest-home-v1.png");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v1.png");
+      this.load.image("avatar-modular-v3", "/static/assets/carrot-forest-modular-avatar-atlas-v3.png");
       Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
       this.load.spritesheet("cat-pets", "/static/assets/carrot-forest-cat-pets-v1.png", { frameWidth: 887, frameHeight: 887 });
     }
@@ -67,6 +68,7 @@
       this.presetSources = Object.fromEntries(Object.entries(premiumPresets).map(([preset, config]) => [preset, {
         image: this.textures.get(`preset-${preset}`).getSourceImage(), rows: config.rows,
       }]));
+      this.presetSources.modular = { image: this.textures.get("avatar-modular-v3").getSourceImage(), rows: 11 };
       if (this.textures.exists("avatar-composite")) this.textures.remove("avatar-composite");
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
       this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);

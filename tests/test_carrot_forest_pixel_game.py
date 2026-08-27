@@ -261,7 +261,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v11" in html
+    assert "forest-local-pwa-reset-v13" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -301,12 +301,31 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v14" in worker
+    assert "gandang-carrot-forest-pwa-v16" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
+
+
+def test_modular_avatar_v3_has_exact_layer_cells_and_runtime_wiring() -> None:
+    import struct
+
+    atlas = ROOT / "src/frontend/assets/carrot-forest-modular-avatar-atlas-v3.png"
+    raw = atlas.read_bytes()
+    width, height = struct.unpack(">II", raw[16:24])
+    compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    assert (width, height) == (224 * 4, 288 * 11)
+    assert (ROOT / "scripts/build_modular_avatar_atlas.py").exists()
+    for row in range(1, 11):
+        assert f": {row}" in compositor
+    assert "drawModularFrame" in compositor
+    assert "carrot-forest-modular-avatar-atlas-v3.png" in game_script
+    assert "carrot-forest-modular-avatar-atlas-v3.png" in phaser_script
 
 
 def test_normalized_avatar_atlases_have_exact_cells_and_reproducible_manifest() -> None:

@@ -4,6 +4,8 @@
   const CELL_WIDTH = 224;
   const CELL_HEIGHT = 288;
   const HEAD_CUT = 166;
+  const modularHairRows = { red_bow: 1, cow_hood: 2, midnight: 3, blue_cap: 4, teal_bob: 5 };
+  const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const directionColumns = { down: 0, up: 1, left: 2, right: 3 };
 
@@ -33,6 +35,23 @@
       destination.width,
       destination.height,
     );
+  }
+
+  function drawModularFrame(context, source, options, target) {
+    const column = directionColumns[options.direction] == null ? 0 : directionColumns[options.direction];
+    const base = { row: 0, column };
+    const outfit = { row: modularOutfitRows[options.outfitPreset] ?? 9, column };
+    const hair = { row: modularHairRows[options.hairPreset] ?? 4, column };
+    const stride = options.moving && !options.mounted ? (Number(options.frame || 0) % 2 ? 2 : -1) : 0;
+    const bob = options.moving ? (Number(options.frame || 0) % 2 ? -2 : 1) : 0;
+    const bodyTarget = { ...target, x: target.x + stride, y: target.y + bob };
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+    drawSource(context, source.image, base, bodyTarget);
+    drawSource(context, source.image, outfit, bodyTarget);
+    drawSource(context, source.image, hair, { ...target, y: target.y + bob });
+    context.restore();
   }
 
   function drawAccessory(context, options, destination) {
@@ -81,6 +100,11 @@
       width: destination.width || CELL_WIDTH,
       height: destination.height || CELL_HEIGHT,
     };
+    if (sources.modular?.image) {
+      drawModularFrame(context, sources.modular, options, target);
+      drawAccessory(context, options, { ...target, y: target.y + (options.moving ? -1 : 0) });
+      return true;
+    }
     const outfit = sources[options.outfitPreset] || sources[options.preset];
     const hair = sources[options.hairPreset] || sources[options.preset] || outfit;
     if (!outfit?.image || !hair?.image) return false;

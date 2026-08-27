@@ -243,6 +243,7 @@
   const storageSpriteAtlas = new Image();
   const basicWalkAtlas = new Image();
   const basicScooterAtlas = new Image();
+  const modularAvatarAtlas = new Image();
   const presetSpriteAtlases = {
     red_bow: { image: new Image(), rows: 6, file: "carrot-forest-avatar-red_bow-normalized-v2.png" },
     cow_hood: { image: new Image(), rows: 5, file: "carrot-forest-avatar-cow_hood-normalized-v2.png" },
@@ -257,6 +258,7 @@
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
   basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
   basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
+  modularAvatarAtlas.src = "/static/assets/carrot-forest-modular-avatar-atlas-v3.png";
   Object.values(presetSpriteAtlases).forEach((atlas) => { atlas.image.src = `/static/assets/${atlas.file}`; });
   sceneImages.world.src = "/static/assets/carrot-forest-world-v2.png";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
@@ -267,6 +269,7 @@
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   basicWalkAtlas.addEventListener("load", renderCanvas);
   basicScooterAtlas.addEventListener("load", renderCanvas);
+  modularAvatarAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   Object.values(presetSpriteAtlases).forEach((atlas) => atlas.image.addEventListener("load", () => {
     renderCanvas();
     if ($("#avatar-studio").open) renderAvatarStudio();
@@ -1026,6 +1029,8 @@
     red_wave: "red_bow", navy_garden: "red_bow", cow_brown: "cow_hood", cow_vest: "cow_hood",
     midnight: "midnight", violet: "midnight", blue_short: "blue_cap", blue_overalls: "blue_cap", teal_bob: "teal_bob", teal_garden: "teal_bob",
   };
+  const modularHairRows = { red_bow: 1, cow_hood: 2, midnight: 3, blue_cap: 4, teal_bob: 5 };
+  const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
 
   function renderCatalogThumbnailCanvases() {
     document.querySelectorAll("canvas[data-preset-thumb]").forEach((thumbnail) => {
@@ -1041,6 +1046,19 @@
       }
       if (preset === "sprout") {
         drawAtlasCell(target, basicWalkAtlas, 0, 4, 4, 11, 5, 74, 88);
+        return;
+      }
+      if (modularAvatarAtlas.complete && modularAvatarAtlas.naturalWidth && window.CarrotAvatarCompositor) {
+        const crop = thumbnail.dataset.presetCrop;
+        if (crop) {
+          const row = crop === "head" ? modularHairRows[preset] : modularOutfitRows[preset];
+          target.drawImage(modularAvatarAtlas, 0, row * 288, 224, 288, 10, 1, 76, 98);
+        } else {
+          window.CarrotAvatarCompositor.drawFrame(target, { modular: { image: modularAvatarAtlas, rows: 11 } }, {
+            preset, hairPreset: preset, outfitPreset: preset, direction: "down",
+            mounted: false, moving: false, frame: 0, accessory: "none", hat: "none", glasses: "none",
+          }, { x: 10, y: 1, width: 76, height: 98 });
+        }
         return;
       }
       const atlas = presetSpriteAtlases[preset];
@@ -1147,6 +1165,7 @@
     const previewPreset = avatarDraft.preset || "blue_cap";
     const previewAtlas = presetSpriteAtlases[previewPreset];
     const presetSources = Object.fromEntries(Object.entries(presetSpriteAtlases).map(([preset, atlas]) => [preset, atlas]));
+    if (modularAvatarAtlas.complete && modularAvatarAtlas.naturalWidth) presetSources.modular = { image: modularAvatarAtlas, rows: 11 };
     if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth && window.CarrotAvatarCompositor) {
       window.CarrotAvatarCompositor.drawFrame(previewContext, presetSources, {
         preset: previewPreset,

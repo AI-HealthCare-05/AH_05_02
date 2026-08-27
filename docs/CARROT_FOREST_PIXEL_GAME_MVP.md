@@ -55,7 +55,14 @@
 - 실행 월드는 `Phaser 3.90.0`을 저장소 내부 정적 파일로 제공하며 MIT 라이선스 전문은 `src/frontend/vendor/PHASER_LICENSE.txt`에 보관한다.
 - 투자자 데모의 월드 아바타와 꾸미기 미리보기는 프로젝트에서 제작한 동일한 고해상도 치비 프리셋 아틀라스를 사용한다. 각 프리셋은 앞·뒤·좌·우 보행과 스쿠터 방향 장면을 포함하며, 월드와 선택 카드의 화풍이 달라지지 않도록 완성형 코디 단위로 제공한다.
 - 원본 모음판은 균등한 셀 구조가 아니므로 직접 잘라 쓰지 않는다. `scripts/build_carrot_avatar_atlases.py`가 각 프레임의 실제 알파 영역을 탐지하고, 발바닥을 기준으로 `224×288` 정수 셀에 다시 배치한다. 이 정규화 과정으로 인접 프레임의 머리·발·의상이 튀어나오는 현상을 차단한다.
-- `avatar-compositor.js`는 정규화된 5개 코디에서 헤어와 의상을 독립적으로 합성하고 액세서리·모자·안경을 같은 좌표계에 그린다. 꾸미기 미리보기와 Phaser 월드가 이 합성기를 함께 사용하므로 저장 후 화풍이나 장착 결과가 달라지지 않는다.
+- `avatar-compositor.js`는 동일 발 기준선·목 기준점으로 제작한 v3 모듈 아틀라스의 기본 몸, 5개 헤어, 5개 의상을 독립 합성한다. 기존처럼 완성 캐릭터를 잘라 붙이지 않으므로 25개 조합에서 옆 캐릭터나 원래 머리가 비치지 않는다. 꾸미기 미리보기와 Phaser 월드가 같은 합성기를 사용하므로 저장 전후 화풍과 장착 결과가 일치한다.
+- `scripts/build_modular_avatar_atlas.py`는 원화의 배경을 가장자리 연결 영역으로만 제거하고 4방향 × 11레이어를 정확한 224×288 셀로 정규화한다. 원화 교체 후에도 같은 명령으로 런타임 아틀라스를 재현할 수 있다.
+
+25개 헤어·의상 조합의 시각 검수표는 [`docs/assets/avatar-modular-combinations-v3.png`](assets/avatar-modular-combinations-v3.png)에서 확인한다. 모든 조합은 같은 기본 몸과 발 기준선을 공유한다.
+
+```bash
+python scripts/build_modular_avatar_atlas.py
+```
 
 - `src/frontend/assets/carrot-forest-avatar-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 4×3 투명 캐릭터 아틀라스
 - `src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png`: 새싹 정원사 기본 의상용 앞·뒤·좌·우 4×4 보행 아틀라스
