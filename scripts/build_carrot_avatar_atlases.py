@@ -32,11 +32,7 @@ def occupied_intervals(alpha: Image.Image, gap: int = 3) -> list[tuple[int, int]
     bounds = alpha.getbbox()
     if bounds is None:
         return []
-    occupied = [
-        x
-        for x in range(alpha.width)
-        if alpha.crop((x, 0, x + 1, alpha.height)).getbbox() is not None
-    ]
+    occupied = [x for x in range(alpha.width) if alpha.crop((x, 0, x + 1, alpha.height)).getbbox() is not None]
     intervals: list[tuple[int, int]] = []
     start = previous = occupied[0]
     for x in occupied[1:]:
@@ -69,8 +65,7 @@ def normalize_preset(preset: str, source_name: str, row_edges: list[int]) -> dic
             sprite = rough.crop(bbox)
             if sprite.width > CELL_WIDTH or sprite.height > CELL_HEIGHT - BOTTOM_PADDING:
                 raise ValueError(
-                    f"{source_name} row {row} column {column}: "
-                    f"sprite {sprite.size} exceeds normalized cell"
+                    f"{source_name} row {row} column {column}: sprite {sprite.size} exceeds normalized cell"
                 )
             paste_x = column * CELL_WIDTH + (CELL_WIDTH - sprite.width) // 2
             paste_y = row * CELL_HEIGHT + CELL_HEIGHT - BOTTOM_PADDING - sprite.height
