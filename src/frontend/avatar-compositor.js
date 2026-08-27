@@ -41,6 +41,34 @@
     );
   }
 
+  function drawPresetMotionFrame(context, source, options, target) {
+    const frame = framePosition(options, source.rows);
+    const motionFrame = Number(options.frame || 0) % 4;
+    const mountedBounce = options.mounted && options.moving ? [0, -2, 0, 1][motionFrame] : 0;
+    const walkBounce = !options.mounted && options.moving ? [0, -1, 0, 1][motionFrame] : 0;
+    const horizontalLean = options.mounted && options.moving && ["left", "right"].includes(options.direction)
+      ? (options.direction === "left" ? -1 : 1) * [0.012, 0.022, 0.012, 0][motionFrame]
+      : 0;
+    const destination = { ...target, y: target.y + mountedBounce + walkBounce };
+
+    context.save();
+    context.imageSmoothingEnabled = false;
+    if (horizontalLean) {
+      const pivotX = destination.x + destination.width / 2;
+      const pivotY = destination.y + destination.height * 0.86;
+      context.translate(pivotX, pivotY);
+      context.rotate(horizontalLean);
+      context.translate(-pivotX, -pivotY);
+    }
+    drawSource(context, source.image, frame, destination);
+    context.restore();
+    drawAccessory(context, {
+      ...options,
+      hat: options.preset === "red_bow" && options.hat === "headband" ? "none" : options.hat,
+    }, destination);
+    return true;
+  }
+
   function drawModularFrame(context, source, options, target) {
     const column = directionColumns[options.direction] == null ? 0 : directionColumns[options.direction];
     const base = { row: 0, column };
@@ -139,6 +167,14 @@
       width: destination.width || CELL_WIDTH,
       height: destination.height || CELL_HEIGHT,
     };
+    const presetSource = sources[options.preset];
+    const usesOriginalPresetMotion = Boolean(
+      presetSource?.image
+      && (options.moving || options.mounted || options.motionPreview)
+      && options.hairPreset === options.preset
+      && options.outfitPreset === options.preset,
+    );
+    if (usesOriginalPresetMotion) return drawPresetMotionFrame(context, presetSource, options, target);
     if (sources.modular?.image) {
       drawModularFrame(context, sources.modular, options, target);
       drawAccessory(context, options, { ...target, y: target.y + (options.moving ? -1 : 0) });

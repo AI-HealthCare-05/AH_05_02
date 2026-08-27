@@ -53,6 +53,7 @@
       this.lastPersist = 0;
       this.forcedDirection = null;
       this.forcedUntil = 0;
+      this.mountTransitioning = false;
     }
 
     preload() {
@@ -69,6 +70,8 @@
       this.shadow = this.add.ellipse(0, 13, 34, 11, 0x16382a, 0.25);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.player.add(this.shadow);
+      this.motionFx = this.add.graphics().setDepth(2);
+      this.player.add(this.motionFx);
       this.presetSources = Object.fromEntries(Object.entries(premiumPresets).map(([preset, config]) => [preset, {
         image: this.textures.get(`preset-${preset}`).getSourceImage(), rows: config.rows,
       }]));
@@ -110,10 +113,14 @@
     }
 
     attachWindowEvents() {
-      this.onAvatar = (event) => { this.avatar = normalizedAvatar({ ...this.avatar, ...(event.detail || {}) }); this.rebuildAvatar(); };
+      this.onAvatar = (event) => this.applyAvatarUpdate(normalizedAvatar({ ...this.avatar, ...(event.detail || {}) }));
       this.onState = (event) => {
         const detail = event.detail || {};
-        if (detail.avatar) { this.avatar = normalizedAvatar(detail.avatar); this.player.setPosition(this.avatar.x, this.avatar.y); this.rebuildAvatar(); }
+        if (detail.avatar) {
+          const nextAvatar = normalizedAvatar(detail.avatar);
+          this.player.setPosition(nextAvatar.x, nextAvatar.y);
+          this.applyAvatarUpdate(nextAvatar);
+        }
         if (detail.scene) this.setScene(detail.scene);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
@@ -123,6 +130,55 @@
     detachWindowEvents() {
       window.removeEventListener("forest-avatar-updated", this.onAvatar);
       window.removeEventListener("forest-state-updated", this.onState);
+    }
+
+    applyAvatarUpdate(nextAvatar) {
+      if (nextAvatar.mounted !== this.avatar.mounted && this.premiumAvatar) {
+        this.playMountTransition(nextAvatar);
+        return;
+      }
+      this.avatar = nextAvatar;
+      this.rebuildAvatar();
+    }
+
+    playMountTransition(nextAvatar) {
+      this.mountTransitioning = true;
+      this.tweens.killTweensOf(this.premiumAvatar);
+      this.motionFx.clear();
+      this.motionFx.lineStyle(3, 0xffd76a, 0.9).strokeCircle(0, 4, 18);
+      this.tweens.add({
+        targets: [this.premiumAvatar, this.shadow],
+        alpha: 0,
+        y: "-=10",
+        duration: 120,
+        ease: "Quad.easeIn",
+        onComplete: () => {
+          this.avatar = nextAvatar;
+          this.setPremiumFrame(this.avatar.direction, false, performance.now());
+          this.premiumAvatar.setY(9).setAlpha(0);
+          this.shadow.setY(16).setAlpha(0);
+          this.motionFx.clear().lineStyle(4, 0xffef9a, 1).strokeCircle(0, 5, 10);
+          this.tweens.add({
+            targets: this.premiumAvatar,
+            alpha: 1,
+            y: 0,
+            duration: 190,
+            ease: "Back.easeOut",
+          });
+          this.tweens.add({
+            targets: this.shadow,
+            alpha: 1,
+            y: 13,
+            duration: 170,
+            ease: "Quad.easeOut",
+            onComplete: () => {
+              this.mountTransitioning = false;
+              this.motionFx.clear();
+              this.rebuildAvatar();
+            },
+          });
+        },
+      });
     }
 
     setScene(sceneName) {
@@ -151,6 +207,7 @@
     }
 
     update(time, delta) {
+      if (this.mountTransitioning) return;
       const inputAllowed = !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);
       let direction = performance.now() < this.forcedUntil ? this.forcedDirection : null;
       if (inputAllowed) {
@@ -198,10 +255,31 @@
         ...this.avatar.tuning,
       });
       this.compositeTexture.refresh();
+      this.drawMotionEffects(direction, moving, Math.floor(time / rate) % 4);
       const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
       this.premiumAvatar.setScale(worldScale);
       this.shadow.setScale(worldScale / AVATAR_RENDER_SCALE);
       this.nameplate?.setY(-Math.round(288 * worldScale * 0.96) - 7);
+    }
+
+    drawMotionEffects(direction, moving, frame) {
+      if (!this.motionFx || this.mountTransitioning) return;
+      this.motionFx.clear();
+      if (!moving) return;
+      const directionSign = direction === "left" ? 1 : direction === "right" ? -1 : 0;
+      if (this.avatar.mounted) {
+        this.motionFx.lineStyle(2, 0xffffff, 0.68);
+        const baseX = directionSign ? directionSign * 30 : -22;
+        for (let index = 0; index < 3; index += 1) {
+          const lineY = 2 + index * 6 + (frame % 2) * 2;
+          this.motionFx.lineBetween(baseX, lineY, baseX + directionSign * 13 - (directionSign ? 0 : 12), lineY);
+        }
+        this.motionFx.fillStyle(0xe8d6a2, 0.55);
+        this.motionFx.fillCircle(directionSign ? directionSign * 25 : -18, 12, frame % 2 ? 3 : 2);
+      } else if (frame % 2 === 1) {
+        this.motionFx.fillStyle(0xe8d6a2, 0.42);
+        this.motionFx.fillCircle(direction === "left" ? 13 : -13, 13, 2.5);
+      }
     }
   }
 
