@@ -147,6 +147,39 @@ def test_avatar_studio_uses_original_pixel_sprite_atlases_instead_of_emoji_previ
     assert "carrot-forest-cosmetics-atlas-v1.png" in css
 
 
+def test_world_scene_transitions_visual_storage_cats_and_fishing_are_connected() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    asset_names = (
+        "carrot-forest-world-v2.png",
+        "carrot-forest-home-v1.png",
+        "carrot-forest-garden-v1.png",
+        "carrot-forest-cat-pets-v1.png",
+        "carrot-forest-storage-atlas-v1.png",
+    )
+
+    assert 'id="scene-exit"' in html
+    for scene in ('switchScene("home")', 'switchScene("garden")', 'switchScene("world")'):
+        assert scene in script
+    for action in ("enter_home", "enter_garden", "rest", "water", "fish", "exit_scene"):
+        assert f'action === "{action}"' in script
+    assert "state.fishCaught" in script
+    assert "state.fishing" in script
+    assert "blue_eyes_white_cat" in script
+    assert "gold_eyes_orange_cat" in script
+    assert "catPetAtlas" in script
+    assert "storage-icon-item" in script
+    assert "storage-sprite-thumb" in css
+    for asset_name in asset_names:
+        asset = ROOT / "src/frontend/assets" / asset_name
+        assert asset.exists()
+        assert asset.stat().st_size > 100_000
+        assert asset.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+        assert asset_name in worker
+
+
 def test_pixel_game_is_installable_pwa() -> None:
     paths = {route.path for route in app.routes if hasattr(route, "path")}
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")

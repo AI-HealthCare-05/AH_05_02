@@ -92,6 +92,8 @@
       { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
       { id: "brown_pup", name: "밤톨이", visual: "🐕" }, { id: "cat", name: "구름이", visual: "🐈" },
       { id: "fox", name: "단풍이", visual: "🦊" },
+      { id: "blue_eyes_white_cat", name: "설빛 고양이", visual: "🐈", isNew: true },
+      { id: "gold_eyes_orange_cat", name: "호박눈 고양이", visual: "🐈", isNew: true },
     ],
     speech: [
       { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
@@ -120,6 +122,8 @@
       placed: [],
       rewardClaimed: false,
       gardenWatered: false,
+      fishCaught: false,
+      fishing: false,
     };
   }
 
@@ -179,6 +183,7 @@
   let running = false;
   let musicEngine = null;
   let animationFrame = 0;
+  let currentScene = "world";
   let activeAvatarCategory = "skin";
   let avatarDraft = { ...defaultCosmetics };
   let avatarDraftHistory = [];
@@ -187,10 +192,21 @@
   context.imageSmoothingEnabled = false;
   const avatarSpriteAtlas = new Image();
   const cosmeticSpriteAtlas = new Image();
+  const catPetAtlas = new Image();
+  const storageSpriteAtlas = new Image();
+  const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
+  catPetAtlas.src = "/static/assets/carrot-forest-cat-pets-v1.png";
+  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
+  sceneImages.world.src = "/static/assets/carrot-forest-world-v2.png";
+  sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
+  sceneImages.garden.src = "/static/assets/carrot-forest-garden-v1.png";
   avatarSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
   cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
+  catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
+  storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
 
   class CozyForestMusic {
     constructor() {
@@ -363,6 +379,15 @@
   }
 
   function drawMap() {
+    const sceneImage = sceneImages[currentScene];
+    if (sceneImage?.complete && sceneImage.naturalWidth) {
+      context.drawImage(sceneImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+      if (currentScene === "world") {
+        drawVehicle();
+        drawPlacedObjects();
+      }
+      return;
+    }
     fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
     for (let y = 0; y < MAP_HEIGHT; y += 1) {
       for (let x = 0; x < MAP_WIDTH; x += 1) {
@@ -394,6 +419,8 @@
     state.placed.forEach((item) => {
       const x = item.x;
       const y = item.y;
+      const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[item.code];
+      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 4, 1, x - 28, y - 34, 56, 56)) return;
       if (item.code === "flower_patch") {
         fillPixelRect(x - 15, y - 7, 30, 14, "#4b8e3f");
         [[-10, -8, "#ffcf43"], [0, -12, "#f16d77"], [10, -7, "#fff2a8"]].forEach(([dx, dy, color]) => fillPixelRect(x + dx, y + dy, 7, 7, color));
@@ -438,6 +465,10 @@
     return indexes[category]?.[itemId] ?? null;
   }
 
+  function catPetSpriteIndex(itemId) {
+    return { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 1 }[itemId] ?? null;
+  }
+
   function drawAtlasCell(target, image, index, columns, rows, x, y, width, height) {
     if (!image.complete || !image.naturalWidth || index == null) return false;
     const cellWidth = image.naturalWidth / columns;
@@ -457,7 +488,10 @@
     const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
     drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
     const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
-    drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
+    const catIndex = catPetSpriteIndex(cosmetics.pet);
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+      drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
+    }
     if (avatar.mounted) {
       const vehicleIndex = cosmeticSpriteIndex("vehicle", cosmetics.vehicle === "none" ? "scooter" : cosmetics.vehicle);
       drawAtlasCell(context, cosmeticSpriteAtlas, vehicleIndex, 5, 4, x - 38, y + 14, 76, 52);
@@ -593,6 +627,46 @@
     }
   }
 
+  function drawSceneEffects() {
+    if (currentScene === "home" && state.avatar.sitting) {
+      context.fillStyle = "rgba(255,255,255,.9)";
+      context.font = "bold 15px sans-serif";
+      context.fillText("Z", state.avatar.x + 31, state.avatar.y - 55);
+      context.font = "bold 10px sans-serif";
+      context.fillText("z", state.avatar.x + 43, state.avatar.y - 68);
+    }
+    if (currentScene === "world" && state.fishing) {
+      context.strokeStyle = "#5a412b";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.moveTo(state.avatar.x + 16, state.avatar.y - 5);
+      context.lineTo(280, 399);
+      context.stroke();
+      context.strokeStyle = "#e8f5ee";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(280, 399);
+      context.lineTo(250, 432);
+      context.stroke();
+      context.fillStyle = "#ffd45c";
+      context.font = "18px sans-serif";
+      context.fillText(state.fishCaught ? "✦" : "~", 246, 436);
+    }
+  }
+
+  function renderSceneChrome() {
+    const sceneCopy = {
+      world: { title: "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
+      home: { title: "나의 홈피 · 포근한 거실", aria: "소파와 옷장이 있는 집 내부 장면" },
+      garden: { title: "공동 당근밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
+    }[currentScene];
+    $("#map-title").textContent = sceneCopy.title;
+    canvas.setAttribute("aria-label", `${sceneCopy.aria}. 방향키나 WASD로 이동하고 Q키로 상호작용할 수 있습니다.`);
+    $("#scene-exit").hidden = currentScene === "world";
+    $(".home-label").hidden = currentScene !== "world";
+    $(".garden-label").hidden = currentScene !== "world";
+  }
+
   function renderCanvas() {
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -600,6 +674,8 @@
     context.imageSmoothingEnabled = false;
     drawMap();
     drawAvatar();
+    drawSceneEffects();
+    renderSceneChrome();
     $("#avatar-coordinate").textContent = `X ${Math.round(state.avatar.x)} · Y ${Math.round(state.avatar.y)}`;
     updateInteractionPrompt();
   }
@@ -619,8 +695,20 @@
   }
 
   function nearbyInteraction() {
-    if (distanceTo(147, 225) < 90) return "home";
-    if (distanceTo(610, 260) < 105) return "garden";
+    if (currentScene === "home") {
+      if (distanceTo(292, 246) < 95) return "sofa";
+      if (distanceTo(558, 205) < 100) return "wardrobe";
+      if (distanceTo(384, 438) < 78) return "exit_home";
+      return null;
+    }
+    if (currentScene === "garden") {
+      if (distanceTo(384, 215) < 120 || distanceTo(622, 382) < 90) return "crops";
+      if (distanceTo(384, 430) < 78) return "exit_garden";
+      return null;
+    }
+    if (distanceTo(200, 270) < 95) return "home";
+    if (distanceTo(600, 255) < 110) return "garden";
+    if (distanceTo(285, 405) < 105) return "pond";
     if (distanceTo(470, 376) < 72) return "vehicle";
     return null;
   }
@@ -629,15 +717,25 @@
     const target = nearbyInteraction();
     const prompt = $("#interaction-prompt");
     prompt.hidden = !target;
-    if (target) prompt.querySelector("span").textContent = { home: "우리 집", garden: "공동 당근밭", vehicle: "숲 스쿠터" }[target];
+    if (target) prompt.querySelector("span").textContent = {
+      home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기", vehicle: "숲 스쿠터",
+      sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
+      crops: "당근 돌보기", exit_garden: "숲으로 돌아가기",
+    }[target];
   }
 
   function openWorldDialog(target) {
     const dialog = $("#world-dialog");
     const content = {
-      home: { icon: "🏠", title: "우리 집", copy: "잠시 쉬거나 옷장을 열어 캐릭터를 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button><button type="button" data-world-action="wardrobe">옷장 열기</button>' },
-      garden: { icon: "🥕", title: "공동 당근밭", copy: `우리 모임은 오늘 ${groupCompleted()}/15개의 퀘스트를 완료했어요. 함께 돌본 만큼 당근밭이 풍성해져요.`, actions: `<button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근밭 물주기"}</button><button type="button" data-world-action="team">공동 진행 보기</button>` },
+      home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
+      garden: { icon: "🥕", title: "공동 당근밭", copy: `우리 모임은 오늘 ${groupCompleted()}/15개의 퀘스트를 완료했어요. 밭 안으로 들어가 당근을 돌봐요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
+      pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
       vehicle: { icon: "🛵", title: "숲 스쿠터", copy: "스쿠터를 타면 숲길을 더 빠르게 이동할 수 있어요.", actions: `<button type="button" data-world-action="ride">${state.avatar.mounted ? "스쿠터에서 내리기" : "스쿠터 타기"}</button>` },
+      sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
+      wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
+      exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
+      crops: { icon: "🥕", title: "공동 당근", copy: "오늘의 실천이 모일수록 공동 당근이 튼튼하게 자라요.", actions: `<button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button><button type="button" data-world-action="team">공동 진행 보기</button>` },
+      exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "공동 당근밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
     }[target];
     if (!content) { setStatus("상호작용할 대상 가까이 이동해 주세요."); return; }
     $("#world-dialog-icon").textContent = content.icon;
@@ -648,15 +746,36 @@
   }
 
   function interact(target = nearbyInteraction()) {
-    if (!target) { setStatus("집, 공동 당근밭 또는 스쿠터 가까이에서 Q를 눌러 주세요."); return; }
+    if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
     openWorldDialog(target);
+  }
+
+  function switchScene(scene) {
+    currentScene = scene;
+    state.avatar.sitting = false;
+    state.avatar.mounted = false;
+    state.fishing = false;
+    const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
+    [state.avatar.x, state.avatar.y] = positions[scene];
+    placementCode = null;
+    renderInventory();
+    renderCanvas();
+    canvas.focus();
   }
 
   function blocked(x, y) {
     if (x < 28 || x > WORLD_WIDTH - 28 || y < 42 || y > WORLD_HEIGHT - 38) return true;
-    if (x > 38 && x < 250 && y > 45 && y < 215) return true;
-    if (x > 500 && x < 730 && y > 45 && y < 230) return true;
-    if (x > 315 && x < 440 && y > 85 && y < 265) return true;
+    if (currentScene === "home") {
+      if (x < 64 || x > 710 || y < 100 || y > 458) return true;
+      return false;
+    }
+    if (currentScene === "garden") {
+      if (x < 105 || x > 675 || y < 105 || y > 458) return true;
+      return false;
+    }
+    if (x > 45 && x < 335 && y > 55 && y < 275) return true;
+    if (x > 465 && x < 735 && y > 45 && y < 255) return true;
+    if (x > 35 && x < 270 && y > 300 && y < 475) return true;
     return false;
   }
 
@@ -665,6 +784,7 @@
     const delta = { up: [0, -step], down: [0, step], left: [-step, 0], right: [step, 0] }[direction];
     if (!delta) return;
     state.avatar.sitting = false;
+    state.fishing = false;
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
     if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
@@ -697,6 +817,12 @@
       const item = itemCatalog[code];
       const equipped = item.kind === "accessory" && state.avatar.equipped === code;
       const selected = item.kind === "object" && placementCode === code;
+      if (item.kind === "object") {
+        const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[code];
+        const backgroundPosition = `${storageIndex * 100 / 3}% 0%`;
+        const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
+        return `<button class="inventory-item storage-icon-item" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
+      }
       return `<button class="inventory-item" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
     $("#wardrobe-list").innerHTML = renderItems("accessory") || "<p class=\"empty-assets\">획득한 의상이 없습니다.</p>";
@@ -731,7 +857,10 @@
     const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, vehicleIndex, 5, 4, 18, 213, 82, 65);
     const petIndex = cosmeticSpriteIndex("pet", avatarDraft.pet);
-    drawAtlasCell(previewContext, cosmeticSpriteAtlas, petIndex, 5, 4, 190, 205, 72, 72);
+    const catIndex = catPetSpriteIndex(avatarDraft.pet);
+    if (!drawAtlasCell(previewContext, catPetAtlas, catIndex, 2, 1, 178, 188, 100, 100)) {
+      drawAtlasCell(previewContext, cosmeticSpriteAtlas, petIndex, 5, 4, 190, 205, 72, 72);
+    }
     const speechIndex = cosmeticSpriteIndex("speech", avatarDraft.speech);
     if (drawAtlasCell(previewContext, cosmeticSpriteAtlas, speechIndex, 5, 4, 175, 8, 96, 70)) {
       previewContext.textAlign = "center"; previewContext.font = "bold 9px sans-serif"; previewContext.fillStyle = "#30323b";
@@ -747,6 +876,7 @@
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
       const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
+      const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
       if (["skin", "outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
         const previewCosmetics = { ...avatarDraft, [activeAvatarCategory]: item.id };
@@ -754,6 +884,8 @@
         const x = index % 4 * 100 / 3;
         const y = Math.floor(index / 4) * 50;
         visual = `<span class="item-visual sprite-thumb avatar-sprite-thumb" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+      } else if (catIndex != null) {
+        visual = `<span class="item-visual sprite-thumb cat-pet-sprite-thumb" style="background-position:${catIndex * 100}% 0%" aria-hidden="true"></span>`;
       } else if (cosmeticIndex != null) {
         const x = cosmeticIndex % 5 * 25;
         const y = Math.floor(cosmeticIndex / 5) * 100 / 3;
@@ -884,12 +1016,23 @@
     const y = Math.round((event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height / 4) * 4;
     if (!placementCode) {
       canvas.focus();
-      if (x >= 38 && x <= 250 && y >= 45 && y <= 215) interact("home");
-      else if (x >= 496 && x <= 724 && y >= 48 && y <= 230) interact("garden");
+      if (currentScene === "home") {
+        if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
+        else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
+        else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
+        else setStatus("소파·옷장·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      } else if (currentScene === "garden") {
+        if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
+        else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
+        else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      } else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) interact("home");
+      else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) interact("garden");
+      else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) interact("pond");
       else if (x >= 440 && x <= 505 && y >= 345 && y <= 410) interact("vehicle");
-      else setStatus("집·공동 당근밭·스쿠터를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      else setStatus("집·당근밭·연못·스쿠터를 클릭하거나 가까이에서 Q를 눌러 보세요.");
       return;
     }
+    if (currentScene !== "world") { setStatus("숲 오브젝트는 월드 장면에서만 배치할 수 있어요."); return; }
     if (blocked(x, y)) { setStatus("그 위치에는 오브젝트를 놓을 수 없습니다."); return; }
     const existing = state.placed.findIndex((item) => item.code === placementCode);
     if (existing >= 0) state.placed.splice(existing, 1);
@@ -924,6 +1067,7 @@
   }
 
   async function toggleRide(requireNearby = true) {
+    if (currentScene !== "world") { setStatus("탈것은 숲 월드에서 이용할 수 있어요."); return; }
     if (!state.avatar.mounted && requireNearby && distanceTo(470, 376) >= 72) {
       setStatus("숲 스쿠터 가까이 이동한 뒤 E를 눌러 주세요.");
       return;
@@ -999,8 +1143,8 @@
   });
 
   $("#reset-position").addEventListener("click", async () => {
-    state.avatar.x = 384;
-    state.avatar.y = 352;
+    const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
+    [state.avatar.x, state.avatar.y] = positions[currentScene];
     renderCanvas();
     await persist("아바타를 시작 위치로 이동했습니다.");
     canvas.focus();
@@ -1010,9 +1154,28 @@
   $("#world-dialog-actions").addEventListener("click", async (event) => {
     const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
     if (!action) return;
+    if (action === "enter_home") {
+      $("#world-dialog").close();
+      switchScene("home");
+      await persist("우리 집 안으로 들어왔습니다. 소파와 옷장을 이용해 보세요.");
+    }
+    if (action === "enter_garden") {
+      $("#world-dialog").close();
+      switchScene("garden");
+      await persist("공동 당근밭 안으로 들어왔습니다. 당근 가까이에서 물을 줄 수 있어요.");
+    }
+    if (action === "exit_scene") {
+      $("#world-dialog").close();
+      switchScene("world");
+      await persist("우리의 작은 숲으로 돌아왔습니다.");
+    }
     if (action === "rest") {
+      currentScene = "home";
+      state.avatar.x = 292;
+      state.avatar.y = 232;
       state.avatar.sitting = true;
       state.avatar.mounted = false;
+      state.fishing = false;
       $("#world-dialog").close();
       renderCanvas();
       await persist("우리 집 소파에서 편안하게 쉬고 있어요.");
@@ -1026,6 +1189,7 @@
       state.carrots += 10;
       $("#carrot-balance").textContent = state.carrots;
       $("#world-dialog").close();
+      renderCanvas();
       await persist("공동 당근밭에 물을 주고 당근 10개를 받았습니다.");
     }
     if (action === "team") {
@@ -1036,6 +1200,27 @@
       $("#world-dialog").close();
       await toggleRide(false);
     }
+    if (action === "fish") {
+      const firstCatch = !state.fishCaught;
+      currentScene = "world";
+      state.avatar.x = 305;
+      state.avatar.y = 390;
+      state.avatar.sitting = true;
+      state.avatar.mounted = false;
+      state.fishing = true;
+      state.fishCaught = true;
+      if (firstCatch) state.carrots += 5;
+      $("#carrot-balance").textContent = state.carrots;
+      $("#world-dialog").close();
+      renderCanvas();
+      await persist(firstCatch ? "은빛 붕어를 잡고 당근 5개를 받았습니다!" : "연못에 낚싯대를 드리우고 잠시 쉬고 있어요.");
+    }
+  });
+
+  $("#scene-exit").addEventListener("click", async () => {
+    if (currentScene === "world") return;
+    switchScene("world");
+    await persist("우리의 작은 숲으로 돌아왔습니다.");
   });
 
   $("#chat-close").addEventListener("click", () => toggleChat(false));
