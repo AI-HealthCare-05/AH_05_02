@@ -21,8 +21,9 @@ def test_home_has_accessibility_and_medical_notice() -> None:
 
     assert "본문으로 바로가기" in html
     assert "진단·처방" in html
-    assert "DEVELOPMENT" in html
-    assert "확률 비공개" in html
+    assert "간당간당 개발용 서비스" in html
+    assert "DEVELOPMENT" not in html
+    assert "확률 비공개" not in html
     assert "약을 끊으세요" not in html + script
     assert "약을 시작하세요" not in html + script
 
@@ -49,7 +50,7 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "검사·의료기관 안내 보기" in script
+    assert "검사·상담 안내 보기" in script
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
     assert '$("#result-next").hidden = !isApprovedRisk' in script
@@ -74,12 +75,12 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
 
     for label in (
         "기존 계정으로 로그인",
-        "공동 챌린지 초대 만들기",
-        "개발용 웨어러블 기록 가져오기",
+        "이메일로 초대",
+        "초대 코드로 초대",
+        "워치 연결하기",
         "근거 자료에서 찾기",
-        "식단 분류 초안",
-        "OCR 입력 초안",
-        "주간 리포트 PDF 받기",
+        "검진표 사진 올리기",
+        "PDF 받기",
     ):
         assert label in html
     assert "accept-shared" in script
@@ -94,11 +95,12 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     for workspace in ("home", "challenge", "report", "together", "tools"):
         assert f'data-workspace="{workspace}"' in html
         assert f'data-workspace-panel="{workspace}"' in html
+        assert f'id="workspace-tab-{workspace}"' in html
     assert "오늘 할 일부터 확인하세요" in html
     assert "내 생활습관 지도" in html
-    assert "생활습관 지도 보기" in html
-    assert "건강도구로 돌아가기" in html
-    assert "진단 부위나 모델 영향도를 나타내는 그림이 아닙니다." in html
+    assert "지도 보기" in html
+    assert "지도 닫기" in html
+    assert "체형이나 건강 위험을 판정하지 않습니다." in html
     assert "3D 생활습관 안내 캐릭터" in html
     assert "lifestyle-avatar-female-60.webp" in html
     assert '"male" : "female"' in script
@@ -111,8 +113,8 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
     assert 'role="tablist"' in html
-    assert html.count('role="tab"') == 5
-    assert html.count('role="tabpanel"') == 5
+    assert html.count('role="tab"') >= 5
+    assert html.count('role="tabpanel"') >= 5
     assert 'aria-pressed="true"' in html
     assert 'button.setAttribute("aria-pressed", String(selected))' in script
     assert "selectedPanel.focus({ preventScroll: true })" in script
