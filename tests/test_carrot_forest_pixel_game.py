@@ -122,12 +122,7 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
     for label in (
-        "캐릭터 프리셋",
-        "피부",
-        "의상",
-        "헤어",
-        "얼굴",
-        "액세서리",
+        "완성형 코디",
         "아우라",
         "찌르기 이펙트",
         "탈것",
@@ -189,7 +184,7 @@ def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers()
     assert "stylePresetByItem" in script
     assert "drawAnimatedAccessoryOverlay" in script
     assert "drawPreviewAccessoryOverlay" in script
-    assert 'avatarDraft.preset = "custom"' in script
+    assert '{ id: "preset", label: "완성형 코디"' in script
     assert "if (drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return" in script
     assert "else if (basicWalkAtlas.complete" in script
     assert "motionRow * 4 + directionColumn" in script
@@ -261,7 +256,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v8" in html
+    assert "forest-local-pwa-reset-v9" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -273,7 +268,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "carrot-forest-cosmetics-atlas-v1.png" in worker
 
 
-def test_phaser_layer_avatar_engine_and_offline_assets_are_connected() -> None:
+def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
@@ -282,7 +277,7 @@ def test_phaser_layer_avatar_engine_and_offline_assets_are_connected() -> None:
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
     assert "/static/forest-phaser.js" in html
-    for category in ("bottom", "shoes", "hat", "glasses"):
+    for category in ("preset", "aura", "effect", "vehicle", "pet", "speech"):
         assert f'id: "{category}"' in game_script
     for event_name in (
         "forest-avatar-updated",
@@ -291,33 +286,19 @@ def test_phaser_layer_avatar_engine_and_offline_assets_are_connected() -> None:
         "forest-phaser-interact",
     ):
         assert event_name in game_script or event_name in phaser_script
-    for layer in ("body", "pants", "shoes", "top", "hair", "hat", "glasses"):
-        assert layer in phaser_script
+    for preset in ("red_bow", "cow_hood", "midnight", "blue_cap", "teal_bob"):
+        assert preset in phaser_script
+        assert f"carrot-forest-preset-{preset.replace('_', '-')}-v1.png" in phaser_script
     assert "directionRows" in phaser_script
+    assert "setPremiumFrame" in phaser_script
+    assert "preparePresetFrames" in phaser_script
+    assert "this.premiumAvatar.setFrame" in phaser_script
     assert "this.keys.R.isDown" in phaser_script
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v11" in worker
-    assert "/static/assets/lpc/body-female.png" in worker
-    assert "/static/assets/lpc/hair-ponytail-fg.png" in worker
-
-    required_assets = (
-        "body-female.png",
-        "body-male.png",
-        "pants-female.png",
-        "pants-male.png",
-        "shoes-female.png",
-        "shoes-male.png",
-        "hair-messy.png",
-        "hair-long.png",
-        "hat-cap.png",
-        "glasses-round.png",
-        "CREDITS.csv",
-        "GENERATOR_LICENSE.txt",
-    )
-    for asset_name in required_assets:
-        assert (ROOT / "src/frontend/assets/lpc" / asset_name).exists()
+    assert "gandang-carrot-forest-pwa-v12" in worker
+    assert "/static/assets/lpc/" not in worker
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
 

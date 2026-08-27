@@ -53,8 +53,8 @@
 ## 픽셀 에셋 출처와 재현
 
 - 실행 월드는 `Phaser 3.90.0`을 저장소 내부 정적 파일로 제공하며 MIT 라이선스 전문은 `src/frontend/vendor/PHASER_LICENSE.txt`에 보관한다.
-- 실제 조합형 아바타는 Universal LPC Spritesheet Character Generator의 동일 규격 64×64 레이어를 사용한다. 사용 자산의 원본 경로·제작자·라이선스는 `src/frontend/assets/lpc/CREDITS.csv`, 라이선스 전문은 `GENERATOR_LICENSE.txt`에서 확인한다.
-- 피부·상의·하의·신발·헤어·모자·안경은 같은 방향·보행 프레임을 공유하므로 독립적으로 바꿔도 월드의 앞·뒤·좌·우 이동 애니메이션이 유지된다.
+- 투자자 데모의 월드 아바타와 꾸미기 미리보기는 프로젝트에서 제작한 동일한 고해상도 치비 프리셋 아틀라스를 사용한다. 각 프리셋은 앞·뒤·좌·우 보행과 스쿠터 방향 장면을 포함하며, 월드와 선택 카드의 화풍이 달라지지 않도록 완성형 코디 단위로 제공한다.
+- 현재 투자자 데모는 `리본 정원사`, `음메 목장지기`, `한밤 숲지기`, `파란 모자 농부`, `미소 정원사`의 5개 완성형 코디를 제공한다. 개별 헤어·의상 조합은 같은 화풍의 레이어 아틀라스를 별도로 제작한 뒤 확장한다.
 
 - `src/frontend/assets/carrot-forest-avatar-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 4×3 투명 캐릭터 아틀라스
 - `src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png`: 새싹 정원사 기본 의상용 앞·뒤·좌·우 4×4 보행 아틀라스
@@ -125,7 +125,7 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | --- | --- |
 | 독립 게임 화면 | `src/frontend/forest.html` |
 | 픽셀 게임·상태·어댑터 | `src/frontend/forest-game.js` |
-| Phaser 월드·레이어 아바타·4방향 이동 | `src/frontend/forest-phaser.js` |
+| Phaser 월드·고해상도 프리셋 아바타·4방향 이동 | `src/frontend/forest-phaser.js` |
 | 반응형·접근성 스타일 | `src/frontend/forest-game.css` |
 | PWA 설치 정보 | `src/frontend/forest.webmanifest` |
 | 오프라인 앱 셸 | `src/frontend/forest-sw.js` |

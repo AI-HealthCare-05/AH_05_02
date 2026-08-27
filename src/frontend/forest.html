@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v8";
+      const resetKey = "forest-local-pwa-reset-v9";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -41,8 +41,8 @@
   </script>
   <link rel="stylesheet" href="/static/forest-game.css?v=20260827-9" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/forest-phaser.js?v=20260827-1" defer></script>
-  <script src="/static/forest-game.js?v=20260827-8" defer></script>
+  <script src="/static/forest-phaser.js?v=20260827-2" defer></script>
+  <script src="/static/forest-game.js?v=20260827-9" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -92,7 +92,7 @@
           <form id="avatar-form" class="avatar-form">
             <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
             <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
-            <label>외형 프리셋<select id="avatar-preset"><option value="custom">나만의 조합</option><option value="sprout">새싹 정원사</option><option value="red_bow">리본 정원사</option><option value="cow_hood">음메 목장지기</option><option value="midnight">한밤 숲지기</option><option value="blue_cap">파란 모자 농부</option><option value="teal_bob">미소 정원사</option><option value="carrot">당근 탐험가</option><option value="moon">달빛 산책가</option><option value="berry">산딸기 수집가</option></select></label>
+            <label>완성형 코디<select id="avatar-preset"><option value="blue_cap">파란 모자 농부</option><option value="red_bow">리본 정원사</option><option value="cow_hood">음메 목장지기</option><option value="midnight">한밤 숲지기</option><option value="teal_bob">미소 정원사</option></select></label>
             <button class="primary-button" type="submit">기본 정보 저장</button>
             <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
           </form>
@@ -112,9 +112,9 @@
 
         <div class="canvas-workarea">
           <div class="canvas-frame">
-            <div id="phaser-world" role="application" tabindex="0" aria-label="레이어형 픽셀 아바타로 이동하는 당근의 숲 월드"></div>
+            <div id="phaser-world" role="application" tabindex="0" aria-label="고해상도 4방향 픽셀 아바타로 이동하는 당근의 숲 월드"></div>
             <canvas id="forest-canvas" width="1536" height="1024" tabindex="0" aria-label="숲, 당근밭, 공동 나무와 집이 있는 고해상도 픽셀 맵. 방향키나 WASD로 아바타를 움직일 수 있습니다." aria-describedby="movement-help"></canvas>
-            <span class="phaser-quality-badge">PHASER · LAYER AVATAR</span>
+            <span class="phaser-quality-badge">PHASER · PREMIUM AVATAR</span>
             <div class="map-label home-label"><span aria-hidden="true">🏠</span>우리 집</div>
             <div class="map-label garden-label"><span aria-hidden="true">🥕</span>공동 당근밭</div>
             <div id="interaction-prompt" class="interaction-prompt" hidden><kbd>Q</kbd><span>상호작용</span></div>

@@ -49,16 +49,7 @@
   };
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
   const avatarCategories = [
-    { id: "preset", label: "캐릭터 프리셋", icon: "🧑‍🌾" },
-    { id: "skin", label: "피부", icon: "🎨" },
-    { id: "outfit", label: "의상", icon: "👕" },
-    { id: "bottom", label: "하의", icon: "👖" },
-    { id: "shoes", label: "신발", icon: "👟" },
-    { id: "hair", label: "헤어", icon: "💇" },
-    { id: "face", label: "얼굴", icon: "😊" },
-    { id: "hat", label: "모자", icon: "🧢" },
-    { id: "glasses", label: "안경", icon: "👓" },
-    { id: "accessory", label: "액세서리", icon: "👓" },
+    { id: "preset", label: "완성형 코디", icon: "🧑‍🌾" },
     { id: "aura", label: "아우라", icon: "✨" },
     { id: "effect", label: "찌르기 이펙트", icon: "💫" },
     { id: "vehicle", label: "탈것", icon: "🛴" },
@@ -67,8 +58,7 @@
   ];
   const avatarCatalog = {
     preset: [
-      { id: "custom", name: "나만의 조합" },
-      { id: "sprout", name: "새싹 정원사" }, { id: "red_bow", name: "리본 정원사", isNew: true },
+      { id: "red_bow", name: "리본 정원사", isNew: true },
       { id: "cow_hood", name: "음메 목장지기", isNew: true }, { id: "midnight", name: "한밤 숲지기", isNew: true },
       { id: "blue_cap", name: "파란 모자 농부", isNew: true }, { id: "teal_bob", name: "미소 정원사", isNew: true },
     ],
@@ -157,7 +147,7 @@
   function defaultState() {
     return {
       dateKey: TODAY,
-      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
+      avatar: { name: "세준", gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -181,6 +171,7 @@
     if (!value || value.dateKey !== TODAY) return fallback;
     const state = { ...fallback, ...value };
     state.avatar = { ...fallback.avatar, ...(value.avatar || {}) };
+    if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -235,7 +226,7 @@
   let walkingUntil = 0;
   let walkAnimationFrame = 0;
   let currentScene = "world";
-  let activeAvatarCategory = "skin";
+  let activeAvatarCategory = "preset";
   let avatarDraft = { ...defaultCosmetics };
   let avatarDraftHistory = [];
   const canvas = $("#forest-canvas");
@@ -1199,8 +1190,6 @@
       let visual;
       if (activeAvatarCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (["skin", "outfit", "bottom", "shoes", "hair", "hat", "glasses"].includes(activeAvatarCategory)) {
-        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-item-category="${activeAvatarCategory}" data-lpc-item-id="${item.id}" aria-hidden="true"></canvas>`;
       } else if (["face", "accessory"].includes(activeAvatarCategory)) {
         const itemPreset = stylePresetByItem[item.id];
         const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
@@ -1229,7 +1218,7 @@
   }
 
   function openAvatarStudio() {
-    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "sprout" };
+    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "blue_cap" };
     avatarDraftHistory = [];
     activeAvatarCategory = "preset";
     renderAvatarStudio();
@@ -1290,8 +1279,6 @@
     const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : stylePresetByItem[button.dataset.avatarItem];
     if (linkedPreset && presetBundles[linkedPreset]) {
       avatarDraft = { ...avatarDraft, preset: linkedPreset, ...presetBundles[linkedPreset] };
-    } else if (["skin", "outfit", "hair", "face"].includes(activeAvatarCategory)) {
-      avatarDraft.preset = "custom";
     }
     renderAvatarStudio();
   });
