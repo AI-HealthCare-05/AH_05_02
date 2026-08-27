@@ -5,6 +5,9 @@
   const CELL_HEIGHT = 288;
   const HEAD_CUT = 166;
   const HEAD_OFFSET_Y = -6;
+  const LONG_HAIR_FRONT_CUT = 166;
+  const BASE_BODY_START = 146;
+  const backHairPresets = new Set(["red_bow"]);
   const modularHairRows = { red_bow: 1, cow_hood: 2, midnight: 3, blue_cap: 4, teal_bob: 5 };
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
@@ -46,13 +49,30 @@
     const bob = options.moving ? (Number(options.frame || 0) % 2 ? -2 : 1) : 0;
     const headOffsetY = Number.isFinite(options.headOffsetY) ? options.headOffsetY : HEAD_OFFSET_Y;
     const outfitOffsetY = Number.isFinite(options.outfitOffsetY) ? options.outfitOffsetY : 0;
-    const bodyTarget = { ...target, y: target.y + bob };
+    const bodyTarget = { ...target, y: target.y + bob + outfitOffsetY };
+    const hairTarget = { ...target, y: target.y + bob + headOffsetY };
+    const usesBackHair = backHairPresets.has(options.hairPreset) && options.direction !== "up";
 
     context.save();
     context.imageSmoothingEnabled = false;
+    if (usesBackHair) drawSource(context, source.image, hair, hairTarget);
+    context.save();
+    context.beginPath();
+    context.rect(target.x, bodyTarget.y + target.height * BASE_BODY_START / CELL_HEIGHT, target.width, target.height * (CELL_HEIGHT - BASE_BODY_START) / CELL_HEIGHT);
+    context.clip();
     drawSource(context, source.image, base, bodyTarget);
-    drawSource(context, source.image, outfit, { ...bodyTarget, y: bodyTarget.y + outfitOffsetY });
-    drawSource(context, source.image, hair, { ...target, y: target.y + bob + headOffsetY });
+    context.restore();
+    drawSource(context, source.image, outfit, bodyTarget);
+    if (usesBackHair) {
+      context.save();
+      context.beginPath();
+      context.rect(target.x, hairTarget.y, target.width, target.height * (LONG_HAIR_FRONT_CUT + headOffsetY) / CELL_HEIGHT);
+      context.clip();
+      drawSource(context, source.image, hair, hairTarget);
+      context.restore();
+    } else {
+      drawSource(context, source.image, hair, hairTarget);
+    }
     context.restore();
   }
 
@@ -66,6 +86,7 @@
     const headOffsetY = Number.isFinite(options.headOffsetY) ? options.headOffsetY : HEAD_OFFSET_Y;
     const headAdjustmentY = headOffsetY - HEAD_OFFSET_Y;
     const glassesOffsetY = Number.isFinite(options.glassesOffsetY) ? options.glassesOffsetY : 0;
+    const bodyOffsetY = Number.isFinite(options.outfitOffsetY) ? options.outfitOffsetY : 0;
     const glasses = options.glasses !== "none" ? options.glasses : ["round_glasses", "star_glasses"].includes(options.accessory) ? options.accessory : "none";
     if (glasses !== "none") {
       context.strokeStyle = glasses === "star_glasses" || glasses === "sun" ? "#51284f" : "#27353d";
@@ -90,15 +111,15 @@
     }
     if (options.accessory === "red_scarf") {
       context.fillStyle = "#b92f34";
-      context.fillRect(77 + directionOffset, 157, 72, 10);
+      context.fillRect(77 + directionOffset, 157 + bodyOffsetY, 72, 10);
       context.fillStyle = "#e14b49";
-      context.fillRect(86 + directionOffset, 156, 54, 5);
+      context.fillRect(86 + directionOffset, 156 + bodyOffsetY, 54, 5);
     }
     if (options.accessory === "carrot_bag" && options.direction !== "left") {
       context.fillStyle = "#b95824";
-      context.fillRect(146 + directionOffset, 176, 28, 42);
+      context.fillRect(146 + directionOffset, 176 + bodyOffsetY, 28, 42);
       context.fillStyle = "#ef8632";
-      context.fillRect(151 + directionOffset, 181, 18, 31);
+      context.fillRect(151 + directionOffset, 181 + bodyOffsetY, 18, 31);
     }
     if (options.accessory === "sprout_hat" || options.hat === "headband") {
       context.fillStyle = options.hat === "headband" ? "#cb3d45" : "#3a8e48";

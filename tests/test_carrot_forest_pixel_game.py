@@ -321,7 +321,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v21" in html
+    assert "forest-local-pwa-reset-v22" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -361,7 +361,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v24" in worker
+    assert "gandang-carrot-forest-pwa-v25" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
@@ -369,6 +369,18 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert "const AVATAR_RENDER_SCALE = 0.43" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
+
+
+def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:
+    compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+
+    assert "const BASE_BODY_START = 146" in compositor
+    assert 'const backHairPresets = new Set(["red_bow"])' in compositor
+    assert "bodyTarget.y + target.height * BASE_BODY_START / CELL_HEIGHT" in compositor
+    assert "if (usesBackHair) drawSource(context, source.image, hair, hairTarget)" in compositor
+    assert "drawSource(context, source.image, outfit, bodyTarget)" in compositor
+    assert "기본 몸 높이" in html
 
 
 def test_modular_avatar_v3_has_exact_layer_cells_and_runtime_wiring() -> None:

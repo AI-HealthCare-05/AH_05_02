@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v21";
+      const resetKey = "forest-local-pwa-reset-v22";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -41,7 +41,7 @@
   </script>
   <link rel="stylesheet" href="/static/forest-game.css?v=20260827-12" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/avatar-compositor.js?v=20260827-8" defer></script>
+  <script src="/static/avatar-compositor.js?v=20260827-9" defer></script>
   <script src="/static/forest-phaser.js?v=20260827-8" defer></script>
   <script src="/static/forest-game.js?v=20260827-19" defer></script>
 </head>
@@ -221,7 +221,7 @@
         <details id="avatar-tuning-controls" class="avatar-tuning-controls" open>
           <summary>간격·크기 직접 조정</summary>
           <label><span>머리 높이 <output data-avatar-tuning-output="headOffsetY">-6px</output></span><input type="range" min="-18" max="8" step="1" value="-6" data-avatar-tuning="headOffsetY"></label>
-          <label><span>몸통 높이 <output data-avatar-tuning-output="outfitOffsetY">0px</output></span><input type="range" min="-8" max="8" step="1" value="0" data-avatar-tuning="outfitOffsetY"></label>
+          <label><span>기본 몸 높이 <output data-avatar-tuning-output="outfitOffsetY">0px</output></span><input type="range" min="-12" max="12" step="1" value="0" data-avatar-tuning="outfitOffsetY"></label>
           <label><span>안경 높이 <output data-avatar-tuning-output="glassesOffsetY">0px</output></span><input type="range" min="-14" max="16" step="1" value="0" data-avatar-tuning="glassesOffsetY"></label>
           <label><span>월드 크기 <output data-avatar-tuning-output="worldScale">43%</output></span><input type="range" min="0.32" max="0.58" step="0.01" value="0.43" data-avatar-tuning="worldScale"></label>
           <button id="avatar-tuning-reset" type="button">기본값으로 되돌리기</button>
