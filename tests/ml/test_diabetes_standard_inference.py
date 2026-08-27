@@ -90,6 +90,127 @@ def test_model_frame_has_training_order_and_safe_missing_values() -> None:
     assert np.isnan(frame.loc[0, "hypertension_diagnosis"])
 
 
+@pytest.mark.parametrize("missing_field", REQUIRED_API_FIELDS)
+def test_json_input_rejects_each_missing_required_field(missing_field: str) -> None:
+    payload = fixed_input().__dict__.copy()
+    payload.pop(missing_field)
+
+    with pytest.raises(ValueError, match="invalid diabetes risk input"):
+        parse_diabetes_risk_input(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_message"),
+    [
+        ("birth_date", "birth_date must be a date"),
+        ("sex", "sex is required"),
+        ("height_cm", "height_cm must be a number"),
+        ("weight_kg", "weight_kg must be a number"),
+        ("smoking_status", "smoking_status is required"),
+        ("current_drinker", "current_drinker must be boolean"),
+        ("regular_exercise", "regular_exercise must be boolean"),
+        ("exercise_days_per_week", "exercise_days_per_week must be a number"),
+        ("exercise_minutes", "exercise_minutes must be a number"),
+        ("previously_diagnosed_diabetes", "previously_diagnosed_diabetes must be boolean"),
+    ],
+)
+def test_model_frame_rejects_null_required_values(field: str, expected_message: str) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        build_standard_model_frame(
+            fixed_input(**{field: None}),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_message"),
+    [
+        ({"height_cm": 119.9}, "height_cm must be between 120 and 220"),
+        ({"height_cm": 220.1}, "height_cm must be between 120 and 220"),
+        ({"weight_kg": 24.9}, "weight_kg must be between 25 and 250"),
+        ({"weight_kg": 250.1}, "weight_kg must be between 25 and 250"),
+        ({"exercise_days_per_week": -1}, "exercise_days_per_week must be between 0 and 7"),
+        ({"exercise_days_per_week": 8}, "exercise_days_per_week must be between 0 and 7"),
+        ({"exercise_minutes": -1}, "exercise_minutes must be between 0 and 720"),
+        ({"exercise_minutes": 721}, "exercise_minutes must be between 0 and 720"),
+        (
+            {"annual_household_income_10k_krw": -1},
+            "annual_household_income_10k_krw must be between 0 and 123500",
+        ),
+        (
+            {"annual_household_income_10k_krw": 123_501},
+            "annual_household_income_10k_krw must be between 0 and 123500",
+        ),
+        ({"health_satisfaction_score": -1}, "health_satisfaction_score must be between 0 and 100"),
+        ({"economic_satisfaction_score": 101}, "economic_satisfaction_score must be between 0 and 100"),
+        ({"overall_quality_of_life_score": float("nan")}, "overall_quality_of_life_score must be between"),
+        ({"height_cm": 220, "weight_kg": 25}, "derived bmi must be between 10 and 70"),
+        ({"height_cm": 120, "weight_kg": 250}, "derived bmi must be between 10 and 70"),
+    ],
+)
+def test_model_frame_rejects_out_of_range_values(
+    overrides: dict,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        build_standard_model_frame(
+            fixed_input(**overrides),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+@pytest.mark.parametrize(
+    ("birth_date", "expected_age"),
+    [
+        (date(1981, 8, 27), 45),
+        (date(1961, 8, 27), 65),
+        (date(1921, 8, 27), 105),
+    ],
+)
+def test_supported_ages_complete_inference(birth_date: date, expected_age: int) -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FixedScorePipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    frame = build_standard_model_frame(
+        fixed_input(birth_date=birth_date),
+        as_of_date=date(2026, 8, 27),
+    )
+    result = predict_with_loaded_model(
+        loaded,
+        fixed_input(birth_date=birth_date),
+        as_of_date=date(2026, 8, 27),
+    )
+
+    assert frame.loc[0, "age"] == expected_age
+    assert result["risk_score"] == pytest.approx(0.02)
+    assert result["risk_category"] == "moderate"
+
+
+@pytest.mark.parametrize(
+    ("birth_date", "expected_age"),
+    [
+        (date(1981, 8, 28), 44),
+        (date(1920, 8, 27), 106),
+    ],
+)
+def test_unsupported_ages_are_rejected(birth_date: date, expected_age: int) -> None:
+    with pytest.raises(ValueError, match=f"age {expected_age} is outside the model-supported range 45-105"):
+        build_standard_model_frame(
+            fixed_input(birth_date=birth_date),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+def test_future_birth_date_is_rejected() -> None:
+    with pytest.raises(ValueError, match="birth_date cannot be in the future"):
+        build_standard_model_frame(
+            fixed_input(birth_date=date(2026, 8, 28)),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
 def test_standard_features_pass_leakage_guard() -> None:
     assert_no_leakage(list(STANDARD_MODEL_FEATURES))
 
