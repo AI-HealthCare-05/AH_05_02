@@ -4,6 +4,7 @@
   const CELL_WIDTH = 224;
   const CELL_HEIGHT = 288;
   const HEAD_CUT = 166;
+  const HEAD_OFFSET_Y = -12;
   const modularHairRows = { red_bow: 1, cow_hood: 2, midnight: 3, blue_cap: 4, teal_bob: 5 };
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
@@ -42,15 +43,14 @@
     const base = { row: 0, column };
     const outfit = { row: modularOutfitRows[options.outfitPreset] ?? 9, column };
     const hair = { row: modularHairRows[options.hairPreset] ?? 4, column };
-    const stride = options.moving && !options.mounted ? (Number(options.frame || 0) % 2 ? 2 : -1) : 0;
     const bob = options.moving ? (Number(options.frame || 0) % 2 ? -2 : 1) : 0;
-    const bodyTarget = { ...target, x: target.x + stride, y: target.y + bob };
+    const bodyTarget = { ...target, y: target.y + bob };
 
     context.save();
     context.imageSmoothingEnabled = false;
     drawSource(context, source.image, base, bodyTarget);
     drawSource(context, source.image, outfit, bodyTarget);
-    drawSource(context, source.image, hair, { ...target, y: target.y + bob });
+    drawSource(context, source.image, hair, { ...target, y: target.y + bob + HEAD_OFFSET_Y });
     context.restore();
   }
 
@@ -64,11 +64,18 @@
     const glasses = options.glasses !== "none" ? options.glasses : ["round_glasses", "star_glasses"].includes(options.accessory) ? options.accessory : "none";
     if (glasses !== "none") {
       context.strokeStyle = glasses === "star_glasses" || glasses === "sun" ? "#51284f" : "#27353d";
-      context.lineWidth = 4;
-      context.strokeRect(82 + directionOffset, 108, 24, 18);
-      context.strokeRect(116 + directionOffset, 108, 24, 18);
-      context.fillStyle = context.strokeStyle;
-      context.fillRect(106 + directionOffset, 114, 10, 4);
+      context.lineWidth = 3;
+      if (options.direction === "left" || options.direction === "right") {
+        const lensX = options.direction === "left" ? 86 : 116;
+        context.strokeRect(lensX + directionOffset, 100, 25, 15);
+        context.fillStyle = context.strokeStyle;
+        context.fillRect(lensX + directionOffset + (options.direction === "left" ? 22 : -4), 105, 7, 3);
+      } else {
+        context.strokeRect(84, 100, 23, 15);
+        context.strokeRect(117, 100, 23, 15);
+        context.fillStyle = context.strokeStyle;
+        context.fillRect(107, 105, 10, 3);
+      }
     }
     if (options.accessory === "red_scarf") {
       context.fillStyle = "#b92f34";
@@ -84,10 +91,10 @@
     }
     if (options.accessory === "sprout_hat" || options.hat === "headband") {
       context.fillStyle = options.hat === "headband" ? "#cb3d45" : "#3a8e48";
-      context.fillRect(72 + directionOffset, 61, 80, 10);
+      context.fillRect(72 + directionOffset, 49, 80, 10);
       if (options.accessory === "sprout_hat") {
-        context.fillRect(107 + directionOffset, 40, 9, 22);
-        context.fillRect(116 + directionOffset, 42, 20, 9);
+        context.fillRect(107 + directionOffset, 28, 9, 22);
+        context.fillRect(116 + directionOffset, 30, 20, 9);
       }
     }
     context.restore();

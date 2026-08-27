@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v14";
+      const resetKey = "forest-local-pwa-reset-v15";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -39,11 +39,11 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-9" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-10" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/avatar-compositor.js?v=20260827-3" defer></script>
+  <script src="/static/avatar-compositor.js?v=20260827-4" defer></script>
   <script src="/static/forest-phaser.js?v=20260827-6" defer></script>
-  <script src="/static/forest-game.js?v=20260827-13" defer></script>
+  <script src="/static/forest-game.js?v=20260827-14" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -58,6 +58,7 @@
       <button id="install-pwa" class="install-button" type="button" hidden>앱으로 설치</button>
       <button id="music-toggle" class="icon-button" type="button" aria-pressed="false">♪ 숲 음악 켜기</button>
       <button id="large-text-toggle" class="icon-button" type="button" aria-pressed="false">글자 크게</button>
+      <button id="open-profile" class="profile-button" type="button"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
     </div>
   </header>
 
@@ -149,17 +150,19 @@
           <button class="inspector-tab" type="button" role="tab" aria-selected="false" data-inspector-tab="team-inspector">함께하기</button>
         </div>
 
-        <section id="quests-panel" class="inspector-panel" aria-labelledby="quest-title">
+        <section id="quests-panel" class="inspector-panel" role="tabpanel" aria-labelledby="quest-title" tabindex="-1">
           <div class="panel-title"><div><p class="eyebrow">TODAY QUEST</p><h2 id="quest-title">오늘의 퀘스트</h2></div><strong id="personal-progress">0/3</strong></div>
           <p class="panel-description">사진 인증 없이 체크만으로 기록할 수 있어요.</p>
           <div id="quest-list" class="quest-list"></div>
         </section>
 
-        <section id="team-inspector" class="inspector-panel" aria-labelledby="group-title">
+        <section id="team-inspector" class="inspector-panel" role="tabpanel" aria-labelledby="group-title" tabindex="-1" hidden>
           <div class="panel-title"><div><p class="eyebrow">TOGETHER</p><h2 id="group-title">5명 공동 목표</h2></div><strong id="group-progress">12/15</strong></div>
+          <div class="group-mission-card"><span aria-hidden="true">🌳</span><div><strong>다섯 명이 오늘 3개씩 실천하기</strong><p id="group-remaining">공동 보상까지 3개 남았어요.</p></div></div>
           <div class="progress-track" role="progressbar" aria-label="공동 목표 진행률" aria-valuemin="0" aria-valuemax="15" aria-valuenow="12"><span id="group-progress-bar"></span></div>
           <ul id="member-list" class="member-list" aria-label="구성원별 퀘스트 진행 상태"></ul>
           <button id="reward-button" class="reward-button" type="button" disabled>15개 완료 후 무료 보물상자 열기</button>
+          <p id="group-reward-help" class="group-reward-help">모두 합쳐 15개를 완료하면 옷장 또는 창고 아이템 1개를 받아요.</p>
         </section>
       </aside>
 
@@ -229,6 +232,32 @@
     <p id="world-dialog-copy">집에서 편안하게 쉬어가세요.</p>
     <div id="world-dialog-actions" class="dialog-actions"></div>
   </dialog>
+
+  <dialog id="profile-dialog" class="profile-dialog" aria-labelledby="profile-title">
+    <header class="profile-header"><div><p class="eyebrow">MY PAGE</p><h2 id="profile-title">마이페이지</h2></div><button id="profile-close" class="dialog-close" type="button" aria-label="마이페이지 닫기">×</button></header>
+    <div class="profile-avatar-stage">
+      <canvas id="profile-avatar-canvas" width="448" height="576" aria-label="내 캐릭터 미리보기"></canvas>
+      <button id="profile-open-avatar" class="plain-button" type="button">캐릭터 꾸미기</button>
+    </div>
+    <form id="profile-form" class="profile-form">
+      <label for="profile-nickname">닉네임</label>
+      <div class="nickname-editor"><input id="profile-nickname" minlength="2" maxlength="14" autocomplete="nickname" required><button class="primary-button" type="submit">닉네임 저장</button></div>
+      <small>처음에는 자동 생성되며 언제든지 바꿀 수 있어요. 2~14자로 입력해 주세요.</small>
+    </form>
+    <div class="profile-summary"><div><span aria-hidden="true">🔥</span><small>연속 참여</small><strong>6일</strong></div><div><span aria-hidden="true">🥕</span><small>보유 당근</small><strong id="profile-carrots">100</strong></div><div><span aria-hidden="true">👥</span><small>모임</small><strong>5명</strong></div></div>
+  </dialog>
+
+  <section id="reward-celebration" class="reward-celebration" role="dialog" aria-modal="true" aria-labelledby="reward-celebration-title" hidden>
+    <button id="reward-skip" class="reward-skip" type="button">연출 건너뛰기</button>
+    <div class="reward-rays" aria-hidden="true"></div>
+    <div class="reward-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="reward-stage">
+      <p class="eyebrow">TODAY'S GROUP REWARD</p>
+      <h2 id="reward-celebration-title">오늘의 보물상자</h2>
+      <div class="treasure-chest" aria-hidden="true"><span class="chest-light"></span><span class="chest-lid"></span><span class="chest-body"></span><span class="chest-lock">🥕</span></div>
+      <div id="reward-reveal" class="reward-reveal"><span id="reward-reveal-icon" aria-hidden="true">🎁</span><strong id="reward-reveal-name">새 아이템</strong><small id="reward-reveal-destination">옷장으로 이동합니다</small></div>
+    </div>
+  </section>
 
   <aside id="chat-panel" class="chat-panel" aria-labelledby="chat-title" hidden>
     <div class="chat-heading"><div><p class="eyebrow">FOREST CHAT</p><h2 id="chat-title">숲 채팅</h2></div><button id="chat-close" type="button" aria-label="채팅 닫기">×</button></div>

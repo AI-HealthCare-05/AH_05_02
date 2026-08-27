@@ -129,17 +129,46 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
         "모자",
         "안경",
         "아우라",
-        "찌르기 이펙트",
+        "이펙트",
         "탈것",
         "펫",
         "말풍선",
     ):
         assert f'label: "{label}"' in script
-    assert 'label: "찌르기"' not in script
+    assert "찌르기 이펙트" not in script
     for behavior in ("renderAvatarStudio", "renderAvatarPreview", "avatarDraftHistory", "avatar-studio-save"):
         assert behavior in script
     assert ".avatar-studio-layout" in css
     assert '.avatar-item-card[aria-pressed="true"]' in css
+
+
+def test_group_tabs_reward_ceremony_and_profile_are_interactive() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    for control_id in (
+        "group-remaining",
+        "reward-celebration",
+        "reward-reveal-name",
+        "open-profile",
+        "profile-dialog",
+        "profile-nickname",
+        "profile-avatar-canvas",
+    ):
+        assert f'id="{control_id}"' in html
+    for behavior in (
+        "activateInspectorPanel",
+        "playRewardCelebration",
+        "generateNickname",
+        "renderProfileAvatar",
+        "profile-form",
+    ):
+        assert behavior in script
+    assert "renderInventory(reward)" in script
+    assert "reward-flight" in css
+    assert "rewardArrival" in css
+    assert "newItemArrival" in css
 
 
 def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation() -> None:
@@ -261,7 +290,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v14" in html
+    assert "forest-local-pwa-reset-v15" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -301,7 +330,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v17" in worker
+    assert "gandang-carrot-forest-pwa-v18" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script

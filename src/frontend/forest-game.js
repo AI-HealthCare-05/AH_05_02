@@ -12,6 +12,18 @@
   const RENDER_SCALE = 2;
   const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
+  let rewardSkipResolve = null;
+  const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
+  const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
+
+  function generateNickname() {
+    const random = new Uint32Array(3);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
+    else random.set([Date.now(), Date.now() * 7, Date.now() * 13]);
+    const adjective = nicknameAdjectives[random[0] % nicknameAdjectives.length];
+    const noun = nicknameNouns[random[1] % nicknameNouns.length];
+    return `${adjective} ${noun}${String(random[2] % 1000).padStart(3, "0")}`;
+  }
 
   const quests = [
     { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
@@ -56,7 +68,7 @@
     { id: "hat", label: "모자", icon: "🧢" },
     { id: "glasses", label: "안경", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
-    { id: "effect", label: "찌르기 이펙트", icon: "💫" },
+    { id: "effect", label: "이펙트", icon: "💫" },
     { id: "vehicle", label: "탈것", icon: "🛴" },
     { id: "pet", label: "펫", icon: "🐾" },
     { id: "speech", label: "말풍선", icon: "💬" },
@@ -150,9 +162,11 @@
   };
 
   function defaultState() {
+    const generatedNickname = generateNickname();
     return {
       dateKey: TODAY,
-      avatar: { name: "세준", gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
+      profileVersion: 1,
+      avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -173,9 +187,25 @@
 
   function normalizeState(value) {
     const fallback = defaultState();
-    if (!value || value.dateKey !== TODAY) return fallback;
+    if (!value) return fallback;
+    if (value.dateKey !== TODAY) {
+      const previousAvatar = value.avatar || {};
+      fallback.profileVersion = 1;
+      fallback.avatar = {
+        ...fallback.avatar,
+        ...previousAvatar,
+        name: previousAvatar.name || fallback.avatar.name,
+        x: 384, y: 352, direction: "down", sitting: false, mounted: false,
+      };
+      fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
+      fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]) : fallback.inventory;
+      fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+      return fallback;
+    }
     const state = { ...fallback, ...value };
     state.avatar = { ...fallback.avatar, ...(value.avatar || {}) };
+    if (!value.profileVersion || !state.avatar.name || state.avatar.name === "세준") state.avatar.name = generateNickname();
+    state.profileVersion = 1;
     if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
@@ -189,8 +219,11 @@
   class DemoForestAdapter {
     constructor() { this.mode = "demo"; }
     async load() {
-      try { return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
-      catch { return defaultState(); }
+      let loaded;
+      try { loaded = normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
+      catch { loaded = defaultState(); }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+      return loaded;
     }
     async save(state) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -269,7 +302,11 @@
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   basicWalkAtlas.addEventListener("load", renderCanvas);
   basicScooterAtlas.addEventListener("load", renderCanvas);
-  modularAvatarAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
+  modularAvatarAtlas.addEventListener("load", () => {
+    renderCanvas();
+    if ($("#avatar-studio").open) renderAvatarStudio();
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
   Object.values(presetSpriteAtlases).forEach((atlas) => atlas.image.addEventListener("load", () => {
     renderCanvas();
     if ($("#avatar-studio").open) renderAvatarStudio();
@@ -319,6 +356,7 @@
   function groupCompleted() { return state.members.reduce((total, member) => total + member.completed, 0); }
   async function persist(message = null) {
     await adapter.save(state);
+    updateProfileUI();
     window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene } }));
     if (message) setStatus(message);
   }
@@ -983,13 +1021,14 @@
     const progressbar = $(".progress-track[role='progressbar']");
     progressbar.setAttribute("aria-valuenow", String(completed));
     $("#group-progress-bar").style.width = `${completed / 15 * 100}%`;
+    $("#group-remaining").textContent = completed >= 15 ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
     $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed === 3 ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/3</span></li>`).join("");
     const rewardButton = $("#reward-button");
     rewardButton.disabled = completed < 15 || state.rewardClaimed;
     rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
   }
 
-  function renderInventory() {
+  function renderInventory(highlightCode = null) {
     const renderItems = (kind) => state.inventory.filter((code) => itemCatalog[code].kind === kind).map((code) => {
       const item = itemCatalog[code];
       const equipped = item.kind === "accessory" && state.avatar.equipped === code;
@@ -998,9 +1037,9 @@
         const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[code];
         const backgroundPosition = `${storageIndex * 100 / 3}% 0%`;
         const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
-        return `<button class="inventory-item storage-icon-item" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
+        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
       }
-      return `<button class="inventory-item" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
+      return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
     $("#wardrobe-list").innerHTML = renderItems("accessory") || "<p class=\"empty-assets\">획득한 의상이 없습니다.</p>";
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
@@ -1264,19 +1303,115 @@
     $("#avatar-studio").showModal();
   }
 
+  function renderProfileAvatar() {
+    const canvas = $("#profile-avatar-canvas");
+    if (!canvas) return;
+    const target = canvas.getContext("2d");
+    target.clearRect(0, 0, canvas.width, canvas.height);
+    target.setTransform(2, 0, 0, 2, 0, 0);
+    target.imageSmoothingEnabled = false;
+    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
+    const cosmetics = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
+    window.CarrotAvatarCompositor.drawFrame(target, { modular: { image: modularAvatarAtlas, rows: 11 } }, {
+      preset: state.avatar.preset,
+      hairPreset: stylePresetByItem[cosmetics.hair] || state.avatar.preset,
+      outfitPreset: stylePresetByItem[cosmetics.outfit] || state.avatar.preset,
+      direction: "down", mounted: false, moving: false, frame: 0,
+      accessory: cosmetics.accessory, hat: cosmetics.hat, glasses: cosmetics.glasses,
+    });
+    target.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function updateProfileUI() {
+    if (!state?.avatar) return;
+    $("#topbar-nickname").textContent = state.avatar.name;
+    $("#profile-nickname").value = state.avatar.name;
+    $("#profile-carrots").textContent = String(state.carrots);
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  }
+
+  function openProfile() {
+    updateProfileUI();
+    renderProfileAvatar();
+    $("#profile-dialog").showModal();
+  }
+
   function renderAll() {
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
     $("#avatar-gender").value = state.avatar.gender;
     $("#avatar-preset").value = state.avatar.preset;
-    renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas();
+    renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); updateProfileUI();
   }
 
   function deterministicReward() {
     const seed = [...TODAY].reduce((total, character) => total + character.charCodeAt(0), state.inventory.length);
     const candidates = rewardPool.filter((code) => !state.inventory.includes(code));
     return candidates.length ? candidates[seed % candidates.length] : null;
+  }
+
+  function activateInspectorPanel(panelId, shouldScroll = false) {
+    document.querySelectorAll("[data-inspector-tab]").forEach((item) => {
+      const active = item.dataset.inspectorTab === panelId;
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-selected", String(active));
+    });
+    for (const id of ["quests-panel", "team-inspector"]) {
+      const panel = document.getElementById(id);
+      panel.hidden = id !== panelId;
+    }
+    const activePanel = document.getElementById(panelId);
+    if (shouldScroll) activePanel?.scrollIntoView({ behavior: "smooth", block: "center" });
+    activePanel?.focus({ preventScroll: true });
+  }
+
+  const animationDelay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+  async function playRewardCelebration(reward) {
+    const item = reward ? itemCatalog[reward] : null;
+    const destinationId = item?.kind === "accessory" ? "wardrobe-list" : "storage-list";
+    const destinationLabel = item?.kind === "accessory" ? "옷장" : "창고";
+    const overlay = $("#reward-celebration");
+    $("#reward-reveal-icon").textContent = item?.icon || "🥕";
+    $("#reward-reveal-name").textContent = item?.name || "당근 50개";
+    $("#reward-reveal-destination").textContent = item ? `${destinationLabel}에 새 아이템이 생성됩니다` : "보유 당근에 추가됩니다";
+    overlay.hidden = false;
+    $("#reward-skip").focus();
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    await Promise.race([
+      animationDelay(reducedMotion ? 250 : 2300),
+      new Promise((resolve) => { rewardSkipResolve = resolve; }),
+    ]);
+    rewardSkipResolve = null;
+    overlay.hidden = true;
+    if (!item) return;
+
+    const destination = document.getElementById(destinationId);
+    const group = destination.closest(".asset-group");
+    group.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    await animationDelay(reducedMotion ? 50 : 450);
+
+    const bounds = group.getBoundingClientRect();
+    const startX = window.innerWidth / 2;
+    const startY = Math.max(80, window.innerHeight * .2);
+    const endX = bounds.left + bounds.width / 2;
+    const endY = bounds.top + Math.min(bounds.height / 2, 90);
+    const flight = document.createElement("div");
+    flight.className = "reward-flight";
+    flight.setAttribute("aria-hidden", "true");
+    flight.textContent = item.icon;
+    flight.style.setProperty("--reward-x", `${endX - startX}px`);
+    flight.style.setProperty("--reward-y", `${endY - startY}px`);
+    document.body.append(flight);
+    window.requestAnimationFrame(() => flight.classList.add("is-flying"));
+    await animationDelay(reducedMotion ? 80 : 850);
+    renderInventory(reward);
+    group.classList.add("reward-arrival");
+    group.querySelector(`[data-item="${reward}"]`)?.focus({ preventScroll: true });
+    window.setTimeout(() => group.classList.remove("reward-arrival"), 1200);
+    window.setTimeout(() => flight.remove(), 250);
   }
 
   $("#quest-list").addEventListener("change", async (event) => {
@@ -1303,6 +1438,30 @@
   $("#avatar-studio-close").addEventListener("click", () => $("#avatar-studio").close());
   $("#avatar-studio").addEventListener("click", (event) => {
     if (event.target === $("#avatar-studio")) $("#avatar-studio").close();
+  });
+  $("#open-profile").addEventListener("click", openProfile);
+  $("#profile-close").addEventListener("click", () => $("#profile-dialog").close());
+  $("#profile-dialog").addEventListener("click", (event) => {
+    if (event.target === $("#profile-dialog")) $("#profile-dialog").close();
+  });
+  $("#profile-open-avatar").addEventListener("click", () => {
+    $("#profile-dialog").close();
+    openAvatarStudio();
+  });
+  $("#profile-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const nickname = $("#profile-nickname").value.trim().replace(/\s+/g, " ");
+    if (nickname.length < 2 || nickname.length > 14) {
+      $("#profile-nickname").setCustomValidity("닉네임은 2~14자로 입력해 주세요.");
+      $("#profile-nickname").reportValidity();
+      return;
+    }
+    $("#profile-nickname").setCustomValidity("");
+    state.avatar.name = nickname;
+    $("#avatar-name").value = nickname;
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
+    await persist(`${nickname}(으)로 닉네임을 변경했습니다.`);
+    $("#profile-dialog").close();
   });
   $("#avatar-category-nav").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-category]");
@@ -1414,8 +1573,18 @@
     state.rewardClaimed = true;
     state.carrots += 50;
     if (reward) state.inventory.push(reward);
-    renderAll();
+    renderGroup();
+    $("#carrot-balance").textContent = String(state.carrots);
+    $("#profile-carrots").textContent = String(state.carrots);
+    await adapter.save(state);
+    await playRewardCelebration(reward);
+    if (!reward) renderInventory();
     await persist(reward ? `${itemCatalog[reward].name}과 당근 50개를 받았습니다!` : "당근 50개를 받았습니다!");
+  });
+
+  $("#reward-skip").addEventListener("click", () => {
+    $("#reward-celebration").hidden = true;
+    if (rewardSkipResolve) rewardSkipResolve();
   });
 
   function toggleChat(force) {
@@ -1506,6 +1675,7 @@
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", String(active));
       });
+      if (button.dataset.workspaceTarget === "team-inspector") activateInspectorPanel("team-inspector");
       const target = document.getElementById(button.dataset.workspaceTarget);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       target?.classList.add("workspace-focus");
@@ -1515,12 +1685,7 @@
 
   document.querySelectorAll("[data-inspector-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      document.querySelectorAll("[data-inspector-tab]").forEach((item) => {
-        const active = item === button;
-        item.classList.toggle("is-active", active);
-        item.setAttribute("aria-selected", String(active));
-      });
-      document.getElementById(button.dataset.inspectorTab)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      activateInspectorPanel(button.dataset.inspectorTab, true);
     });
   });
 
@@ -1583,7 +1748,7 @@
     }
     if (action === "team") {
       $("#world-dialog").close();
-      $("#team-inspector").scrollIntoView({ behavior: "smooth", block: "center" });
+      activateInspectorPanel("team-inspector", true);
     }
     if (action === "ride") {
       $("#world-dialog").close();
