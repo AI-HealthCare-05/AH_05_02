@@ -12,10 +12,19 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-1">
-  <script src="/static/forest-game.js?v=20260827-1" defer></script>
+  <style>
+    #forest-boot{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:#edf2ee;color:#16342c;font:800 18px/1.6 system-ui,sans-serif;text-align:center}
+    #forest-boot span{display:block;margin:auto auto 14px;font-size:42px;animation:forestBootPulse 1s ease-in-out infinite alternate}
+    html:not(.forest-style-ready) body>:not(#forest-boot),html:not(.forest-script-ready) body>:not(#forest-boot){visibility:hidden}
+    html.forest-style-ready.forest-script-ready #forest-boot{display:none}
+    @keyframes forestBootPulse{to{transform:translateY(-5px)}}
+    @media(prefers-reduced-motion:reduce){#forest-boot span{animation:none}}
+  </style>
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-2" onload="document.documentElement.classList.add('forest-style-ready')">
+  <script src="/static/forest-game.js?v=20260827-2" defer></script>
 </head>
 <body>
+  <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
 
   <header class="studio-topbar">

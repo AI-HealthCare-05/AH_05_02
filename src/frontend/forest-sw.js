@@ -1,11 +1,15 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v3";
-const APP_SHELL = [
+const CACHE_NAME = "gandang-carrot-forest-pwa-v4";
+const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260827-1",
-  "/static/forest-game.js?v=20260827-1",
+  "/static/forest-game.css?v=20260827-2",
+  "/static/forest-game.js?v=20260827-2",
+  "/static/icons/forest-icon-192.png",
+  "/static/icons/forest-icon-512.png",
+];
+const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-avatar-atlas-v1.png",
   "/static/assets/carrot-forest-cosmetics-atlas-v1.png",
   "/static/assets/carrot-forest-cat-pets-v1.png",
@@ -13,12 +17,15 @@ const APP_SHELL = [
   "/static/assets/carrot-forest-world-v2.png",
   "/static/assets/carrot-forest-home-v1.png",
   "/static/assets/carrot-forest-garden-v1.png",
-  "/static/icons/forest-icon-192.png",
-  "/static/icons/forest-icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await cache.addAll(CORE_SHELL);
+      await Promise.allSettled(MEDIA_ASSETS.map((asset) => cache.add(asset)));
+    })
+  );
   self.skipWaiting();
 });
 

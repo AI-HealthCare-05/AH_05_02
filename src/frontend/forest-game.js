@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  document.documentElement.classList.add("forest-script-ready");
+
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;

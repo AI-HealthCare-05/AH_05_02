@@ -194,6 +194,11 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert '"sizes": "192x192"' in manifest
     assert '"sizes": "512x512"' in manifest
     assert "beforeinstallprompt" in script
+    assert 'id="forest-boot" role="status"' in html
+    assert "forest-style-ready" in html
+    assert 'classList.add("forest-script-ready")' in script
+    assert "const CORE_SHELL" in worker
+    assert "Promise.allSettled" in worker
     assert 'serviceWorker.register("/forest-sw.js", { scope: "/forest" })' in script
     assert 'url.pathname.startsWith("/api/")' in worker
     assert "carrot-forest-avatar-atlas-v1.png" in worker
