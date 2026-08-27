@@ -1,13 +1,14 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v12";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v14";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
   "/static/forest-game.css?v=20260827-9",
   "/static/vendor/phaser-3.90.0.min.js",
-  "/static/forest-phaser.js?v=20260827-2",
-  "/static/forest-game.js?v=20260827-9",
+  "/static/avatar-compositor.js?v=20260827-2",
+  "/static/forest-phaser.js?v=20260827-4",
+  "/static/forest-game.js?v=20260827-11",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
@@ -20,6 +21,12 @@ const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-preset-midnight-v1.png",
   "/static/assets/carrot-forest-preset-blue-cap-v1.png",
   "/static/assets/carrot-forest-preset-teal-bob-v1.png",
+  "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png",
+  "/static/assets/carrot-forest-avatar-cow_hood-normalized-v2.png",
+  "/static/assets/carrot-forest-avatar-midnight-normalized-v2.png",
+  "/static/assets/carrot-forest-avatar-blue_cap-normalized-v2.png",
+  "/static/assets/carrot-forest-avatar-teal_bob-normalized-v2.png",
+  "/static/assets/carrot-forest-avatar-manifest-v2.json",
   "/static/assets/carrot-forest-cosmetics-atlas-v1.png",
   "/static/assets/carrot-forest-cat-pets-v1.png",
   "/static/assets/carrot-forest-storage-atlas-v1.png",

@@ -54,7 +54,8 @@
 
 - 실행 월드는 `Phaser 3.90.0`을 저장소 내부 정적 파일로 제공하며 MIT 라이선스 전문은 `src/frontend/vendor/PHASER_LICENSE.txt`에 보관한다.
 - 투자자 데모의 월드 아바타와 꾸미기 미리보기는 프로젝트에서 제작한 동일한 고해상도 치비 프리셋 아틀라스를 사용한다. 각 프리셋은 앞·뒤·좌·우 보행과 스쿠터 방향 장면을 포함하며, 월드와 선택 카드의 화풍이 달라지지 않도록 완성형 코디 단위로 제공한다.
-- 현재 투자자 데모는 `리본 정원사`, `음메 목장지기`, `한밤 숲지기`, `파란 모자 농부`, `미소 정원사`의 5개 완성형 코디를 제공한다. 개별 헤어·의상 조합은 같은 화풍의 레이어 아틀라스를 별도로 제작한 뒤 확장한다.
+- 원본 모음판은 균등한 셀 구조가 아니므로 직접 잘라 쓰지 않는다. `scripts/build_carrot_avatar_atlases.py`가 각 프레임의 실제 알파 영역을 탐지하고, 발바닥을 기준으로 `224×288` 정수 셀에 다시 배치한다. 이 정규화 과정으로 인접 프레임의 머리·발·의상이 튀어나오는 현상을 차단한다.
+- `avatar-compositor.js`는 정규화된 5개 코디에서 헤어와 의상을 독립적으로 합성하고 액세서리·모자·안경을 같은 좌표계에 그린다. 꾸미기 미리보기와 Phaser 월드가 이 합성기를 함께 사용하므로 저장 후 화풍이나 장착 결과가 달라지지 않는다.
 
 - `src/frontend/assets/carrot-forest-avatar-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 4×3 투명 캐릭터 아틀라스
 - `src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png`: 새싹 정원사 기본 의상용 앞·뒤·좌·우 4×4 보행 아틀라스
@@ -64,6 +65,8 @@
 - `src/frontend/assets/carrot-forest-preset-midnight-v1.png`: 한밤 숲지기 보행·탑승 아틀라스
 - `src/frontend/assets/carrot-forest-preset-blue-cap-v1.png`: 파란 모자 농부 보행·탑승 아틀라스
 - `src/frontend/assets/carrot-forest-preset-teal-bob-v1.png`: 미소 정원사 보행·탑승 아틀라스
+- `src/frontend/assets/carrot-forest-avatar-*-normalized-v2.png`: 정수 셀과 하단 앵커를 적용한 실제 실행용 아틀라스
+- `src/frontend/assets/carrot-forest-avatar-manifest-v2.json`: 원본·정규화 프레임 경계와 방향 행 메타데이터
 - `src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 5×4 투명 꾸미기 아이콘 아틀라스
 - `src/frontend/assets/carrot-forest-cat-pets-v1.png`: 파란 눈 흰 고양이·노란 눈 주황갈색 고양이 2×1 투명 펫 아틀라스
 - `src/frontend/assets/carrot-forest-storage-atlas-v1.png`: 꽃밭·등불·바르게 선 버섯·벤치 4×1 투명 창고 오브젝트 아틀라스
@@ -71,7 +74,7 @@
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
 - 첨부 화면은 픽셀 밀도·치비 비율·카드 가독성의 참고 자료로만 사용했으며 기존 캐릭터·아이템·로고·UI 이미지는 복제하지 않았다.
-- 스프라이트 셀 좌표는 `drawAtlasCell()`에서 계산하며, 같은 에셋을 카드 CSS와 Canvas 미리보기·월드 렌더러가 함께 사용한다.
+- 원본 모음판을 갱신한 경우 `pip install -r requirements-assets.txt` 후 `python scripts/build_carrot_avatar_atlases.py`로 실행용 아틀라스를 재생성한다.
 
 ## 3. 실행 방법
 
@@ -126,6 +129,8 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | 독립 게임 화면 | `src/frontend/forest.html` |
 | 픽셀 게임·상태·어댑터 | `src/frontend/forest-game.js` |
 | Phaser 월드·고해상도 프리셋 아바타·4방향 이동 | `src/frontend/forest-phaser.js` |
+| 헤어·의상·액세서리 공통 합성 | `src/frontend/avatar-compositor.js` |
+| 스프라이트 정규화 빌드 | `scripts/build_carrot_avatar_atlases.py` |
 | 반응형·접근성 스타일 | `src/frontend/forest-game.css` |
 | PWA 설치 정보 | `src/frontend/forest.webmanifest` |
 | 오프라인 앱 셸 | `src/frontend/forest-sw.js` |
@@ -148,6 +153,7 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 ```powershell
 node --check src/frontend/forest-game.js
 node --check src/frontend/forest-phaser.js
+node --check src/frontend/avatar-compositor.js
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```

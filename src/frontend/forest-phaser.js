@@ -7,15 +7,23 @@
   const WORLD = { width: 768, height: 512 };
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const premiumPresets = {
-    red_bow: { path: "/static/assets/carrot-forest-preset-red-bow-v1.png", rows: 6 },
-    cow_hood: { path: "/static/assets/carrot-forest-preset-cow-hood-v1.png", rows: 5 },
-    midnight: { path: "/static/assets/carrot-forest-preset-midnight-v1.png", rows: 6 },
-    blue_cap: { path: "/static/assets/carrot-forest-preset-blue-cap-v1.png", rows: 6 },
-    teal_bob: { path: "/static/assets/carrot-forest-preset-teal-bob-v1.png", rows: 6 },
+    red_bow: { path: "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png", rows: 6 },
+    cow_hood: { path: "/static/assets/carrot-forest-avatar-cow_hood-normalized-v2.png", rows: 5 },
+    midnight: { path: "/static/assets/carrot-forest-avatar-midnight-normalized-v2.png", rows: 6 },
+    blue_cap: { path: "/static/assets/carrot-forest-avatar-blue_cap-normalized-v2.png", rows: 6 },
+    teal_bob: { path: "/static/assets/carrot-forest-avatar-teal_bob-normalized-v2.png", rows: 6 },
   };
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft",
     hat: "none", glasses: "none", face: "calm", accessory: "none",
+  };
+  const hairPresetByStyle = {
+    red_wave: "red_bow", cow_brown: "cow_hood", midnight: "midnight",
+    blue_short: "blue_cap", teal_bob: "teal_bob",
+  };
+  const outfitPresetByStyle = {
+    navy_garden: "red_bow", cow_vest: "cow_hood", violet: "midnight",
+    blue_overalls: "blue_cap", teal_garden: "teal_bob",
   };
 
   function storedState() {
@@ -47,7 +55,7 @@
       this.load.image("world-bg", "/static/assets/carrot-forest-world-v2.png");
       this.load.image("home-bg", "/static/assets/carrot-forest-home-v1.png");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v1.png");
-      Object.entries(premiumPresets).forEach(([key, config]) => this.load.image(`preset-${key}`, config.path));
+      Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
       this.load.spritesheet("cat-pets", "/static/assets/carrot-forest-cat-pets-v1.png", { frameWidth: 887, frameHeight: 887 });
     }
 
@@ -56,12 +64,16 @@
       this.shadow = this.add.ellipse(0, 16, 42, 15, 0x16382a, 0.25);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.player.add(this.shadow);
-      this.preparePresetFrames();
-      this.premiumAvatar = this.add.image(0, 0, `preset-${this.avatar.preset}`, "r0c0").setOrigin(0.5, 0.82).setDepth(3);
+      this.presetSources = Object.fromEntries(Object.entries(premiumPresets).map(([preset, config]) => [preset, {
+        image: this.textures.get(`preset-${preset}`).getSourceImage(), rows: config.rows,
+      }]));
+      if (this.textures.exists("avatar-composite")) this.textures.remove("avatar-composite");
+      this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
+      this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);
       this.player.add(this.premiumAvatar);
       this.pet = this.add.sprite(39, 12, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.057).setDepth(1);
       this.player.add(this.pet);
-      this.nameplate = this.add.text(0, -50, this.avatar.name, {
+      this.nameplate = this.add.text(0, -118, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
         color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
       }).setOrigin(0.5).setStroke("#ffffff", 2);
@@ -82,24 +94,8 @@
       this.emitPosition(true);
     }
 
-    preparePresetFrames() {
-      Object.entries(premiumPresets).forEach(([preset, config]) => {
-        const texture = this.textures.get(`preset-${preset}`);
-        const source = texture.getSourceImage();
-        const cellWidth = source.width / 4;
-        const cellHeight = source.height / config.rows;
-        for (let row = 0; row < config.rows; row += 1) {
-          for (let column = 0; column < 4; column += 1) {
-            const frameName = `r${row}c${column}`;
-            if (!texture.has(frameName)) texture.add(frameName, 0, column * cellWidth, row * cellHeight, cellWidth, cellHeight);
-          }
-        }
-      });
-    }
-
     rebuildAvatar() {
       const c = this.avatar.cosmetics;
-      this.premiumAvatar?.setTexture(`preset-${this.avatar.preset}`, "r0c0").setDepth(3);
       this.setPremiumFrame(this.avatar.direction, false, 0);
       this.nameplate?.setDepth(30).setText(this.avatar.name);
       const pet = c.pet;
@@ -177,17 +173,25 @@
     }
 
     setPremiumFrame(direction, moving, time, running = false) {
-      if (!this.premiumAvatar) return;
-      const source = this.premiumAvatar.texture.getSourceImage();
-      const cellWidth = source.width / 4;
-      const rows = premiumPresets[this.avatar.preset].rows;
-      const cellHeight = source.height / rows;
-      const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] || 0;
-      const row = this.avatar.mounted ? (moving && rows === 6 ? 5 : 4) : directionRows[direction];
+      if (!this.premiumAvatar || !window.CarrotAvatarCompositor) return;
       const rate = running || this.avatar.mounted ? 90 : 140;
-      const column = this.avatar.mounted ? directionColumn : moving ? Math.floor(time / rate) % 4 : 0;
-      this.premiumAvatar.setFrame(`r${row}c${column}`);
-      this.premiumAvatar.setScale(138 / cellHeight);
+      const cosmetics = this.avatar.cosmetics;
+      const context = this.compositeTexture.getContext();
+      context.clearRect(0, 0, 224, 288);
+      window.CarrotAvatarCompositor.drawFrame(context, this.presetSources, {
+        preset: this.avatar.preset,
+        hairPreset: hairPresetByStyle[cosmetics.hair] || this.avatar.preset,
+        outfitPreset: outfitPresetByStyle[cosmetics.outfit] || this.avatar.preset,
+        direction,
+        mounted: this.avatar.mounted,
+        moving,
+        frame: Math.floor(time / rate) % 4,
+        accessory: cosmetics.accessory,
+        hat: cosmetics.hat,
+        glasses: cosmetics.glasses,
+      });
+      this.compositeTexture.refresh();
+      this.premiumAvatar.setScale(0.56);
     }
   }
 

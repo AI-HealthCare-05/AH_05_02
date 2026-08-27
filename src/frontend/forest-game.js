@@ -50,6 +50,11 @@
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
   const avatarCategories = [
     { id: "preset", label: "완성형 코디", icon: "🧑‍🌾" },
+    { id: "hair", label: "헤어", icon: "💇" },
+    { id: "outfit", label: "의상", icon: "👕" },
+    { id: "accessory", label: "액세서리", icon: "👜" },
+    { id: "hat", label: "모자", icon: "🧢" },
+    { id: "glasses", label: "안경", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
     { id: "effect", label: "찌르기 이펙트", icon: "💫" },
     { id: "vehicle", label: "탈것", icon: "🛴" },
@@ -239,11 +244,11 @@
   const basicWalkAtlas = new Image();
   const basicScooterAtlas = new Image();
   const presetSpriteAtlases = {
-    red_bow: { image: new Image(), rows: 6, file: "carrot-forest-preset-red-bow-v1.png" },
-    cow_hood: { image: new Image(), rows: 5, file: "carrot-forest-preset-cow-hood-v1.png" },
-    midnight: { image: new Image(), rows: 6, file: "carrot-forest-preset-midnight-v1.png" },
-    blue_cap: { image: new Image(), rows: 6, file: "carrot-forest-preset-blue-cap-v1.png" },
-    teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-preset-teal-bob-v1.png" },
+    red_bow: { image: new Image(), rows: 6, file: "carrot-forest-avatar-red_bow-normalized-v2.png" },
+    cow_hood: { image: new Image(), rows: 5, file: "carrot-forest-avatar-cow_hood-normalized-v2.png" },
+    midnight: { image: new Image(), rows: 6, file: "carrot-forest-avatar-midnight-normalized-v2.png" },
+    blue_cap: { image: new Image(), rows: 6, file: "carrot-forest-avatar-blue_cap-normalized-v2.png" },
+    teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-avatar-teal_bob-normalized-v2.png" },
   };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
@@ -1039,7 +1044,12 @@
         return;
       }
       const atlas = presetSpriteAtlases[preset];
-      if (atlas) drawAtlasCell(target, atlas.image, 0, 4, atlas.rows, 9, 5, 78, 88);
+      if (atlas) {
+        const crop = thumbnail.dataset.presetCrop;
+        if (crop === "head") target.drawImage(atlas.image, 0, 0, 224, 166, 9, 4, 78, 91);
+        else if (crop === "body") target.drawImage(atlas.image, 0, 136, 224, 152, 9, 5, 78, 88);
+        else drawAtlasCell(target, atlas.image, 0, 4, atlas.rows, 9, 5, 78, 88);
+      }
     });
     document.querySelectorAll("canvas[data-avatar-thumb]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
@@ -1134,16 +1144,22 @@
     previewContext.imageSmoothingEnabled = false;
     const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
-    const previewPreset = avatarDraft.preset || "sprout";
+    const previewPreset = avatarDraft.preset || "blue_cap";
     const previewAtlas = presetSpriteAtlases[previewPreset];
-    if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth) {
-      drawAtlasCell(previewContext, previewAtlas.image, 0, 4, previewAtlas.rows, 58, 38, 164, 205);
+    const presetSources = Object.fromEntries(Object.entries(presetSpriteAtlases).map(([preset, atlas]) => [preset, atlas]));
+    if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth && window.CarrotAvatarCompositor) {
+      window.CarrotAvatarCompositor.drawFrame(previewContext, presetSources, {
+        preset: previewPreset,
+        hairPreset: stylePresetByItem[avatarDraft.hair] || previewPreset,
+        outfitPreset: stylePresetByItem[avatarDraft.outfit] || previewPreset,
+        direction: "down", mounted: false, moving: false, frame: 0,
+        accessory: avatarDraft.accessory, hat: avatarDraft.hat, glasses: avatarDraft.glasses,
+      }, { x: 58, y: 24, width: 164, height: 224 });
     } else if (basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
       drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
     } else {
       drawLayeredAvatarPreview(previewContext, avatarDraft);
     }
-    drawPreviewAccessoryOverlay(previewContext, avatarDraft.accessory);
     const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, effectIndex, 5, 4, 16, 50, 80, 80);
     const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
@@ -1181,7 +1197,9 @@
   function renderAvatarStudio() {
     $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
-    const items = avatarCatalog[activeAvatarCategory];
+    const items = ["hair", "outfit"].includes(activeAvatarCategory)
+      ? avatarCatalog[activeAvatarCategory].filter((item) => stylePresetByItem[item.id])
+      : avatarCatalog[activeAvatarCategory];
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
@@ -1190,6 +1208,8 @@
       let visual;
       if (activeAvatarCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (["hair", "outfit"].includes(activeAvatarCategory)) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${stylePresetByItem[item.id]}" data-preset-crop="${activeAvatarCategory === "hair" ? "head" : "body"}" aria-hidden="true"></canvas>`;
       } else if (["face", "accessory"].includes(activeAvatarCategory)) {
         const itemPreset = stylePresetByItem[item.id];
         const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
@@ -1276,7 +1296,7 @@
     if (!button || avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
-    const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : stylePresetByItem[button.dataset.avatarItem];
+    const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : null;
     if (linkedPreset && presetBundles[linkedPreset]) {
       avatarDraft = { ...avatarDraft, preset: linkedPreset, ...presetBundles[linkedPreset] };
     }

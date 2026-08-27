@@ -123,6 +123,11 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-item-grid"' in html
     for label in (
         "완성형 코디",
+        "헤어",
+        "의상",
+        "액세서리",
+        "모자",
+        "안경",
         "아우라",
         "찌르기 이펙트",
         "탈것",
@@ -256,7 +261,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v9" in html
+    assert "forest-local-pwa-reset-v11" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -288,19 +293,44 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
         assert event_name in game_script or event_name in phaser_script
     for preset in ("red_bow", "cow_hood", "midnight", "blue_cap", "teal_bob"):
         assert preset in phaser_script
-        assert f"carrot-forest-preset-{preset.replace('_', '-')}-v1.png" in phaser_script
+        assert f"carrot-forest-avatar-{preset}-normalized-v2.png" in phaser_script
     assert "directionRows" in phaser_script
     assert "setPremiumFrame" in phaser_script
-    assert "preparePresetFrames" in phaser_script
-    assert "this.premiumAvatar.setFrame" in phaser_script
+    assert "this.compositeTexture.refresh" in phaser_script
     assert "this.keys.R.isDown" in phaser_script
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v12" in worker
+    assert "gandang-carrot-forest-pwa-v14" in worker
     assert "/static/assets/lpc/" not in worker
+    assert "/static/avatar-compositor.js" in html
+    assert "CarrotAvatarCompositor" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
+
+
+def test_normalized_avatar_atlases_have_exact_cells_and_reproducible_manifest() -> None:
+    import json
+    import struct
+
+    manifest_path = ROOT / "src/frontend/assets/carrot-forest-avatar-manifest-v2.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["cell_width"] == 224
+    assert manifest["cell_height"] == 288
+    assert (ROOT / "scripts/build_carrot_avatar_atlases.py").exists()
+    assert (ROOT / "requirements-assets.txt").exists()
+    for preset, config in manifest["presets"].items():
+        image_path = ROOT / "src/frontend/assets" / config["file"]
+        raw = image_path.read_bytes()
+        width, height = struct.unpack(">II", raw[16:24])
+        assert width == 224 * 4
+        assert height == 288 * config["rows"]
+        assert len(config["frames"]) == 4 * config["rows"]
+        for frame in config["frames"]:
+            left, top, right, bottom = frame["normalized_bbox"]
+            assert 0 <= left < right <= manifest["cell_width"]
+            assert 0 <= top < bottom <= manifest["cell_height"]
+        assert preset in ("red_bow", "cow_hood", "midnight", "blue_cap", "teal_bob")
 
 
 def test_pwa_route_response_contracts() -> None:
