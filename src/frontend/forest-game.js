@@ -1282,7 +1282,8 @@
     setStatus("당근의 숲이 앱으로 설치되었습니다.");
   });
 
-  if ("serviceWorker" in navigator) {
+  const localDemoOrigin = ["127.0.0.1", "localhost"].includes(window.location.hostname);
+  if ("serviceWorker" in navigator && !localDemoOrigin) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/forest-sw.js", { scope: "/forest" }).catch(() => {
         setStatus("오프라인 준비에 실패했습니다. 온라인 게임은 계속 이용할 수 있습니다.");

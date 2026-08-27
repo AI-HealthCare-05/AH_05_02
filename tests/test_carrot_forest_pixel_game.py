@@ -196,7 +196,10 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
+    assert "forest-local-pwa-reset-v5" in html
+    assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
+    assert "localDemoOrigin" in script
     assert "const CORE_SHELL" in worker
     assert "Promise.allSettled" in worker
     assert 'serviceWorker.register("/forest-sw.js", { scope: "/forest" })' in script

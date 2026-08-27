@@ -20,6 +20,25 @@
     @keyframes forestBootPulse{to{transform:translateY(-5px)}}
     @media(prefers-reduced-motion:reduce){#forest-boot span{animation:none}}
   </style>
+  <script>
+    (() => {
+      const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
+      if (!localDemo || !("serviceWorker" in navigator)) return;
+      const resetKey = "forest-local-pwa-reset-v5";
+      if (sessionStorage.getItem(resetKey)) return;
+      sessionStorage.setItem(resetKey, "1");
+      Promise.all([
+        navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(
+          registrations.filter((registration) => registration.scope.startsWith(`${location.origin}/forest`)).map((registration) => registration.unregister())
+        )),
+        caches.keys().then((keys) => Promise.all(
+          keys.filter((key) => key.startsWith("gandang-carrot-forest-pwa-")).map((key) => caches.delete(key))
+        )),
+      ]).then(() => {
+        if (navigator.serviceWorker.controller) window.location.reload();
+      }).catch(() => {});
+    })();
+  </script>
   <link rel="stylesheet" href="/static/forest-game.css?v=20260827-2" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/forest-game.js?v=20260827-2" defer></script>
 </head>

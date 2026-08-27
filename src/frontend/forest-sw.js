@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v4";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v5";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
