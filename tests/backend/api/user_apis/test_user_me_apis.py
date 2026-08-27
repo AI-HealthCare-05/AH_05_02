@@ -13,9 +13,7 @@ class TestUserMeApis(TestCase):
             "email": email,
             "password": "Password123!",
             "name": "내정보테스터",
-            "gender": "FEMALE",
-            "birth_date": "1992-02-02",
-            "phone_number": "01055556666",
+            "terms_agreed": True,
         }
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             await client.post("/api/v1/auth/signup", json=signup_data)
@@ -37,9 +35,7 @@ class TestUserMeApis(TestCase):
             "email": email,
             "password": "Password123!",
             "name": "수정전",
-            "gender": "MALE",
-            "birth_date": "1990-10-10",
-            "phone_number": "01077778888",
+            "terms_agreed": True,
         }
         update_data = {"name": "수정후"}
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -50,7 +46,7 @@ class TestUserMeApis(TestCase):
 
             # 내 정보 수정
             headers = {"Authorization": f"Bearer {access_token}"}
-            response = await client.patch("/api/v1/users/me", json=update_data, headers=headers)
+            response = await client.patch("/api/v1/users/me/profile", json=update_data, headers=headers)
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["name"] == "수정후"
 

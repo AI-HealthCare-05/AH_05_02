@@ -13,10 +13,10 @@ from app.main import app
 
 async def signup_and_login(client: AsyncClient, email: str) -> dict[str, str]:
     signup = {
+        "name": "테스트 사용자",
         "email": email,
         "password": "Password123!",
-        "gender": "FEMALE",
-        "birth_date": "1965-04-12",
+        "terms_agreed": True,
     }
     response = await client.post("/api/v1/auth/signup", json=signup)
     assert response.status_code == status.HTTP_201_CREATED

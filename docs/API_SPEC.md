@@ -301,7 +301,7 @@
   "data": {
     "job_id": "predjob_01J...",
     "status": "succeeded",
-    "prediction_ids": [901],
+    "prediction_id": 901,
     "finished_at": "2026-08-13T03:20:04Z"
   },
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
@@ -323,6 +323,23 @@
   "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:14Z"}
 }
 ```
+
+`GET /api/v1/predictions/{prediction_id}/risk-factors` 승인 전 응답:
+
+```json
+{
+  "data": {
+    "prediction_id": 901,
+    "status": "not_available",
+    "items": [],
+    "message": "검증된 설명 방법이 준비되기 전에는 위험·보호 요인을 표시하지 않습니다.",
+    "shap_claimed": false
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
+}
+```
+
+설명 방법과 원변수 메타데이터가 검토·승인되기 전에는 `risk_factors` 레코드를 생성하지 않는다.
 
 ### 4.5 예측 결과
 

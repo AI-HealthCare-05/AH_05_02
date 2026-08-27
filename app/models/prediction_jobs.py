@@ -2,7 +2,9 @@ from tortoise import fields
 from tortoise.models import Model
 
 
-class AIJob(Model):
+class PredictionJob(Model):
+    """Durable audit record for an asynchronous prediction request."""
+
     job_id = fields.CharField(max_length=36, primary_key=True)
     task_type = fields.CharField(max_length=50)
     status = fields.CharField(max_length=20, default="queued", db_index=True)
@@ -14,6 +16,11 @@ class AIJob(Model):
     model_version = fields.CharField(max_length=100, null=True)
     model_key = fields.CharField(max_length=100, default="diabetes_incidence")
     feature_schema_version = fields.CharField(max_length=100, null=True)
+    input_schema_version = fields.CharField(max_length=100, null=True)
+    preprocessing_version = fields.CharField(max_length=100, null=True)
+    target_definition_version = fields.CharField(max_length=100, null=True)
+    calibration_version = fields.CharField(max_length=100, null=True)
+    model_artifact_digest = fields.CharField(max_length=128, null=True)
     threshold_version = fields.CharField(max_length=100, null=True)
     user_id = fields.BigIntField(null=True, db_index=True)
     health_checkup_id = fields.BigIntField(null=True, db_index=True)
@@ -28,4 +35,4 @@ class AIJob(Model):
     completed_at = fields.DatetimeField(null=True)
 
     class Meta:
-        table = "ai_jobs"
+        table = "prediction_jobs"

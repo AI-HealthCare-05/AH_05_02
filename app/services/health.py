@@ -94,6 +94,11 @@ class HealthService:
         return consent
 
     async def check_eligibility(self, user: User, request: EligibilityCreateRequest) -> EligibilityCheck:
+        if user.birthday is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="적합성 확인 전에 건강정보 입력 단계에서 생년월일을 등록해 주세요.",
+            )
         if request.birth_date is not None and request.birth_date != user.birthday:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -226,11 +231,14 @@ class HealthService:
             current_smoker=request.current_smoker,
             current_drinker=request.current_drinker,
         )
-        for field, value in request.model_dump().items():
-            setattr(item, field, value)
-        item.bmi = bmi
-        await item.save()
-        return item
+        return await self.repo.create_checkup(
+            user_id=user.id,
+            eligibility_check_id=item.eligibility_check_id,
+            age=item.age,
+            sex=item.sex,
+            bmi=bmi,
+            **request.model_dump(),
+        )
 
     @staticmethod
     def features_for(checkup: HealthCheckup) -> PredictionFeatures:

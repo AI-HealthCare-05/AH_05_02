@@ -24,7 +24,13 @@ class ActiveModel(BaseModel):
     model_key: str
     version: str
     feature_schema_version: str
+    input_schema_version: str
+    preprocessing_version: str
+    target_definition_version: str
+    calibration_version: str
+    model_artifact_digest: str | None
     threshold_version: str
+    decision_threshold: float | None
     min_age: int
     max_age: int | None
     model_population: str
@@ -41,7 +47,13 @@ ACTIVE_MODEL = ActiveModel(
     model_key=config.PREDICTION_MODEL_KEY,
     version=config.PREDICTION_MODEL_VERSION,
     feature_schema_version=config.PREDICTION_FEATURE_SCHEMA_VERSION,
+    input_schema_version=config.PREDICTION_INPUT_SCHEMA_VERSION,
+    preprocessing_version=config.PREDICTION_PREPROCESSING_VERSION,
+    target_definition_version=config.PREDICTION_TARGET_DEFINITION_VERSION,
+    calibration_version=config.PREDICTION_CALIBRATION_VERSION,
+    model_artifact_digest=config.PREDICTION_MODEL_ARTIFACT_DIGEST or None,
     threshold_version=config.PREDICTION_THRESHOLD_VERSION,
+    decision_threshold=config.PREDICTION_DECISION_THRESHOLD,
     min_age=config.PREDICTION_MODEL_MIN_AGE,
     max_age=config.PREDICTION_MODEL_MAX_AGE,
     model_population=config.PREDICTION_MODEL_POPULATION,

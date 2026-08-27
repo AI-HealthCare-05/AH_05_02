@@ -81,14 +81,14 @@ def test_behavior_change_templates_are_bounded_and_medically_safe() -> None:
 def test_signup_minimizes_optional_identity_collection() -> None:
     request = SignUpRequest.model_validate(
         {
+            "name": "최소 수집 사용자",
             "email": "minimal@example.com",
             "password": "Prototype123!",
-            "gender": "FEMALE",
-            "birth_date": "1965-04-12",
+            "terms_agreed": True,
         }
     )
-    assert request.name is None
-    assert request.phone_number is None
+    assert request.name == "최소 수집 사용자"
+    assert "phone_number" not in SignUpRequest.model_fields
 
 
 def test_fastapi_container_applies_migrations_before_serving() -> None:
@@ -167,8 +167,15 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
         risk_category="high",
         internal_score=0.99,
         model_version="candidate-v0",
+        input_schema_version="klosa-diabetes-input-v1",
         feature_schema_version="klosa-diabetes-incident-v1",
+        preprocessing_version="unapproved",
+        target_definition_version="next-observation-new-diabetes-v1",
+        calibration_version="unapproved",
+        model_artifact_digest="",
         threshold_version="unapproved",
+        decision_threshold=None,
+        output_status="uncalibrated_research_probability_only",
         model_population="baseline_undiagnosed_age_45_plus",
         predicted_at=datetime.now(UTC),
     )

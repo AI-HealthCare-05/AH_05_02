@@ -32,6 +32,7 @@ async def active_models() -> dict[str, object]:
                     **ACTIVE_MODEL.model_dump(),
                     "threshold_approved": ACTIVE_MODEL.threshold_is_approved,
                     "public_result_available": ACTIVE_MODEL.threshold_is_approved,
+                    "artifact_status": "verified" if ACTIVE_MODEL.model_artifact_digest else "not_configured",
                 }
             ]
         }
@@ -76,12 +77,13 @@ async def read_prediction_job(
 
 
 def prediction_payload(item: Prediction) -> dict[str, object]:
-    promotion_status = (
-        "approved"
-        if item.result_status == "approved" and item.threshold_version != "unapproved"
-        else "development_only"
+    public_result_available = (
+        item.result_status == "approved"
+        and item.threshold_version != "unapproved"
+        and item.decision_threshold is not None
     )
-    public_category = item.risk_category if promotion_status == "approved" else None
+    promotion_status = "approved" if public_result_available else "development_only"
+    public_category = item.risk_category if public_result_available else None
     return {
         "prediction_id": item.id,
         "checkup_id": item.health_checkup_id,
@@ -90,10 +92,17 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "result_status": item.result_status,
         "promotion_status": promotion_status,
         "risk_category": public_category,
-        "risk_category_label": RISK_LABELS.get(public_category, "검토 중"),
+        "risk_category_label": RISK_LABELS.get(public_category) if public_category else None,
         "model_version": item.model_version,
         "feature_schema_version": item.feature_schema_version,
+        "input_schema_version": item.input_schema_version,
+        "preprocessing_version": item.preprocessing_version,
+        "target_definition_version": item.target_definition_version,
+        "calibration_version": item.calibration_version,
+        "model_artifact_digest": item.model_artifact_digest,
         "threshold_version": item.threshold_version,
+        "decision_threshold": item.decision_threshold if public_result_available else None,
+        "output_status": item.output_status,
         "model_population": item.model_population,
         "predicted_at": item.predicted_at,
         "disclaimer": PUBLIC_DISCLAIMER if public_category else DEVELOPMENT_DISCLAIMER,
@@ -113,6 +122,33 @@ async def latest_prediction(user: Annotated[User, Depends(get_request_user)]) ->
 async def list_predictions(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     items = await HealthRepository().list_predictions(user.id)
     return envelope({"items": [prediction_payload(item) for item in items]})
+
+
+@prediction_router.get("/predictions/changes")
+async def prediction_changes(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    items = await HealthRepository().list_predictions(user.id)
+    if len(items) < 2:
+        return envelope({"available": False, "first": None, "latest": None, "change": None})
+    latest = items[0]
+    first = next(
+        (
+            item
+            for item in reversed(items)
+            if item.model_key == latest.model_key and item.outcome_definition == latest.outcome_definition
+        ),
+        None,
+    )
+    if first is None or first.id == latest.id:
+        return envelope({"available": False, "first": None, "latest": None, "change": None})
+    return envelope(
+        {
+            "available": True,
+            "first": prediction_payload(first),
+            "latest": prediction_payload(latest),
+            "change": None,
+            "notice": "예측 변화는 진단이나 치료 효과를 의미하지 않습니다.",
+        }
+    )
 
 
 @prediction_router.get("/predictions/{prediction_id}")
