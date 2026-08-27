@@ -5,8 +5,8 @@
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const WORLD = { width: 768, height: 512 };
-  const AVATAR_RENDER_SCALE = 0.56;
-  const NAMEPLATE_Y = -158;
+  const AVATAR_RENDER_SCALE = 0.43;
+  const NAMEPLATE_Y = -126;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const premiumPresets = {
     red_bow: { path: "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png", rows: 6 },
@@ -64,7 +64,7 @@
 
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
-      this.shadow = this.add.ellipse(0, 16, 42, 15, 0x16382a, 0.25);
+      this.shadow = this.add.ellipse(0, 13, 34, 11, 0x16382a, 0.25);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.player.add(this.shadow);
       this.presetSources = Object.fromEntries(Object.entries(premiumPresets).map(([preset, config]) => [preset, {
@@ -75,7 +75,7 @@
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
       this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);
       this.player.add(this.premiumAvatar);
-      this.pet = this.add.sprite(39, 12, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.057).setDepth(1);
+      this.pet = this.add.sprite(31, 10, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.045).setDepth(1);
       this.player.add(this.pet);
       this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",

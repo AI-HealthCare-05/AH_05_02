@@ -4,7 +4,7 @@
   const CELL_WIDTH = 224;
   const CELL_HEIGHT = 288;
   const HEAD_CUT = 166;
-  const HEAD_OFFSET_Y = -12;
+  const HEAD_OFFSET_Y = -6;
   const modularHairRows = { red_bow: 1, cow_hood: 2, midnight: 3, blue_cap: 4, teal_bob: 5 };
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };

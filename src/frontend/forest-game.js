@@ -1219,7 +1219,7 @@
         outfitPreset: stylePresetByItem[avatarDraft.outfit] || previewPreset,
         direction: "down", mounted: false, moving: false, frame: 0,
         accessory: avatarDraft.accessory, hat: avatarDraft.hat, glasses: avatarDraft.glasses,
-      }, { x: 58, y: 24, width: 164, height: 224 });
+      }, { x: 65, y: 30, width: 150, height: 210 });
     } else if (basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
       drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
     } else {
@@ -1325,7 +1325,7 @@
       outfitPreset: stylePresetByItem[cosmetics.outfit] || state.avatar.preset,
       direction: "down", mounted: false, moving: false, frame: 0,
       accessory: cosmetics.accessory, hat: cosmetics.hat, glasses: cosmetics.glasses,
-    });
+    }, { x: 22, y: 28, width: 180, height: 232 });
     target.setTransform(1, 0, 0, 1, 0, 0);
   }
 
