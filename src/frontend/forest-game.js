@@ -167,6 +167,7 @@
     return {
       dateKey: TODAY,
       profileVersion: 1,
+      cosmeticSchemaVersion: 2,
       avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
@@ -191,10 +192,13 @@
     if (!value) return fallback;
     if (value.dateKey !== TODAY) {
       const previousAvatar = value.avatar || {};
+      const previousCosmetics = { ...defaultCosmetics, ...(previousAvatar.cosmetics || {}) };
+      if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(previousCosmetics, presetDecorationReset, { glasses: "none" });
       fallback.profileVersion = 1;
       fallback.avatar = {
         ...fallback.avatar,
         ...previousAvatar,
+        cosmetics: previousCosmetics,
         name: previousAvatar.name || fallback.avatar.name,
         x: 384, y: 352, direction: "down", sitting: false, mounted: false,
       };
@@ -209,6 +213,8 @@
     state.profileVersion = 1;
     if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
+    if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
+    state.cosmeticSchemaVersion = 2;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
     state.inventory = [...new Set(Array.isArray(value.inventory) ? value.inventory : fallback.inventory)]

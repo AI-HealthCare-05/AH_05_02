@@ -181,6 +181,8 @@ def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> No
     )
     assert "...presetDecorationReset, preset: linkedPreset" in script
     assert 'activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory]' in script
+    assert "cosmeticSchemaVersion: 2" in script
+    assert "Object.assign(state.avatar.cosmetics, presetDecorationReset" in script
     assert 'glasses: "round"' not in script
     assert "context.ellipse(lensX, 123, 14, 10" in compositor
 
@@ -304,7 +306,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v18" in html
+    assert "forest-local-pwa-reset-v19" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -344,7 +346,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v21" in worker
+    assert "gandang-carrot-forest-pwa-v22" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
