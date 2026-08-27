@@ -121,7 +121,7 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-studio"' in html
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
-    for label in ("피부", "의상", "헤어", "얼굴", "액세서리", "아우라", "찌르기 이펙트", "탈것", "펫", "말풍선"):
+    for label in ("캐릭터 프리셋", "피부", "의상", "헤어", "얼굴", "액세서리", "아우라", "찌르기 이펙트", "탈것", "펫", "말풍선"):
         assert f'label: "{label}"' in script
     assert 'label: "찌르기"' not in script
     for behavior in ("renderAvatarStudio", "renderAvatarPreview", "avatarDraftHistory", "avatar-studio-save"):
@@ -151,6 +151,34 @@ def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation()
     assert "state.avatar.direction = direction" in script
     assert "drawLayeredAvatarPreview" in script
     assert "renderCatalogThumbnailCanvases" in script
+
+
+def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    preset_assets = (
+        "carrot-forest-preset-red-bow-v1.png",
+        "carrot-forest-preset-cow-hood-v1.png",
+        "carrot-forest-preset-midnight-v1.png",
+        "carrot-forest-preset-blue-cap-v1.png",
+        "carrot-forest-preset-teal-bob-v1.png",
+    )
+
+    for preset in ("red_bow", "cow_hood", "midnight", "blue_cap", "teal_bob"):
+        assert f'value="{preset}"' in html
+        assert f"{preset}:" in script
+    for asset_name in preset_assets:
+        asset = ROOT / "src/frontend/assets" / asset_name
+        assert asset.exists()
+        assert asset.stat().st_size > 100_000
+        assert asset_name in worker
+    assert "presetBundles" in script
+    assert "stylePresetByItem" in script
+    assert "drawAnimatedAccessoryOverlay" in script
+    assert "drawPreviewAccessoryOverlay" in script
+    assert 'avatarDraft.preset = "custom"' in script
+    assert "motionRow * 4 + directionColumn" in script
 
 
 def test_avatar_studio_uses_original_pixel_sprite_atlases_instead_of_emoji_previews() -> None:

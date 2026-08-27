@@ -19,10 +19,24 @@
     { id: "check", icon: "📝", category: "건강 기록", title: "건강 기록 확인하기", description: "입력한 생활습관 다시 보기", reward: 15 },
   ];
   const presets = {
+    custom: { label: "나만의 조합", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
     sprout: { label: "새싹 정원사", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
     carrot: { label: "당근 탐험가", hair: "#7b3d20", outfit: "#f07b32", accent: "#ffe078" },
     moon: { label: "달빛 산책가", hair: "#303c61", outfit: "#536eb5", accent: "#d9e3ff" },
     berry: { label: "산딸기 수집가", hair: "#5d2949", outfit: "#b44f78", accent: "#ffd2df" },
+    red_bow: { label: "리본 정원사", hair: "#c8542c", outfit: "#26395f", accent: "#f7e7cc" },
+    cow_hood: { label: "음메 목장지기", hair: "#6e452f", outfit: "#c54f24", accent: "#f7ead2" },
+    midnight: { label: "한밤 숲지기", hair: "#17192e", outfit: "#29243f", accent: "#8d72c9" },
+    blue_cap: { label: "파란 모자 농부", hair: "#26313d", outfit: "#254c7e", accent: "#f2dfbd" },
+    teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
+  };
+  const presetBundles = {
+    sprout: { hair: "soft", outfit: "forest", face: "calm", accessory: "none" },
+    red_bow: { hair: "red_wave", outfit: "navy_garden", face: "smile", accessory: "none" },
+    cow_hood: { hair: "cow_brown", outfit: "cow_vest", face: "smile", accessory: "none" },
+    midnight: { hair: "midnight", outfit: "violet", face: "calm", accessory: "none" },
+    blue_cap: { hair: "blue_short", outfit: "blue_overalls", face: "calm", accessory: "none" },
+    teal_bob: { hair: "teal_bob", outfit: "teal_garden", face: "smile", accessory: "none" },
   };
   const itemCatalog = {
     red_scarf: { name: "빨간 목도리", kind: "accessory", icon: "🧣" },
@@ -35,6 +49,7 @@
   };
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
   const avatarCategories = [
+    { id: "preset", label: "캐릭터 프리셋", icon: "🧑‍🌾" },
     { id: "skin", label: "피부", icon: "🎨" },
     { id: "outfit", label: "의상", icon: "👕" },
     { id: "hair", label: "헤어", icon: "💇" },
@@ -47,6 +62,12 @@
     { id: "speech", label: "말풍선", icon: "💬" },
   ];
   const avatarCatalog = {
+    preset: [
+      { id: "custom", name: "나만의 조합" },
+      { id: "sprout", name: "새싹 정원사" }, { id: "red_bow", name: "리본 정원사", isNew: true },
+      { id: "cow_hood", name: "음메 목장지기", isNew: true }, { id: "midnight", name: "한밤 숲지기", isNew: true },
+      { id: "blue_cap", name: "파란 모자 농부", isNew: true }, { id: "teal_bob", name: "미소 정원사", isNew: true },
+    ],
     skin: [
       { id: "peach", name: "복숭아빛", visual: "#f2bd92", color: "#f2bd92" },
       { id: "rose", name: "장밋빛", visual: "#eaa68e", color: "#eaa68e" },
@@ -60,11 +81,16 @@
       { id: "carrot", name: "당근 탐험복", visual: "🦺" }, { id: "moon", name: "달빛 정장", visual: "👔", isNew: true },
       { id: "berry", name: "산딸기 후드", visual: "👚" }, { id: "yellow", name: "햇살 우비", visual: "🧶" },
       { id: "violet", name: "보랏빛 재킷", visual: "🥋" }, { id: "black", name: "밤숲 코트", visual: "🕴️" },
+      { id: "navy_garden", name: "리본 네이비 원피스", visual: "👗" }, { id: "cow_vest", name: "목장 주황 조끼", visual: "🦺" },
+      { id: "blue_overalls", name: "파란 농부 멜빵", visual: "👖" }, { id: "teal_garden", name: "청록 리본 작업복", visual: "🥼" },
     ],
     hair: [
       { id: "soft", name: "포근한 단발", visual: "💇" }, { id: "wave", name: "물결 장발", visual: "👩‍🦱", isNew: true },
       { id: "crop", name: "산뜻한 숏컷", visual: "🧑" }, { id: "twin", name: "양갈래 머리", visual: "👧" },
       { id: "silver", name: "은빛 웨이브", visual: "🧓" }, { id: "orange", name: "당근빛 웨이브", visual: "🧑‍🦰" },
+      { id: "red_wave", name: "리본빛 긴 머리", visual: "👩‍🦰" }, { id: "cow_brown", name: "목장 단발", visual: "💇" },
+      { id: "midnight", name: "한밤 레이어드", visual: "🧑" }, { id: "blue_short", name: "파란 모자 숏컷", visual: "🧑" },
+      { id: "teal_bob", name: "미소 갈색 단발", visual: "💇" },
     ],
     face: [
       { id: "calm", name: "차분한 표정", visual: "🙂" }, { id: "smile", name: "환한 미소", visual: "😊" },
@@ -200,6 +226,13 @@
   const storageSpriteAtlas = new Image();
   const basicWalkAtlas = new Image();
   const basicScooterAtlas = new Image();
+  const presetSpriteAtlases = {
+    red_bow: { image: new Image(), rows: 6, file: "carrot-forest-preset-red-bow-v1.png" },
+    cow_hood: { image: new Image(), rows: 5, file: "carrot-forest-preset-cow-hood-v1.png" },
+    midnight: { image: new Image(), rows: 6, file: "carrot-forest-preset-midnight-v1.png" },
+    blue_cap: { image: new Image(), rows: 6, file: "carrot-forest-preset-blue-cap-v1.png" },
+    teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-preset-teal-bob-v1.png" },
+  };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
@@ -207,6 +240,7 @@
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
   basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
   basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
+  Object.values(presetSpriteAtlases).forEach((atlas) => { atlas.image.src = `/static/assets/${atlas.file}`; });
   sceneImages.world.src = "/static/assets/carrot-forest-world-v2.png";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v1.png";
@@ -216,6 +250,10 @@
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   basicWalkAtlas.addEventListener("load", renderCanvas);
   basicScooterAtlas.addEventListener("load", renderCanvas);
+  Object.values(presetSpriteAtlases).forEach((atlas) => atlas.image.addEventListener("load", () => {
+    renderCanvas();
+    if ($("#avatar-studio").open) renderAvatarStudio();
+  }));
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
 
   class CozyForestMusic {
@@ -497,8 +535,34 @@
       && cosmetics.accessory === "none";
   }
 
+  function drawAnimatedAccessoryOverlay(avatar, cosmetics, x, y) {
+    const direction = avatar.direction || "down";
+    const accessory = cosmetics.accessory;
+    if (accessory === "red_scarf") {
+      fillPixelRect(x - 15, y - 22, 30, 6, "#cf3435");
+      if (direction === "left") fillPixelRect(x + 9, y - 18, 12, 5, "#e34c49");
+      if (direction === "right") fillPixelRect(x - 21, y - 18, 12, 5, "#e34c49");
+    }
+    if (accessory === "sprout_hat") {
+      fillPixelRect(x - 18, y - 55, 36, 7, "#347f3d"); fillPixelRect(x - 3, y - 66, 6, 12, "#216a34"); fillPixelRect(x + 2, y - 66, 12, 7, "#65b85d");
+    }
+    if (accessory === "round_glasses" || accessory === "star_glasses") {
+      const color = accessory === "star_glasses" ? "#e75e99" : "#354751";
+      if (direction === "down") {
+        context.strokeStyle = color; context.lineWidth = 2; context.strokeRect(x - 15, y - 40, 12, 9); context.strokeRect(x + 3, y - 40, 12, 9); fillPixelRect(x - 3, y - 37, 6, 2, color);
+      } else if (direction === "left" || direction === "right") {
+        context.strokeStyle = color; context.lineWidth = 2; context.strokeRect(x + (direction === "left" ? -17 : 5), y - 39, 13, 9);
+      }
+    }
+    if (accessory === "carrot_bag") {
+      const side = direction === "left" ? 12 : direction === "right" ? -23 : 14;
+      fillPixelRect(x + side, y - 5, 12, 22, "#bd4e25"); fillPixelRect(x + side + 2, y - 2, 8, 16, "#ef7c31");
+    }
+  }
+
   function drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y) {
-    if (avatar.preset !== "sprout" || !isAnimatedBasicPreset(cosmetics)) return false;
+    const presetAtlas = presetSpriteAtlases[avatar.preset];
+    if (!presetAtlas && (avatar.preset !== "sprout" || !isAnimatedBasicPreset(cosmetics))) return false;
     const direction = avatar.direction || "down";
     const moving = performance.now() < walkingUntil;
     if (!avatar.mounted) {
@@ -506,7 +570,19 @@
       drawAtlasCell(context, cosmeticSpriteAtlas, auraIndex, 5, 4, x - 45, y - 51, 90, 90);
     }
 
-    if (avatar.mounted) {
+    if (presetAtlas) {
+      if (!presetAtlas.image.complete || !presetAtlas.image.naturalWidth) return false;
+      const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
+      if (avatar.mounted) {
+        const motionRow = moving && presetAtlas.rows === 6 ? 5 : 4;
+        const rideBob = moving && presetAtlas.rows === 5 ? walkAnimationFrame % 2 : 0;
+        drawAtlasCell(context, presetAtlas.image, motionRow * 4 + directionColumn, 4, presetAtlas.rows, x - 48, y - 57 - rideBob, 96, 96);
+      } else {
+        const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
+        const frame = moving ? walkAnimationFrame % 4 : 0;
+        drawAtlasCell(context, presetAtlas.image, directionRow * 4 + frame, 4, presetAtlas.rows, x - 36, y - 56, 72, 88);
+      }
+    } else if (avatar.mounted) {
       if (!basicScooterAtlas.complete || !basicScooterAtlas.naturalWidth) return false;
       const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
       const motionRow = moving ? walkAnimationFrame % 2 : 0;
@@ -514,9 +590,11 @@
     } else {
       if (!basicWalkAtlas.complete || !basicWalkAtlas.naturalWidth) return false;
       const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
-      const frame = avatar.sitting ? 0 : moving ? walkAnimationFrame % 4 : 0;
+      const frame = moving ? walkAnimationFrame % 4 : 0;
       drawAtlasCell(context, basicWalkAtlas, directionRow * 4 + frame, 4, 4, x - 34, y - 54, 68, 86);
     }
+
+    drawAnimatedAccessoryOverlay(avatar, cosmetics, x, y);
 
     const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
     drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
@@ -923,8 +1001,30 @@
     face: { calm: 0, smile: 1, sparkle: 5, blush: 7, wink: 3, cool: 10 },
     accessory: { none: null, red_scarf: 0, sprout_hat: 8, carrot_bag: 11, round_glasses: 2, star_glasses: 3 },
   };
+  const stylePresetByItem = {
+    red_wave: "red_bow", navy_garden: "red_bow", cow_brown: "cow_hood", cow_vest: "cow_hood",
+    midnight: "midnight", violet: "midnight", blue_short: "blue_cap", blue_overalls: "blue_cap", teal_bob: "teal_bob", teal_garden: "teal_bob",
+  };
 
   function renderCatalogThumbnailCanvases() {
+    document.querySelectorAll("canvas[data-preset-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      const preset = thumbnail.dataset.presetThumb;
+      if (preset === "custom") {
+        target.font = "42px sans-serif";
+        target.textAlign = "center";
+        target.fillText("🧩", 48, 64);
+        return;
+      }
+      if (preset === "sprout") {
+        drawAtlasCell(target, basicWalkAtlas, 0, 4, 4, 11, 5, 74, 88);
+        return;
+      }
+      const atlas = presetSpriteAtlases[preset];
+      if (atlas) drawAtlasCell(target, atlas.image, 0, 4, atlas.rows, 9, 5, 78, 88);
+    });
     document.querySelectorAll("canvas[data-avatar-thumb]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
@@ -1018,7 +1118,16 @@
     previewContext.imageSmoothingEnabled = false;
     const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
-    drawLayeredAvatarPreview(previewContext, avatarDraft);
+    const previewPreset = avatarDraft.preset || "sprout";
+    const previewAtlas = presetSpriteAtlases[previewPreset];
+    if (previewPreset === "sprout" && basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
+      drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
+    } else if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth) {
+      drawAtlasCell(previewContext, previewAtlas.image, 0, 4, previewAtlas.rows, 58, 38, 164, 205);
+    } else {
+      drawLayeredAvatarPreview(previewContext, avatarDraft);
+    }
+    drawPreviewAccessoryOverlay(previewContext, avatarDraft.accessory);
     const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, effectIndex, 5, 4, 16, 50, 80, 80);
     const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
@@ -1035,6 +1144,24 @@
     }
   }
 
+  function drawPreviewAccessoryOverlay(target, accessory) {
+    if (accessory === "none") return;
+    const rect = (x, y, width, height, color) => {
+      target.fillStyle = color;
+      target.fillRect(x, y, width, height);
+    };
+    if (accessory === "red_scarf") rect(108, 160, 64, 12, "#d93432");
+    if (accessory === "sprout_hat") {
+      rect(100, 83, 80, 13, "#347f3d"); rect(134, 63, 11, 22, "#216a34"); rect(143, 64, 20, 10, "#65b85d");
+    }
+    if (accessory === "carrot_bag") { rect(174, 177, 24, 40, "#b94f25"); rect(179, 182, 14, 29, "#ee7d32"); }
+    if (["round_glasses", "star_glasses"].includes(accessory)) {
+      const color = accessory === "star_glasses" ? "#e75e99" : "#354751";
+      target.strokeStyle = color; target.lineWidth = 4;
+      target.strokeRect(112, 119, 24, 19); target.strokeRect(144, 119, 24, 19); rect(136, 126, 8, 4, color);
+    }
+  }
+
   function renderAvatarStudio() {
     $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
@@ -1045,13 +1172,18 @@
       const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
       const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (activeAvatarCategory === "skin") {
+      if (activeAvatarCategory === "preset") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (activeAvatarCategory === "skin") {
         visual = `<span class="item-visual"><span class="color-chip" style="background:${item.color}" aria-hidden="true"></span></span>`;
       } else if (["outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
+        const itemPreset = stylePresetByItem[item.id];
         const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
-        visual = index == null
-          ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
-          : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
+        visual = itemPreset
+          ? `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${itemPreset}" aria-hidden="true"></canvas>`
+          : index == null
+            ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
+            : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
       } else if (cosmeticIndex != null) {
@@ -1059,7 +1191,8 @@
       } else {
         visual = '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>';
       }
-      return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${avatarDraft[activeAvatarCategory] === item.id}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${avatarDraft[activeAvatarCategory] === item.id ? "선택됨" : "보유 아이템"}</small></button>`;
+      const selected = avatarDraft[activeAvatarCategory] === item.id;
+      return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${selected ? "선택됨" : "보유 아이템"}</small></button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
     $("#avatar-preview-name").textContent = state.avatar.name;
@@ -1070,9 +1203,9 @@
   }
 
   function openAvatarStudio() {
-    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
+    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "sprout" };
     avatarDraftHistory = [];
-    activeAvatarCategory = "skin";
+    activeAvatarCategory = "preset";
     renderAvatarStudio();
     $("#avatar-studio").showModal();
   }
@@ -1105,6 +1238,10 @@
     state.avatar.name = $("#avatar-name").value.trim();
     state.avatar.gender = $("#avatar-gender").value;
     state.avatar.preset = $("#avatar-preset").value;
+    if (presetBundles[state.avatar.preset]) {
+      state.avatar.cosmetics = { ...state.avatar.cosmetics, ...presetBundles[state.avatar.preset] };
+      state.avatar.equipped = null;
+    }
     renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
   });
 
@@ -1124,6 +1261,12 @@
     if (!button || avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
+    const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : stylePresetByItem[button.dataset.avatarItem];
+    if (linkedPreset && presetBundles[linkedPreset]) {
+      avatarDraft = { ...avatarDraft, preset: linkedPreset, ...presetBundles[linkedPreset] };
+    } else if (["skin", "outfit", "hair", "face"].includes(activeAvatarCategory)) {
+      avatarDraft.preset = "custom";
+    }
     renderAvatarStudio();
   });
   $("#avatar-undo").addEventListener("click", () => {
@@ -1141,8 +1284,11 @@
     renderAvatarStudio();
   });
   $("#avatar-studio-save").addEventListener("click", async () => {
-    state.avatar.cosmetics = { ...avatarDraft };
+    state.avatar.preset = avatarDraft.preset || state.avatar.preset;
+    const { preset: _preset, ...savedCosmetics } = avatarDraft;
+    state.avatar.cosmetics = { ...savedCosmetics };
     state.avatar.equipped = avatarDraft.accessory === "none" ? null : avatarDraft.accessory;
+    $("#avatar-preset").value = state.avatar.preset;
     renderInventory();
     renderCanvas();
     $("#avatar-studio").close();

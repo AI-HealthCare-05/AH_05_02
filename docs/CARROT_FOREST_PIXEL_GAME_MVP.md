@@ -35,8 +35,11 @@
 - 꾸미기 카테고리: 피부·의상·헤어·얼굴·액세서리·아우라·찌르기 이펙트·탈것·펫·말풍선. 각 탭에는 의미에 맞는 전용 아이콘을 표시한다.
 - 아우라는 지속 장식, 이펙트는 순간 표현으로 구분하며 선택·실행 취소·무작위 코디·저장을 지원
 - 저장한 피부색·의상·헤어·표정·액세서리·아우라·이펙트·펫·말풍선을 월드 아바타에 즉시 반영하며, 커스텀 조합은 서로 덮어쓰지 않는 레이어형 렌더러를 사용한다.
-- 기본 `새싹 정원사` 프리셋 1벌은 앞·뒤·좌·우 4방향과 방향별 4프레임 보행을 제공한다. 커스텀 의상 전체의 방향 애니메이션은 현재 범위에 포함하지 않는다.
+- 기본 `새싹 정원사`와 추가 프리셋 5종은 앞·뒤·좌·우 4방향 보행과 방향별 프레임 애니메이션을 제공한다. 프리셋에 없는 개별 조합은 레이어 합성 미리보기로 제공한다.
 - 기본 프리셋의 스쿠터는 캐릭터와 탈것을 따로 겹치지 않고, 손·발·발판을 하나로 그린 방향별 정지·이동 프레임을 사용한다.
+- 리본 정원사·음메 목장지기·한밤 숲지기·파란 모자 농부·미소 정원사 5개 프리셋을 추가했다. 각 프리셋은 고유 헤어·모자·안경·의상과 4방향 보행·통합 스쿠터 자세를 가진다.
+- 프리셋에서 안경·모자·가방·아우라를 덧입힐 수 있고, 개별 피부·헤어·의상·얼굴을 선택하면 `나만의 조합`으로 전환되어 선택 결과가 미리보기와 월드에 반영된다.
+- 프리셋은 꾸미기 작업실의 첫 번째 카테고리와 왼쪽 기본 정보 선택기에서 고를 수 있으며, 목도리·새싹 모자·안경·가방은 이동 프레임 위에 별도 장착 레이어로 유지된다.
 - 꾸미기 카드 썸네일은 CSS 배경 위치 대신 독립 Canvas 셀 크롭을 사용해 인접 스프라이트의 위·아래가 노출되지 않도록 했다.
 - 오리지널 투명 PNG 아틀라스 기반의 정교한 32-bit 치비 캐릭터 12종과 꾸미기 아이콘 20종 적용
 - 카드 썸네일은 원본 아틀라스를 안전하게 크롭하고, 미리보기·커스텀 월드는 레이어형 렌더러로 선택 조합을 정확히 표현한다.
@@ -52,6 +55,11 @@
 - `src/frontend/assets/carrot-forest-avatar-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 4×3 투명 캐릭터 아틀라스
 - `src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png`: 새싹 정원사 기본 의상용 앞·뒤·좌·우 4×4 보행 아틀라스
 - `src/frontend/assets/carrot-forest-basic-scooter-atlas-v1.png`: 같은 기본 의상용 4방향 × 정지·이동 4×2 통합 탑승 아틀라스
+- `src/frontend/assets/carrot-forest-preset-red-bow-v1.png`: 리본 정원사 보행·탑승 아틀라스
+- `src/frontend/assets/carrot-forest-preset-cow-hood-v1.png`: 음메 목장지기 보행·탑승 아틀라스
+- `src/frontend/assets/carrot-forest-preset-midnight-v1.png`: 한밤 숲지기 보행·탑승 아틀라스
+- `src/frontend/assets/carrot-forest-preset-blue-cap-v1.png`: 파란 모자 농부 보행·탑승 아틀라스
+- `src/frontend/assets/carrot-forest-preset-teal-bob-v1.png`: 미소 정원사 보행·탑승 아틀라스
 - `src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 5×4 투명 꾸미기 아이콘 아틀라스
 - `src/frontend/assets/carrot-forest-cat-pets-v1.png`: 파란 눈 흰 고양이·노란 눈 주황갈색 고양이 2×1 투명 펫 아틀라스
 - `src/frontend/assets/carrot-forest-storage-atlas-v1.png`: 꽃밭·등불·바르게 선 버섯·벤치 4×1 투명 창고 오브젝트 아틀라스
