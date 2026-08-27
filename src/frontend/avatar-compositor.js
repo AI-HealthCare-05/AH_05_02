@@ -64,17 +64,23 @@
     const glasses = options.glasses !== "none" ? options.glasses : ["round_glasses", "star_glasses"].includes(options.accessory) ? options.accessory : "none";
     if (glasses !== "none") {
       context.strokeStyle = glasses === "star_glasses" || glasses === "sun" ? "#51284f" : "#27353d";
-      context.lineWidth = 3;
+      context.fillStyle = glasses === "sun" ? "rgba(49, 33, 69, .72)" : "rgba(186, 226, 235, .22)";
+      context.lineWidth = 2.5;
       if (options.direction === "left" || options.direction === "right") {
-        const lensX = options.direction === "left" ? 86 : 116;
-        context.strokeRect(lensX + directionOffset, 100, 25, 15);
-        context.fillStyle = context.strokeStyle;
-        context.fillRect(lensX + directionOffset + (options.direction === "left" ? 22 : -4), 105, 7, 3);
+        const lensX = (options.direction === "left" ? 98 : 126) + directionOffset;
+        context.beginPath();
+        context.ellipse(lensX, 123, 13, 9, 0, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
       } else {
-        context.strokeRect(84, 100, 23, 15);
-        context.strokeRect(117, 100, 23, 15);
+        for (const lensX of [96, 128]) {
+          context.beginPath();
+          context.ellipse(lensX, 123, 14, 10, 0, 0, Math.PI * 2);
+          context.fill();
+          context.stroke();
+        }
         context.fillStyle = context.strokeStyle;
-        context.fillRect(107, 105, 10, 3);
+        context.fillRect(110, 121, 4, 3);
       }
     }
     if (options.accessory === "red_scarf") {

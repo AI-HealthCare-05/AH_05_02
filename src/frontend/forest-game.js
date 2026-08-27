@@ -46,7 +46,7 @@
     sprout: { hair: "soft", outfit: "forest", bottom: "cream", shoes: "brown", face: "calm", accessory: "none", hat: "none", glasses: "none" },
     red_bow: { hair: "red_wave", outfit: "navy_garden", bottom: "cream", shoes: "brown", face: "smile", accessory: "none", hat: "headband", glasses: "none" },
     cow_hood: { hair: "cow_brown", outfit: "cow_vest", bottom: "charcoal", shoes: "brown", face: "smile", accessory: "none", hat: "cap", glasses: "none" },
-    midnight: { hair: "midnight", outfit: "violet", bottom: "charcoal", shoes: "black", face: "calm", accessory: "none", hat: "none", glasses: "round" },
+    midnight: { hair: "midnight", outfit: "violet", bottom: "charcoal", shoes: "black", face: "calm", accessory: "none", hat: "none", glasses: "none" },
     blue_cap: { hair: "blue_short", outfit: "blue_overalls", bottom: "denim", shoes: "white", face: "calm", accessory: "none", hat: "cap", glasses: "none" },
     teal_bob: { hair: "teal_bob", outfit: "teal_garden", bottom: "olive", shoes: "brown", face: "smile", accessory: "none", hat: "none", glasses: "none" },
   };
@@ -160,6 +160,7 @@
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
   };
+  const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
 
   function defaultState() {
     const generatedNickname = generateNickname();
@@ -1471,12 +1472,13 @@
   });
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
-    if (!button || avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
+    if (!button) return;
+    if (activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
     const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : null;
     if (linkedPreset && presetBundles[linkedPreset]) {
-      avatarDraft = { ...avatarDraft, preset: linkedPreset, ...presetBundles[linkedPreset] };
+      avatarDraft = { ...avatarDraft, ...presetDecorationReset, preset: linkedPreset, ...presetBundles[linkedPreset] };
     }
     renderAvatarStudio();
   });

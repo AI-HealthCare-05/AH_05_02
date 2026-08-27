@@ -171,6 +171,20 @@ def test_group_tabs_reward_ceremony_and_profile_are_interactive() -> None:
     assert "newItemArrival" in css
 
 
+def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> None:
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
+
+    assert (
+        'const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" }'
+        in script
+    )
+    assert "...presetDecorationReset, preset: linkedPreset" in script
+    assert 'activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory]' in script
+    assert 'glasses: "round"' not in script
+    assert "context.ellipse(lensX, 123, 14, 10" in compositor
+
+
 def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation() -> None:
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
@@ -290,7 +304,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v15" in html
+    assert "forest-local-pwa-reset-v18" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -330,7 +344,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v18" in worker
+    assert "gandang-carrot-forest-pwa-v21" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
