@@ -38,6 +38,18 @@ class FixedScorePipeline:
         return np.array([[1.0 - self.score, self.score]])
 
 
+class FloatingPointJitterPipeline:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    def predict_proba(self, frame):
+        assert tuple(frame.columns) == STANDARD_MODEL_FEATURES
+        scores = (0.022930332474699750, 0.022930332474699756, 0.022930332474699753)
+        score = scores[self.call_count % len(scores)]
+        self.call_count += 1
+        return np.array([[1.0 - score, score]])
+
+
 def fixed_input(**overrides) -> DiabetesRiskInput:
     values = {
         "birth_date": date(1960, 4, 15),
@@ -88,6 +100,22 @@ def test_model_frame_has_training_order_and_safe_missing_values() -> None:
     assert frame.loc[0, "exercise_minutes"] == 0
     assert np.isnan(frame.loc[0, "log_household_income"])
     assert np.isnan(frame.loc[0, "hypertension_diagnosis"])
+
+
+def test_input_with_all_optional_values_missing_completes_inference() -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FixedScorePipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    result = predict_with_loaded_model(
+        loaded,
+        fixed_input(),
+        as_of_date=date(2026, 8, 27),
+    )
+
+    assert result["risk_score"] == pytest.approx(0.02)
+    assert result["risk_category"] == "moderate"
 
 
 @pytest.mark.parametrize("missing_field", REQUIRED_API_FIELDS)
@@ -186,6 +214,9 @@ def test_supported_ages_complete_inference(birth_date: date, expected_age: int) 
     assert frame.loc[0, "age"] == expected_age
     assert result["risk_score"] == pytest.approx(0.02)
     assert result["risk_category"] == "moderate"
+    assert result["applicability"]["minimum_age"] == 45
+    assert result["applicability"]["maximum_age"] == 105
+    assert "동일한 성능을 보장하지 않습니다" in result["applicability"]["notice"]
 
 
 @pytest.mark.parametrize(
@@ -239,6 +270,25 @@ def test_fixed_input_inference_is_deterministic_and_versioned() -> None:
     assert first["feature_schema_version"] == "klosa_stage3_25features_v1"
     assert first["threshold_version"] == "validation-recall-090-080-v1"
     assert "진단이나 처방이 아닙니다" in first["disclaimer"]
+
+
+def test_floating_point_jitter_is_normalized_for_reproducible_output() -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FloatingPointJitterPipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    results = [
+        predict_with_loaded_model(
+            loaded,
+            fixed_input(),
+            as_of_date=date(2026, 8, 27),
+        )
+        for _ in range(3)
+    ]
+
+    assert results[0] == results[1] == results[2]
+    assert results[0]["risk_score"] == 0.022930332475
 
 
 @pytest.mark.parametrize(

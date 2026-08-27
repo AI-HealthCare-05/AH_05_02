@@ -20,6 +20,8 @@ import joblib
 from src.ml.evaluation.diabetes_risk_categories import categorize_risk_score
 from src.ml.preprocessing.diabetes_api_features import (
     STANDARD_MODEL_FEATURES,
+    SUPPORTED_AGE_MAXIMUM,
+    SUPPORTED_AGE_MINIMUM,
     DiabetesRiskInput,
     build_standard_model_frame,
     parse_diabetes_risk_input,
@@ -130,7 +132,10 @@ def predict_with_loaded_model(
     """Run deterministic single-record risk-screening inference."""
 
     frame = build_standard_model_frame(user_input, as_of_date=as_of_date)
-    score = float(loaded.pipeline.predict_proba(frame)[0, 1])
+    # Parallel tree aggregation can vary below meaningful floating-point
+    # precision. Normalize the web contract so identical inputs serialize to
+    # identical scores across repeated calls.
+    score = round(float(loaded.pipeline.predict_proba(frame)[0, 1]), 12)
     thresholds = loaded.manifest["thresholds"]
     category = categorize_risk_score(
         score,
@@ -152,6 +157,15 @@ def predict_with_loaded_model(
         "input_schema_version": loaded.manifest["input_schema_version"],
         "threshold_version": loaded.manifest["threshold_version"],
         "decision_threshold": float(thresholds["high"]),
+        "applicability": {
+            "minimum_age": SUPPORTED_AGE_MINIMUM,
+            "maximum_age": SUPPORTED_AGE_MAXIMUM,
+            "age_unit": "years",
+            "notice": (
+                "만 45~105세 입력에만 사용할 수 있습니다. 이 범위는 기술적 입력 허용 범위이며 "
+                "모든 연령에서 동일한 성능을 보장하지 않습니다."
+            ),
+        },
         "output_status": "research_screening_candidate_not_operationally_approved",
         "disclaimer": (
             "향후 신규 당뇨병 의사진단 위험을 선별하기 위한 연구용 점수이며 "
