@@ -35,16 +35,16 @@
   };
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
   const avatarCategories = [
-    { id: "skin", label: "피부", icon: "◉" },
-    { id: "outfit", label: "의상", icon: "♜" },
-    { id: "hair", label: "헤어", icon: "♟" },
-    { id: "face", label: "얼굴", icon: "☺" },
-    { id: "accessory", label: "액세서리", icon: "◇" },
-    { id: "aura", label: "아우라", icon: "✦" },
-    { id: "effect", label: "이펙트", icon: "✧" },
-    { id: "vehicle", label: "탈것", icon: "◈" },
-    { id: "pet", label: "펫", icon: "♧" },
-    { id: "speech", label: "말풍선", icon: "▢" },
+    { id: "skin", label: "피부", icon: "🎨" },
+    { id: "outfit", label: "의상", icon: "👕" },
+    { id: "hair", label: "헤어", icon: "💇" },
+    { id: "face", label: "얼굴", icon: "😊" },
+    { id: "accessory", label: "액세서리", icon: "👓" },
+    { id: "aura", label: "아우라", icon: "✨" },
+    { id: "effect", label: "찌르기 이펙트", icon: "💫" },
+    { id: "vehicle", label: "탈것", icon: "🛴" },
+    { id: "pet", label: "펫", icon: "🐾" },
+    { id: "speech", label: "말풍선", icon: "💬" },
   ];
   const avatarCatalog = {
     skin: [
@@ -110,7 +110,7 @@
   function defaultState() {
     return {
       dateKey: TODAY,
-      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
+      avatar: { name: "세준", gender: "female", preset: "sprout", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -185,6 +185,8 @@
   let running = false;
   let musicEngine = null;
   let animationFrame = 0;
+  let walkingUntil = 0;
+  let walkAnimationFrame = 0;
   let currentScene = "world";
   let activeAvatarCategory = "skin";
   let avatarDraft = { ...defaultCosmetics };
@@ -196,18 +198,24 @@
   const cosmeticSpriteAtlas = new Image();
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
+  const basicWalkAtlas = new Image();
+  const basicScooterAtlas = new Image();
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
   catPetAtlas.src = "/static/assets/carrot-forest-cat-pets-v1.png";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
+  basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
+  basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v2.png";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v1.png";
-  avatarSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
-  cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
-  catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarPreview(); });
+  avatarSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
+  cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
+  catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  basicWalkAtlas.addEventListener("load", renderCanvas);
+  basicScooterAtlas.addEventListener("load", renderCanvas);
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
 
   class CozyForestMusic {
@@ -481,6 +489,54 @@
     return true;
   }
 
+  function isAnimatedBasicPreset(cosmetics) {
+    return cosmetics.skin === "peach"
+      && cosmetics.outfit === "forest"
+      && cosmetics.hair === "soft"
+      && cosmetics.face === "calm"
+      && cosmetics.accessory === "none";
+  }
+
+  function drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y) {
+    if (avatar.preset !== "sprout" || !isAnimatedBasicPreset(cosmetics)) return false;
+    const direction = avatar.direction || "down";
+    const moving = performance.now() < walkingUntil;
+    if (!avatar.mounted) {
+      const auraIndex = cosmeticSpriteIndex("aura", cosmetics.aura);
+      drawAtlasCell(context, cosmeticSpriteAtlas, auraIndex, 5, 4, x - 45, y - 51, 90, 90);
+    }
+
+    if (avatar.mounted) {
+      if (!basicScooterAtlas.complete || !basicScooterAtlas.naturalWidth) return false;
+      const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
+      const motionRow = moving ? walkAnimationFrame % 2 : 0;
+      drawAtlasCell(context, basicScooterAtlas, motionRow * 4 + directionColumn, 4, 2, x - 52, y - 62, 104, 104);
+    } else {
+      if (!basicWalkAtlas.complete || !basicWalkAtlas.naturalWidth) return false;
+      const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
+      const frame = avatar.sitting ? 0 : moving ? walkAnimationFrame % 4 : 0;
+      drawAtlasCell(context, basicWalkAtlas, directionRow * 4 + frame, 4, 4, x - 34, y - 54, 68, 86);
+    }
+
+    const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
+    drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
+    const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
+    const catIndex = catPetSpriteIndex(cosmetics.pet);
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+      drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
+    }
+    if (cosmetics.speech !== "none") {
+      const speechIndex = cosmeticSpriteIndex("speech", cosmetics.speech);
+      drawAtlasCell(context, cosmeticSpriteAtlas, speechIndex, 5, 4, x + 25, y - 65, 62, 45);
+      context.font = "bold 7px sans-serif"; context.textAlign = "center"; context.fillStyle = "#31343f";
+      context.fillText(cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "한 걸음" : "같이 걸어요", x + 56, y - 41);
+    }
+    context.font = "bold 11px sans-serif"; context.textAlign = "center";
+    context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x - Math.max(25, avatar.name.length * 6), y - 69, Math.max(50, avatar.name.length * 12), 17);
+    context.fillStyle = "#18382d"; context.fillText(avatar.name, x, y - 56);
+    return true;
+  }
+
   function drawGeneratedWorldAvatar(avatar, cosmetics, x, y) {
     if (!avatarSpriteAtlas.complete || !avatarSpriteAtlas.naturalWidth) return false;
     const auraIndex = cosmeticSpriteIndex("aura", cosmetics.aura);
@@ -527,7 +583,7 @@
     const x = Math.round(avatar.x / 4) * 4;
     const bob = avatar.sitting || avatar.mounted ? 0 : animationFrame;
     const y = Math.round(avatar.y / 4) * 4 - bob;
-    if (drawGeneratedWorldAvatar(avatar, cosmetics, x, y)) return;
+    if (!avatar.sitting && drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return;
     if (cosmetics.aura === "wings") {
       [[-27, -13], [-34, -6], [24, -13], [31, -6]].forEach(([dx, dy], index) => fillPixelRect(x + dx, y + dy, index % 2 ? 9 : 12, 18, index % 2 ? "#bff8ff" : "#65ddea"));
     } else if (cosmetics.aura === "halo") {
@@ -615,7 +671,10 @@
     }
     if (cosmetics.pet !== "none") {
       const petGlyphs = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" };
-      context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet], x + 34, y + 34);
+      const catIndex = catPetSpriteIndex(cosmetics.pet);
+      if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+        context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet] || "🐾", x + 34, y + 34);
+      }
     }
     context.font = "bold 13px sans-serif";
     context.textAlign = "center";
@@ -683,12 +742,24 @@
   }
 
   let lastAnimationAt = 0;
+  let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
+    let needsRender = false;
     if (!document.hidden && timestamp - lastAnimationAt > 420) {
       animationFrame = (animationFrame + 1) % 2;
-      renderCanvas();
       lastAnimationAt = timestamp;
+      needsRender = true;
     }
+    const moving = timestamp < walkingUntil;
+    if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : 95)) {
+      walkAnimationFrame = (walkAnimationFrame + 1) % 4;
+      lastWalkAnimationAt = timestamp;
+      needsRender = true;
+    } else if (!moving && walkAnimationFrame !== 0) {
+      walkAnimationFrame = 0;
+      needsRender = true;
+    }
+    if (needsRender) renderCanvas();
     window.requestAnimationFrame(animateWorld);
   }
 
@@ -785,12 +856,14 @@
     const step = state.avatar.mounted ? 28 : running ? 22 : 12;
     const delta = { up: [0, -step], down: [0, step], left: [-step, 0], right: [step, 0] }[direction];
     if (!delta) return;
+    state.avatar.direction = direction;
     state.avatar.sitting = false;
     state.fishing = false;
+    walkingUntil = performance.now() + (state.avatar.mounted ? 260 : 220);
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
     if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
-    else setStatus("그쪽에는 집·나무·당근밭이 있어요. 다른 방향으로 움직여 주세요.");
+    else { renderCanvas(); setStatus("그쪽에는 집·나무·당근밭이 있어요. 다른 방향으로 움직여 주세요."); }
   }
 
   function renderQuests() {
@@ -844,6 +917,98 @@
     return avatarCatalog[category].find((item) => item.id === id) || avatarCatalog[category][0];
   }
 
+  const avatarThumbnailIndexes = {
+    outfit: { forest: 0, denim: 4, carrot: 8, moon: 2, berry: 5, yellow: 3, violet: 10, black: 6 },
+    hair: { soft: 0, wave: 1, crop: 4, twin: 7, silver: 10, orange: 9 },
+    face: { calm: 0, smile: 1, sparkle: 5, blush: 7, wink: 3, cool: 10 },
+    accessory: { none: null, red_scarf: 0, sprout_hat: 8, carrot_bag: 11, round_glasses: 2, star_glasses: 3 },
+  };
+
+  function renderCatalogThumbnailCanvases() {
+    document.querySelectorAll("canvas[data-avatar-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      if (!avatarSpriteAtlas.complete || !avatarSpriteAtlas.naturalWidth) return;
+      const index = Number(thumbnail.dataset.avatarThumb);
+      const cellWidth = avatarSpriteAtlas.naturalWidth / 4;
+      const cellHeight = avatarSpriteAtlas.naturalHeight / 3;
+      const column = index % 4;
+      const row = Math.floor(index / 4);
+      const headOnly = thumbnail.dataset.avatarCrop === "head";
+      const sx = column * cellWidth + cellWidth * (headOnly ? .2 : .08);
+      const sy = row * cellHeight + cellHeight * (headOnly ? .01 : .035);
+      const sw = cellWidth * (headOnly ? .6 : .84);
+      const sh = cellHeight * (headOnly ? .56 : .92);
+      const dx = headOnly ? 11 : 8;
+      const dy = headOnly ? 8 : 5;
+      const dw = headOnly ? 74 : 80;
+      const dh = headOnly ? 78 : 88;
+      target.drawImage(avatarSpriteAtlas, sx, sy, sw, sh, dx, dy, dw, dh);
+    });
+    document.querySelectorAll("canvas[data-cosmetic-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      drawAtlasCell(target, cosmeticSpriteAtlas, Number(thumbnail.dataset.cosmeticThumb), 5, 4, 8, 8, 80, 80);
+    });
+    document.querySelectorAll("canvas[data-cat-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 2, 1, 7, 7, 82, 82);
+    });
+  }
+
+  function drawLayeredAvatarPreview(target, cosmetics) {
+    const rect = (x, y, width, height, color) => {
+      target.fillStyle = color;
+      target.fillRect(Math.round(x), Math.round(y), Math.round(width), Math.round(height));
+    };
+    const skin = avatarCatalog.skin.find((item) => item.id === cosmetics.skin)?.color || "#f2bd92";
+    const skinShadow = cosmetics.skin === "deep" ? "#6d392f" : cosmetics.skin === "warm" ? "#a7654f" : "#d99978";
+    const hairColor = { soft: "#4b2f24", wave: "#3b2b34", crop: "#263b43", twin: "#54313e", silver: "#8992a4", orange: "#bd6236" }[cosmetics.hair] || "#4b2f24";
+    const outfit = {
+      forest: ["#255c3d", "#f5e4bd"], denim: ["#35688f", "#c8e3f8"], carrot: ["#d65d25", "#ffe078"],
+      moon: ["#424b7d", "#d9e3ff"], berry: ["#9e3d68", "#ffd2df"], yellow: ["#d9a51f", "#fff1a8"],
+      violet: ["#60439e", "#d8c8ff"], black: ["#252a36", "#9da6bc"],
+    }[cosmetics.outfit] || ["#255c3d", "#f5e4bd"];
+    target.fillStyle = "rgba(36,48,45,.13)";
+    target.beginPath(); target.ellipse(140, 252, 57, 13, 0, 0, Math.PI * 2); target.fill();
+    rect(103, 107, 74, 69, "#2c241f");
+    rect(108, 112, 64, 61, skinShadow); rect(112, 114, 56, 57, skin);
+    if (cosmetics.hair === "crop") {
+      rect(104, 97, 72, 25, hairColor); rect(106, 113, 12, 27, hairColor);
+    } else if (cosmetics.hair === "twin") {
+      rect(103, 94, 74, 27, hairColor); rect(91, 113, 18, 50, hairColor); rect(171, 113, 18, 50, hairColor);
+    } else if (cosmetics.hair === "wave") {
+      rect(101, 94, 78, 28, hairColor); rect(98, 111, 17, 72, hairColor); rect(165, 111, 17, 72, hairColor);
+    } else {
+      rect(102, 95, 76, 28, hairColor); rect(102, 112, 15, 38, hairColor); rect(165, 112, 15, 38, hairColor);
+    }
+    rect(112, 101, 26, 7, "rgba(255,255,255,.16)");
+    rect(121, 138, 10, 10, "#fff"); rect(149, 138, 10, 10, "#fff");
+    rect(124, 140, 5, 7, "#27352f"); rect(152, 140, 5, 7, "#27352f");
+    if (cosmetics.face === "wink") rect(148, 143, 13, 3, "#27352f");
+    if (["blush", "sparkle"].includes(cosmetics.face)) { rect(114, 153, 11, 5, "#ef8b98"); rect(155, 153, 11, 5, "#ef8b98"); }
+    rect(cosmetics.face === "smile" ? 130 : 134, 157, cosmetics.face === "smile" ? 20 : 12, 4, cosmetics.face === "cool" ? "#635763" : "#b76067");
+    rect(105, 174, 70, 55, "#173c2e"); rect(109, 178, 62, 47, outfit[0]);
+    rect(119, 178, 42, 47, outfit[1]); rect(125, 178, 5, 47, outfit[0]); rect(151, 178, 5, 47, outfit[0]);
+    rect(90, 179, 19, 44, outfit[0]); rect(171, 179, 19, 44, outfit[0]);
+    rect(94, 217, 15, 13, skin); rect(171, 217, 15, 13, skin);
+    rect(112, 225, 25, 27, "#594330"); rect(143, 225, 25, 27, "#594330");
+    rect(108, 246, 31, 10, "#31271f"); rect(141, 246, 31, 10, "#31271f");
+    if (cosmetics.accessory === "red_scarf") rect(105, 170, 70, 12, "#d93432");
+    if (cosmetics.accessory === "sprout_hat") {
+      rect(97, 91, 86, 14, "#347f3d"); rect(135, 71, 10, 22, "#216a34"); rect(143, 72, 20, 11, "#65b85d");
+    }
+    if (cosmetics.accessory === "carrot_bag") { rect(173, 187, 22, 37, "#b94f25"); rect(177, 191, 15, 29, "#ee7d32"); }
+    if (["round_glasses", "star_glasses"].includes(cosmetics.accessory)) {
+      target.strokeStyle = cosmetics.accessory === "star_glasses" ? "#e75e99" : "#354751"; target.lineWidth = 4;
+      target.strokeRect(115, 134, 21, 18); target.strokeRect(144, 134, 21, 18); rect(136, 140, 8, 4, target.strokeStyle);
+    }
+  }
+
   function renderAvatarPreview() {
     const preview = $("#avatar-preview-canvas");
     const previewContext = preview.getContext("2d");
@@ -853,7 +1018,7 @@
     previewContext.imageSmoothingEnabled = false;
     const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
-    drawAtlasCell(previewContext, avatarSpriteAtlas, avatarSpriteIndex(avatarDraft), 4, 3, 58, 38, 164, 205);
+    drawLayeredAvatarPreview(previewContext, avatarDraft);
     const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, effectIndex, 5, 4, 16, 50, 80, 80);
     const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
@@ -880,18 +1045,17 @@
       const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
       const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (["skin", "outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
-        const previewCosmetics = { ...avatarDraft, [activeAvatarCategory]: item.id };
-        const index = avatarSpriteIndex(previewCosmetics);
-        const x = index % 4 * 100 / 3;
-        const y = Math.floor(index / 4) * 50;
-        visual = `<span class="item-visual sprite-thumb avatar-sprite-thumb" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+      if (activeAvatarCategory === "skin") {
+        visual = `<span class="item-visual"><span class="color-chip" style="background:${item.color}" aria-hidden="true"></span></span>`;
+      } else if (["outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
+        const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
+        visual = index == null
+          ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
+          : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
       } else if (catIndex != null) {
-        visual = `<span class="item-visual sprite-thumb cat-pet-sprite-thumb" style="background-position:${catIndex * 100}% 0%" aria-hidden="true"></span>`;
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
       } else if (cosmeticIndex != null) {
-        const x = cosmeticIndex % 5 * 25;
-        const y = Math.floor(cosmeticIndex / 5) * 100 / 3;
-        visual = `<span class="item-visual sprite-thumb cosmetic-sprite-thumb" style="background-position:${x}% ${y}%" aria-hidden="true"></span>`;
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cosmetic-thumb="${cosmeticIndex}" aria-hidden="true"></canvas>`;
       } else {
         visual = '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>';
       }
@@ -901,6 +1065,7 @@
     $("#avatar-preview-name").textContent = state.avatar.name;
     $("#avatar-selection-name").textContent = selectedAvatarItem(activeAvatarCategory).name;
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
+    renderCatalogThumbnailCanvases();
     renderAvatarPreview();
   }
 
@@ -1076,6 +1241,8 @@
     }
     state.avatar.mounted = !state.avatar.mounted;
     state.avatar.sitting = false;
+    walkingUntil = 0;
+    walkAnimationFrame = 0;
     if (!state.avatar.mounted) { state.avatar.x = 470; state.avatar.y = 410; }
     renderCanvas();
     await persist(state.avatar.mounted ? "숲 스쿠터에 탔습니다. 이동 속도가 빨라졌어요." : "숲 스쿠터에서 내렸습니다.");

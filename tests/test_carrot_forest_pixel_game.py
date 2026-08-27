@@ -121,13 +121,36 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-studio"' in html
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
-    for label in ("피부", "의상", "헤어", "얼굴", "액세서리", "아우라", "이펙트", "탈것", "펫", "말풍선"):
+    for label in ("피부", "의상", "헤어", "얼굴", "액세서리", "아우라", "찌르기 이펙트", "탈것", "펫", "말풍선"):
         assert f'label: "{label}"' in script
     assert 'label: "찌르기"' not in script
     for behavior in ("renderAvatarStudio", "renderAvatarPreview", "avatarDraftHistory", "avatar-studio-save"):
         assert behavior in script
     assert ".avatar-studio-layout" in css
     assert '.avatar-item-card[aria-pressed="true"]' in css
+
+
+def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation() -> None:
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    assets = (
+        ROOT / "src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png",
+        ROOT / "src/frontend/assets/carrot-forest-basic-scooter-atlas-v1.png",
+    )
+
+    for asset in assets:
+        assert asset.exists()
+        assert asset.stat().st_size > 100_000
+        assert asset.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+        assert asset.name in worker
+    assert "drawAnimatedBasicWorldAvatar" in script
+    assert 'const directionRow = { down: 0, up: 1, left: 2, right: 3 }' in script
+    assert 'const directionColumn = { down: 0, up: 1, left: 2, right: 3 }' in script
+    assert "walkingUntil" in script
+    assert "walkAnimationFrame" in script
+    assert "state.avatar.direction = direction" in script
+    assert "drawLayeredAvatarPreview" in script
+    assert "renderCatalogThumbnailCanvases" in script
 
 
 def test_avatar_studio_uses_original_pixel_sprite_atlases_instead_of_emoji_previews() -> None:
