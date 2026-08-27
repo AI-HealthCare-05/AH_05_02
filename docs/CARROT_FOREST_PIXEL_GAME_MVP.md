@@ -8,7 +8,7 @@
 
 ## 2. 오늘 구현한 범위
 
-- Canvas 기반 24×16 타일 픽셀 맵: 숲, 당근밭, 공동 나무, 집, 산책길
+- Phaser 3.90 기반 24×16 월드: 숲, 당근밭, 공동 나무, 집, 산책길
 - 여성형·남성형·중립형 성별 표현과 외형 프리셋 4종
 - 아바타 표시 이름과 맵 위 이름표
 - 키보드 방향키·WASD 및 모바일용 큰 방향 버튼
@@ -32,7 +32,7 @@
 - 지붕 타일, 창문 반사, 나뭇결, 흙 고랑, 잎 명암, 그림자와 캐릭터 표정·의상·신발 디테일 추가
 - 모션 감소 설정을 존중하는 저주파 잎 흔들림·수면 반사·아바타 호흡 애니메이션
 - 전용 `아바타 꾸미기` 작업실: 좌측 카테고리, 중앙 아이템 카드, 우측 2배 픽셀 미리보기
-- 꾸미기 카테고리: 피부·의상·헤어·얼굴·액세서리·아우라·찌르기 이펙트·탈것·펫·말풍선. 각 탭에는 의미에 맞는 전용 아이콘을 표시한다.
+- 꾸미기 카테고리: 피부·의상·하의·신발·헤어·얼굴·모자·안경·액세서리·아우라·찌르기 이펙트·탈것·펫·말풍선. 각 탭에는 의미에 맞는 전용 아이콘을 표시한다.
 - 아우라는 지속 장식, 이펙트는 순간 표현으로 구분하며 선택·실행 취소·무작위 코디·저장을 지원
 - 저장한 피부색·의상·헤어·표정·액세서리·아우라·이펙트·펫·말풍선을 월드 아바타에 즉시 반영하며, 커스텀 조합은 서로 덮어쓰지 않는 레이어형 렌더러를 사용한다.
 - 기본 `새싹 정원사`와 추가 프리셋 5종은 앞·뒤·좌·우 4방향 보행과 방향별 프레임 애니메이션을 제공한다. 프리셋에 없는 개별 조합은 레이어 합성 미리보기로 제공한다.
@@ -51,6 +51,10 @@
 - `127.0.0.1`·`localhost` 개발 실행에서는 오래된 설치형 PWA 캐시를 자동 해제하며, 실제 배포 호스트에서만 서비스워커를 등록
 
 ## 픽셀 에셋 출처와 재현
+
+- 실행 월드는 `Phaser 3.90.0`을 저장소 내부 정적 파일로 제공하며 MIT 라이선스 전문은 `src/frontend/vendor/PHASER_LICENSE.txt`에 보관한다.
+- 실제 조합형 아바타는 Universal LPC Spritesheet Character Generator의 동일 규격 64×64 레이어를 사용한다. 사용 자산의 원본 경로·제작자·라이선스는 `src/frontend/assets/lpc/CREDITS.csv`, 라이선스 전문은 `GENERATOR_LICENSE.txt`에서 확인한다.
+- 피부·상의·하의·신발·헤어·모자·안경은 같은 방향·보행 프레임을 공유하므로 독립적으로 바꿔도 월드의 앞·뒤·좌·우 이동 애니메이션이 유지된다.
 
 - `src/frontend/assets/carrot-forest-avatar-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 4×3 투명 캐릭터 아틀라스
 - `src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png`: 새싹 정원사 기본 의상용 앞·뒤·좌·우 4×4 보행 아틀라스
@@ -121,6 +125,7 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | --- | --- |
 | 독립 게임 화면 | `src/frontend/forest.html` |
 | 픽셀 게임·상태·어댑터 | `src/frontend/forest-game.js` |
+| Phaser 월드·레이어 아바타·4방향 이동 | `src/frontend/forest-phaser.js` |
 | 반응형·접근성 스타일 | `src/frontend/forest-game.css` |
 | PWA 설치 정보 | `src/frontend/forest.webmanifest` |
 | 오프라인 앱 셸 | `src/frontend/forest-sw.js` |
@@ -134,7 +139,7 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 
 ## 6. Unity를 나중에 연결할 때의 경계
 
-오늘 구현은 Canvas 렌더러와 상태 어댑터를 분리했다. Unity WebGL을 도입하더라도 인증·퀘스트·보상·인벤토리·오브젝트 API는 그대로 사용하고, `forest-game.js`의 맵 렌더링과 입력 처리만 Unity 빌드로 교체한다. Unity가 건강정보나 예측 결과를 직접 조회하지 않고 서버가 승인한 게임 상태만 받도록 유지한다.
+오늘 구현은 Phaser 렌더러와 상태 어댑터를 분리했다. Unity WebGL을 도입하더라도 인증·퀘스트·보상·인벤토리·오브젝트 API는 그대로 사용하고, `forest-phaser.js`의 월드 렌더링과 입력 처리만 Unity 빌드로 교체한다. Unity가 건강정보나 예측 결과를 직접 조회하지 않고 서버가 승인한 게임 상태만 받도록 유지한다.
 
 월드 스튜디오 레이아웃 역시 렌더러와 분리되어 있다. 향후 Unity 화면은 중앙 `world-stage`만 교체하고, 좌측 아바타 편집기·우측 퀘스트 인스펙터·하단 에셋 라이브러리는 웹 UI로 계속 사용할 수 있다.
 
@@ -142,6 +147,7 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 
 ```powershell
 node --check src/frontend/forest-game.js
+node --check src/frontend/forest-phaser.js
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```

@@ -31,12 +31,12 @@
     teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
   };
   const presetBundles = {
-    sprout: { hair: "soft", outfit: "forest", face: "calm", accessory: "none" },
-    red_bow: { hair: "red_wave", outfit: "navy_garden", face: "smile", accessory: "none" },
-    cow_hood: { hair: "cow_brown", outfit: "cow_vest", face: "smile", accessory: "none" },
-    midnight: { hair: "midnight", outfit: "violet", face: "calm", accessory: "none" },
-    blue_cap: { hair: "blue_short", outfit: "blue_overalls", face: "calm", accessory: "none" },
-    teal_bob: { hair: "teal_bob", outfit: "teal_garden", face: "smile", accessory: "none" },
+    sprout: { hair: "soft", outfit: "forest", bottom: "cream", shoes: "brown", face: "calm", accessory: "none", hat: "none", glasses: "none" },
+    red_bow: { hair: "red_wave", outfit: "navy_garden", bottom: "cream", shoes: "brown", face: "smile", accessory: "none", hat: "headband", glasses: "none" },
+    cow_hood: { hair: "cow_brown", outfit: "cow_vest", bottom: "charcoal", shoes: "brown", face: "smile", accessory: "none", hat: "cap", glasses: "none" },
+    midnight: { hair: "midnight", outfit: "violet", bottom: "charcoal", shoes: "black", face: "calm", accessory: "none", hat: "none", glasses: "round" },
+    blue_cap: { hair: "blue_short", outfit: "blue_overalls", bottom: "denim", shoes: "white", face: "calm", accessory: "none", hat: "cap", glasses: "none" },
+    teal_bob: { hair: "teal_bob", outfit: "teal_garden", bottom: "olive", shoes: "brown", face: "smile", accessory: "none", hat: "none", glasses: "none" },
   };
   const itemCatalog = {
     red_scarf: { name: "빨간 목도리", kind: "accessory", icon: "🧣" },
@@ -52,8 +52,12 @@
     { id: "preset", label: "캐릭터 프리셋", icon: "🧑‍🌾" },
     { id: "skin", label: "피부", icon: "🎨" },
     { id: "outfit", label: "의상", icon: "👕" },
+    { id: "bottom", label: "하의", icon: "👖" },
+    { id: "shoes", label: "신발", icon: "👟" },
     { id: "hair", label: "헤어", icon: "💇" },
     { id: "face", label: "얼굴", icon: "😊" },
+    { id: "hat", label: "모자", icon: "🧢" },
+    { id: "glasses", label: "안경", icon: "👓" },
     { id: "accessory", label: "액세서리", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
     { id: "effect", label: "찌르기 이펙트", icon: "💫" },
@@ -84,6 +88,15 @@
       { id: "navy_garden", name: "리본 네이비 원피스", visual: "👗" }, { id: "cow_vest", name: "목장 주황 조끼", visual: "🦺" },
       { id: "blue_overalls", name: "파란 농부 멜빵", visual: "👖" }, { id: "teal_garden", name: "청록 리본 작업복", visual: "🥼" },
     ],
+    bottom: [
+      { id: "cream", name: "크림 작업바지", visual: "🤍" }, { id: "denim", name: "데님 바지", visual: "💙" },
+      { id: "charcoal", name: "차콜 바지", visual: "🖤" }, { id: "olive", name: "올리브 바지", visual: "💚" },
+      { id: "plum", name: "플럼 바지", visual: "💜" },
+    ],
+    shoes: [
+      { id: "brown", name: "브라운 워커", visual: "🥾" }, { id: "white", name: "화이트 스니커즈", visual: "👟" },
+      { id: "black", name: "블랙 로퍼", visual: "👞" }, { id: "orange", name: "오렌지 러너", visual: "🟠" },
+    ],
     hair: [
       { id: "soft", name: "포근한 단발", visual: "💇" }, { id: "wave", name: "물결 장발", visual: "👩‍🦱", isNew: true },
       { id: "crop", name: "산뜻한 숏컷", visual: "🧑" }, { id: "twin", name: "양갈래 머리", visual: "👧" },
@@ -96,6 +109,14 @@
       { id: "calm", name: "차분한 표정", visual: "🙂" }, { id: "smile", name: "환한 미소", visual: "😊" },
       { id: "sparkle", name: "반짝이는 눈", visual: "🤩", isNew: true }, { id: "blush", name: "수줍은 볼", visual: "☺️" },
       { id: "wink", name: "윙크", visual: "😉" }, { id: "cool", name: "도도한 표정", visual: "😌" },
+    ],
+    hat: [
+      { id: "none", name: "모자 없음", visual: "—" }, { id: "cap", name: "산책 캡", visual: "🧢" },
+      { id: "headband", name: "리본 헤드밴드", visual: "🎀" },
+    ],
+    glasses: [
+      { id: "none", name: "안경 없음", visual: "—" }, { id: "round", name: "둥근 안경", visual: "👓" },
+      { id: "sun", name: "선글라스", visual: "🕶️" },
     ],
     accessory: [
       { id: "none", name: "착용 안 함", visual: "—" }, { id: "red_scarf", name: "빨간 목도리", visual: "🧣" },
@@ -129,7 +150,7 @@
     ],
   };
   const defaultCosmetics = {
-    skin: "peach", outfit: "forest", hair: "soft", face: "calm", accessory: "none",
+    skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
   };
 
@@ -299,6 +320,7 @@
   function groupCompleted() { return state.members.reduce((total, member) => total + member.completed, 0); }
   async function persist(message = null) {
     await adapter.save(state);
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene } }));
     if (message) setStatus(message);
   }
 
@@ -930,6 +952,10 @@
   }
 
   async function moveAvatar(direction) {
+    if (window.carrotForestPhaserActive && window.carrotForestPhaserMove) {
+      window.carrotForestPhaserMove(direction);
+      return;
+    }
     const step = state.avatar.mounted ? 28 : running ? 22 : 12;
     const delta = { up: [0, -step], down: [0, step], left: [-step, 0], right: [step, 0] }[direction];
     if (!delta) return;
@@ -1173,9 +1199,9 @@
       let visual;
       if (activeAvatarCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (activeAvatarCategory === "skin") {
-        visual = `<span class="item-visual"><span class="color-chip" style="background:${item.color}" aria-hidden="true"></span></span>`;
-      } else if (["outfit", "hair", "face", "accessory"].includes(activeAvatarCategory)) {
+      } else if (["skin", "outfit", "bottom", "shoes", "hair", "hat", "glasses"].includes(activeAvatarCategory)) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-item-category="${activeAvatarCategory}" data-lpc-item-id="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (["face", "accessory"].includes(activeAvatarCategory)) {
         const itemPreset = stylePresetByItem[item.id];
         const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
         visual = itemPreset
@@ -1188,7 +1214,7 @@
       } else if (cosmeticIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cosmetic-thumb="${cosmeticIndex}" aria-hidden="true"></canvas>`;
       } else {
-        visual = '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>';
+        visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
       const selected = avatarDraft[activeAvatarCategory] === item.id;
       return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${selected ? "선택됨" : "보유 아이템"}</small></button>`;
@@ -1199,6 +1225,7 @@
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
     renderCatalogThumbnailCanvases();
     renderAvatarPreview();
+    window.dispatchEvent(new CustomEvent("forest-avatar-draft", { detail: avatarDraft }));
   }
 
   function openAvatarStudio() {
@@ -1290,6 +1317,7 @@
     $("#avatar-preset").value = state.avatar.preset;
     renderInventory();
     renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
     $("#avatar-studio").close();
     await persist(`${state.avatar.name}님의 새 코디를 저장했습니다.`);
   });
@@ -1393,8 +1421,28 @@
     await persist(state.avatar.mounted ? "숲 스쿠터에 탔습니다. 이동 속도가 빨라졌어요." : "숲 스쿠터에서 내렸습니다.");
   }
 
+  let phaserPersistTimer = null;
+  window.addEventListener("forest-phaser-position", (event) => {
+    const detail = event.detail || {};
+    if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
+    state.avatar.x = detail.x;
+    state.avatar.y = detail.y;
+    if (detail.direction) state.avatar.direction = detail.direction;
+    $("#avatar-coordinate").textContent = `X ${Math.round(detail.x)} · Y ${Math.round(detail.y)}`;
+    updateInteractionPrompt();
+    window.clearTimeout(phaserPersistTimer);
+    phaserPersistTimer = window.setTimeout(() => adapter.save(state), 240);
+  });
+  window.addEventListener("forest-phaser-interact", () => interact());
+  window.addEventListener("forest-phaser-action", async (event) => {
+    if (event.detail === "chat") toggleChat();
+    if (event.detail === "sit") await toggleSit();
+    if (event.detail === "ride") await toggleRide();
+  });
+
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
+    if (window.carrotForestPhaserActive) return;
     if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E"].includes(event.key)) event.preventDefault();
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
@@ -1406,6 +1454,7 @@
     event.preventDefault(); moveAvatar(direction);
   });
   document.addEventListener("keyup", (event) => {
+    if (window.carrotForestPhaserActive) return;
     if (event.key === "r" || event.key === "R") { running = false; setStatus("달리기를 멈췄습니다."); }
   });
   document.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("pointerdown", (event) => { event.preventDefault(); moveAvatar(button.dataset.move); }));
