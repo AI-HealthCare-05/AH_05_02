@@ -19,6 +19,7 @@
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft",
     hat: "none", glasses: "none", face: "calm", accessory: "none",
   };
+  const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };
   const hairPresetByStyle = {
     red_wave: "red_bow", cow_brown: "cow_hood", midnight: "midnight",
     blue_short: "blue_cap", teal_bob: "teal_bob",
@@ -40,6 +41,7 @@
       direction: directionRows[source.direction] == null ? "down" : source.direction,
       mounted: Boolean(source.mounted), sitting: Boolean(source.sitting),
       cosmetics: { ...defaultCosmetics, ...(source.cosmetics || {}) },
+      tuning: { ...defaultTuning, ...(source.tuning || {}) },
     };
   }
 
@@ -193,9 +195,13 @@
         accessory: cosmetics.accessory,
         hat: cosmetics.hat,
         glasses: cosmetics.glasses,
+        ...this.avatar.tuning,
       });
       this.compositeTexture.refresh();
-      this.premiumAvatar.setScale(AVATAR_RENDER_SCALE);
+      const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
+      this.premiumAvatar.setScale(worldScale);
+      this.shadow.setScale(worldScale / AVATAR_RENDER_SCALE);
+      this.nameplate?.setY(-Math.round(288 * worldScale * 0.96) - 7);
     }
   }
 

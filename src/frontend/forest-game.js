@@ -161,6 +161,7 @@
     aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
   };
   const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
+  const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
 
   function defaultState() {
     const generatedNickname = generateNickname();
@@ -168,7 +169,7 @@
       dateKey: TODAY,
       profileVersion: 1,
       cosmeticSchemaVersion: 2,
-      avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, sitting: false, mounted: false },
+      avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -202,6 +203,7 @@
         name: previousAvatar.name || fallback.avatar.name,
         x: 384, y: 352, direction: "down", sitting: false, mounted: false,
       };
+      fallback.avatar.tuning = { ...defaultAvatarTuning, ...(previousAvatar.tuning || {}) };
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]) : fallback.inventory;
       fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
@@ -209,6 +211,7 @@
     }
     const state = { ...fallback, ...value };
     state.avatar = { ...fallback.avatar, ...(value.avatar || {}) };
+    state.avatar.tuning = { ...defaultAvatarTuning, ...((value.avatar || {}).tuning || {}) };
     if (!value.profileVersion || !state.avatar.name || state.avatar.name === "세준") state.avatar.name = generateNickname();
     state.profileVersion = 1;
     if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
@@ -273,6 +276,7 @@
   let currentScene = "world";
   let activeAvatarCategory = "preset";
   let avatarDraft = { ...defaultCosmetics };
+  let avatarTuningDraft = { ...defaultAvatarTuning };
   let avatarDraftHistory = [];
   const canvas = $("#forest-canvas");
   const context = canvas.getContext("2d");
@@ -1219,6 +1223,7 @@
         outfitPreset: stylePresetByItem[avatarDraft.outfit] || previewPreset,
         direction: "down", mounted: false, moving: false, frame: 0,
         accessory: avatarDraft.accessory, hat: avatarDraft.hat, glasses: avatarDraft.glasses,
+        ...avatarTuningDraft,
       }, { x: 65, y: 30, width: 150, height: 210 });
     } else if (basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
       drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
@@ -1297,6 +1302,12 @@
     $("#avatar-preview-name").textContent = state.avatar.name;
     $("#avatar-selection-name").textContent = selectedAvatarItem(activeAvatarCategory).name;
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
+    for (const [key, value] of Object.entries(avatarTuningDraft)) {
+      const input = document.querySelector(`[data-avatar-tuning="${key}"]`);
+      const output = document.querySelector(`[data-avatar-tuning-output="${key}"]`);
+      if (input) input.value = String(value);
+      if (output) output.textContent = key === "worldScale" ? `${Math.round(value * 100)}%` : `${value > 0 ? "+" : ""}${value}px`;
+    }
     renderCatalogThumbnailCanvases();
     renderAvatarPreview();
     window.dispatchEvent(new CustomEvent("forest-avatar-draft", { detail: avatarDraft }));
@@ -1304,6 +1315,7 @@
 
   function openAvatarStudio() {
     avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "blue_cap" };
+    avatarTuningDraft = { ...defaultAvatarTuning, ...(state.avatar.tuning || {}) };
     avatarDraftHistory = [];
     activeAvatarCategory = "preset";
     renderAvatarStudio();
@@ -1325,6 +1337,7 @@
       outfitPreset: stylePresetByItem[cosmetics.outfit] || state.avatar.preset,
       direction: "down", mounted: false, moving: false, frame: 0,
       accessory: cosmetics.accessory, hat: cosmetics.hat, glasses: cosmetics.glasses,
+      ...state.avatar.tuning,
     }, { x: 22, y: 28, width: 180, height: 232 });
     target.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -1502,10 +1515,21 @@
     });
     renderAvatarStudio();
   });
+  $("#avatar-tuning-controls").addEventListener("input", (event) => {
+    const input = event.target.closest("[data-avatar-tuning]");
+    if (!input) return;
+    avatarTuningDraft[input.dataset.avatarTuning] = Number(input.value);
+    renderAvatarStudio();
+  });
+  $("#avatar-tuning-reset").addEventListener("click", () => {
+    avatarTuningDraft = { ...defaultAvatarTuning };
+    renderAvatarStudio();
+  });
   $("#avatar-studio-save").addEventListener("click", async () => {
     state.avatar.preset = avatarDraft.preset || state.avatar.preset;
     const { preset: _preset, ...savedCosmetics } = avatarDraft;
     state.avatar.cosmetics = { ...savedCosmetics };
+    state.avatar.tuning = { ...avatarTuningDraft };
     state.avatar.equipped = avatarDraft.accessory === "none" ? null : avatarDraft.accessory;
     $("#avatar-preset").value = state.avatar.preset;
     renderInventory();

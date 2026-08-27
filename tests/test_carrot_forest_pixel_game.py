@@ -184,7 +184,22 @@ def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> No
     assert "cosmeticSchemaVersion: 2" in script
     assert "Object.assign(state.avatar.cosmetics, presetDecorationReset" in script
     assert 'glasses: "round"' not in script
-    assert "context.ellipse(lensX, 123, 14, 10" in compositor
+    assert "context.ellipse(lensX, 123 + headAdjustmentY + glassesOffsetY, 14, 10" in compositor
+
+
+def test_avatar_spacing_and_world_scale_can_be_tuned_by_user() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
+    phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    for key in ("headOffsetY", "outfitOffsetY", "glassesOffsetY", "worldScale"):
+        assert f'data-avatar-tuning="{key}"' in html
+        assert key in script
+    assert 'id="avatar-tuning-reset"' in html
+    assert "avatarTuningDraft" in script
+    assert "headOffsetY" in compositor
+    assert "this.avatar.tuning.worldScale" in phaser
 
 
 def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation() -> None:
@@ -306,7 +321,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v20" in html
+    assert "forest-local-pwa-reset-v21" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -346,7 +361,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v23" in worker
+    assert "gandang-carrot-forest-pwa-v24" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
