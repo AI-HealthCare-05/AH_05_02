@@ -178,8 +178,8 @@ def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers()
     assert "drawAnimatedAccessoryOverlay" in script
     assert "drawPreviewAccessoryOverlay" in script
     assert 'avatarDraft.preset = "custom"' in script
-    assert 'avatar.preset === "custom"' in script
-    assert '["sprout", "custom"].includes(previewPreset)' in script
+    assert "if (drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return" in script
+    assert "else if (basicWalkAtlas.complete" in script
     assert "motionRow * 4 + directionColumn" in script
 
 
@@ -249,7 +249,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v6" in html
+    assert "forest-local-pwa-reset-v7" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script

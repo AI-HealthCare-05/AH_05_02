@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v6";
+      const resetKey = "forest-local-pwa-reset-v7";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -39,8 +39,8 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-6" onload="document.documentElement.classList.add('forest-style-ready')">
-  <script src="/static/forest-game.js?v=20260827-6" defer></script>
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-7" onload="document.documentElement.classList.add('forest-style-ready')">
+  <script src="/static/forest-game.js?v=20260827-7" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
