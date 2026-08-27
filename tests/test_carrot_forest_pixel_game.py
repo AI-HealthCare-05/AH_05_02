@@ -261,7 +261,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v13" in html
+    assert "forest-local-pwa-reset-v14" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -301,10 +301,11 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v16" in worker
+    assert "gandang-carrot-forest-pwa-v17" in worker
     assert "/static/assets/lpc/" not in worker
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
+    assert "const NAMEPLATE_Y = -158" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
 

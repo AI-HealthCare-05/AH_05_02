@@ -5,6 +5,8 @@
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const WORLD = { width: 768, height: 512 };
+  const AVATAR_RENDER_SCALE = 0.56;
+  const NAMEPLATE_Y = -158;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const premiumPresets = {
     red_bow: { path: "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png", rows: 6 },
@@ -75,7 +77,7 @@
       this.player.add(this.premiumAvatar);
       this.pet = this.add.sprite(39, 12, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.057).setDepth(1);
       this.player.add(this.pet);
-      this.nameplate = this.add.text(0, -118, this.avatar.name, {
+      this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
         color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
       }).setOrigin(0.5).setStroke("#ffffff", 2);
@@ -193,7 +195,7 @@
         glasses: cosmetics.glasses,
       });
       this.compositeTexture.refresh();
-      this.premiumAvatar.setScale(0.56);
+      this.premiumAvatar.setScale(AVATAR_RENDER_SCALE);
     }
   }
 
