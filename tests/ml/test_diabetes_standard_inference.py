@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import date
 from pathlib import Path
 
@@ -347,3 +348,25 @@ def test_candidate_manifest_records_metrics_contract_and_reproduction() -> None:
     assert manifest["artifact_local_path"].startswith("outputs/ml/")
     assert manifest["artifact_git_policy"] == ("local_only_do_not_commit_model_binary")
     assert manifest["reproduce"]["run"] == ("./scripts/ml-experiment.sh run rf_25features_v001")
+
+
+def test_registered_artifact_matches_fixed_input_golden_output() -> None:
+    configured_path = os.environ.get("DIABETES_RF25_MODEL_PATH")
+    if configured_path is None:
+        pytest.skip("set DIABETES_RF25_MODEL_PATH to verify the Git-excluded registered artifact")
+
+    experiment_dir = Path("experiments/diabetes_incidence/candidates/rf_25features_v001")
+    payload = json.loads((experiment_dir / "inference_request.example.json").read_text(encoding="utf-8"))
+    expected = json.loads((experiment_dir / "inference_response.golden.json").read_text(encoding="utf-8"))
+    loaded = load_standard_model(model_path=Path(configured_path))
+
+    results = [
+        predict_with_loaded_model(
+            loaded,
+            parse_diabetes_risk_input(payload),
+            as_of_date=date(2026, 8, 26),
+        )
+        for _ in range(5)
+    ]
+
+    assert results == [expected] * 5

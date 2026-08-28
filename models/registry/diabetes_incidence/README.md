@@ -12,6 +12,8 @@
 `20260825T045054926974Z`다. Git에는 `candidates/`의 JSON Manifest만 저장하며 모델
 바이너리는 저장하지 않는다. Manifest에는 모델 SHA-256, 25개 특성 순서,
 입력·특성·임계값 버전, Recall·Specificity·AUROC·AUPRC와 재현 명령이 포함된다.
+후보의 입력·전처리·성능·한계와 롤백 기준은
+`docs/model/MODEL_CARD_RF25_DIABETES_INCIDENCE.md`에 기록한다.
 
 ```bash
 ./scripts/ml-experiment.sh validate
