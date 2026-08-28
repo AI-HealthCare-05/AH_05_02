@@ -67,6 +67,22 @@ class ChallengeLogUpsertRequest(BaseModel):
     note: str | None = Field(default=None, max_length=200)
 
 
+class ChallengeVerificationCreateRequest(BaseModel):
+    verification_date: date
+    verification_type: Literal["photo", "location"]
+    evidence_ref: str | None = Field(default=None, max_length=500)
+    evidence_digest: str | None = Field(default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+    location_accuracy_m: float | None = Field(default=None, ge=0, le=100000)
+
+    @model_validator(mode="after")
+    def validate_evidence(self) -> ChallengeVerificationCreateRequest:
+        if self.verification_type == "photo" and not (self.evidence_ref or self.evidence_digest):
+            raise ValueError("사진 인증에는 증빙 참조 또는 SHA-256 해시가 필요합니다.")
+        if self.verification_type == "location" and self.location_accuracy_m is None:
+            raise ValueError("위치 인증에는 위치 정확도가 필요합니다.")
+        return self
+
+
 class ChallengeCycleStatusRequest(BaseModel):
     status: Literal["stopped"]
     reason: str = Field(default="user_requested", max_length=80)
