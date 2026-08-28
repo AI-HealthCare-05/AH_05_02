@@ -102,12 +102,20 @@ class EngagementRepository:
         member = await self.get_shared_member(group_id, user_id)
         if member is None:
             return None
-        return await SharedChallengeGroup.get_or_none(id=group_id)
+        return await SharedChallengeGroup.get_or_none(id=group_id, status="active")
 
     async def list_shared_groups(self, user_id: int) -> list[SharedChallengeGroup]:
         memberships = await SharedChallengeMember.filter(user_id=user_id)
         ids = [item.group_id for item in memberships]
-        return [] if not ids else await SharedChallengeGroup.filter(id__in=ids).order_by("-created_at")
+        return (
+            []
+            if not ids
+            # "-id" breaks ties among rows with an identical created_at (e.g. groups created
+            # in the same second) so "most recent group" resolves the same way on every call —
+            # without it, a user in >1 active group could get a different group back from one
+            # request to the next, which is exactly what happened here.
+            else await SharedChallengeGroup.filter(id__in=ids, status="active").order_by("-created_at", "-id")
+        )
 
     async def shared_members(self, group_id: int) -> list[SharedChallengeMember]:
         return await SharedChallengeMember.filter(group_id=group_id).order_by("id")
