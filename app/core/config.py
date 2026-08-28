@@ -57,6 +57,13 @@ class Config(BaseSettings):
     PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
+    # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.
+    FOOD_VISION_PROVIDER: str = "development"
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    FOOD_VISION_TIMEOUT_SECONDS: int = 20
+    FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
+
     COOKIE_DOMAIN: str = "localhost"
 
     JWT_ALGORITHM: str = "HS256"
