@@ -236,7 +236,9 @@ class ForestService:
                         using_db=connection,
                     )
         except IntegrityError as exc:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="오늘의 그룹 보상을 이미 받았습니다.") from exc
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="오늘의 그룹 보상을 이미 받았습니다."
+            ) from exc
         return {
             "carrot_amount": GROUP_REWARD_CARROTS,
             "item_code": item_code,
@@ -278,6 +280,8 @@ class ForestService:
         if item is None:
             return {"object_id": object_id, "removed": False, "already_removed": True, "carrot_refund": 0}
         if item.placed_by_user_id != user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="본인이 배치한 오브젝트만 회수할 수 있습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="본인이 배치한 오브젝트만 회수할 수 있습니다."
+            )
         await item.delete()
         return {"object_id": object_id, "removed": True, "already_removed": False, "carrot_refund": 0}

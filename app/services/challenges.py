@@ -239,7 +239,9 @@ class ChallengeService:
         self, user: User, user_challenge_id: int, request: ChallengeVerificationCreateRequest
     ) -> dict[str, object]:
         if request.verification_date > date.today():
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
+            )
         user_challenge = await self.repo.get_user_challenge(user_challenge_id, user.id)
         if user_challenge is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="선택한 챌린지를 찾을 수 없습니다.")
@@ -287,7 +289,9 @@ class ChallengeService:
         분석 직후 폐기하며 서버에 저장하지 않고, 판별 결과와 SHA-256 다이제스트만 남깁니다.
         """
         if verification_date > date.today():
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
+            )
         user_challenge = await self.repo.get_user_challenge(user_challenge_id, user.id)
         if user_challenge is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="선택한 챌린지를 찾을 수 없습니다.")
@@ -411,10 +415,14 @@ class ChallengeService:
 
     async def claim_daily_reward(self, user: User, reward_date: date) -> dict[str, object]:
         if reward_date > date.today():
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜의 보상은 받을 수 없습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜의 보상은 받을 수 없습니다."
+            )
         reward_status = await self.daily_reward_status(user, reward_date)
         if not reward_status["eligible"]:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="오늘의 챌린지 3개를 모두 완료해야 합니다.")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="오늘의 챌린지 3개를 모두 완료해야 합니다."
+            )
         async with in_transaction():
             reward, created = await self.repo.claim_daily_reward(user.id, reward_date, 55)
             transaction, credited = await GameRepository().credit(
