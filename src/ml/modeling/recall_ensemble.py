@@ -752,7 +752,7 @@ def run_experiment(
                 },
                 "prediction": {
                     "risk_score_internal": "0..1; internal candidate output, not a validated personal probability",
-                    "risk_category": "low|moderate|high only after a reviewed mapping is approved",
+                    "risk_category": "low|caution|high only after a reviewed mapping is approved",
                     "model_version": "echoed",
                     "feature_schema_version": "echoed",
                     "threshold_version": "echoed",

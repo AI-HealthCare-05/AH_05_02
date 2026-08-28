@@ -139,7 +139,7 @@ def predict_with_loaded_model(
     thresholds = loaded.manifest["thresholds"]
     category = categorize_risk_score(
         score,
-        moderate_threshold=float(thresholds["moderate"]),
+        caution_threshold=float(thresholds["caution"]),
         high_threshold=float(thresholds["high"]),
     )
     return {
@@ -149,7 +149,7 @@ def predict_with_loaded_model(
         "risk_category": category,
         "risk_category_label": {
             "low": "낮음",
-            "moderate": "중간",
+            "caution": "주의",
             "high": "높음",
         }[category],
         "model_version": loaded.manifest["model_version"],

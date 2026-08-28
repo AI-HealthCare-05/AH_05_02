@@ -14,15 +14,15 @@
   "threshold_version": "validation-recall-090-080-v1",
   "thresholds": {
     "low": 0.0,
-    "moderate": 0.016719708895315412,
+    "caution": 0.016719708895315412,
     "high": 0.022410835788097848,
     "selection_data": "validation_only",
-    "moderate_target_recall": 0.9,
+    "caution_target_recall": 0.9,
     "high_target_recall": 0.8
   },
   "risk_categories": [
     "low",
-    "moderate",
+    "caution",
     "high"
   ],
   "features": [

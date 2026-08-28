@@ -74,7 +74,7 @@ def candidate_manifest() -> dict:
         "feature_schema_version": "klosa_stage3_25features_v1",
         "input_schema_version": "diabetes-incidence-api-25features-v1",
         "threshold_version": "validation-recall-090-080-v1",
-        "thresholds": {"moderate": 0.0167, "high": 0.0224},
+        "thresholds": {"caution": 0.0167, "high": 0.0224},
     }
 
 
@@ -116,7 +116,7 @@ def test_input_with_all_optional_values_missing_completes_inference() -> None:
     )
 
     assert result["risk_score"] == pytest.approx(0.02)
-    assert result["risk_category"] == "moderate"
+    assert result["risk_category"] == "caution"
 
 
 @pytest.mark.parametrize("missing_field", REQUIRED_API_FIELDS)
@@ -214,7 +214,7 @@ def test_supported_ages_complete_inference(birth_date: date, expected_age: int) 
 
     assert frame.loc[0, "age"] == expected_age
     assert result["risk_score"] == pytest.approx(0.02)
-    assert result["risk_category"] == "moderate"
+    assert result["risk_category"] == "caution"
     assert result["applicability"]["minimum_age"] == 45
     assert result["applicability"]["maximum_age"] == 105
     assert "동일한 성능을 보장하지 않습니다" in result["applicability"]["notice"]
@@ -266,7 +266,7 @@ def test_fixed_input_inference_is_deterministic_and_versioned() -> None:
 
     assert first == second
     assert first["risk_score"] == pytest.approx(0.02)
-    assert first["risk_category"] == "moderate"
+    assert first["risk_category"] == "caution"
     assert first["model_version"] == "rf-25features-v001-run-test"
     assert first["feature_schema_version"] == "klosa_stage3_25features_v1"
     assert first["threshold_version"] == "validation-recall-090-080-v1"
@@ -294,13 +294,13 @@ def test_floating_point_jitter_is_normalized_for_reproducible_output() -> None:
 
 @pytest.mark.parametrize(
     ("score", "expected"),
-    [(0.01, "low"), (0.02, "moderate"), (0.03, "high")],
+    [(0.01, "low"), (0.02, "caution"), (0.03, "high")],
 )
 def test_risk_categories(score: float, expected: str) -> None:
     assert (
         categorize_risk_score(
             score,
-            moderate_threshold=0.0167,
+            caution_threshold=0.0167,
             high_threshold=0.0224,
         )
         == expected

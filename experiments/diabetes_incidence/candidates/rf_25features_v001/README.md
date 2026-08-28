@@ -99,10 +99,10 @@ Train 최빈값으로 처리된다. 진단 상태 `null`은 `no`로 바꾸지 �
 위험 범주는 Validation에서만 산출한 작동점을 사용한다.
 
 - `low`: 점수 < `0.01671971`
-- `moderate`: `0.01671971` 이상, `0.02241084` 미만
+- `caution`: `0.01671971` 이상, `0.02241084` 미만
 - `high`: `0.02241084` 이상
 
-`moderate`와 `high` 경계는 각각 Validation Recall 0.90과 0.80 작동점이다. 이는
+`caution`과 `high` 경계는 각각 Validation Recall 0.90과 0.80 작동점이다. 이는
 연구용 위험 선별 등급이며 진단·처방 또는 약물 변경 근거가 아니다. 후보 Manifest는
 `models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json`에
 체크섬, 특성 순서, 버전과 재현 명령을 기록한다.
