@@ -1,11 +1,11 @@
 import pandas as pd
 import pytest
 
-from ai_worker.ml.compare_klosa_thresholds import (
+from src.ml.evaluation.compare_klosa_thresholds import (
     choose_threshold_for_recall,
     evaluate_operating_points,
 )
-from ai_worker.ml.train_klosa_diabetes_sample import choose_threshold
+from src.ml.modeling.train_klosa_diabetes_sample import choose_threshold
 
 
 def test_operating_points_select_on_validation_and_report_test_confusion() -> None:

@@ -1,14 +1,14 @@
 import pandas as pd
 import pytest
 
-from ai_worker.ml.build_klosa_diabetes_cohort import TARGET
-from ai_worker.ml.train_klosa_diabetes_pooled import (
+from src.ml.modeling.train_klosa_diabetes_pooled import (
     describe_age_groups,
     logistic_experiment_identity,
     split_grouped_cohort,
     summarize_calibration,
 )
-from ai_worker.ml.train_klosa_diabetes_sample import evaluate, make_logistic_pipeline
+from src.ml.modeling.train_klosa_diabetes_sample import evaluate, make_logistic_pipeline
+from src.ml.preprocessing.build_klosa_diabetes_cohort import TARGET
 
 
 def make_repeated_pid_cohort() -> pd.DataFrame:

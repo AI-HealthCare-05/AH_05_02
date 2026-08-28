@@ -1,13 +1,13 @@
 import pandas as pd
 
-from ai_worker.ml.build_klosa_diabetes_extended_cohort import (
+from src.ml.modeling.train_klosa_diabetes_extended_features import (
+    MODEL_NAMES,
+    make_extended_pipeline,
+)
+from src.ml.preprocessing.build_klosa_diabetes_extended_cohort import (
     COMORBIDITY_FEATURES,
     EXTENDED_MODEL_FEATURES,
     build_extended_transition,
-)
-from ai_worker.ml.train_klosa_diabetes_extended_features import (
-    MODEL_NAMES,
-    make_extended_pipeline,
 )
 
 

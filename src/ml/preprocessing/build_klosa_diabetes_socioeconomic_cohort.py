@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from ai_worker.ml.build_klosa_diabetes_cohort import _numeric, load_transition
-from ai_worker.ml.build_klosa_diabetes_extended_cohort import (
+from src.ml.preprocessing.build_klosa_diabetes_cohort import _numeric, load_transition
+from src.ml.preprocessing.build_klosa_diabetes_extended_cohort import (
     COMORBIDITY_SOURCES,
     EXTENDED_MODEL_FEATURES,
     build_extended_transition,

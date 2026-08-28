@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from ai_worker.ml.build_klosa_diabetes_cohort import (
+from src.ml.preprocessing.build_klosa_diabetes_cohort import (
     TARGET,
     assert_model_matrix_is_safe,
     build_transition,

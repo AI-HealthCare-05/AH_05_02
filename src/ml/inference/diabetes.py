@@ -17,7 +17,7 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from ai_worker.ml.build_klosa_diabetes_cohort import WEB_MODEL_FEATURES
+from src.ml.preprocessing.build_klosa_diabetes_cohort import WEB_MODEL_FEATURES
 
 MODEL_VERSION = "klosa-diabetes-incidence-pooled-logistic-v1"
 TARGET_DEFINITION_VERSION = "klosa-diabetes-incidence-next-wave-v1"
@@ -166,7 +166,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         type=Path,
-        default=Path("models/baselines/klosa_diabetes_incidence_pooled/model.joblib"),
+        default=Path("models/artifacts/baselines/klosa_diabetes_incidence_pooled/model.joblib"),
     )
     parser.add_argument("--input-json", type=Path, required=True)
     parser.add_argument("--as-of-date", type=date.fromisoformat, default=date.today())

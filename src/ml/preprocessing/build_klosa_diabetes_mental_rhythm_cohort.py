@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from ai_worker.ml.build_klosa_diabetes_cohort import _numeric, load_transition
-from ai_worker.ml.build_klosa_diabetes_extended_cohort import COMORBIDITY_SOURCES
-from ai_worker.ml.build_klosa_diabetes_socioeconomic_cohort import (
+from src.ml.preprocessing.build_klosa_diabetes_cohort import _numeric, load_transition
+from src.ml.preprocessing.build_klosa_diabetes_extended_cohort import COMORBIDITY_SOURCES
+from src.ml.preprocessing.build_klosa_diabetes_socioeconomic_cohort import (
     SOCIOECONOMIC_EXTENDED_FEATURES,
     _code_category,
     build_socioeconomic_transition,

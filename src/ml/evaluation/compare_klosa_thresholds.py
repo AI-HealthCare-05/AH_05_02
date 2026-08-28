@@ -23,49 +23,49 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from sklearn.metrics import roc_curve  # noqa: E402
 
-from ai_worker.ml.build_klosa_diabetes_cohort import (  # noqa: E402
+from src.ml.modeling.train_klosa_diabetes_pooled import split_grouped_cohort  # noqa: E402
+from src.ml.modeling.train_klosa_diabetes_sample import evaluate  # noqa: E402
+from src.ml.preprocessing.build_klosa_diabetes_cohort import (  # noqa: E402
     TARGET,
     WEB_MODEL_FEATURES,
     build_cohort,
 )
-from ai_worker.ml.train_klosa_diabetes_pooled import split_grouped_cohort  # noqa: E402
-from ai_worker.ml.train_klosa_diabetes_sample import evaluate  # noqa: E402
 
 MODEL_SPECS = [
     {
         "model": "Logistic Regression",
         "weighting": "none",
-        "path": Path("models/baselines/klosa_diabetes_incidence_pooled/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_pooled/model.joblib"),
         "primary": True,
     },
     {
         "model": "Random Forest",
         "weighting": "none",
-        "path": Path("models/baselines/klosa_diabetes_incidence_random_forest_unweighted/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_random_forest_unweighted/model.joblib"),
         "primary": True,
     },
     {
         "model": "XGBoost",
         "weighting": "none",
-        "path": Path("models/baselines/klosa_diabetes_incidence_xgboost_unweighted/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_xgboost_unweighted/model.joblib"),
         "primary": True,
     },
     {
         "model": "Logistic Regression",
         "weighting": "balanced",
-        "path": Path("models/baselines/klosa_diabetes_incidence_logistic_balanced/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_logistic_balanced/model.joblib"),
         "primary": False,
     },
     {
         "model": "Random Forest",
         "weighting": "balanced_subsample",
-        "path": Path("models/baselines/klosa_diabetes_incidence_random_forest/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_random_forest/model.joblib"),
         "primary": False,
     },
     {
         "model": "XGBoost",
         "weighting": "scale_pos_weight",
-        "path": Path("models/baselines/klosa_diabetes_incidence_xgboost/model.joblib"),
+        "path": Path("models/artifacts/baselines/klosa_diabetes_incidence_xgboost/model.joblib"),
         "primary": False,
     },
 ]
@@ -233,12 +233,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("experiments/klosa_diabetes_threshold_comparison"),
+        default=Path("experiments/diabetes_incidence/candidates/klosa_diabetes_threshold_comparison"),
     )
     parser.add_argument("--random-state", type=int, default=42)
     return parser.parse_args()

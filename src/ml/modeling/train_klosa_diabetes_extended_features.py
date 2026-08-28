@@ -15,18 +15,18 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from xgboost import XGBClassifier
 
-from ai_worker.ml.build_klosa_diabetes_cohort import TARGET, WEB_MODEL_FEATURES
-from ai_worker.ml.build_klosa_diabetes_extended_cohort import (
-    COMORBIDITY_FEATURES,
-    EXTENDED_MODEL_FEATURES,
-    build_extended_cohort,
-)
-from ai_worker.ml.compare_klosa_thresholds import choose_threshold_for_recall
-from ai_worker.ml.train_klosa_diabetes_pooled import split_grouped_cohort
-from ai_worker.ml.train_klosa_diabetes_sample import (
+from src.ml.evaluation.compare_klosa_thresholds import choose_threshold_for_recall
+from src.ml.modeling.train_klosa_diabetes_pooled import split_grouped_cohort
+from src.ml.modeling.train_klosa_diabetes_sample import (
     CATEGORICAL_FEATURES,
     NUMERIC_FEATURES,
     evaluate,
+)
+from src.ml.preprocessing.build_klosa_diabetes_cohort import TARGET, WEB_MODEL_FEATURES
+from src.ml.preprocessing.build_klosa_diabetes_extended_cohort import (
+    COMORBIDITY_FEATURES,
+    EXTENDED_MODEL_FEATURES,
+    build_extended_cohort,
 )
 
 MODEL_NAMES = ["logistic_regression", "random_forest", "xgboost"]
@@ -167,12 +167,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/raw/klosa/20260413/extracted"),
+        default=Path("data/interim/source_extract/klosa/20260413"),
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("experiments/klosa_diabetes_extended_comorbidities"),
+        default=Path("experiments/diabetes_incidence/candidates/klosa_diabetes_extended_comorbidities"),
     )
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--minimum-validation-recall", type=float, default=0.80)

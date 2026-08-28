@@ -1,4 +1,4 @@
-from ai_worker.ml.compare_klosa_top_balanced_model_weights import (
+from src.ml.evaluation.compare_klosa_top_balanced_model_weights import (
     preprocessing_contract,
     top_balanced_candidates,
     weight_variants,
