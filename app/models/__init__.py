@@ -1,5 +1,5 @@
-from app.models.game import InventoryItem, RewardTransaction, UserAvatar, UserInventory, UserWallet
 from app.models.forest import ForestAvatar, ForestInventory, ForestObject, ForestReward, ForestSpace
+from app.models.game import InventoryItem, RewardTransaction, UserAvatar, UserInventory, UserWallet
 from app.models.health import (
     Challenge,
     ChallengeCycle,
