@@ -103,7 +103,7 @@ def test_signup_minimizes_optional_identity_collection() -> None:
             "terms_agreed": True,
         }
     )
-    assert "name" not in SignUpRequest.model_fields
+    assert SignUpRequest.model_fields["name"].default is None
     assert "phone_number" not in SignUpRequest.model_fields
 
 

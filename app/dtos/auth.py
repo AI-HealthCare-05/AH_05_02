@@ -11,6 +11,7 @@ class SignUpRequest(BaseModel):
         Field(None, max_length=40),
     ]
     password: Annotated[str, Field(min_length=8), AfterValidator(validate_password)]
+    name: str | None = Field(default=None, min_length=2, max_length=20)
     terms_agreed: bool = Field(..., description="서비스 이용약관 동의 여부")
 
     @field_validator("terms_agreed")

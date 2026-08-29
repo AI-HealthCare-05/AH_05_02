@@ -25,7 +25,7 @@ class AuthService:
             user = await self.user_repo.create_user(
                 email=data.email,
                 hashed_password=hash_password(data.password),  # 해시화된 비밀번호를 사용
-                name=None,
+                name=data.name,
                 phone_number=None,
                 gender=None,
                 birthday=None,
