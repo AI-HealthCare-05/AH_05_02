@@ -96,7 +96,7 @@ def test_behavior_change_templates_are_bounded_and_medically_safe() -> None:
 
 
 def test_signup_minimizes_optional_identity_collection() -> None:
-    request = SignUpRequest.model_validate(
+    SignUpRequest.model_validate(
         {
             "email": "minimal@example.com",
             "password": "Prototype123!",
