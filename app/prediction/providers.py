@@ -7,9 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Protocol
 
-import joblib
-import pandas as pd
-
 from app.core import config
 from app.prediction.contracts import ACTIVE_MODEL, STANDARD_MODEL_FEATURES, PredictionFeatures
 
@@ -94,6 +91,8 @@ class ArtifactPredictionProvider:
 
 @lru_cache(maxsize=1)
 def load_standard_model() -> object:
+    import joblib
+
     if not config.MODEL_URI:
         raise RuntimeError("MODEL_ARTIFACT_UNAVAILABLE")
     path = Path(config.MODEL_URI)
@@ -119,6 +118,8 @@ def load_standard_model() -> object:
 
 
 def _predict_score(bundle: object, record: dict[str, object]) -> float:
+    import pandas as pd
+
     model = bundle.get("pipeline") if isinstance(bundle, dict) else bundle
     if model is None or not hasattr(model, "predict_proba"):
         raise RuntimeError("MODEL_CONTRACT_MISMATCH")
