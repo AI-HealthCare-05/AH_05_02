@@ -12,7 +12,6 @@ class TestUserMeApis(TestCase):
         signup_data = {
             "email": email,
             "password": "Password123!",
-            "name": "내정보테스터",
             "terms_agreed": True,
         }
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -26,7 +25,7 @@ class TestUserMeApis(TestCase):
             response = await client.get("/api/v1/users/me", headers=headers)
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["email"] == email
-        assert response.json()["name"] == "내정보테스터"
+        assert response.json()["name"] is None
 
     async def test_update_user_me_success(self):
         # 사용자 등록 및 로그인
@@ -34,7 +33,6 @@ class TestUserMeApis(TestCase):
         signup_data = {
             "email": email,
             "password": "Password123!",
-            "name": "수정전",
             "terms_agreed": True,
         }
         update_data = {"name": "수정후"}
