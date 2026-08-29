@@ -10,7 +10,6 @@ class TestSignupAPI(TestCase):
         signup_data = {
             "email": "test@example.com",
             "password": "Password123!",
-            "name": "테스터",
             "terms_agreed": True,
         }
 
@@ -24,7 +23,6 @@ class TestSignupAPI(TestCase):
         signup_data = {
             "email": "invalid-email",
             "password": "password123!",
-            "name": "테스터",
             "terms_agreed": True,
         }
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -35,7 +33,6 @@ class TestSignupAPI(TestCase):
         signup_data = {
             "email": "no-terms@example.com",
             "password": "Password123!",
-            "name": "테스터",
             "terms_agreed": False,
         }
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
