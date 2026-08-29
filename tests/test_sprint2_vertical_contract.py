@@ -20,13 +20,30 @@ from app.services.health import eligibility_reason_codes
 
 VALID_FEATURES = {
     "age": 61,
-    "bmi": 25.3,
-    "self_rated_health": "fair",
-    "meal_count_yesterday": 3,
     "sex": "female",
-    "regular_exercise": True,
-    "current_smoker": False,
+    "bmi": 25.3,
+    "smoking_status": "never",
     "current_drinker": False,
+    "regular_exercise": True,
+    "exercise_days_per_week": 3,
+    "exercise_minutes": 40,
+    "hypertension_diagnosis": None,
+    "cancer_diagnosis": None,
+    "chronic_lung_disease_diagnosis": None,
+    "liver_disease_diagnosis": None,
+    "heart_disease_diagnosis": None,
+    "cerebrovascular_disease_diagnosis": None,
+    "psychiatric_disease_diagnosis": None,
+    "arthritis_rheumatism_diagnosis": None,
+    "log_household_income": None,
+    "education_level": None,
+    "marital_status": None,
+    "household_structure": None,
+    "health_satisfaction_score": None,
+    "economic_satisfaction_score": None,
+    "overall_quality_of_life_score": None,
+    "depressed_feeling_last_week": None,
+    "sleep_difficulty_last_week": None,
 }
 
 
@@ -81,13 +98,12 @@ def test_behavior_change_templates_are_bounded_and_medically_safe() -> None:
 def test_signup_minimizes_optional_identity_collection() -> None:
     request = SignUpRequest.model_validate(
         {
-            "name": "최소 수집 사용자",
             "email": "minimal@example.com",
             "password": "Prototype123!",
             "terms_agreed": True,
         }
     )
-    assert request.name == "최소 수집 사용자"
+    assert "name" not in SignUpRequest.model_fields
     assert "phone_number" not in SignUpRequest.model_fields
 
 
@@ -114,7 +130,7 @@ def test_feature_contract_matches_pr4_klosa_schema_and_rejects_extra_fields() ->
 
 def test_input_schema_names_leakage_fields_as_excluded() -> None:
     schema = input_schema_document()
-    assert schema["feature_schema_version"] == "klosa-diabetes-incident-v1"
+    assert schema["feature_schema_version"] == "klosa_stage3_25features_v1"
     assert "future_wave_measurements" in schema["excluded_leakage_fields"]
 
 

@@ -57,8 +57,28 @@ class HealthCheckup(Model):
     self_rated_health = fields.CharField(max_length=20)
     meal_count_yesterday = fields.IntField()
     regular_exercise = fields.BooleanField()
-    current_smoker = fields.BooleanField()
+    current_smoker = fields.BooleanField(null=True)
+    smoking_status = fields.CharField(max_length=10, null=True)
     current_drinker = fields.BooleanField()
+    exercise_days_per_week = fields.FloatField(null=True)
+    exercise_minutes = fields.FloatField(null=True)
+    annual_household_income_10k_krw = fields.FloatField(null=True)
+    health_satisfaction_score = fields.FloatField(null=True)
+    economic_satisfaction_score = fields.FloatField(null=True)
+    overall_quality_of_life_score = fields.FloatField(null=True)
+    hypertension_diagnosis = fields.BooleanField(null=True)
+    cancer_diagnosis = fields.BooleanField(null=True)
+    chronic_lung_disease_diagnosis = fields.BooleanField(null=True)
+    liver_disease_diagnosis = fields.BooleanField(null=True)
+    heart_disease_diagnosis = fields.BooleanField(null=True)
+    cerebrovascular_disease_diagnosis = fields.BooleanField(null=True)
+    psychiatric_disease_diagnosis = fields.BooleanField(null=True)
+    arthritis_rheumatism_diagnosis = fields.BooleanField(null=True)
+    education_level = fields.CharField(max_length=50, null=True)
+    marital_status = fields.CharField(max_length=50, null=True)
+    household_structure = fields.CharField(max_length=50, null=True)
+    depressed_feeling_last_week = fields.BooleanField(null=True)
+    sleep_difficulty_last_week = fields.BooleanField(null=True)
     feature_schema_version = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
@@ -173,6 +193,49 @@ class ChallengeLog(Model):
     class Meta:
         table = "challenge_logs"
         unique_together = (("user_challenge_id", "log_date"),)
+
+
+class ChallengeVerification(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    user_challenge_id = fields.BigIntField(db_index=True)
+    verification_date = fields.DateField(db_index=True)
+    verification_type = fields.CharField(max_length=20)
+    evidence_ref = fields.CharField(max_length=500, null=True)
+    evidence_digest = fields.CharField(max_length=64, null=True)
+    location_accuracy_m = fields.FloatField(null=True)
+    review_status = fields.CharField(max_length=20, default="accepted", db_index=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "challenge_verifications"
+        unique_together = (("user_challenge_id", "verification_date"),)
+
+
+class ChallengeVerificationEvent(Model):
+    id = fields.BigIntField(primary_key=True)
+    verification_id = fields.BigIntField(db_index=True)
+    user_id = fields.BigIntField(db_index=True)
+    event_type = fields.CharField(max_length=30)
+    review_status = fields.CharField(max_length=20)
+    evidence_digest = fields.CharField(max_length=64, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "challenge_verification_events"
+
+
+class DailyChallengeReward(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    reward_date = fields.DateField(db_index=True)
+    carrot_amount = fields.IntField(default=55)
+    claimed_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "daily_challenge_rewards"
+        unique_together = (("user_id", "reward_date"),)
 
 
 class FollowUpAction(Model):

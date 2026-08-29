@@ -73,9 +73,11 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                     "self_rated_health": "fair",
                     "meal_count_yesterday": 3,
                     "regular_exercise": False,
-                    "current_smoker": False,
+                    "smoking_status": "never",
                     "current_drinker": False,
-                    "feature_schema_version": "klosa-diabetes-incident-v1",
+                    "exercise_days_per_week": 0,
+                    "exercise_minutes": 0,
+                    "feature_schema_version": "klosa_stage3_25features_v1",
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED

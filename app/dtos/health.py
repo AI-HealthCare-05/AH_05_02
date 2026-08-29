@@ -25,21 +25,43 @@ class HealthCheckupCreateRequest(BaseModel):
     checkup_type: Literal["initial", "reassessment"] = "initial"
     checkup_date: date
     height_cm: float = Field(ge=120, le=220)
-    weight_kg: float = Field(ge=30, le=250)
+    weight_kg: float = Field(ge=25, le=250)
     waist_cm: float | None = Field(default=None, ge=45, le=180)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
     self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
     meal_count_yesterday: int = Field(ge=0, le=10)
+    smoking_status: Literal["never", "former", "current"]
     regular_exercise: bool
-    current_smoker: bool
     current_drinker: bool
+    exercise_days_per_week: float = Field(ge=0, le=7)
+    exercise_minutes: float = Field(ge=0, le=720)
+    annual_household_income_10k_krw: float | None = Field(default=None, ge=0)
+    health_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
+    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
+    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=10)
+    hypertension_diagnosis: bool | None = None
+    cancer_diagnosis: bool | None = None
+    chronic_lung_disease_diagnosis: bool | None = None
+    liver_disease_diagnosis: bool | None = None
+    heart_disease_diagnosis: bool | None = None
+    cerebrovascular_disease_diagnosis: bool | None = None
+    psychiatric_disease_diagnosis: bool | None = None
+    arthritis_rheumatism_diagnosis: bool | None = None
+    education_level: str | None = Field(default=None, max_length=50)
+    marital_status: str | None = Field(default=None, max_length=50)
+    household_structure: str | None = Field(default=None, max_length=50)
+    depressed_feeling_last_week: bool | None = None
+    sleep_difficulty_last_week: bool | None = None
     feature_schema_version: str = Field(default=ACTIVE_MODEL.feature_schema_version, max_length=100)
 
     @model_validator(mode="after")
     def validate_blood_pressure(self) -> HealthCheckupCreateRequest:
         if self.systolic_bp is not None and self.diastolic_bp is not None and self.systolic_bp <= self.diastolic_bp:
             raise ValueError("수축기 혈압은 이완기 혈압보다 커야 합니다.")
+        if not self.regular_exercise:
+            self.exercise_days_per_week = 0
+            self.exercise_minutes = 0
         return self
 
 

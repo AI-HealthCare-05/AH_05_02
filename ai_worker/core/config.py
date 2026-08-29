@@ -28,12 +28,19 @@ class Config(BaseSettings):
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
-    PREDICTION_MODEL_VERSION: str = "dev-diabetes-incidence-v0"
-    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa-diabetes-incident-v1"
-    PREDICTION_THRESHOLD_VERSION: str = "unapproved"
+    PREDICTION_MODEL_VERSION: str = "rf-25features-v001-run-20260825T045054926974Z"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
+    PREDICTION_THRESHOLD_VERSION: str = "validation-recall-090-080-v1"
     PREDICTION_MODEL_MIN_AGE: int = 45
-    PREDICTION_MODEL_MAX_AGE: int | None = None
-    PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
+    PREDICTION_MODEL_MAX_AGE: int | None = 105
+    PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
+    PREDICTION_PROMOTION_STATUS: str = "candidate_only"
+    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-25features-v1"
+    PREDICTION_PREPROCESSING_VERSION: str = "rf25-bundled-pipeline-v1"
+    PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
+    PREDICTION_CALIBRATION_VERSION: str = "unapproved"
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "7c07625d5bc4cb89203bfe34612b72655e709e7849f7f5ed00638af1c09a9c73"
+    PREDICTION_DECISION_THRESHOLD: float | None = 0.022410835788097848
 
     MODEL_URI: str = ""
     MODEL_CACHE_DIR: str = "/app/storage/models"
