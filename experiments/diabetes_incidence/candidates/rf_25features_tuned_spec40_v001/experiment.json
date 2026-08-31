@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "experiment_id": "rf_25features_tuned_spec40_v001",
+  "owner": "양준혁",
+  "kind": "candidate",
+  "model_type": "Fixed PID OOF tuned RandomForestClassifier",
+  "problem": "diabetes_incidence_next_observation",
+  "dataset_path": "data/processed/official_v1/",
+  "dataset_version": "official_v1",
+  "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "entrypoint": "pipeline.py:run_experiment",
+  "primary_metric": "recall",
+  "minimum_specificity": 0.4,
+  "feature_schema_version": "klosa_stage3_25features_v1",
+  "safety": {
+    "participant_level_split": true,
+    "exclude_future_information": true,
+    "exclude_diagnosis_and_treatment_features": true,
+    "fit_preprocessing_on_train_only": true,
+    "select_threshold_on_validation_only": true,
+    "use_test_for_final_evaluation_only": true
+  },
+  "notes": "PID OOF에서 선택한 RF25 하이퍼파라미터를 고정한다. High 임계값은 Validation Specificity 0.43 이상에서 Recall 최대화, caution 임계값은 Validation Recall 0.90 기준으로 정한다. 연구용 운영 미승인 후보이다."
+}

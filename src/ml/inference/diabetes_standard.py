@@ -7,6 +7,7 @@ treatment advice.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from collections.abc import Mapping
@@ -29,7 +30,7 @@ from src.ml.preprocessing.diabetes_api_features import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CANDIDATE_MANIFEST = REPOSITORY_ROOT / (
-    "models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json"
+    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
 )
 
 
@@ -66,6 +67,8 @@ def _load_candidate_manifest(path: Path) -> dict[str, Any]:
         raise ModelContractError(f"invalid model candidate manifest: {path}")
     if tuple(manifest.get("features", ())) != STANDARD_MODEL_FEATURES:
         raise ModelContractError("candidate manifest feature order is invalid")
+    if manifest.get("risk_categories") != ["low", "caution", "high"]:
+        raise ModelContractError("candidate manifest risk categories are invalid")
     required_metrics = {"recall", "specificity", "auroc", "auprc"}
     if not required_metrics.issubset(manifest.get("metrics", {})):
         raise ModelContractError("candidate manifest is missing required metrics")
@@ -186,3 +189,26 @@ def predict_diabetes_risk(
     user_input = payload if isinstance(payload, DiabetesRiskInput) else parse_diabetes_risk_input(dict(payload))
     loaded = load_standard_model(manifest_path=manifest_path, model_path=model_path)
     return predict_with_loaded_model(loaded, user_input, as_of_date=as_of_date)
+
+
+def main() -> None:
+    """Run one JSON request through the standard server inference boundary."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input-json", type=Path, required=True)
+    parser.add_argument("--as-of-date", type=date.fromisoformat, required=True)
+    parser.add_argument("--manifest", type=Path, default=DEFAULT_CANDIDATE_MANIFEST)
+    parser.add_argument("--model", type=Path)
+    args = parser.parse_args()
+    payload = json.loads(args.input_json.read_text(encoding="utf-8"))
+    result = predict_diabetes_risk(
+        payload,
+        as_of_date=args.as_of_date,
+        manifest_path=args.manifest,
+        model_path=args.model,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

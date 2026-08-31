@@ -4,17 +4,17 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 모델 | Random Forest 25-feature candidate |
-| 모델 버전 | `rf-25features-v001-run-20260825T045054926974Z` |
+| 모델 | PID OOF tuned Random Forest 25-feature candidate |
+| 모델 버전 | `rf25-tuned-spec40-v1` |
 | 입력 스키마 | `diabetes-incidence-api-25features-v1` |
 | 특성 스키마 | `klosa_stage3_25features_v1` |
-| 임계값 버전 | `validation-recall-090-080-v1` |
-| 실행 ID | `20260825T045054926974Z` |
+| 임계값 버전 | `validation-spec043-caution-recall090-v1` |
+| 실행 ID | `20260831T093746972655Z` |
 | 상태 | 연구 후보, 운영 미승인 |
-| SHA-256 | `7c07625d5bc4cb89203bfe34612b72655e709e7849f7f5ed00638af1c09a9c73` |
+| SHA-256 | `e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8` |
 
 실제 모델은 Git 제외 경로
-`outputs/ml/rf_25features_v001/20260825T045054926974Z/model.joblib`에 배치한다.
+`models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib`에 배치한다.
 Manifest의 체크섬과 다르면 추론을 중단한다.
 
 ## 의도된 사용과 금지 용도
@@ -103,29 +103,29 @@ API는 키(cm)와 체중(kg)으로 BMI를 계산하고 연소득 만원 단위�
 
 ## Recall 중심 성능
 
-Validation Recall 0.80 이상 중 Specificity가 가장 높은 임계값 `0.022410835788097848`을
-Test에 고정 적용했다.
+Validation Specificity 0.43 이상에서 Recall을 최대화한 임계값
+`0.021153602801262862`를 Test에 고정 적용했다.
 
 | Recall | Specificity | AUROC | AUPRC | F1 | Brier |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.8000 | 0.4742 | 0.6596 | 0.0511 | 0.0708 | 0.02389 |
+| 0.8410 | 0.4024 | 0.6636 | 0.0485 | 0.0661 | 0.02388 |
 
-Test 혼동행렬은 TP 156, FN 39, TN 3,655, FP 4,053이다. Recall은 목표를 충족했지만
+Test 혼동행렬은 TP 164, FN 31, TN 3,102, FP 4,606이다. Recall은 목표를 충족했지만
 절반이 넘는 비사건이 양성으로 분류되고 AUPRC·F1이 낮다. 실험 Manifest의 Specificity
-0.30은 연구 실행 하한일 뿐 운영 승인 기준이 아니다. 운영 전에는 최소 Specificity,
+0.40은 연구 실행 하한일 뿐 운영 승인 기준이 아니다. 운영 전에는 최소 Specificity,
 확률 보정, 시간·외부 검증과 하위집단 기준을 별도로 승인해야 한다.
 
 ## 출력 계약과 고정 입력
 
 - `risk_score`: 소수점 12자리로 정규화한 연구용 RF 점수
-- `low`: 점수 < `0.016719708895315412`
-- `caution`: 위 값 이상, `0.022410835788097848` 미만
-- `high`: `0.022410835788097848` 이상
+- `low`: 점수 < `0.017113354352510553`
+- `caution`: 위 값 이상, `0.021153602801262862` 미만
+- `high`: `0.021153602801262862` 이상
 - 모델·입력·특성·임계값 버전과 적용 연령·안내 문구를 함께 반환
 
-고정 입력 `inference_request.example.json`은 기준일 2026-08-26에 점수
-`0.029554591894`, 범주 `high`를 반환한다. Golden 응답은
-`inference_response.golden.json`이며 동일 아티팩트·입력·기준일에서 전체 JSON이 같아야 한다.
+고정 입력 `docs/api/examples/tuned_rf25_valid_input.json`은 기준일 2026-08-31에 점수
+`0.022053512988`, 범주 `high`를 반환한다. Golden 응답은
+`docs/api/examples/tuned_rf25_response.json`이며 동일 아티팩트·입력·기준일에서 전체 JSON이 같아야 한다.
 
 ## 한계
 
@@ -165,11 +165,11 @@ Test 혼동행렬은 TP 156, FN 39, TN 3,655, FP 4,053이다. Recall은 목표�
 
 ```bash
 ./scripts/ml-experiment.sh validate
-./scripts/ml-experiment.sh run rf_25features_v001
+./scripts/ml-experiment.sh run rf_25features_tuned_spec40_v001
 ./scripts/ml-experiment.sh leaderboard
-DIABETES_RF25_MODEL_PATH=outputs/ml/rf_25features_v001/20260825T045054926974Z/model.joblib \
+DIABETES_RF25_MODEL_PATH=models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib \
   .venv/bin/pytest -q tests/ml/test_diabetes_standard_inference.py
 ```
 
 후보 Manifest:
-`models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json`
+`models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json`

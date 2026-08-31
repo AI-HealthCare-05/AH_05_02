@@ -340,14 +340,15 @@ def test_json_input_parsing_accepts_iso_birth_date() -> None:
 
 
 def test_candidate_manifest_records_metrics_contract_and_reproduction() -> None:
-    path = Path("models/registry/diabetes_incidence/candidates/rf_25features_v001-20260825T045054926974Z.json")
+    path = Path("models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json")
     manifest = json.loads(path.read_text(encoding="utf-8"))
 
     assert manifest["features"] == list(STANDARD_MODEL_FEATURES)
     assert {"recall", "specificity", "auroc", "auprc"} <= set(manifest["metrics"])
-    assert manifest["artifact_local_path"].startswith("outputs/ml/")
+    assert manifest["artifact_local_path"].startswith("models/artifacts/")
     assert manifest["artifact_git_policy"] == ("local_only_do_not_commit_model_binary")
-    assert manifest["reproduce"]["run"] == ("./scripts/ml-experiment.sh run rf_25features_v001")
+    assert manifest["risk_categories"] == ["low", "caution", "high"]
+    assert manifest["reproduce"]["run"] == ("./scripts/ml-experiment.sh run rf_25features_tuned_spec40_v001")
 
 
 def test_registered_artifact_matches_fixed_input_golden_output() -> None:
@@ -355,16 +356,16 @@ def test_registered_artifact_matches_fixed_input_golden_output() -> None:
     if configured_path is None:
         pytest.skip("set DIABETES_RF25_MODEL_PATH to verify the Git-excluded registered artifact")
 
-    experiment_dir = Path("experiments/diabetes_incidence/candidates/rf_25features_v001")
-    payload = json.loads((experiment_dir / "inference_request.example.json").read_text(encoding="utf-8"))
-    expected = json.loads((experiment_dir / "inference_response.golden.json").read_text(encoding="utf-8"))
+    examples_dir = Path("docs/api/examples")
+    payload = json.loads((examples_dir / "tuned_rf25_valid_input.json").read_text(encoding="utf-8"))
+    expected = json.loads((examples_dir / "tuned_rf25_response.json").read_text(encoding="utf-8"))
     loaded = load_standard_model(model_path=Path(configured_path))
 
     results = [
         predict_with_loaded_model(
             loaded,
             parse_diabetes_risk_input(payload),
-            as_of_date=date(2026, 8, 26),
+            as_of_date=date(2026, 8, 31),
         )
         for _ in range(5)
     ]

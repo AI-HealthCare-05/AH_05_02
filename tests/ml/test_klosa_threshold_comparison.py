@@ -3,6 +3,7 @@ import pytest
 
 from src.ml.evaluation.compare_klosa_thresholds import (
     choose_threshold_for_recall,
+    choose_threshold_for_specificity,
     evaluate_operating_points,
 )
 from src.ml.modeling.train_klosa_diabetes_sample import choose_threshold
@@ -35,3 +36,20 @@ def test_fast_threshold_matches_training_rule() -> None:
     assert choose_threshold_for_recall(target, probabilities, 2 / 3) == pytest.approx(
         choose_threshold(target, probabilities, minimum_recall=2 / 3)
     )
+
+
+def test_specificity_floor_selects_highest_recall_operating_point() -> None:
+    target = pd.Series([0, 0, 0, 1, 1, 1])
+    probabilities = pd.Series([0.05, 0.20, 0.70, 0.40, 0.60, 0.90]).to_numpy()
+
+    assert choose_threshold_for_specificity(target, probabilities, 2 / 3) == pytest.approx(0.4)
+
+
+@pytest.mark.parametrize("minimum_specificity", [-0.1, 1.1])
+def test_specificity_floor_rejects_invalid_constraint(minimum_specificity: float) -> None:
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        choose_threshold_for_specificity(
+            pd.Series([0, 1]),
+            pd.Series([0.2, 0.8]).to_numpy(),
+            minimum_specificity,
+        )

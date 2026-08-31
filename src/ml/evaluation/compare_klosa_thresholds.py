@@ -94,6 +94,31 @@ def choose_threshold_for_recall(
     return float(thresholds[best_index])
 
 
+def choose_threshold_for_specificity(
+    target: pd.Series | np.ndarray,
+    probabilities: np.ndarray,
+    minimum_specificity: float,
+) -> float:
+    """Maximize recall subject to a minimum validation specificity."""
+
+    if not 0 <= minimum_specificity <= 1:
+        raise ValueError("minimum_specificity must be between 0 and 1")
+    false_positive_rate, recall, thresholds = roc_curve(
+        target,
+        probabilities,
+        drop_intermediate=False,
+    )
+    specificity = 1 - false_positive_rate
+    eligible = np.flatnonzero(specificity >= minimum_specificity)
+    if not len(eligible):
+        raise ValueError(f"No threshold reaches specificity {minimum_specificity}")
+    best_recall = recall[eligible].max()
+    tied = eligible[np.isclose(recall[eligible], best_recall)]
+    best_specificity = specificity[tied].max()
+    tied = tied[np.isclose(specificity[tied], best_specificity)]
+    return float(thresholds[tied[np.argmin(thresholds[tied])]])
+
+
 def evaluate_operating_points(
     validation_target: pd.Series,
     validation_probabilities,
