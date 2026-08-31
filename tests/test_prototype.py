@@ -62,9 +62,9 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
     assert '$("#result-next").hidden = !isApprovedRisk' in script
-    assert 'options.resultAvailable === true' in script
+    assert "options.resultAvailable === true" in script
     assert 'factors?.status === "approved"' in script
-    assert 'factors?.shap_claimed === true' in script
+    assert "factors?.shap_claimed === true" in script
     assert '$("#risk-confirm-card").hidden = !isApprovedRisk' in script
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
@@ -122,7 +122,7 @@ def test_invite_method_starts_unselected_and_reveals_only_requested_panel() -> N
     assert 'id="invite-tab-code" type="button" aria-expanded="false"' in html
     assert 'id="invite-form"' in html and 'data-invite-panel="email" hidden' in html
     assert 'id="invite-panel-code"' in html and 'data-invite-panel="code" hidden' in html
-    assert 'panel.hidden = !selected' in script
+    assert "panel.hidden = !selected" in script
     assert 'button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode))' in script
 
 
@@ -134,7 +134,7 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'name: $("#display-name").value' not in script
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
-    assert 'email, password, gender, birth_date: birthDate' in script
+    assert "email, password, gender, birth_date: birthDate" in script
     assert 'terms_agreed: $("#personal-consent").checked' not in script
     assert 'api("/users/me", { method: "PATCH"' in script
     assert 'api("/users/me/profile", { method: "PATCH"' not in script
@@ -142,7 +142,7 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
     assert 'const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"]' in script
-    assert 'if (!isDemoEnvironment()) return;' in script
+    assert "if (!isDemoEnvironment()) return;" in script
     assert "API 연결 전이라 로컬 화면 확인 모드로 계속합니다." not in script
     assert "API 연결 전이라 기존 회원 화면 확인 모드로 로그인했습니다." not in script
     assert 'data-demo-status="timeout"' not in html
@@ -174,9 +174,9 @@ def test_frontend_distinguishes_api_errors_without_demo_fallback() -> None:
 def test_signup_and_login_block_duplicate_requests_while_busy() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'function setFormBusy(form, activeButton, busyLabel)' in script
+    assert "function setFormBusy(form, activeButton, busyLabel)" in script
     assert 'form.setAttribute("aria-busy", "true")' in script
-    assert 'buttons.forEach((button) => { button.disabled = true; })' in script
+    assert "buttons.forEach((button) => { button.disabled = true; })" in script
     assert '"가입 처리 중…"' in script
     assert '"로그인 중…"' in script
     assert script.count("releaseBusy();") >= 2
@@ -204,10 +204,10 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
 def test_active_challenge_conflict_resumes_current_cycle_dashboard() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'error.status === 409' in script
+    assert "error.status === 409" in script
     assert 'error.message.includes("진행 중인 4주 챌린지")' in script
     assert 'const currentCycle = await api("/challenge-cycles/current")' in script
-    assert 'renderCycle(currentCycle)' in script
+    assert "renderCycle(currentCycle)" in script
     assert 'showWorkspace("home", { moveFocus: false })' in script
     assert "이미 진행 중인 4주 챌린지를 불러왔어요" in script
 
@@ -236,8 +236,8 @@ def test_returning_user_routes_from_persisted_eligibility_state() -> None:
     assert "로그인할 때마다 반복하는 절차는 아닙니다" in script
     assert 'id="challenge-follow-up"' in html
     assert 'api("/follow-up-actions")' in script
-    assert 'state.openFollowUpActionIds.map((actionId)' in script
-    assert 'api(`/follow-up-actions/${actionId}/acknowledge`' in script
+    assert "state.openFollowUpActionIds.map((actionId)" in script
+    assert "api(`/follow-up-actions/${actionId}/acknowledge`" in script
     assert "if (state.currentHealthOnly)" in script
     assert "if (state.cycle?.user_challenges?.length)" in script
     assert "이어서 4주 생활습관 챌린지를 선택해 주세요" in script
