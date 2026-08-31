@@ -387,6 +387,7 @@ function showStep(step, { recordHistory = true } = {}) {
   const targetStep = Math.max(1, Math.min(8, step));
   if (recordHistory && state.navigationHistory.at(-1) !== targetStep) state.navigationHistory.push(targetStep);
   state.step = targetStep;
+  document.body.classList.toggle("intro-mode", state.step === 1);
   document.body.classList.toggle("dashboard-mode", state.step === 8);
   state.visitedSteps.add(state.step);
   clearMessage();
@@ -1607,8 +1608,28 @@ function closeMemberMenus() {
   $$(".member-menu-button").forEach((button) => button.setAttribute("aria-expanded", "false"));
 }
 
+const introChallengeChoices = {
+  walk: { src: "/static/assets/hyeoldangi-challenge-walking.png", alt: "활기차게 걷는 혈당이" },
+  meal: { src: "/static/assets/hyeoldangi-challenge-meal.png", alt: "건강한 식사를 들고 있는 혈당이" },
+  water: { src: "/static/assets/hyeoldangi-challenge-water.png", alt: "물 마시기를 응원하는 혈당이" },
+};
+
+function setIntroChallenge(key) {
+  const mascot = $("#intro-preview-mascot");
+  const choice = introChallengeChoices[key];
+  if (!mascot || !choice) return;
+  mascot.src = choice.src;
+  mascot.alt = choice.alt;
+  mascot.classList.add("is-changing");
+  window.setTimeout(() => mascot.classList.remove("is-changing"), 360);
+  $$('[data-intro-challenge]').forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.introChallenge === key));
+  });
+}
+
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", goBack));
+$$('[data-intro-challenge]').forEach((button) => button.addEventListener("click", () => setIntroChallenge(button.dataset.introChallenge)));
 $$('#step-list li').forEach((element, index) => {
   const targetStep = index + 1;
   element.dataset.gotoStep = String(targetStep);

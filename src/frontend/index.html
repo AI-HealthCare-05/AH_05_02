@@ -6,10 +6,10 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260831-age-policy">
-  <script src="/static/app.js?v=20260831-age-policy" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260831-intro-challenge">
+  <script src="/static/app.js?v=20260831-intro-challenge" defer></script>
 </head>
-<body>
+<body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
   <header class="topbar">
     <a class="brand" href="#" aria-label="간당간당 처음으로"><span class="brand-mark" aria-hidden="true">+</span> 간당간당</a>
@@ -20,6 +20,10 @@
     <aside class="step-panel" aria-label="진행 단계">
       <p class="eyebrow">진행 단계</p><p class="step-count"><strong id="step-current">1</strong> / 8</p>
       <div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div>
+      <div class="intro-progress-groups" aria-label="서비스 진행 구성">
+        <span>✓ 1–6단계 · 당뇨병 위험 확인</span>
+        <span>★ 7–8단계 · 4주 챌린지</span>
+      </div>
       <ol id="step-list">
         <li class="active"><span>1</span> 서비스 안내</li><li><span>2</span> 가입·동의</li>
         <li><span>3</span> 이용 가능 확인</li><li><span>4</span> 건강정보 입력</li>
@@ -29,24 +33,43 @@
     </aside>
     <section class="content" aria-live="polite">
       <div id="message" class="message" role="alert" hidden></div>
-      <section class="screen active" data-step="1" aria-labelledby="intro-title">
-        <p class="eyebrow">당뇨병 미래 발병 위험 선별</p>
-        <h1 id="intro-title">미래 위험을 살피고 건강 습관을 기록하세요</h1>
-        <p class="lead">입력한 건강정보로 당뇨병 위험 신호를 확인하고, 4주 동안 생활습관 실천을 기록해요.</p>
-        <div class="notice safety intro-notice"><span aria-hidden="true">알아두세요</span><div><p>이 서비스는 당뇨병을 진단하거나 치료·처방하지 않습니다. 약을 임의로 시작·중단하거나 용량을 바꾸지 마세요.</p></div></div>
-        <div class="intro-mascot-card">
-          <img src="/static/assets/hyeoldangi-default.png" alt="인사하는 혈당이 캐릭터" class="intro-mascot">
-          <div class="intro-speech-bubble">
-            <p>반가워요, 작은 습관부터 같이 만들어가요. 가까운 사람과 함께해도 좋아요, 제가 도와드릴게요.</p>
+      <section class="screen active intro-screen" data-step="1" aria-labelledby="intro-title">
+        <div class="intro-hero-grid">
+          <div class="intro-copy">
+            <p class="eyebrow">당뇨병 위험 확인 + 4주 생활습관 챌린지</p>
+            <h1 id="intro-title">위험만 확인하지 말고,<br><em>4주 동안 함께</em><br>바꿔봐요.</h1>
+            <div class="intro-summary">
+              <p>건강정보와 생활습관으로 당뇨병 위험 신호를 살펴본 뒤,</p>
+              <p>혈당이와 함께 챌린지를 시작합니다.</p>
+            </div>
+            <div class="intro-actions">
+              <button class="primary next" type="button">시작하기 <span aria-hidden="true">→</span></button>
+            </div>
+            <div class="intro-safety-note">
+              <span aria-hidden="true">ⓘ</span>
+              <div><p>이 서비스는 당뇨병을 진단하거나 치료·처방하지 않습니다.</p><p>위험 신호 확인과 생활습관 실천을 돕습니다.</p></div>
+            </div>
           </div>
+
+          <section class="intro-challenge-preview" id="intro-challenge-preview" aria-labelledby="intro-challenge-title" tabindex="-1">
+            <div class="intro-preview-heading">
+              <div><h2 id="intro-challenge-title">혈당이와 4주 챌린지</h2><p>내게 맞는 작은 습관부터 시작해요</p></div>
+              <ol aria-label="4주 진행 예시"><li class="active">1주</li><li>2주</li><li>3주</li><li>4주</li></ol>
+            </div>
+            <img id="intro-preview-mascot" src="/static/assets/hyeoldangi-challenge-walking.png" alt="활기차게 걷는 혈당이">
+            <div class="intro-challenge-options" aria-label="챌린지 예시 선택">
+              <button type="button" data-intro-challenge="walk" aria-pressed="true"><span aria-hidden="true">👟</span><strong>식후 걷기</strong></button>
+              <button type="button" data-intro-challenge="meal" aria-pressed="false"><span aria-hidden="true">🥗</span><strong>건강한 한 끼</strong></button>
+              <button type="button" data-intro-challenge="water" aria-pressed="false"><span aria-hidden="true">💧</span><strong>물 마시기</strong></button>
+            </div>
+          </section>
         </div>
+
         <ul class="intro-process-grid" aria-label="서비스 이용 과정">
-          <li><img src="/static/assets/hyeoldangi-health-input.png" alt="건강정보 입력을 안내하는 혈당이"><strong>건강정보 입력</strong></li>
-          <li><img src="/static/assets/hyeoldangi-guide.png" alt="결과 확인을 안내하는 혈당이"><strong>결과 확인</strong></li>
-          <li><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="걷기 챌린지를 시작하는 혈당이"><strong>챌린지 시작</strong></li>
+          <li><img src="/static/assets/hyeoldangi-health-input.png" alt="건강정보를 기록하는 혈당이"><strong>건강정보 입력</strong></li>
+          <li><img src="/static/assets/hyeoldangi-guide.png" alt="위험 신호를 안내하는 혈당이"><strong>위험 신호 확인</strong></li>
+          <li><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="챌린지를 시작하는 혈당이"><strong>맞춤 4주 챌린지</strong></li>
         </ul>
-        <div class="intro-actions"><button class="primary next" type="button">시작하기</button></div>
-        <p class="intro-footer">간당간당 개발용 서비스 · 진단·처방이 아닌 위험 선별과 건강교육</p>
       </section>
       <section class="screen" data-step="2" aria-labelledby="signup-title">
         <div class="screen-title-with-mascot">
