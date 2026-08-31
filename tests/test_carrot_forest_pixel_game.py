@@ -82,13 +82,15 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
         assert f'id="{control_id}"' in html
     assert 'id="wardrobe-list"' in html
     assert 'id="storage-list"' in html
-    assert html.count("data-action=") == 5
+    assert html.count("data-action=") == 7
     for key in (
         'event.key === "q"',
         'event.key === "r"',
         'event.key === "c"',
         'event.key === "x"',
         'event.key === "e"',
+        'event.key === "z"',
+        'event.key === "0"',
     ):
         assert key in script
     for behavior in ("CozyForestMusic", "toggleRide", "toggleSit", "openWorldDialog"):
@@ -122,17 +124,9 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
     for label in (
-        "완성형 코디",
-        "헤어",
-        "의상",
-        "액세서리",
-        "모자",
-        "안경",
-        "아우라",
-        "이펙트",
-        "탈것",
-        "펫",
-        "말풍선",
+        "피부", "헤어", "헤어 색", "상의", "상의 색", "하의", "하의 색",
+        "신발", "신발 색", "표정", "모자", "안경", "아우라",
+        "이펙트", "탈것", "펫", "말풍선", "동작",
     ):
         assert f'label: "{label}"' in script
     assert "찌르기 이펙트" not in script
@@ -249,9 +243,12 @@ def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers()
     assert "stylePresetByItem" in script
     assert "drawAnimatedAccessoryOverlay" in script
     assert "drawPreviewAccessoryOverlay" in script
-    assert '{ id: "preset", label: "완성형 코디"' in script
+    assert '{ id: "lpcHair", label: "헤어"' in script
+    assert '{ id: "lpcOutfit", label: "상의"' in script
+    assert '{ id: "lpcBottom", label: "하의"' in script
+    assert '{ id: "lpcShoes", label: "신발"' in script
     assert "if (drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return" in script
-    assert "else if (basicWalkAtlas.complete" in script
+    assert "basicWalkAtlas.complete && basicWalkAtlas.naturalWidth" in script
     assert "motionRow * 4 + directionColumn" in script
 
 
@@ -321,7 +318,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v23" in html
+    assert "forest-local-pwa-reset-v25" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -342,7 +339,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
     assert "/static/forest-phaser.js" in html
-    for category in ("preset", "aura", "effect", "vehicle", "pet", "speech"):
+    for category in ("lpcHair", "lpcOutfit", "lpcBottom", "lpcShoes", "aura", "effect", "vehicle", "pet", "speech", "pose"):
         assert f'id: "{category}"' in game_script
     for event_name in (
         "forest-avatar-updated",
@@ -361,14 +358,41 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'this.load.spritesheet("cat-pets"' in phaser_script
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v26" in worker
-    assert "/static/assets/lpc/" not in worker
+    assert "gandang-carrot-forest-pwa-v28" in worker
+    assert "/static/assets/lpc-pack/manifest.json" in worker
+    assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
     assert "const NAMEPLATE_Y = -126" in phaser_script
     assert "const AVATAR_RENDER_SCALE = 0.43" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
+
+
+def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
+    import json
+
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    manifest_path = ROOT / "src/frontend/assets/lpc-pack/manifest.json"
+    credits_path = ROOT / "src/frontend/assets/lpc-pack/credits.json"
+
+    assert manifest_path.exists()
+    assert credits_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert len(manifest["items"]) >= 24
+    for action in ("harvest", "fishing", "door", "attack", "dance"):
+        assert action in engine_script
+    for key_label in ("공격", "함께 춤"):
+        assert key_label in html
+    assert "playTogether" in phaser_script
+    assert "this.petTrail" in phaser_script
+    assert "time - 330" in phaser_script
+    assert "this.petFacing" in phaser_script
+    assert 'this.petAction = nextAvatar.sitting ? "sit" : "idle"' in phaser_script
+    assert 'event.key === "0"' in game_script
 
 
 def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:

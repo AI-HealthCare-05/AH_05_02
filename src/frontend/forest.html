@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v23";
+      const resetKey = "forest-local-pwa-reset-v25";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -39,11 +39,12 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260827-12" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260831-2" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
+  <script src="/static/lpc-avatar-engine.js?v=20260831-2" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-phaser.js?v=20260827-9" defer></script>
-  <script src="/static/forest-game.js?v=20260827-19" defer></script>
+  <script src="/static/forest-phaser.js?v=20260831-2" defer></script>
+  <script src="/static/forest-game.js?v=20260831-2" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -94,7 +95,7 @@
           <form id="avatar-form" class="avatar-form">
             <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
             <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
-            <label>완성형 코디<select id="avatar-preset"><option value="blue_cap">파란 모자 농부</option><option value="red_bow">리본 정원사</option><option value="cow_hood">음메 목장지기</option><option value="midnight">한밤 숲지기</option><option value="teal_bob">미소 정원사</option></select></label>
+            <label>LPC 기본 스타일<select id="avatar-preset"><option value="blue_cap">파란 모자 농부</option><option value="red_bow">리본 정원사</option><option value="cow_hood">음메 목장지기</option><option value="midnight">한밤 숲지기</option><option value="teal_bob">미소 정원사</option></select></label>
             <button class="primary-button" type="submit">기본 정보 저장</button>
             <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
           </form>
@@ -125,7 +126,7 @@
         </div>
 
         <div class="stage-footer">
-          <p id="movement-help" class="help-text"><kbd>WASD</kbd> 이동 · <kbd>R</kbd> 달리기 · <kbd>Q</kbd> 상호작용 · <kbd>C</kbd> 채팅 · <kbd>X</kbd> 앉기 · <kbd>E</kbd> 탈것</p>
+          <p id="movement-help" class="help-text"><kbd>WASD</kbd> 이동 · <kbd>R</kbd> 달리기 · <kbd>Q</kbd> 대상 행동 · <kbd>Z</kbd> 공격 · <kbd>0</kbd> 펫과 춤 · <kbd>C</kbd> 채팅 · <kbd>X</kbd> 펫과 앉기 · <kbd>E</kbd> 탈것</p>
           <div class="control-cluster">
             <div class="touch-controls" aria-label="아바타 이동 버튼">
               <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
@@ -139,6 +140,8 @@
               <button type="button" data-action="chat"><kbd>C</kbd><span>채팅</span></button>
               <button type="button" data-action="sit"><kbd>X</kbd><span>앉기</span></button>
               <button type="button" data-action="ride"><kbd>E</kbd><span>탈것</span></button>
+              <button type="button" data-action="attack"><kbd>Z</kbd><span>공격</span></button>
+              <button type="button" data-action="dance"><kbd>0</kbd><span>함께 춤</span></button>
             </div>
           </div>
         </div>

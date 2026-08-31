@@ -43,12 +43,12 @@
     teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
   };
   const presetBundles = {
-    sprout: { hair: "soft", outfit: "forest", bottom: "cream", shoes: "brown", face: "calm", accessory: "none", hat: "none", glasses: "none" },
-    red_bow: { hair: "red_wave", outfit: "navy_garden", bottom: "cream", shoes: "brown", face: "smile", accessory: "none", hat: "headband", glasses: "none" },
-    cow_hood: { hair: "cow_brown", outfit: "cow_vest", bottom: "charcoal", shoes: "brown", face: "smile", accessory: "none", hat: "cap", glasses: "none" },
-    midnight: { hair: "midnight", outfit: "violet", bottom: "charcoal", shoes: "black", face: "calm", accessory: "none", hat: "none", glasses: "none" },
-    blue_cap: { hair: "blue_short", outfit: "blue_overalls", bottom: "denim", shoes: "white", face: "calm", accessory: "none", hat: "cap", glasses: "none" },
-    teal_bob: { hair: "teal_bob", outfit: "teal_garden", bottom: "olive", shoes: "brown", face: "smile", accessory: "none", hat: "none", glasses: "none" },
+    sprout: { lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown" },
+    red_bow: { lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "leggings", lpcShoes: "shoes", lpcHat: "bandana", lpcGlasses: "none", expression: "bright", hairColor: "red", outfitColor: "navy", bottomColor: "cream", shoeColor: "brown" },
+    cow_hood: { lpcHair: "afro", lpcOutfit: "tshirt", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "bowler", lpcGlasses: "none", expression: "delighted", hairColor: "brown", outfitColor: "orange", bottomColor: "brown", shoeColor: "brown" },
+    midnight: { lpcHair: "messy", lpcOutfit: "short_cardigan", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "halfmoon", expression: "calm", hairColor: "black", outfitColor: "purple", bottomColor: "black", shoeColor: "black" },
+    blue_cap: { lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", hairColor: "brown", outfitColor: "blue", bottomColor: "cream", shoeColor: "brown" },
+    teal_bob: { lpcHair: "page", lpcOutfit: "sleeveless", lpcBottom: "shorts", lpcShoes: "shoes", lpcHat: "none", lpcGlasses: "round", expression: "wink", hairColor: "brown", outfitColor: "teal", bottomColor: "cream", shoeColor: "brown" },
   };
   const itemCatalog = {
     red_scarf: { name: "빨간 목도리", kind: "accessory", icon: "🧣" },
@@ -61,17 +61,24 @@
   };
   const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
   const avatarCategories = [
-    { id: "preset", label: "완성형 코디", icon: "🧑‍🌾" },
-    { id: "hair", label: "헤어", icon: "💇" },
-    { id: "outfit", label: "의상", icon: "👕" },
-    { id: "accessory", label: "액세서리", icon: "👜" },
-    { id: "hat", label: "모자", icon: "🧢" },
-    { id: "glasses", label: "안경", icon: "👓" },
+    { id: "skin", label: "피부", icon: "🎨" },
+    { id: "lpcHair", label: "헤어", icon: "💇" },
+    { id: "hairColor", label: "헤어 색", icon: "🖌️" },
+    { id: "lpcOutfit", label: "상의", icon: "👕" },
+    { id: "outfitColor", label: "상의 색", icon: "🧵" },
+    { id: "lpcBottom", label: "하의", icon: "👖" },
+    { id: "bottomColor", label: "하의 색", icon: "🟦" },
+    { id: "lpcShoes", label: "신발", icon: "👟" },
+    { id: "shoeColor", label: "신발 색", icon: "🟫" },
+    { id: "expression", label: "표정", icon: "😊" },
+    { id: "lpcHat", label: "모자", icon: "🧢" },
+    { id: "lpcGlasses", label: "안경", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
     { id: "effect", label: "이펙트", icon: "💫" },
     { id: "vehicle", label: "탈것", icon: "🛴" },
     { id: "pet", label: "펫", icon: "🐾" },
     { id: "speech", label: "말풍선", icon: "💬" },
+    { id: "pose", label: "동작", icon: "🏃" },
   ];
   const avatarCatalog = {
     preset: [
@@ -155,10 +162,63 @@
       { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
       { id: "leaf", name: "네잎클로버", visual: "🍀" }, { id: "window", name: "파란 창문", visual: "🪟", isNew: true },
     ],
+    lpcHair: [
+      { id: "bob", name: "단정한 단발", visual: "💇" }, { id: "afro", name: "몽글 아프로", visual: "🧑‍🦱" },
+      { id: "long", name: "긴 생머리", visual: "👩" }, { id: "messy", name: "헝클어진 숏컷", visual: "🧑" },
+      { id: "page", name: "페이지 컷", visual: "🧒" },
+    ],
+    lpcOutfit: [
+      { id: "overalls", name: "정원사 멜빵", visual: "🧑‍🌾" }, { id: "tshirt", name: "편안한 티셔츠", visual: "👕" },
+      { id: "cardigan", name: "포근한 카디건", visual: "🧥" }, { id: "sleeveless", name: "산뜻한 민소매", visual: "🎽" },
+      { id: "short_cardigan", name: "반소매 카디건", visual: "👚" },
+    ],
+    lpcBottom: [
+      { id: "pants", name: "기본 바지", visual: "👖" }, { id: "long_pants", name: "긴 바지", visual: "👖" },
+      { id: "shorts", name: "산책 반바지", visual: "🩳" }, { id: "leggings", name: "활동 레깅스", visual: "🧘" },
+    ],
+    lpcShoes: [
+      { id: "shoes", name: "기본 운동화", visual: "👟" }, { id: "boots", name: "정원 워커", visual: "🥾" },
+      { id: "slippers", name: "폭신 슬리퍼", visual: "🥿" },
+    ],
+    lpcHat: [
+      { id: "none", name: "모자 없음", visual: "—" }, { id: "leather_cap", name: "가죽 산책 모자", visual: "🧢" },
+      { id: "bowler", name: "포멀 보울러", visual: "🎩" }, { id: "bandana", name: "숲 반다나", visual: "🧣" },
+    ],
+    lpcGlasses: [
+      { id: "none", name: "안경 없음", visual: "—" }, { id: "round", name: "동그란 안경", visual: "👓" },
+      { id: "halfmoon", name: "반달 안경", visual: "👓" }, { id: "sunglasses", name: "선글라스", visual: "🕶️" },
+    ],
+    expression: [
+      { id: "calm", name: "차분한 미소", visual: "🙂" }, { id: "bright", name: "환한 미소", visual: "😄" },
+      { id: "wink", name: "윙크", visual: "😉" }, { id: "delighted", name: "눈웃음", visual: "😊" },
+      { id: "worried", name: "살짝 걱정", visual: "😟" }, { id: "determined", name: "씩씩한 표정", visual: "😤" },
+    ],
+    pose: [
+      { id: "idle", name: "가만히", visual: "🧍" }, { id: "walk", name: "걷기", visual: "🚶" },
+      { id: "run", name: "달리기", visual: "🏃" }, { id: "sit", name: "앉기", visual: "🧘" },
+      { id: "jump", name: "점프", visual: "🙌" }, { id: "dance", name: "함께 춤추기", visual: "💃" },
+      { id: "harvest", name: "당근 수확", visual: "🥕" }, { id: "fishing", name: "낚시", visual: "🎣" },
+      { id: "door", name: "문 열기", visual: "🚪" }, { id: "attack", name: "공격", visual: "⚔️" },
+      { id: "spellcast", name: "반짝임 만들기", visual: "✨" }, { id: "hurt", name: "깜짝 놀라기", visual: "😲" },
+    ],
   };
+  const colorChoices = [
+    ["brown", "브라운", "#704229"], ["black", "블랙", "#282b31"], ["silver", "실버", "#aeb5bf"],
+    ["blue", "블루", "#4268a8"], ["teal", "청록", "#308b82"], ["red", "레드", "#a84335"],
+    ["orange", "오렌지", "#d4762f"], ["green", "그린", "#447849"], ["navy", "네이비", "#293c68"],
+    ["cream", "크림", "#ead9b5"], ["pink", "핑크", "#d9839f"], ["purple", "퍼플", "#765a9c"],
+    ["white", "화이트", "#eef0ed"], ["gray", "그레이", "#747a81"], ["yellow", "옐로", "#e2b845"],
+  ].map(([id, name, color]) => ({ id, name, color, visual: "" }));
+  avatarCatalog.hairColor = colorChoices;
+  avatarCatalog.outfitColor = colorChoices;
+  avatarCatalog.bottomColor = colorChoices;
+  avatarCatalog.shoeColor = colorChoices;
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
+    lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none",
+    expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown",
+    hatColor: "brown", glassesColor: "brown",
   };
   const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
@@ -169,7 +229,7 @@
       dateKey: TODAY,
       profileVersion: 1,
       cosmeticSchemaVersion: 2,
-      avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
+      avatar: { name: generatedNickname, gender: "male", engine: "lpc", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
       members: [
         { id: "me", name: "나", completed: 0, me: true },
@@ -274,7 +334,10 @@
   let walkingUntil = 0;
   let walkAnimationFrame = 0;
   let currentScene = "world";
-  let activeAvatarCategory = "preset";
+  let activeAvatarCategory = "lpcHair";
+  let avatarPreviewPose = "idle";
+  let avatarPreviewFrame = 0;
+  let lastAvatarPreviewAt = 0;
   let avatarDraft = { ...defaultCosmetics };
   let avatarTuningDraft = { ...defaultAvatarTuning };
   let avatarDraftHistory = [];
@@ -323,6 +386,11 @@
     if ($("#avatar-studio").open) renderAvatarStudio();
   }));
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
+  window.addEventListener("lpc-avatar-ready", () => {
+    renderCanvas();
+    if ($("#avatar-studio").open) renderAvatarStudio();
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
 
   class CozyForestMusic {
     constructor() {
@@ -898,6 +966,12 @@
       needsRender = true;
     }
     const moving = timestamp < walkingUntil;
+    if ($("#avatar-studio").open && timestamp - lastAvatarPreviewAt > 120) {
+      avatarPreviewFrame += 1;
+      lastAvatarPreviewAt = timestamp;
+      renderCatalogThumbnailCanvases();
+      renderAvatarPreview();
+    }
     if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : 95)) {
       walkAnimationFrame = (walkAnimationFrame + 1) % 4;
       lastWalkAnimationAt = timestamp;
@@ -967,6 +1041,11 @@
 
   function interact(target = nearbyInteraction()) {
     if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
+    const pose = {
+      crops: "harvest", pond: "fishing", home: "door", garden: "door",
+      exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
+    }[target];
+    if (pose) window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose, duration: pose === "fishing" ? 1800 : 1100 } }));
     openWorldDialog(target);
   }
 
@@ -1065,7 +1144,7 @@
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
 
-  function selectedAvatarItem(category, id = avatarDraft[category]) {
+  function selectedAvatarItem(category, id = category === "pose" ? avatarPreviewPose : avatarDraft[category]) {
     return avatarCatalog[category].find((item) => item.id === id) || avatarCatalog[category][0];
   }
 
@@ -1083,6 +1162,19 @@
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
 
   function renderCatalogThumbnailCanvases() {
+    document.querySelectorAll("canvas[data-lpc-category]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const category = thumbnail.dataset.lpcCategory;
+      const id = thumbnail.dataset.lpcItem;
+      const cosmetics = { ...avatarDraft, [category]: id };
+      const pose = category === "expression" ? "idle" : avatarPreviewPose;
+      window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
+        direction: "down", pose, frame: avatarPreviewFrame,
+      }, { x: 3, y: 3, width: 90, height: 90 });
+    });
     document.querySelectorAll("canvas[data-preset-thumb]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
@@ -1212,11 +1304,16 @@
     previewContext.imageSmoothingEnabled = false;
     const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
+    if (window.LpcAvatarEngine?.isReady()) {
+      window.LpcAvatarEngine.draw(previewContext, {
+        ...state.avatar, engine: "lpc", cosmetics: avatarDraft, sitting: false, mounted: false,
+      }, { direction: "down", pose: avatarPreviewPose, frame: avatarPreviewFrame }, { x: 48, y: 42, width: 184, height: 184 });
+    }
     const previewPreset = avatarDraft.preset || "blue_cap";
     const previewAtlas = presetSpriteAtlases[previewPreset];
     const presetSources = Object.fromEntries(Object.entries(presetSpriteAtlases).map(([preset, atlas]) => [preset, atlas]));
     if (modularAvatarAtlas.complete && modularAvatarAtlas.naturalWidth) presetSources.modular = { image: modularAvatarAtlas, rows: 11 };
-    if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth && window.CarrotAvatarCompositor) {
+    if (!window.LpcAvatarEngine?.isReady() && previewAtlas?.image.complete && previewAtlas.image.naturalWidth && window.CarrotAvatarCompositor) {
       window.CarrotAvatarCompositor.drawFrame(previewContext, presetSources, {
         preset: previewPreset,
         hairPreset: stylePresetByItem[avatarDraft.hair] || previewPreset,
@@ -1225,9 +1322,9 @@
         accessory: avatarDraft.accessory, hat: avatarDraft.hat, glasses: avatarDraft.glasses,
         ...avatarTuningDraft,
       }, { x: 65, y: 30, width: 150, height: 210 });
-    } else if (basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
+    } else if (!window.LpcAvatarEngine?.isReady() && basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
       drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
-    } else {
+    } else if (!window.LpcAvatarEngine?.isReady()) {
       drawLayeredAvatarPreview(previewContext, avatarDraft);
     }
     const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
@@ -1276,7 +1373,11 @@
       const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
       const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (activeAvatarCategory === "preset") {
+      if (["lpcHair", "lpcOutfit", "lpcBottom", "lpcShoes", "lpcHat", "lpcGlasses", "expression"].includes(activeAvatarCategory)) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${activeAvatarCategory}" data-lpc-item="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "skin"].includes(activeAvatarCategory) && item.color) {
+        visual = `<span class="item-visual lpc-color-swatch" style="--swatch:${item.color}" aria-hidden="true"></span>`;
+      } else if (activeAvatarCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
       } else if (["hair", "outfit"].includes(activeAvatarCategory)) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${stylePresetByItem[item.id]}" data-preset-crop="${activeAvatarCategory === "hair" ? "head" : "body"}" aria-hidden="true"></canvas>`;
@@ -1295,7 +1396,7 @@
       } else {
         visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
-      const selected = avatarDraft[activeAvatarCategory] === item.id;
+      const selected = (activeAvatarCategory === "pose" ? avatarPreviewPose : avatarDraft[activeAvatarCategory]) === item.id;
       return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${selected ? "선택됨" : "보유 아이템"}</small></button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
@@ -1317,7 +1418,8 @@
     avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "blue_cap" };
     avatarTuningDraft = { ...defaultAvatarTuning, ...(state.avatar.tuning || {}) };
     avatarDraftHistory = [];
-    activeAvatarCategory = "preset";
+    activeAvatarCategory = "lpcHair";
+    avatarPreviewPose = "idle";
     renderAvatarStudio();
     $("#avatar-studio").showModal();
   }
@@ -1329,8 +1431,15 @@
     target.clearRect(0, 0, canvas.width, canvas.height);
     target.setTransform(2, 0, 0, 2, 0, 0);
     target.imageSmoothingEnabled = false;
-    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
     const cosmetics = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
+    if (window.LpcAvatarEngine?.isReady()) {
+      window.LpcAvatarEngine.draw(target, { ...state.avatar, engine: "lpc", cosmetics, sitting: false, mounted: false }, {
+        direction: "down", pose: "idle", frame: avatarPreviewFrame,
+      }, { x: 24, y: 32, width: 176, height: 176 });
+      target.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
+    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
     window.CarrotAvatarCompositor.drawFrame(target, { modular: { image: modularAvatarAtlas, rows: 11 } }, {
       preset: state.avatar.preset,
       hairPreset: stylePresetByItem[cosmetics.hair] || state.avatar.preset,
@@ -1492,6 +1601,11 @@
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
     if (!button) return;
+    if (activeAvatarCategory === "pose") {
+      avatarPreviewPose = button.dataset.avatarItem;
+      renderAvatarStudio();
+      return;
+    }
     if (activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
@@ -1509,7 +1623,7 @@
   });
   $("#avatar-randomize").addEventListener("click", () => {
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarCategories.forEach(({ id }) => {
+    avatarCategories.filter(({ id }) => id !== "pose").forEach(({ id }) => {
       const choices = avatarCatalog[id];
       avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
     });
@@ -1526,6 +1640,7 @@
     renderAvatarStudio();
   });
   $("#avatar-studio-save").addEventListener("click", async () => {
+    state.avatar.engine = "lpc";
     state.avatar.preset = avatarDraft.preset || state.avatar.preset;
     const { preset: _preset, ...savedCosmetics } = avatarDraft;
     state.avatar.cosmetics = { ...savedCosmetics };
@@ -1670,12 +1785,14 @@
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "0"].includes(event.key)) event.preventDefault();
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
     if (event.key === "c" || event.key === "C") { toggleChat(); return; }
     if (event.key === "x" || event.key === "X") { toggleSit(); return; }
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
+    if (event.key === "z" || event.key === "Z") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "attack", duration: 760 } })); return; }
+    if (event.key === "0") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } })); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
     event.preventDefault(); moveAvatar(direction);
@@ -1692,6 +1809,8 @@
     if (action === "chat") toggleChat();
     if (action === "sit") await toggleSit();
     if (action === "ride") await toggleRide();
+    if (action === "attack") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "attack", duration: 760 } }));
+    if (action === "dance") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } }));
   }));
 
   $("#large-text-toggle").addEventListener("click", (event) => {
@@ -1741,16 +1860,19 @@
     const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
     if (!action) return;
     if (action === "enter_home") {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("home");
       await persist("우리 집 안으로 들어왔습니다. 소파와 옷장을 이용해 보세요.");
     }
     if (action === "enter_garden") {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("garden");
       await persist("공동 당근밭 안으로 들어왔습니다. 당근 가까이에서 물을 줄 수 있어요.");
     }
     if (action === "exit_scene") {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("world");
       await persist("우리의 작은 숲으로 돌아왔습니다.");
@@ -1771,6 +1893,7 @@
       openAvatarStudio();
     }
     if (action === "water" && !state.gardenWatered) {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1400 } }));
       state.gardenWatered = true;
       state.carrots += 10;
       $("#carrot-balance").textContent = state.carrots;
@@ -1787,6 +1910,7 @@
       await toggleRide(false);
     }
     if (action === "fish") {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "fishing", duration: 2200 } }));
       const firstCatch = !state.fishCaught;
       currentScene = "world";
       state.avatar.x = 305;

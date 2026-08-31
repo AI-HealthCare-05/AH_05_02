@@ -47,6 +47,9 @@
 - 오리지널 투명 PNG 아틀라스 기반의 정교한 32-bit 치비 캐릭터 12종과 꾸미기 아이콘 20종 적용
 - 카드 썸네일은 원본 아틀라스를 안전하게 크롭하고, 미리보기·커스텀 월드는 레이어형 렌더러로 선택 조합을 정확히 표현한다.
 - 파란 눈의 흰 고양이와 노란 눈의 주황갈색 고양이를 전용 펫 아틀라스로 추가
+- Universal LPC 호환 레이어 팩을 도입해 몸·헤어·상의·하의·신발·모자·안경을 동일한 프레임 규격으로 실시간 합성
+- `Q` 당근 수확·낚시·문 열기, `Z` 공격, `0` 아바타·펫 동시 춤, `X` 아바타·펫 동시 앉기 동작 추가
+- 펫을 아바타에 고정하지 않고 최근 이동 경로를 시간차로 추적하는 독립 월드 액터로 변경
 - 창고에서는 오브젝트 이름·설명을 감추고 그림만으로 고르되, 스크린리더용 이름과 툴팁은 유지
 - PWA 설치: 지원 브라우저에서 바탕화면·홈 화면 앱으로 추가하고 독립 창으로 실행
 - 초기 CSS·JavaScript가 준비되기 전에는 원시 HTML 대신 전용 로딩 화면을 표시
@@ -79,6 +82,10 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-avatar-manifest-v2.json`: 원본·정규화 프레임 경계와 방향 행 메타데이터
 - `src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 5×4 투명 꾸미기 아이콘 아틀라스
 - `src/frontend/assets/carrot-forest-cat-pets-v1.png`: 파란 눈 흰 고양이·노란 눈 주황갈색 고양이 2×1 투명 펫 아틀라스
+- `src/frontend/assets/lpc-pack/`: Universal LPC에서 선별·정규화한 아바타 레이어와 파일별 크레딧
+- `scripts/build_lpc_avatar_pack.py`: LPC 레이어 팩 재현 빌드 스크립트
+- `src/frontend/lpc-avatar-engine.js`: 4방향 LPC 합성·표정·행동·탈것 렌더러
+- 라이선스와 확장 절차는 [`LPC_AVATAR_ENGINE.md`](LPC_AVATAR_ENGINE.md)에서 확인한다.
 - `src/frontend/assets/carrot-forest-storage-atlas-v1.png`: 꽃밭·등불·바르게 선 버섯·벤치 4×1 투명 창고 오브젝트 아틀라스
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
@@ -140,6 +147,8 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | 픽셀 게임·상태·어댑터 | `src/frontend/forest-game.js` |
 | Phaser 월드·고해상도 프리셋 아바타·4방향 이동 | `src/frontend/forest-phaser.js` |
 | 헤어·의상·액세서리 공통 합성 | `src/frontend/avatar-compositor.js` |
+| Universal LPC 레이어·표정·행동 합성 | `src/frontend/lpc-avatar-engine.js` |
+| Universal LPC 팩 재현 빌드 | `scripts/build_lpc_avatar_pack.py` |
 | 스프라이트 정규화 빌드 | `scripts/build_carrot_avatar_atlases.py` |
 | 반응형·접근성 스타일 | `src/frontend/forest-game.css` |
 | PWA 설치 정보 | `src/frontend/forest.webmanifest` |

@@ -1,0 +1,870 @@
+{
+  "format": "gandang-lpc-pack-v1",
+  "frame": 64,
+  "columns": 13,
+  "rows": 54,
+  "animationRows": {
+    "spellcast": 0,
+    "thrust": 4,
+    "walk": 8,
+    "slash": 12,
+    "shoot": 16,
+    "hurt": 20,
+    "climb": 21,
+    "idle": 22,
+    "jump": 26,
+    "sit": 30,
+    "emote": 34,
+    "run": 38,
+    "combat_idle": 42,
+    "backslash": 46,
+    "halfslash": 50
+  },
+  "directionRows": {
+    "up": 0,
+    "left": 1,
+    "down": 2,
+    "right": 3
+  },
+  "source": "Universal-LPC-Spritesheet-Character-Generator",
+  "sourceUrl": "https://github.com/liberatedpixelcup/Universal-LPC-Spritesheet-Character-Generator",
+  "items": [
+    {
+      "id": "body",
+      "category": "body",
+      "label": "기본 몸",
+      "sources": {
+        "male": [
+          {
+            "file": "body-body-male-layer1.png",
+            "z": 10
+          }
+        ],
+        "female": [
+          {
+            "file": "body-body-female-layer1.png",
+            "z": 10
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "body/body.json"
+    },
+    {
+      "id": "bob",
+      "category": "hair",
+      "label": "단정한 단발",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-bob-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/bob/hair_bob.json"
+    },
+    {
+      "id": "afro",
+      "category": "hair",
+      "label": "몽글 아프로",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-afro-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-afro-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/afro/hair_afro.json"
+    },
+    {
+      "id": "long",
+      "category": "hair",
+      "label": "긴 생머리",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-long-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/long/hair_long.json"
+    },
+    {
+      "id": "messy",
+      "category": "hair",
+      "label": "헝클어진 숏컷",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-messy-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-messy-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_messy1.json"
+    },
+    {
+      "id": "page",
+      "category": "hair",
+      "label": "페이지 컷",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-page-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-page-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_page.json"
+    },
+    {
+      "id": "overalls",
+      "category": "outfit",
+      "label": "정원사 멜빵",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-overalls-male-layer1.png",
+            "z": 38
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-overalls-female-layer1.png",
+            "z": 38
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/aprons/torso_aprons_overalls.json"
+    },
+    {
+      "id": "tshirt",
+      "category": "outfit",
+      "label": "편안한 티셔츠",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-tshirt-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-tshirt-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/shortsleeve/torso_clothes_tshirt.json"
+    },
+    {
+      "id": "cardigan",
+      "category": "outfit",
+      "label": "포근한 카디건",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-cardigan-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-cardigan-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve2_cardigan.json"
+    },
+    {
+      "id": "sleeveless",
+      "category": "outfit",
+      "label": "산뜻한 민소매",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-sleeveless-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-sleeveless-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/sleeveless/torso_clothes_sleeveless2.json"
+    },
+    {
+      "id": "short_cardigan",
+      "category": "outfit",
+      "label": "반소매 카디건",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-short_cardigan-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-short_cardigan-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/shortsleeve/torso_clothes_shortsleeve_cardigan.json"
+    },
+    {
+      "id": "pants",
+      "category": "bottom",
+      "label": "기본 바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-pants-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-pants-female-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/pants/legs_pants.json"
+    },
+    {
+      "id": "long_pants",
+      "category": "bottom",
+      "label": "긴 바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-long_pants-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-long_pants-female-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/pants/legs_pants2.json"
+    },
+    {
+      "id": "shorts",
+      "category": "bottom",
+      "label": "산책 반바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-shorts-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-shorts-female-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/shorts/legs_shorts.json"
+    },
+    {
+      "id": "leggings",
+      "category": "bottom",
+      "label": "활동 레깅스",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-leggings-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-leggings-female-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/leggings/legs_leggings.json"
+    },
+    {
+      "id": "shoes",
+      "category": "shoes",
+      "label": "기본 운동화",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-shoes-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-shoes-female-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/shoes/feet_shoes_basic.json"
+    },
+    {
+      "id": "boots",
+      "category": "shoes",
+      "label": "정원 워커",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-boots-male-layer1.png",
+            "z": 25
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-boots-female-layer1.png",
+            "z": 25
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/boots/feet_boots_basic.json"
+    },
+    {
+      "id": "slippers",
+      "category": "shoes",
+      "label": "폭신 슬리퍼",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-slippers-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-slippers-female-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/feet_slippers.json"
+    },
+    {
+      "id": "leather_cap",
+      "category": "hat",
+      "label": "가죽 산책 모자",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-leather_cap-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-leather_cap-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/caps/hat_cap_leather.json"
+    },
+    {
+      "id": "bowler",
+      "category": "hat",
+      "label": "포멀 보울러",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-bowler-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-bowler-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/formal/hat_formal_bowler.json"
+    },
+    {
+      "id": "bandana",
+      "category": "hat",
+      "label": "숲 반다나",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-bandana-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/coverings/bandana/hat_bandana.json"
+    },
+    {
+      "id": "round",
+      "category": "glasses",
+      "label": "동그란 안경",
+      "sources": {
+        "male": [
+          {
+            "file": "glasses-round-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "glasses-round-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_round.json"
+    },
+    {
+      "id": "halfmoon",
+      "category": "glasses",
+      "label": "반달 안경",
+      "sources": {
+        "male": [
+          {
+            "file": "glasses-halfmoon-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "glasses-halfmoon-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_halfmoon.json"
+    },
+    {
+      "id": "sunglasses",
+      "category": "glasses",
+      "label": "선글라스",
+      "sources": {
+        "male": [
+          {
+            "file": "glasses-sunglasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "glasses-sunglasses-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_sunglasses.json"
+    }
+  ]
+}

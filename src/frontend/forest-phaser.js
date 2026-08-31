@@ -18,6 +18,9 @@
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft",
     hat: "none", glasses: "none", face: "calm", accessory: "none",
+    lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots",
+    lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright",
+    hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
   };
   const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };
   const hairPresetByStyle = {
@@ -36,6 +39,7 @@
   function normalizedAvatar(source = {}) {
     return {
       name: source.name || "세준", gender: source.gender === "male" ? "male" : "female",
+      engine: source.engine === "premium" ? "premium" : "lpc",
       preset: premiumPresets[source.preset] ? source.preset : "blue_cap",
       x: Number.isFinite(source.x) ? source.x : 384, y: Number.isFinite(source.y) ? source.y : 352,
       direction: directionRows[source.direction] == null ? "down" : source.direction,
@@ -54,6 +58,13 @@
       this.forcedDirection = null;
       this.forcedUntil = 0;
       this.mountTransitioning = false;
+      this.actionPose = null;
+      this.actionUntil = 0;
+      this.petAction = null;
+      this.petActionUntil = 0;
+      this.petTrail = [];
+      this.petLastSampleAt = 0;
+      this.petFacing = "right";
     }
 
     preload() {
@@ -80,8 +91,10 @@
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
       this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);
       this.player.add(this.premiumAvatar);
-      this.pet = this.add.sprite(31, 10, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.045).setDepth(1);
-      this.player.add(this.pet);
+      this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.045).setDepth(this.avatar.y - 1);
+      this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1);
+      this.petFollowX = this.avatar.x + 31;
+      this.petFollowY = this.avatar.y + 10;
       this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
         color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
@@ -92,10 +105,20 @@
       this.cursors = this.input.keyboard.createCursorKeys();
       this.input.keyboard.on("keydown-Q", () => window.dispatchEvent(new CustomEvent("forest-phaser-interact")));
       this.input.keyboard.on("keydown-C", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })));
-      this.input.keyboard.on("keydown-X", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" })));
+      this.input.keyboard.on("keydown-X", () => {
+        this.playTogether(this.avatar.sitting ? "idle" : "sit", 900);
+        window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
+      });
       this.input.keyboard.on("keydown-E", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })));
+      this.input.keyboard.on("keydown-Z", () => this.playAction("attack", 760));
+      this.input.keyboard.on("keydown", (event) => {
+        if (event.key !== "0" || event.repeat) return;
+        event.preventDefault();
+        this.playTogether("dance", 1800);
+      });
       this.events.on("shutdown", () => this.detachWindowEvents());
       this.attachWindowEvents();
+      window.LpcAvatarEngine?.ready().then(() => this.rebuildAvatar());
       document.documentElement.classList.add("phaser-world-ready");
       window.carrotForestPhaserActive = true;
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
@@ -108,8 +131,13 @@
       this.setPremiumFrame(this.avatar.direction, false, 0);
       this.nameplate?.setDepth(30).setText(this.avatar.name);
       const pet = c.pet;
-      this.pet?.setVisible(["cat", "blue_eyes_white_cat", "gold_eyes_orange_cat"].includes(pet));
+      const catPet = ["cat", "blue_eyes_white_cat", "gold_eyes_orange_cat"].includes(pet);
+      this.pet?.setVisible(catPet);
       this.pet?.setFrame(pet === "gold_eyes_orange_cat" ? 1 : 0);
+      const glyphs = { white_pup: "🐶", brown_pup: "🐕", fox: "🦊" };
+      this.petEmoji?.setText(glyphs[pet] || "").setVisible(Boolean(glyphs[pet]));
+      this.petTrail = [];
+      this.petLastSampleAt = 0;
     }
 
     attachWindowEvents() {
@@ -125,11 +153,33 @@
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
       window.addEventListener("forest-state-updated", this.onState);
+      this.onAction = (event) => {
+        const detail = event.detail || {};
+        this.playAction(detail.pose || detail, Number(detail.duration) || 1100);
+      };
+      window.addEventListener("forest-avatar-action", this.onAction);
     }
 
     detachWindowEvents() {
       window.removeEventListener("forest-avatar-updated", this.onAvatar);
       window.removeEventListener("forest-state-updated", this.onState);
+      window.removeEventListener("forest-avatar-action", this.onAction);
+    }
+
+    playAction(pose, duration = 1100) {
+      this.actionPose = pose;
+      this.actionUntil = performance.now() + duration;
+      if (pose === "dance") {
+        this.petAction = "dance";
+        this.petActionUntil = this.actionUntil;
+      }
+    }
+
+    playTogether(pose, duration = 1600) {
+      this.playAction(pose, duration);
+      this.petAction = pose;
+      this.petActionUntil = performance.now() + duration;
+      window.dispatchEvent(new CustomEvent("forest-companion-action", { detail: pose }));
     }
 
     applyAvatarUpdate(nextAvatar) {
@@ -137,7 +187,12 @@
         this.playMountTransition(nextAvatar);
         return;
       }
+      const sittingChanged = nextAvatar.sitting !== this.avatar.sitting;
       this.avatar = nextAvatar;
+      if (sittingChanged) {
+        this.petAction = nextAvatar.sitting ? "sit" : "idle";
+        this.petActionUntil = performance.now() + 900;
+      }
       this.rebuildAvatar();
     }
 
@@ -219,6 +274,7 @@
       const running = inputAllowed && this.keys.R.isDown;
       if (!direction) {
         this.setPremiumFrame(this.avatar.direction, false, time);
+        this.updatePet(time, delta, false);
         return;
       }
       const speed = this.avatar.mounted ? 185 : running ? 150 : 92;
@@ -232,7 +288,51 @@
         this.player.setPosition(nextX, nextY).setDepth(nextY);
       }
       this.setPremiumFrame(direction, true, time, running);
+      this.updatePet(time, delta, true);
       this.emitPosition();
+    }
+
+    updatePet(time, delta, playerMoving) {
+      if ((!this.pet || !this.pet.visible) && (!this.petEmoji || !this.petEmoji.visible)) return;
+      if (!this.petTrail.length) {
+        this.petTrail.push({ x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction, time });
+      }
+      if (playerMoving && time - this.petLastSampleAt >= 42) {
+        this.petTrail.push({ x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction, time });
+        this.petLastSampleAt = time;
+        while (this.petTrail.length > 28 || (this.petTrail[1] && time - this.petTrail[1].time > 1600)) this.petTrail.shift();
+      }
+      const directionOffset = {
+        left: [32, 8], right: [-32, 8], up: [27, 18], down: [-29, 9],
+      }[this.avatar.direction] || [-29, 9];
+      const delayed = playerMoving
+        ? [...this.petTrail].reverse().find((point) => point.time <= time - 330)
+        : null;
+      const targetX = delayed ? delayed.x : this.avatar.x + directionOffset[0];
+      const targetY = delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
+      const follow = playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
+      const actor = this.pet?.visible ? this.pet : this.petEmoji;
+      const previousX = this.petFollowX;
+      this.petFollowX += (targetX - this.petFollowX) * follow;
+      this.petFollowY += (targetY - this.petFollowY) * follow;
+      const togetherSitting = this.avatar.sitting;
+      const dancing = this.petAction === "dance" && time < this.petActionUntil;
+      if (Math.abs(this.petFollowX - previousX) > 0.08) this.petFacing = this.petFollowX < previousX ? "left" : "right";
+      const gait = playerMoving ? Math.sin(time / 82) : 0;
+      const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
+      const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
+      actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
+      actor.setFlipX?.(this.petFacing === "left");
+      actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving ? gait * 2.2 : 0);
+      if (this.pet?.visible) {
+        const baseScale = togetherSitting ? 0.041 : 0.045;
+        const squash = dancing ? Math.sin(time / 118) * 0.004 : playerMoving ? Math.abs(gait) * 0.0018 : 0;
+        actor.setScale(baseScale + squash, baseScale - squash * 0.65);
+      } else {
+        const emojiScale = togetherSitting ? 0.88 : dancing ? 1 + Math.sin(time / 118) * 0.08 : 1;
+        actor.setScale(emojiScale, emojiScale);
+      }
+      if (time >= this.petActionUntil) this.petAction = null;
     }
 
     setPremiumFrame(direction, moving, time, running = false) {
@@ -241,7 +341,12 @@
       const cosmetics = this.avatar.cosmetics;
       const context = this.compositeTexture.getContext();
       context.clearRect(0, 0, 224, 288);
-      window.CarrotAvatarCompositor.drawFrame(context, this.presetSources, {
+      const pose = performance.now() < this.actionUntil ? this.actionPose : null;
+      if (!pose) this.actionPose = null;
+      const usedLpc = this.avatar.engine === "lpc" && window.LpcAvatarEngine?.draw(context, this.avatar, {
+        direction, moving, running, pose, frame: Math.floor(time / rate),
+      }, { x: 16, y: 58, width: 192, height: 192 });
+      if (!usedLpc) window.CarrotAvatarCompositor.drawFrame(context, this.presetSources, {
         preset: this.avatar.preset,
         hairPreset: hairPresetByStyle[cosmetics.hair] || this.avatar.preset,
         outfitPreset: outfitPresetByStyle[cosmetics.outfit] || this.avatar.preset,
@@ -265,6 +370,26 @@
     drawMotionEffects(direction, moving, frame) {
       if (!this.motionFx || this.mountTransitioning) return;
       this.motionFx.clear();
+      const cosmetics = this.avatar.cosmetics || {};
+      if (cosmetics.aura === "halo") {
+        this.motionFx.lineStyle(2, 0xffe272, 0.8).strokeEllipse(0, -73, 30, 8);
+      } else if (cosmetics.aura === "wings") {
+        this.motionFx.lineStyle(2, 0x8fe8ff, 0.82);
+        this.motionFx.strokeEllipse(-27, -27, 23, 38).strokeEllipse(27, -27, 23, 38);
+      } else if (cosmetics.aura === "forest") {
+        this.motionFx.fillStyle(0x73c969, 0.72);
+        this.motionFx.fillCircle(-29, -18 + (frame % 3) * 3, 3).fillCircle(31, -32 + ((frame + 1) % 3) * 4, 2.5);
+      } else if (cosmetics.aura === "hearts") {
+        this.motionFx.fillStyle(0xf27d9b, 0.75);
+        this.motionFx.fillCircle(-28, -35, 3).fillCircle(28, -50, 2.5);
+      }
+      if (cosmetics.effect !== "none") {
+        const colors = { bubble: 0x8fe8ff, spark: 0xffe272, heart: 0xf27d9b, carrot: 0xef8632, leaf: 0x73c969 };
+        this.motionFx.fillStyle(colors[cosmetics.effect] || 0xffe272, 0.84);
+        const phase = frame % 4;
+        this.motionFx.fillCircle(-34 + phase * 3, -54 - phase * 2, phase % 2 ? 2.5 : 1.8);
+        this.motionFx.fillCircle(36 - phase * 2, -22 - phase * 3, phase % 2 ? 1.8 : 2.6);
+      }
       if (!moving) return;
       const directionSign = direction === "left" ? 1 : direction === "right" ? -1 : 0;
       if (this.avatar.mounted) {
