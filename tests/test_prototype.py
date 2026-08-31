@@ -210,6 +210,8 @@ def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> Non
         assert challenge in script
     assert 'api("/challenges")' in script
     assert "state.selectedChallengeIds" in script
+    assert "state.challengeRecommendationsPersonalized = result.personalized === true" in script
+    assert "state.challengeRecommendationsPersonalized && recommendationIds.has" in script
     assert "챌린지는 최대 3개까지 선택할 수 있어요." in script
 
 

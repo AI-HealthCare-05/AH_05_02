@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -1051,7 +1051,7 @@ async function loadChallenges() {
   let result;
   let catalogResult;
   if (isLocalPreview()) {
-    result = { items: fallbackChallenges.slice(0, 3), medical_guidance_required_first: false };
+    result = { items: fallbackChallenges.slice(0, 3), personalized: false, medical_guidance_required_first: false };
     catalogResult = { items: [...fallbackChallenges, ...localNotionChallenges] };
   } else {
     try {
@@ -1067,6 +1067,7 @@ async function loadChallenges() {
   }
   const items = result.items || [];
   state.challengeRecommendations = items;
+  state.challengeRecommendationsPersonalized = result.personalized === true;
   state.challengeCatalog = catalogResult?.items || items;
   state.selectedChallengeIds = new Set();
   state.activeChallengeCategory = null;
@@ -1145,7 +1146,7 @@ function renderChallengeDetails() {
   const items = state.challengeCatalog.filter((item) => item.category === state.activeChallengeCategory);
   $("#challenge-detail-list").innerHTML = items.map((item) => `<label class="challenge-detail-option">
     <input type="checkbox" name="challenge" value="${item.challenge_id}" ${state.selectedChallengeIds.has(Number(item.challenge_id)) ? "checked" : ""}>
-    <span><strong>${escapeHtml(item.title)}</strong><small>목표: ${escapeHtml(item.daily_goal)}</small>${recommendationIds.has(Number(item.challenge_id)) ? '<em>나에게 추천</em>' : ""}</span>
+    <span><strong>${escapeHtml(item.title)}</strong><small>목표: ${escapeHtml(item.daily_goal)}</small>${state.challengeRecommendationsPersonalized && recommendationIds.has(Number(item.challenge_id)) ? '<em>나에게 추천</em>' : ""}</span>
   </label>`).join("");
 }
 
