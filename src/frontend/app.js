@@ -1554,6 +1554,41 @@ function setInviteMode(mode) {
   });
 }
 
+function configureEnvironmentControls() {
+  const statusPanel = $(".status-demo-panel");
+  if (statusPanel) statusPanel.hidden = !isDemoEnvironment();
+
+  const codeNode = $("#forest-invite-code");
+  const codeNote = $("#invite-code-note");
+  const copyButton = $("#copy-invite-code");
+  if (!codeNode || !codeNote || !copyButton) return;
+
+  const isDemo = isDemoEnvironment();
+  codeNode.textContent = isDemo ? "DEMO-CODE" : "초대 코드 발급 준비 중";
+  codeNode.dataset.copyValue = isDemo ? "DEMO-CODE" : "";
+  codeNote.textContent = isDemo
+    ? "로컬 화면 확인용 코드입니다. 실제 초대에는 사용할 수 없어요."
+    : "실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요.";
+  copyButton.disabled = !isDemo;
+  copyButton.textContent = isDemo ? "복사" : "준비 중";
+}
+
+function renderInviteEmailResult(result = {}) {
+  const box = $("#invite-result");
+  if (!box) return;
+  const content = document.createElement("div");
+  const title = document.createElement("strong");
+  const token = document.createElement("p");
+  const notice = document.createElement("small");
+  title.textContent = "초대 이메일을 보낼 준비가 되었습니다";
+  token.className = "invite-code";
+  token.textContent = result.token || "초대 요청 접수 완료";
+  notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요.";
+  content.append(title, token, notice);
+  box.replaceChildren(content);
+  box.hidden = false;
+}
+
 function setReportPeriod(period) {
   $$("[data-report-period]").forEach((button) => {
     const selected = button.dataset.reportPeriod === period;
@@ -2098,15 +2133,17 @@ $("#invite-form").addEventListener("submit", async (event) => {
     const result = await api("/invitations", { method: "POST", body: JSON.stringify({
       invitee_email: $("#invite-email").value, relation_type: "family",
     }) });
-    const box = $("#invite-result");
-    box.hidden = false;
-    box.innerHTML = `<div><strong>초대 이메일을 보낼 준비가 되었습니다</strong><p class="invite-code">${result.token}</p><small>${result.notice}</small></div>`;
+    renderInviteEmailResult(result);
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
 $$("[data-invite-mode]").forEach((button) => button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode)));
 $("#copy-invite-code")?.addEventListener("click", async () => {
-  const code = $("#forest-invite-code")?.textContent?.trim() || "";
+  const code = $("#forest-invite-code")?.dataset.copyValue || "";
+  if (!code) {
+    showMessage("실제 초대 코드 발급 기능을 준비하고 있습니다.");
+    return;
+  }
   try {
     await navigator.clipboard.writeText(code);
     showMessage("초대 코드를 복사했습니다.", "success");
@@ -2377,4 +2414,5 @@ function resumeFromForest() {
   showWorkspace("together", { moveFocus: false });
 }
 
+configureEnvironmentControls();
 resumeFromForest();

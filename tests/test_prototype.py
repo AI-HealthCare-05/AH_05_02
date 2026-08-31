@@ -126,6 +126,31 @@ def test_invite_method_starts_unselected_and_reveals_only_requested_panel() -> N
     assert 'button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode))' in script
 
 
+def test_demo_controls_and_invite_placeholders_are_environment_safe() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'class="status-demo-panel" aria-label="분석 결과 상태 확인용" hidden' in html
+    assert "statusPanel.hidden = !isDemoEnvironment()" in script
+    assert '<strong id="forest-invite-code">7F K3 Q1</strong>' not in html
+    assert '<strong id="forest-invite-code">초대 코드 발급 준비 중</strong>' in html
+    assert 'id="copy-invite-code" type="button" disabled' in html
+    assert 'codeNode.dataset.copyValue = isDemo ? "DEMO-CODE" : ""' in script
+    assert "로컬 화면 확인용 코드입니다. 실제 초대에는 사용할 수 없어요." in script
+    assert "실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요." in html + script
+
+
+def test_invite_api_response_is_rendered_as_text_not_html() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "function renderInviteEmailResult(result = {})" in script
+    assert 'token.textContent = result.token || "초대 요청 접수 완료"' in script
+    assert 'notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요."' in script
+    assert "box.replaceChildren(content)" in script
+    assert "renderInviteEmailResult(result)" in script
+    assert "box.innerHTML = `<div><strong>초대 이메일을 보낼 준비가 되었습니다" not in script
+
+
 def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")

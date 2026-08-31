@@ -250,7 +250,7 @@
         <h2 id="result-title">예측 요청을 접수했습니다</h2>
         <p id="job-status" class="lead">순서에 따라 분석을 시작하며, 완료되면 위험 범주를 확인할 수 있습니다.</p>
         <div id="probability-policy" class="notice safety prediction-status-notice"><span aria-hidden="true">안내</span><div><p>대기·처리 중에는 결과가 생성되지 않으며, 진행률 숫자나 확률은 표시하지 않습니다.</p></div></div>
-        <div class="status-demo-panel" aria-label="분석 결과 상태 확인용">
+        <div class="status-demo-panel" aria-label="분석 결과 상태 확인용" hidden>
           <span>상태 확인용</span>
           <button type="button" data-demo-status="queued">대기</button>
           <button type="button" data-demo-status="running">분석 중</button>
@@ -608,10 +608,10 @@
               </form>
               <div class="invite-panel invite-code-panel" id="invite-panel-code" aria-labelledby="invite-tab-code" data-invite-panel="code" hidden>
                 <div class="invite-code-box">
-                  <strong id="forest-invite-code">7F K3 Q1</strong>
-                  <button class="secondary" id="copy-invite-code" type="button">복사</button>
+                  <strong id="forest-invite-code">초대 코드 발급 준비 중</strong>
+                  <button class="secondary" id="copy-invite-code" type="button" disabled>준비 중</button>
                 </div>
-                <p class="invite-code-note">24시간 동안 유효 · 최대 4명까지 참여 가능해요</p>
+                <p class="invite-code-note" id="invite-code-note">실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요.</p>
               </div>
             </section>
 
