@@ -1897,6 +1897,17 @@
     if (event.detail === "sit") await toggleSit();
     if (event.detail === "ride") await toggleRide();
   });
+  window.addEventListener("forest-rat-appeared", () => {
+    setStatus("숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
+  });
+  window.addEventListener("forest-rat-caught", async (event) => {
+    const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
+    state.carrots += amount;
+    $("#carrot-balance").textContent = String(state.carrots);
+    $("#preview-carrot-balance").textContent = String(state.carrots);
+    $("#profile-carrots").textContent = String(state.carrots);
+    await persist(`야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
+  });
 
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;

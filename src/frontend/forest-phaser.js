@@ -66,6 +66,13 @@
       this.petTrail = [];
       this.petLastSampleAt = 0;
       this.petFacing = "right";
+      this.ratActive = false;
+      this.ratNextSpawnAt = 0;
+      this.ratDespawnAt = 0;
+      this.ratTurnAt = 0;
+      this.ratDirection = "left";
+      this.ratEventId = 0;
+      this.lastRatAttackAt = 0;
     }
 
     preload() {
@@ -75,6 +82,7 @@
       this.load.image("avatar-modular-v3", "/static/assets/carrot-forest-modular-avatar-atlas-v3.png");
       Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
     }
 
     create() {
@@ -96,6 +104,14 @@
       this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
+      this.ratActor = this.add.container(0, 0).setVisible(false);
+      this.ratShadow = this.add.ellipse(0, 0, 22, 6, 0x17352a, 0.24).setOrigin(0.5, 0.5);
+      this.ratSprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(0.5, 1).setScale(1.4);
+      this.ratMarker = this.add.text(0, -38, "!", {
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
+        color: "#ffffff", backgroundColor: "#d85836", padding: { x: 5, y: 1 },
+      }).setOrigin(0.5);
+      this.ratActor.add([this.ratShadow, this.ratSprite, this.ratMarker]);
       this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
         color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
@@ -112,7 +128,10 @@
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
       });
       this.input.keyboard.on("keydown-E", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })));
-      this.input.keyboard.on("keydown-Z", () => this.playAction("attack", 760));
+      this.input.keyboard.on("keydown-Z", (event) => {
+        if (event.repeat) return;
+        this.playAction("attack", 760);
+      });
       this.input.keyboard.on("keydown", (event) => {
         if (event.key !== "0" || event.repeat) return;
         event.preventDefault();
@@ -171,6 +190,7 @@
     playAction(pose, duration = 1100) {
       this.actionPose = pose;
       this.actionUntil = performance.now() + duration;
+      if (pose === "attack") this.tryAttackRat(performance.now());
       if (pose === "dance") {
         this.petAction = "dance";
         this.petActionUntil = this.actionUntil;
@@ -241,6 +261,7 @@
     setScene(sceneName) {
       this.sceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
+      this.ratActor?.setVisible(this.sceneName === "world" && this.ratActive);
     }
 
     nudge(direction) {
@@ -265,6 +286,7 @@
 
     update(time, delta) {
       if (this.mountTransitioning) return;
+      this.updateRat(time, delta);
       const inputAllowed = !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);
       let direction = performance.now() < this.forcedUntil ? this.forcedDirection : null;
       if (inputAllowed) {
@@ -292,6 +314,93 @@
       this.setPremiumFrame(direction, true, time, running);
       this.updatePet(time, delta, true);
       this.emitPosition();
+    }
+
+    spawnRat(time) {
+      const spawnPoints = [
+        [374, 286], [420, 420], [540, 330], [650, 365], [690, 445], [355, 470],
+      ];
+      const candidates = spawnPoints.filter(([x, y]) => Phaser.Math.Distance.Between(x, y, this.avatar.x, this.avatar.y) > 110);
+      const [x, y] = Phaser.Utils.Array.GetRandom(candidates.length ? candidates : spawnPoints);
+      this.ratEventId += 1;
+      this.ratActive = true;
+      this.ratDespawnAt = time + 12000;
+      this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
+      this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
+      this.ratActor.setPosition(x, y).setDepth(y - 2).setAlpha(1).setScale(1).setVisible(true);
+      window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: { eventId: this.ratEventId } }));
+    }
+
+    dismissRat(time, caught = false) {
+      if (!this.ratActive) return;
+      this.ratActive = false;
+      this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
+      if (!caught) {
+        this.ratActor.setVisible(false);
+        return;
+      }
+      const x = this.ratActor.x;
+      const y = this.ratActor.y;
+      const rewardText = this.add.text(x, y - 30, "+5 🥕", {
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
+        color: "#fff7bd", stroke: "#5c3511", strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(999);
+      this.tweens.add({
+        targets: this.ratActor, alpha: 0, scale: 1.45, duration: 180,
+        onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
+      });
+      this.tweens.add({
+        targets: rewardText, y: y - 58, alpha: 0, duration: 850,
+        onComplete: () => rewardText.destroy(),
+      });
+    }
+
+    tryAttackRat(time) {
+      if (this.sceneName !== "world" || !this.ratActive || time - this.lastRatAttackAt < 320) return;
+      this.lastRatAttackAt = time;
+      const dx = this.ratActor.x - this.avatar.x;
+      const dy = this.ratActor.y - this.avatar.y;
+      const distance = Math.hypot(dx, dy);
+      const facing = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[this.avatar.direction] || [0, 1];
+      const facingScore = distance ? (dx * facing[0] + dy * facing[1]) / distance : 1;
+      if (distance > 76 || facingScore < -0.1) return;
+      const eventId = this.ratEventId;
+      this.dismissRat(time, true);
+      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5 } }));
+    }
+
+    updateRat(time, delta) {
+      if (this.sceneName !== "world") {
+        this.ratActor?.setVisible(false);
+        return;
+      }
+      if (!this.ratActive) {
+        if (!this.ratNextSpawnAt) this.ratNextSpawnAt = time + Phaser.Math.Between(3500, 7000);
+        if (time >= this.ratNextSpawnAt) this.spawnRat(time);
+        return;
+      }
+      this.ratActor.setVisible(true);
+      if (time >= this.ratDespawnAt) {
+        this.dismissRat(time);
+        return;
+      }
+      if (time >= this.ratTurnAt) {
+        this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
+        this.ratTurnAt = time + Phaser.Math.Between(700, 1600);
+      }
+      const speed = 23 * Math.min(delta, 40) / 1000;
+      const vector = { left: [-speed, 0], right: [speed, 0], up: [0, -speed], down: [0, speed] }[this.ratDirection];
+      const nextX = this.ratActor.x + vector[0];
+      const nextY = this.ratActor.y + vector[1];
+      if (this.isBlocked(nextX, nextY)) {
+        this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
+        this.ratTurnAt = time + 500;
+      } else {
+        this.ratActor.setPosition(nextX, nextY).setDepth(nextY - 2);
+      }
+      const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
+      this.ratSprite.setFrame(directionRow * 3 + Math.floor(time / 145) % 3);
+      this.ratShadow.setY(0);
     }
 
     updatePet(time, delta, playerMoving) {

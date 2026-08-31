@@ -28,6 +28,7 @@
 - 옷장(아바타 액세서리)과 창고(숲 오브젝트)를 분리한 에셋 관리
 - 창고에는 텐트·캠핑 의자·피크닉 매트·연못·랜턴·울타리·꽃수레·화분·버섯·벤치·모닥불 등 20개 농장 꾸미기 오브젝트를 기본 제공한다.
 - 공동 목표 보상은 희귀 꾸미기 오브젝트 `행운의 젖소`다. 획득 즉시 창고에 들어가며, 별도 정원 전용 기능 없이 다른 꾸미기 오브젝트와 동일하게 월드에 배치·이동·회수한다.
+- 쥐는 펫이 아니다. 월드에 간헐적으로 출현하는 이벤트 대상으로만 사용하며, 가까이에서 쥐 방향을 보고 `Z` 공격을 맞히면 사라지고 당근 5개를 얻는다.
 - 배치한 의자나 벤치 가까이에서 `X`를 누르면 해당 자리에 정렬해 앉고, 다시 `X`를 누르면 일어난다.
 - 기존 퀘스트 화면의 연속 참여·퀘스트별 당근 보상 정보를 월드 스튜디오에 통합
 - 1536×1024 내부 Canvas를 768×512 월드 좌표에 2배 렌더링하는 고해상도 픽셀 파이프라인
@@ -86,6 +87,7 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-avatar-manifest-v2.json`: 원본·정규화 프레임 경계와 방향 행 메타데이터
 - `src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 5×4 투명 꾸미기 아이콘 아틀라스
 - `src/frontend/assets/carrot-forest-lpc-pets-v1.png`: LPC 동물 시트에서 재구성한 흰 고양이·주황 고양이·강아지의 4방향 보행 아틀라스
+- `src/frontend/assets/carrot-forest-lpc-rat-v1.png`: 펫과 분리된 야생 쥐 이벤트용 4방향 보행 아틀라스
 - `src/frontend/assets/lpc-pack/`: Universal LPC에서 선별·정규화한 아바타 레이어와 파일별 크레딧
 - `scripts/build_lpc_avatar_pack.py`: LPC 레이어 팩 재현 빌드 스크립트
 - `src/frontend/lpc-avatar-engine.js`: 4방향 LPC 합성·표정·행동·탈것 렌더러

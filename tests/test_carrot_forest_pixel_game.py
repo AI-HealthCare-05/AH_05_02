@@ -415,7 +415,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v29" in worker
+    assert "gandang-carrot-forest-pwa-v30" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
@@ -450,6 +450,26 @@ def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
     assert "this.petFacing" in phaser_script
     assert 'this.petAction = nextAvatar.sitting ? "sit" : "idle"' in phaser_script
     assert 'event.key === "0"' in game_script
+
+
+def test_wild_rat_is_a_separate_attack_reward_event() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    pet_builder = (ROOT / "scripts/build_lpc_pet_pack.py").read_text(encoding="utf-8")
+
+    assert 'this.load.spritesheet("lpc-rat"' in phaser_script
+    assert "spawnRat(time)" in phaser_script
+    assert "tryAttackRat(time)" in phaser_script
+    assert 'pose === "attack"' in phaser_script
+    assert 'new CustomEvent("forest-rat-caught"' in phaser_script
+    assert 'window.addEventListener("forest-rat-caught"' in game_script
+    assert "state.carrots += amount" in game_script
+    assert "야생 쥐를 잡고 당근" in game_script
+    assert "RAT_OUTPUT" in pet_builder
+    assert "carrot-forest-lpc-rat-v1.png" in worker
+    assert (ROOT / "src/frontend/assets/carrot-forest-lpc-rat-v1.png").is_file()
+    assert 'id: "rat"' not in game_script
 
 
 def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:
