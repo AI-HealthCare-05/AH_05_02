@@ -15,6 +15,9 @@
     natural: "none", peach: "none", rose: "hue-rotate(-9deg) saturate(.92) brightness(1.02)",
     warm: "sepia(.28) saturate(1.18) brightness(.88)", deep: "sepia(.38) saturate(1.25) brightness(.62)",
     olive: "sepia(.3) hue-rotate(18deg) saturate(.9) brightness(.78)", porcelain: "saturate(.72) brightness(1.08)",
+    sand: "sepia(.18) saturate(1.08) brightness(.93)", golden: "sepia(.34) saturate(1.22) brightness(.79)",
+    amber: "sepia(.4) saturate(1.25) brightness(.7)", bronze: "sepia(.42) saturate(1.2) brightness(.61)",
+    espresso: "sepia(.45) saturate(1.1) brightness(.45)", neutral: "sepia(.2) saturate(.95) brightness(.84)",
     brown: "hue-rotate(-18deg) saturate(.72) brightness(.66)", black: "grayscale(1) brightness(.32)",
     silver: "grayscale(1) brightness(1.42)", blue: "hue-rotate(165deg) saturate(1.3) brightness(.8)",
     teal: "hue-rotate(120deg) saturate(1.15) brightness(.82)", red: "hue-rotate(-28deg) saturate(1.25) brightness(.86)",
@@ -22,10 +25,6 @@
     navy: "hue-rotate(172deg) saturate(1.25) brightness(.56)", cream: "saturate(.38) brightness(1.42)",
     pink: "hue-rotate(-38deg) saturate(.82) brightness(1.18)", purple: "hue-rotate(225deg) saturate(1.15) brightness(.76)",
     white: "grayscale(1) brightness(1.7)", gray: "grayscale(1) brightness(.78)", yellow: "hue-rotate(25deg) saturate(1.4) brightness(1.2)",
-  };
-  const expressionLabels = {
-    calm: "차분한 미소", bright: "환한 미소", wink: "윙크", delighted: "눈웃음",
-    worried: "살짝 걱정", determined: "씩씩한 표정",
   };
   const poseLabels = {
     idle: "가만히", walk: "걷기", run: "달리기", sit: "앉기", jump: "점프", emote: "기쁨 표현",
@@ -39,6 +38,8 @@
   let manifest = null;
   const items = new Map();
   const images = new Map();
+  const pendingImages = new Map();
+  let assetEventPending = false;
 
   function loadImage(url) {
     return new Promise((resolve, reject) => {
@@ -55,12 +56,9 @@
       if (!response.ok) throw new Error("LPC manifest load failed");
       return response.json();
     })
-    .then(async (value) => {
+    .then((value) => {
       manifest = value;
       value.items.forEach((item) => items.set(`${item.category}:${item.id}`, item));
-      const files = new Set();
-      value.items.forEach((item) => Object.values(item.sources).flat().forEach((layer) => files.add(layer.file)));
-      await Promise.all([...files].map(async (file) => images.set(file, await loadImage(`${BASE}${file}`))));
       window.dispatchEvent(new CustomEvent("lpc-avatar-ready"));
       return value;
     })
@@ -73,26 +71,49 @@
     return items.get(`${category}:${id}`) || items.get(`${category}:${fallback}`);
   }
 
+  function ensureImage(file) {
+    if (!file || images.has(file) || pendingImages.has(file)) return;
+    const request = loadImage(`${BASE}${file}`)
+      .then((image) => {
+        images.set(file, image);
+        if (!assetEventPending) {
+          assetEventPending = true;
+          requestAnimationFrame(() => {
+            assetEventPending = false;
+            window.dispatchEvent(new CustomEvent("lpc-avatar-assets-updated"));
+          });
+        }
+      })
+      .catch((error) => console.error(error))
+      .finally(() => pendingImages.delete(file));
+    pendingImages.set(file, request);
+  }
+
   function selectedLayers(avatar) {
     const cosmetics = avatar.cosmetics || {};
     const gender = avatar.gender === "female" ? "female" : "male";
+    const bodyType = cosmetics.bodyType || gender;
     const selections = [
       ["body", "body", "body", cosmetics.skin || "peach"],
       ["bottom", cosmetics.lpcBottom, "pants", cosmetics.bottomColor || "navy"],
       ["shoes", cosmetics.lpcShoes, "shoes", cosmetics.shoeColor || "brown"],
       ["outfit", cosmetics.lpcOutfit, "overalls", cosmetics.outfitColor || "green"],
+      ["expression", cosmetics.lpcExpression, "neutral", "natural"],
+      ["eyebrow", cosmetics.lpcEyebrow, "thick", cosmetics.hairColor || "brown"],
+      ["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"],
+      ["eyes", cosmetics.lpcEyes, "cyclops", "natural"],
+      ["wrinkles", cosmetics.lpcWrinkles, "wrinkles", cosmetics.skin || "peach"],
       ["hair", cosmetics.lpcHair, "bob", cosmetics.hairColor || "brown"],
-      ["glasses", cosmetics.lpcGlasses, "round", cosmetics.glassesColor || "brown"],
+      ["eyewear", cosmetics.lpcGlasses, "round", cosmetics.glassesColor || "brown"],
       ["hat", cosmetics.lpcHat, "leather_cap", cosmetics.hatColor || "brown"],
     ];
     const output = [];
     selections.forEach(([category, selected, fallback, color]) => {
       if (selected === "none") return;
       const record = item(category, selected, fallback);
-      const layers = record?.sources?.[gender] || record?.sources?.male || [];
+      const layers = record?.sources?.[bodyType] || record?.sources?.[gender] || record?.sources?.male || [];
       layers.forEach((layer) => output.push({ ...layer, color, category, item: record }));
     });
-    output.push({ z: 110, category: "expression", expression: cosmetics.expression || cosmetics.face || "calm" });
     return output.sort((left, right) => left.z - right.z);
   }
 
@@ -105,7 +126,7 @@
     return "idle";
   }
 
-  function drawActionProp(context, destination, direction, pose, frame) {
+  function drawActionProp(context, destination, direction, pose, frame, cosmetics = {}) {
     if (!pose || direction === "up") return;
     const scaleX = destination.width / FRAME;
     const scaleY = destination.height / FRAME;
@@ -130,11 +151,20 @@
       drawPixel(context, destination, side - 1, 42, 3, 3, "#559c45");
       drawPixel(context, destination, side + 2, 41, 3, 3, "#6fb659");
     } else if (pose === "attack") {
-      context.strokeStyle = "rgba(255, 227, 119, .92)";
-      context.lineWidth = Math.max(2, 2 * scaleX);
-      context.beginPath();
-      context.arc(destination.x + 32 * scaleX, destination.y + 36 * scaleY, (20 + frame) * scaleX, -1.1, 0.55);
-      context.stroke();
+      const effect = cosmetics.effect || "sword_arc";
+      const cx = destination.x + 32 * scaleX;
+      const cy = destination.y + 34 * scaleY;
+      if (effect === "magic_burst") {
+        context.strokeStyle = "rgba(165, 117, 255, .95)"; context.lineWidth = Math.max(2, 2 * scaleX);
+        for (let index = 0; index < 3; index += 1) { context.beginPath(); context.arc(cx, cy, (10 + frame * 2 + index * 6) * scaleX, 0, Math.PI * 2); context.stroke(); }
+      } else if (effect === "arrow_volley") {
+        context.strokeStyle = "#f1d39a"; context.lineWidth = Math.max(1, scaleX);
+        for (let index = -1; index <= 1; index += 1) { context.beginPath(); context.moveTo(cx, cy + index * 7 * scaleY); context.lineTo(cx + (direction === "left" ? -34 : 34) * scaleX, cy + index * 7 * scaleY); context.stroke(); }
+      } else {
+        context.strokeStyle = effect === "leaf_blade" ? "rgba(111, 191, 101, .95)" : "rgba(255, 227, 119, .95)";
+        context.lineWidth = Math.max(2, 3 * scaleX); context.beginPath();
+        context.arc(cx, cy, (18 + frame) * scaleX, -1.25, 0.75); context.stroke();
+      }
     } else if (pose === "door") {
       drawPixel(context, destination, direction === "left" ? 15 : 47, 34, 2, 2, "#ffe69a");
     }
@@ -149,54 +179,6 @@
       Math.round(destination.x + x * scaleX), Math.round(destination.y + y * scaleY),
       Math.max(1, Math.round(width * scaleX)), Math.max(1, Math.round(height * scaleY)),
     );
-  }
-
-  function drawExpression(context, destination, direction, expression, frame) {
-    if (direction === "up") return;
-    const skin = "#efae85";
-    const eye = "#4a241d";
-    const shine = "#fff8ef";
-    const blush = "#ee8b86";
-    const mouth = "#8b3c39";
-    const blink = frame % 18 === 17;
-    if (direction === "left" || direction === "right") {
-      const eyeX = direction === "left" ? 23 : 39;
-      drawPixel(context, destination, eyeX, 34, 2, blink ? 1 : 3, eye);
-      if (!blink) drawPixel(context, destination, eyeX, 34, 1, 1, shine);
-      drawPixel(context, destination, direction === "left" ? 19 : 42, 39, 2, 1, blush);
-      return;
-    }
-    const closed = expression === "delighted" || blink;
-    const winkLeft = expression === "wink";
-    for (const [index, eyeX] of [25, 37].entries()) {
-      const isClosed = closed || (winkLeft && index === 0);
-      if (isClosed) {
-        drawPixel(context, destination, eyeX, 36, 3, 1, eye);
-      } else {
-        drawPixel(context, destination, eyeX, 33, 3, 4, eye);
-        drawPixel(context, destination, eyeX, 33, 1, 1, shine);
-        drawPixel(context, destination, eyeX + 1, 36, 1, 1, skin);
-      }
-    }
-    if (expression === "determined") {
-      drawPixel(context, destination, 24, 31, 4, 1, eye);
-      drawPixel(context, destination, 37, 31, 4, 1, eye);
-    } else if (expression === "worried") {
-      drawPixel(context, destination, 24, 31, 3, 1, eye);
-      drawPixel(context, destination, 38, 31, 3, 1, eye);
-    }
-    drawPixel(context, destination, 21, 39, 3, 1, blush);
-    drawPixel(context, destination, 40, 39, 3, 1, blush);
-    if (["bright", "delighted", "wink"].includes(expression)) {
-      drawPixel(context, destination, 30, 40, 5, 1, mouth);
-      drawPixel(context, destination, 31, 41, 3, 1, "#f6c0b0");
-    } else if (expression === "worried") {
-      drawPixel(context, destination, 31, 41, 3, 1, mouth);
-      drawPixel(context, destination, 30, 42, 1, 1, mouth);
-      drawPixel(context, destination, 34, 42, 1, 1, mouth);
-    } else {
-      drawPixel(context, destination, 31, 41, 3, 1, mouth);
-    }
   }
 
   function drawScooter(context, destination, direction, moving, frame) {
@@ -242,12 +224,8 @@
     context.imageSmoothingEnabled = false;
     if (avatar.mounted) drawScooter(context, target, direction, Boolean(options.moving), frameIndex);
     selectedLayers(avatar).forEach((layer) => {
-      if (layer.category === "expression") {
-        drawExpression(context, target, direction, expressionLabels[layer.expression] ? layer.expression : "calm", Number(options.frame || 0));
-        return;
-      }
       const image = images.get(layer.file);
-      if (!image) return;
+      if (!image) { ensureImage(layer.file); return; }
       context.save();
       context.filter = colorFilters[layer.color] || "none";
       context.drawImage(
@@ -256,13 +234,12 @@
       );
       context.restore();
     });
-    drawActionProp(context, target, direction, options.pose, frameIndex);
+    drawActionProp(context, target, direction, options.pose, frameIndex, avatar.cosmetics || {});
     context.restore();
     return true;
   }
 
   function catalog(category) {
-    if (category === "expression") return Object.entries(expressionLabels).map(([id, label]) => ({ id, label }));
     if (category === "pose") return Object.entries(poseLabels).map(([id, label]) => ({ id, label }));
     return manifest?.items.filter((record) => record.category === category) || [];
   }
@@ -272,7 +249,6 @@
     isReady: () => Boolean(manifest),
     draw,
     catalog,
-    expressionLabels,
     poseLabels,
     colors: colorFilters,
   };

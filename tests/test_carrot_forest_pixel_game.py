@@ -349,7 +349,6 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
-    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
 
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
@@ -381,10 +380,42 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert "setPremiumFrame" in phaser_script
     assert "this.compositeTexture.refresh" in phaser_script
     assert "this.keys.R.isDown" in phaser_script
-    assert 'this.load.spritesheet("cat-pets"' in phaser_script
+    assert 'this.load.spritesheet("lpc-pets"' in phaser_script
+    assert "carrot-forest-lpc-pets-v1.png" in phaser_script
+
+
+def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    engine = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    manifest = (ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+
+    for category in ("bodyType", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles"):
+        assert f'id: "{category}"' in game_script
+    assert "selected-check" in game_script
+    assert "action-view-only" in game_script
+    assert "storageObjectCodes" in game_script
+    assert 'reward_cow: { name: "행운의 젖소"' in game_script
+    assert 'reward_cow: { name: "행운의 젖소", kind: "object"' in game_script
+    assert 'const rewardPool = ["reward_cow"]' in game_script
+    assert "희귀 꾸미기 오브젝트" in game_script
+    assert 'state.rewardClaimed && !state.inventory.includes("reward_cow")' in game_script
+    assert 'name: "세준"' in game_script
+    assert "event.repeat" in phaser_script
+    assert "this.add.ellipse(0, 0" in phaser_script
+    assert "pendingImages" in engine
+    assert '"category": "expression"' in manifest
+    for asset in (
+        "carrot-forest-storage-atlas-v2.png",
+        "carrot-forest-reward-cow-v1.png",
+        "carrot-forest-lpc-pets-v1.png",
+    ):
+        assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v28" in worker
+    assert "gandang-carrot-forest-pwa-v29" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html

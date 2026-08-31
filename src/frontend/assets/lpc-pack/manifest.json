@@ -45,6 +45,24 @@
             "file": "body-body-female-layer1.png",
             "z": 10
           }
+        ],
+        "muscular": [
+          {
+            "file": "body-body-muscular-layer1.png",
+            "z": 10
+          }
+        ],
+        "teen": [
+          {
+            "file": "body-body-teen-layer1.png",
+            "z": 10
+          }
+        ],
+        "child": [
+          {
+            "file": "body-body-child-layer1.png",
+            "z": 10
+          }
         ]
       },
       "animations": [
@@ -76,6 +94,24 @@
           }
         ],
         "female": [
+          {
+            "file": "hair-bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
           {
             "file": "hair-bob-adult-layer1.png",
             "z": 120
@@ -115,6 +151,24 @@
             "file": "hair-afro-adult-layer1.png",
             "z": 120
           }
+        ],
+        "muscular": [
+          {
+            "file": "hair-afro-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-afro-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-afro-adult-layer1.png",
+            "z": 120
+          }
         ]
       },
       "animations": [
@@ -146,6 +200,24 @@
           }
         ],
         "female": [
+          {
+            "file": "hair-long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
           {
             "file": "hair-long-adult-layer1.png",
             "z": 120
@@ -185,6 +257,24 @@
             "file": "hair-messy-adult-layer1.png",
             "z": 120
           }
+        ],
+        "muscular": [
+          {
+            "file": "hair-messy-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-messy-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-messy-adult-layer1.png",
+            "z": 120
+          }
         ]
       },
       "animations": [
@@ -220,6 +310,24 @@
             "file": "hair-page-adult-layer1.png",
             "z": 120
           }
+        ],
+        "muscular": [
+          {
+            "file": "hair-page-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-page-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-page-adult-layer1.png",
+            "z": 120
+          }
         ]
       },
       "animations": [
@@ -240,6 +348,1113 @@
       "definition": "hair/short/hair_page.json"
     },
     {
+      "id": "pixie",
+      "category": "hair",
+      "label": "픽시",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-pixie-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-pixie-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-pixie-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-pixie-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-pixie-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_pixie.json"
+    },
+    {
+      "id": "bedhead",
+      "category": "hair",
+      "label": "베드헤드",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-bedhead-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-bedhead-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-bedhead-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-bedhead-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-bedhead-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_bedhead.json"
+    },
+    {
+      "id": "curtains",
+      "category": "hair",
+      "label": "커튼",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-curtains-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-curtains-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-curtains-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-curtains-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-curtains-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_curtains.json"
+    },
+    {
+      "id": "idol",
+      "category": "hair",
+      "label": "아이돌",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-idol-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-idol-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-idol-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-idol-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-idol-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/short/hair_idol.json"
+    },
+    {
+      "id": "buzzcut",
+      "category": "hair",
+      "label": "버즈컷",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-buzzcut-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-buzzcut-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-buzzcut-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-buzzcut-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-buzzcut-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/bald/hair_buzzcut.json"
+    },
+    {
+      "id": "shorthawk",
+      "category": "hair",
+      "label": "숏호크",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-shorthawk-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-shorthawk-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-shorthawk-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-shorthawk-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-shorthawk-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/bald/hair_shorthawk.json"
+    },
+    {
+      "id": "lob",
+      "category": "hair",
+      "label": "롱보브",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-lob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-lob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-lob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-lob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-lob-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/bob/hair_lob.json"
+    },
+    {
+      "id": "side_bob",
+      "category": "hair",
+      "label": "사이드 보브",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-side_bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-side_bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-side_bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-side_bob-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-side_bob-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/bob/hair_bob_side_part.json"
+    },
+    {
+      "id": "braid",
+      "category": "hair",
+      "label": "브레이드",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-braid-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-braid-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-braid-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-braid-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-braid-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-braid-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-braid-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-braid-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-braid-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-braid-adult-layer2.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/braids/hair_braid.json"
+    },
+    {
+      "id": "ponytail",
+      "category": "hair",
+      "label": "포니테일",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/braids/hair_ponytail.json"
+    },
+    {
+      "id": "high_ponytail",
+      "category": "hair",
+      "label": "하이 포니테일",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-high_ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-high_ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-high_ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-high_ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-high_ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-high_ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-high_ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-high_ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-high_ponytail-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-high_ponytail-adult-layer2.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/braids/hair_high_ponytail.json"
+    },
+    {
+      "id": "topknot",
+      "category": "hair",
+      "label": "탑노트",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-topknot-adult-layer1.png",
+            "z": 120
+          },
+          {
+            "file": "hair-topknot-adult-layer2.png",
+            "z": 145
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-topknot-adult-layer1.png",
+            "z": 120
+          },
+          {
+            "file": "hair-topknot-adult-layer2.png",
+            "z": 145
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-topknot-adult-layer1.png",
+            "z": 120
+          },
+          {
+            "file": "hair-topknot-adult-layer2.png",
+            "z": 145
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-topknot-adult-layer1.png",
+            "z": 120
+          },
+          {
+            "file": "hair-topknot-adult-layer2.png",
+            "z": 145
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-topknot-adult-layer1.png",
+            "z": 120
+          },
+          {
+            "file": "hair-topknot-adult-layer2.png",
+            "z": 145
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/braids/hair_topknot_short.json"
+    },
+    {
+      "id": "curly",
+      "category": "hair",
+      "label": "컬리",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-curly-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-curly-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-curly-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-curly-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-curly-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/curly/hair_curly_short.json"
+    },
+    {
+      "id": "curly_long",
+      "category": "hair",
+      "label": "롱 컬리",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-curly_long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-curly_long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-curly_long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-curly_long-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-curly_long-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/curly/hair_curly_long.json"
+    },
+    {
+      "id": "natural",
+      "category": "hair",
+      "label": "내추럴",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-natural-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-natural-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-natural-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-natural-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-natural-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/afro/hair_natural.json"
+    },
+    {
+      "id": "cornrows",
+      "category": "hair",
+      "label": "콘로우",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-cornrows-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-cornrows-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-cornrows-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-cornrows-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-cornrows-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/afro/hair_cornrows.json"
+    },
+    {
+      "id": "dreadlocks",
+      "category": "hair",
+      "label": "드레드록",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-dreadlocks-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-dreadlocks-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-dreadlocks-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-dreadlocks-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-dreadlocks-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/afro/hair_dreadlocks_long.json"
+    },
+    {
+      "id": "pigtails",
+      "category": "hair",
+      "label": "피그테일",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-pigtails-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-pigtails-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-pigtails-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-pigtails-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-pigtails-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/pigtails/hair_pigtails.json"
+    },
+    {
+      "id": "wavy",
+      "category": "hair",
+      "label": "웨이브",
+      "sources": {
+        "male": [
+          {
+            "file": "hair-wavy-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-wavy-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hair-wavy-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-wavy-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hair-wavy-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-wavy-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hair-wavy-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-wavy-adult-layer2.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hair-wavy-adult-layer1.png",
+            "z": 9
+          },
+          {
+            "file": "hair-wavy-adult-layer2.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "hair/long/hair_wavy.json"
+    },
+    {
       "id": "overalls",
       "category": "outfit",
       "label": "정원사 멜빵",
@@ -253,6 +1468,12 @@
         "female": [
           {
             "file": "outfit-overalls-female-layer1.png",
+            "z": 38
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-overalls-teen-layer1.png",
             "z": 38
           }
         ]
@@ -290,6 +1511,12 @@
             "file": "outfit-tshirt-female-layer1.png",
             "z": 35
           }
+        ],
+        "teen": [
+          {
+            "file": "outfit-tshirt-teen-layer1.png",
+            "z": 35
+          }
         ]
       },
       "animations": [
@@ -323,6 +1550,12 @@
         "female": [
           {
             "file": "outfit-cardigan-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-cardigan-teen-layer1.png",
             "z": 35
           }
         ]
@@ -360,6 +1593,12 @@
             "file": "outfit-sleeveless-female-layer1.png",
             "z": 35
           }
+        ],
+        "teen": [
+          {
+            "file": "outfit-sleeveless-teen-layer1.png",
+            "z": 35
+          }
         ]
       },
       "animations": [
@@ -395,6 +1634,12 @@
             "file": "outfit-short_cardigan-female-layer1.png",
             "z": 35
           }
+        ],
+        "teen": [
+          {
+            "file": "outfit-short_cardigan-teen-layer1.png",
+            "z": 35
+          }
         ]
       },
       "animations": [
@@ -415,6 +1660,425 @@
       "definition": "torso/shirts/shortsleeve/torso_clothes_shortsleeve_cardigan.json"
     },
     {
+      "id": "blouse",
+      "category": "outfit",
+      "label": "블라우스",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-blouse-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/torso_clothes_blouse.json"
+    },
+    {
+      "id": "long_blouse",
+      "category": "outfit",
+      "label": "긴 블라우스",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-long_blouse-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/torso_clothes_blouse_longsleeve.json"
+    },
+    {
+      "id": "tunic",
+      "category": "outfit",
+      "label": "튜닉",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-tunic-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/torso_clothes_tunic.json"
+    },
+    {
+      "id": "robe",
+      "category": "outfit",
+      "label": "로브",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-robe-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "walk",
+        "slash",
+        "hurt"
+      ],
+      "definition": "torso/shirts/torso_clothes_robe.json"
+    },
+    {
+      "id": "corset",
+      "category": "outfit",
+      "label": "코르셋",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-corset-female-layer1.png",
+            "z": 45
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/torso_clothes_corset.json"
+    },
+    {
+      "id": "child_shirt",
+      "category": "outfit",
+      "label": "아동 셔츠",
+      "sources": {
+        "child": [
+          {
+            "file": "outfit-child_shirt-child-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "walk"
+      ],
+      "definition": "torso/shirts/torso_clothes_child_shirt.json"
+    },
+    {
+      "id": "formal",
+      "category": "outfit",
+      "label": "포멀",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-formal-male-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve_formal.json"
+    },
+    {
+      "id": "laced",
+      "category": "outfit",
+      "label": "레이스",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-laced-male-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve_laced.json"
+    },
+    {
+      "id": "polo",
+      "category": "outfit",
+      "label": "폴로",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-polo-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-polo-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-polo-teen-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve2_polo.json"
+    },
+    {
+      "id": "buttoned",
+      "category": "outfit",
+      "label": "버튼 셔츠",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-buttoned-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-buttoned-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-buttoned-teen-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve2_buttoned.json"
+    },
+    {
+      "id": "vneck",
+      "category": "outfit",
+      "label": "브이넥",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-vneck-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-vneck-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-vneck-teen-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/longsleeve/torso_clothes_longsleeve2_vneck.json"
+    },
+    {
+      "id": "short_polo",
+      "category": "outfit",
+      "label": "반소매 폴로",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-short_polo-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-short_polo-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-short_polo-teen-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/shortsleeve/torso_clothes_shortsleeve_polo.json"
+    },
+    {
+      "id": "tshirt_vneck",
+      "category": "outfit",
+      "label": "브이넥 티",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-tshirt_vneck-male-layer1.png",
+            "z": 35
+          }
+        ],
+        "female": [
+          {
+            "file": "outfit-tshirt_vneck-female-layer1.png",
+            "z": 35
+          }
+        ],
+        "teen": [
+          {
+            "file": "outfit-tshirt_vneck-teen-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "torso/shirts/shortsleeve/torso_clothes_tshirt_vneck.json"
+    },
+    {
+      "id": "tanktop",
+      "category": "outfit",
+      "label": "탱크톱",
+      "sources": {
+        "female": [
+          {
+            "file": "outfit-tanktop-female-layer1.png",
+            "z": 35
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt"
+      ],
+      "definition": "torso/shirts/sleeveless/torso_clothes_sleeveless_tanktop.json"
+    },
+    {
+      "id": "vest",
+      "category": "outfit",
+      "label": "조끼",
+      "sources": {
+        "male": [
+          {
+            "file": "outfit-vest-male-layer1.png",
+            "z": 45
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle"
+      ],
+      "definition": "torso/vest/torso_clothes_vest.json"
+    },
+    {
       "id": "pants",
       "category": "bottom",
       "label": "기본 바지",
@@ -428,6 +2092,18 @@
         "female": [
           {
             "file": "bottom-pants-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "muscular": [
+          {
+            "file": "bottom-pants-muscular-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-pants-teen-layer1.png",
             "z": 20
           }
         ]
@@ -465,6 +2141,12 @@
             "file": "bottom-long_pants-female-layer1.png",
             "z": 20
           }
+        ],
+        "teen": [
+          {
+            "file": "bottom-long_pants-teen-layer1.png",
+            "z": 20
+          }
         ]
       },
       "animations": [
@@ -498,6 +2180,12 @@
         "female": [
           {
             "file": "bottom-shorts-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-shorts-teen-layer1.png",
             "z": 20
           }
         ]
@@ -535,6 +2223,12 @@
             "file": "bottom-leggings-female-layer1.png",
             "z": 20
           }
+        ],
+        "teen": [
+          {
+            "file": "bottom-leggings-teen-layer1.png",
+            "z": 20
+          }
         ]
       },
       "animations": [
@@ -555,6 +2249,398 @@
       "definition": "legs/leggings/legs_leggings.json"
     },
     {
+      "id": "leggings2",
+      "category": "bottom",
+      "label": "슬림 레깅스",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-leggings2-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-leggings2-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-leggings2-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/leggings/legs_leggings2.json"
+    },
+    {
+      "id": "hose",
+      "category": "bottom",
+      "label": "호즈",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-hose-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-hose-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-hose-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/leggings/legs_hose.json"
+    },
+    {
+      "id": "short_short",
+      "category": "bottom",
+      "label": "짧은 반바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-short_short-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-short_short-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-short_short-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/shorts/legs_shorts_short.json"
+    },
+    {
+      "id": "formal_pants",
+      "category": "bottom",
+      "label": "정장 바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-formal_pants-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-formal_pants-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "muscular": [
+          {
+            "file": "bottom-formal_pants-muscular-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-formal_pants-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/pants/legs_formal.json"
+    },
+    {
+      "id": "cuffed",
+      "category": "bottom",
+      "label": "커프 바지",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-cuffed-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-cuffed-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-cuffed-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/pants/legs_cuffed.json"
+    },
+    {
+      "id": "pantaloons",
+      "category": "bottom",
+      "label": "판탈롱",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-pantaloons-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-pantaloons-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "muscular": [
+          {
+            "file": "bottom-pantaloons-muscular-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-pantaloons-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "legs/pants/legs_pantaloons.json"
+    },
+    {
+      "id": "childpants",
+      "category": "bottom",
+      "label": "아동 바지",
+      "sources": {
+        "child": [
+          {
+            "file": "bottom-childpants-child-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "walk"
+      ],
+      "definition": "legs/pants/legs_childpants.json"
+    },
+    {
+      "id": "widepants",
+      "category": "bottom",
+      "label": "와이드 팬츠",
+      "sources": {
+        "muscular": [
+          {
+            "file": "bottom-widepants-muscular-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "emote"
+      ],
+      "definition": "legs/pants/legs_widepants.json"
+    },
+    {
+      "id": "plain_skirt",
+      "category": "bottom",
+      "label": "기본 스커트",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-plain_skirt-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-plain_skirt-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-plain_skirt-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "sit",
+        "emote"
+      ],
+      "definition": "legs/skirts/legs_skirts_plain.json"
+    },
+    {
+      "id": "slit_skirt",
+      "category": "bottom",
+      "label": "슬릿 스커트",
+      "sources": {
+        "male": [
+          {
+            "file": "bottom-slit_skirt-male-layer1.png",
+            "z": 20
+          }
+        ],
+        "female": [
+          {
+            "file": "bottom-slit_skirt-female-layer1.png",
+            "z": 20
+          }
+        ],
+        "teen": [
+          {
+            "file": "bottom-slit_skirt-teen-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "emote"
+      ],
+      "definition": "legs/skirts/legs_skirts_slit.json"
+    },
+    {
+      "id": "childskirts",
+      "category": "bottom",
+      "label": "아동 스커트",
+      "sources": {
+        "child": [
+          {
+            "file": "bottom-childskirts-child-layer1.png",
+            "z": 20
+          }
+        ]
+      },
+      "animations": [
+        "walk"
+      ],
+      "definition": "legs/skirts/legs_childskirts.json"
+    },
+    {
       "id": "shoes",
       "category": "shoes",
       "label": "기본 운동화",
@@ -568,6 +2654,18 @@
         "female": [
           {
             "file": "shoes-shoes-female-layer1.png",
+            "z": 15
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-shoes-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-shoes-teen-layer1.png",
             "z": 15
           }
         ]
@@ -605,6 +2703,18 @@
             "file": "shoes-boots-female-layer1.png",
             "z": 25
           }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-boots-muscular-layer1.png",
+            "z": 25
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-boots-teen-layer1.png",
+            "z": 25
+          }
         ]
       },
       "animations": [
@@ -640,6 +2750,18 @@
             "file": "shoes-slippers-female-layer1.png",
             "z": 15
           }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-slippers-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-slippers-teen-layer1.png",
+            "z": 15
+          }
         ]
       },
       "animations": [
@@ -660,6 +2782,417 @@
       "definition": "feet/feet_slippers.json"
     },
     {
+      "id": "sandals",
+      "category": "shoes",
+      "label": "샌들",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-sandals-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-sandals-female-layer1.png",
+            "z": 15
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-sandals-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-sandals-teen-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/feet_sandals.json"
+    },
+    {
+      "id": "shoe_revised",
+      "category": "shoes",
+      "label": "가죽 구두",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-shoe_revised-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-shoe_revised-female-layer1.png",
+            "z": 15
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-shoe_revised-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-shoe_revised-teen-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/shoes/feet_shoes_revised.json"
+    },
+    {
+      "id": "ghillies",
+      "category": "shoes",
+      "label": "길리 슈즈",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-ghillies-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-ghillies-female-layer1.png",
+            "z": 15
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-ghillies-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-ghillies-teen-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/shoes/feet_shoes_ghillies.json"
+    },
+    {
+      "id": "sara_shoes",
+      "category": "shoes",
+      "label": "사라 슈즈",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-sara_shoes-male-layer1.png",
+            "z": 15
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-sara_shoes-female-layer1.png",
+            "z": 15
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-sara_shoes-muscular-layer1.png",
+            "z": 15
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-sara_shoes-teen-layer1.png",
+            "z": 15
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/shoes/feet_shoes_sara.json"
+    },
+    {
+      "id": "boots_fold",
+      "category": "shoes",
+      "label": "폴드 부츠",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-boots_fold-male-layer1.png",
+            "z": 25
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-boots_fold-female-layer1.png",
+            "z": 25
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-boots_fold-muscular-layer1.png",
+            "z": 25
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-boots_fold-teen-layer1.png",
+            "z": 25
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/boots/feet_boots_fold.json"
+    },
+    {
+      "id": "boots_rim",
+      "category": "shoes",
+      "label": "림 부츠",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-boots_rim-male-layer1.png",
+            "z": 25
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-boots_rim-female-layer1.png",
+            "z": 25
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-boots_rim-muscular-layer1.png",
+            "z": 25
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-boots_rim-teen-layer1.png",
+            "z": 25
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/boots/feet_boots_rim.json"
+    },
+    {
+      "id": "boots_revised",
+      "category": "shoes",
+      "label": "롱 부츠",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-boots_revised-male-layer1.png",
+            "z": 25
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-boots_revised-female-layer1.png",
+            "z": 25
+          }
+        ],
+        "muscular": [
+          {
+            "file": "shoes-boots_revised-muscular-layer1.png",
+            "z": 25
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-boots_revised-teen-layer1.png",
+            "z": 25
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/boots/feet_boots_revised.json"
+    },
+    {
+      "id": "ankle_socks",
+      "category": "shoes",
+      "label": "앵클 삭스",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-ankle_socks-male-layer1.png",
+            "z": 14
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-ankle_socks-female-layer1.png",
+            "z": 14
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-ankle_socks-teen-layer1.png",
+            "z": 14
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/socks/feet_socks_ankle.json"
+    },
+    {
+      "id": "high_socks",
+      "category": "shoes",
+      "label": "하이 삭스",
+      "sources": {
+        "male": [
+          {
+            "file": "shoes-high_socks-male-layer1.png",
+            "z": 14
+          }
+        ],
+        "female": [
+          {
+            "file": "shoes-high_socks-female-layer1.png",
+            "z": 14
+          }
+        ],
+        "teen": [
+          {
+            "file": "shoes-high_socks-teen-layer1.png",
+            "z": 14
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "feet/socks/feet_socks_high.json"
+    },
+    {
       "id": "leather_cap",
       "category": "hat",
       "label": "가죽 산책 모자",
@@ -671,6 +3204,24 @@
           }
         ],
         "female": [
+          {
+            "file": "hat-leather_cap-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-leather_cap-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-leather_cap-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
           {
             "file": "hat-leather_cap-adult-layer1.png",
             "z": 130
@@ -710,6 +3261,24 @@
             "file": "hat-bowler-adult-layer1.png",
             "z": 130
           }
+        ],
+        "muscular": [
+          {
+            "file": "hat-bowler-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-bowler-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-bowler-adult-layer1.png",
+            "z": 130
+          }
         ]
       },
       "animations": [
@@ -745,6 +3314,24 @@
             "file": "hat-bandana-adult-layer1.png",
             "z": 120
           }
+        ],
+        "muscular": [
+          {
+            "file": "hat-bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-bandana-adult-layer1.png",
+            "z": 120
+          }
         ]
       },
       "animations": [
@@ -765,19 +3352,884 @@
       "definition": "headwear/coverings/bandana/hat_bandana.json"
     },
     {
+      "id": "bonnie",
+      "category": "hat",
+      "label": "보니",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-bonnie-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-bonnie-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-bonnie-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-bonnie-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-bonnie-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/caps/hat_cap_bonnie.json"
+    },
+    {
+      "id": "bonnie_feather",
+      "category": "hat",
+      "label": "깃털 보니",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-bonnie_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-bonnie_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-bonnie_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-bonnie_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-bonnie_feather-adult-layer1.png",
+            "z": 131
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/caps/hat_cap_bonnie_feather.json"
+    },
+    {
+      "id": "cavalier",
+      "category": "hat",
+      "label": "카발리에",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-cavalier-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-cavalier-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-cavalier-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-cavalier-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-cavalier-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/caps/hat_cap_cavalier.json"
+    },
+    {
+      "id": "leather_feather",
+      "category": "hat",
+      "label": "깃털 가죽캡",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-leather_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-leather_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-leather_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-leather_feather-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-leather_feather-adult-layer1.png",
+            "z": 131
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/caps/hat_cap_leather_feather.json"
+    },
+    {
+      "id": "crown",
+      "category": "hat",
+      "label": "왕관",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-crown-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-crown-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-crown-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-crown-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-crown-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/formal/hat_formal_crown.json"
+    },
+    {
+      "id": "tiara",
+      "category": "hat",
+      "label": "티아라",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-tiara-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-tiara-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-tiara-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-tiara-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-tiara-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/formal/hat_formal_tiara.json"
+    },
+    {
+      "id": "tophat",
+      "category": "hat",
+      "label": "톱햇",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-tophat-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-tophat-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-tophat-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-tophat-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-tophat-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/formal/hat_formal_tophat.json"
+    },
+    {
+      "id": "wizard",
+      "category": "hat",
+      "label": "마법사",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-wizard-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-wizard-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-wizard-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-wizard-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-wizard-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/magic/hat_magic_wizard.json"
+    },
+    {
+      "id": "wizard_buckle",
+      "category": "hat",
+      "label": "버클 마법사",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-wizard_buckle-adult-layer1.png",
+            "z": 132
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-wizard_buckle-adult-layer1.png",
+            "z": 132
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-wizard_buckle-adult-layer1.png",
+            "z": 132
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-wizard_buckle-adult-layer1.png",
+            "z": 132
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-wizard_buckle-adult-layer1.png",
+            "z": 132
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/magic/hat_magic_wizard_buckle.json"
+    },
+    {
+      "id": "celestial",
+      "category": "hat",
+      "label": "천체 모자",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-celestial-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-celestial-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-celestial-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-celestial-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-celestial-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/magic/hat_magic_celestial.json"
+    },
+    {
+      "id": "celestial_moon",
+      "category": "hat",
+      "label": "달 모자",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-celestial_moon-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-celestial_moon-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-celestial_moon-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-celestial_moon-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-celestial_moon-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/magic/hat_magic_celestial_moon.json"
+    },
+    {
+      "id": "santa",
+      "category": "hat",
+      "label": "산타",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-santa-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-santa-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-santa-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-santa-adult-layer1.png",
+            "z": 131
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-santa-adult-layer1.png",
+            "z": 131
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/holiday/hat_holiday_santa.json"
+    },
+    {
+      "id": "elf",
+      "category": "hat",
+      "label": "엘프",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-elf-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-elf-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-elf-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-elf-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-elf-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/holiday/hat_holiday_elf.json"
+    },
+    {
+      "id": "tricorne",
+      "category": "hat",
+      "label": "트라이콘",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-tricorne-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-tricorne-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-tricorne-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-tricorne-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-tricorne-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/hats/tricorne/hat_tricorne.json"
+    },
+    {
+      "id": "pirate_bandana",
+      "category": "hat",
+      "label": "해적 반다나",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-pirate_bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-pirate_bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-pirate_bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-pirate_bandana-adult-layer1.png",
+            "z": 120
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-pirate_bandana-adult-layer1.png",
+            "z": 120
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/coverings/bandana/hat_bandana_pirate.json"
+    },
+    {
+      "id": "hijab",
+      "category": "hat",
+      "label": "히잡",
+      "sources": {
+        "male": [
+          {
+            "file": "hat-hijab-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "female": [
+          {
+            "file": "hat-hijab-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "muscular": [
+          {
+            "file": "hat-hijab-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "teen": [
+          {
+            "file": "hat-hijab-adult-layer1.png",
+            "z": 130
+          }
+        ],
+        "child": [
+          {
+            "file": "hat-hijab-adult-layer1.png",
+            "z": 130
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/coverings/hoods/hat_hood_hijab.json"
+    },
+    {
       "id": "round",
-      "category": "glasses",
+      "category": "eyewear",
       "label": "동그란 안경",
       "sources": {
         "male": [
           {
-            "file": "glasses-round-adult-layer1.png",
+            "file": "eyewear-round-adult-layer1.png",
             "z": 115
           }
         ],
         "female": [
           {
-            "file": "glasses-round-adult-layer1.png",
+            "file": "eyewear-round-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-round-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-round-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-round-adult-layer1.png",
             "z": 115
           }
         ]
@@ -800,18 +4252,36 @@
     },
     {
       "id": "halfmoon",
-      "category": "glasses",
+      "category": "eyewear",
       "label": "반달 안경",
       "sources": {
         "male": [
           {
-            "file": "glasses-halfmoon-adult-layer1.png",
+            "file": "eyewear-halfmoon-adult-layer1.png",
             "z": 115
           }
         ],
         "female": [
           {
-            "file": "glasses-halfmoon-adult-layer1.png",
+            "file": "eyewear-halfmoon-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-halfmoon-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-halfmoon-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-halfmoon-adult-layer1.png",
             "z": 115
           }
         ]
@@ -834,18 +4304,36 @@
     },
     {
       "id": "sunglasses",
-      "category": "glasses",
+      "category": "eyewear",
       "label": "선글라스",
       "sources": {
         "male": [
           {
-            "file": "glasses-sunglasses-adult-layer1.png",
+            "file": "eyewear-sunglasses-adult-layer1.png",
             "z": 115
           }
         ],
         "female": [
           {
-            "file": "glasses-sunglasses-adult-layer1.png",
+            "file": "eyewear-sunglasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-sunglasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-sunglasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-sunglasses-adult-layer1.png",
             "z": 115
           }
         ]
@@ -865,6 +4353,1892 @@
         "combat_idle"
       ],
       "definition": "headwear/accessories/glasses/facial_glasses_sunglasses.json"
+    },
+    {
+      "id": "basic_glasses",
+      "category": "eyewear",
+      "label": "기본 안경",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-basic_glasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-basic_glasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-basic_glasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-basic_glasses-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-basic_glasses-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses.json"
+    },
+    {
+      "id": "nerd",
+      "category": "eyewear",
+      "label": "너드 안경",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-nerd-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-nerd-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-nerd-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-nerd-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-nerd-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_nerd.json"
+    },
+    {
+      "id": "secretary",
+      "category": "eyewear",
+      "label": "세크리터리",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-secretary-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-secretary-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-secretary-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-secretary-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-secretary-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_secretary.json"
+    },
+    {
+      "id": "shades",
+      "category": "eyewear",
+      "label": "셰이드",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-shades-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-shades-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-shades-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-shades-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-shades-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/glasses/facial_glasses_shades.json"
+    },
+    {
+      "id": "patch_left",
+      "category": "eyewear",
+      "label": "왼쪽 안대",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-patch_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-patch_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-patch_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-patch_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-patch_left-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/eyepatch/facial_eyepatch_left.json"
+    },
+    {
+      "id": "patch_right",
+      "category": "eyewear",
+      "label": "오른쪽 안대",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-patch_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-patch_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-patch_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-patch_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-patch_right-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/eyepatch/facial_eyepatch_right.json"
+    },
+    {
+      "id": "patch_small_left",
+      "category": "eyewear",
+      "label": "작은 왼쪽 안대",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-patch_small_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-patch_small_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-patch_small_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-patch_small_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-patch_small_left-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/eyepatch/facial_eyepatch_small_left.json"
+    },
+    {
+      "id": "patch_small_right",
+      "category": "eyewear",
+      "label": "작은 오른쪽 안대",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-patch_small_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-patch_small_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-patch_small_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-patch_small_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-patch_small_right-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/eyepatch/facial_eyepatch_small_right.json"
+    },
+    {
+      "id": "patch_ambi",
+      "category": "eyewear",
+      "label": "양안대",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-patch_ambi-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-patch_ambi-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-patch_ambi-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-patch_ambi-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-patch_ambi-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/eyepatch/facial_eyepatch_ambi.json"
+    },
+    {
+      "id": "monocle_left",
+      "category": "eyewear",
+      "label": "왼쪽 모노클",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-monocle_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-monocle_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-monocle_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-monocle_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-monocle_left-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/monocle/facial_monocle_left.json"
+    },
+    {
+      "id": "monocle_right",
+      "category": "eyewear",
+      "label": "오른쪽 모노클",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-monocle_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-monocle_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-monocle_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-monocle_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-monocle_right-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/monocle/facial_monocle_right.json"
+    },
+    {
+      "id": "monocle_frame_left",
+      "category": "eyewear",
+      "label": "왼쪽 프레임",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-monocle_frame_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-monocle_frame_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-monocle_frame_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-monocle_frame_left-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-monocle_frame_left-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/monocle/facial_monocle_left_frame.json"
+    },
+    {
+      "id": "monocle_frame_right",
+      "category": "eyewear",
+      "label": "오른쪽 프레임",
+      "sources": {
+        "male": [
+          {
+            "file": "eyewear-monocle_frame_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "female": [
+          {
+            "file": "eyewear-monocle_frame_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyewear-monocle_frame_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyewear-monocle_frame_right-adult-layer1.png",
+            "z": 115
+          }
+        ],
+        "child": [
+          {
+            "file": "eyewear-monocle_frame_right-adult-layer1.png",
+            "z": 115
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "headwear/accessories/monocle/facial_monocle_right_frame.json"
+    },
+    {
+      "id": "angry",
+      "category": "expression",
+      "label": "face_angry",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-angry-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-angry-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-angry-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-angry-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_angry.json"
+    },
+    {
+      "id": "angry2",
+      "category": "expression",
+      "label": "face_angry2",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-angry2-male-layer1.png",
+            "z": 106
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-angry2-female-layer1.png",
+            "z": 106
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-angry2-muscular-layer1.png",
+            "z": 106
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-angry2-teen-layer1.png",
+            "z": 106
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_angry2.json"
+    },
+    {
+      "id": "blush",
+      "category": "expression",
+      "label": "face_blush",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-blush-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-blush-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-blush-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-blush-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_blush.json"
+    },
+    {
+      "id": "closed",
+      "category": "expression",
+      "label": "face_closed",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-closed-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-closed-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-closed-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-closed-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_closed.json"
+    },
+    {
+      "id": "closing",
+      "category": "expression",
+      "label": "face_closing",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-closing-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-closing-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-closing-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-closing-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_closing.json"
+    },
+    {
+      "id": "eyeroll",
+      "category": "expression",
+      "label": "face_eyeroll",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-eyeroll-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-eyeroll-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-eyeroll-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-eyeroll-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_eyeroll.json"
+    },
+    {
+      "id": "happy",
+      "category": "expression",
+      "label": "face_happy",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-happy-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-happy-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-happy-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-happy-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_happy.json"
+    },
+    {
+      "id": "happy2",
+      "category": "expression",
+      "label": "face_happy2",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-happy2-male-layer1.png",
+            "z": 106
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-happy2-female-layer1.png",
+            "z": 106
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-happy2-muscular-layer1.png",
+            "z": 106
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-happy2-teen-layer1.png",
+            "z": 106
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_happy2.json"
+    },
+    {
+      "id": "look_l",
+      "category": "expression",
+      "label": "face_look_l",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-look_l-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-look_l-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-look_l-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-look_l-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_look_l.json"
+    },
+    {
+      "id": "look_r",
+      "category": "expression",
+      "label": "face_look_r",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-look_r-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-look_r-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-look_r-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-look_r-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_look_r.json"
+    },
+    {
+      "id": "neutral",
+      "category": "expression",
+      "label": "face_neutral",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-neutral-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-neutral-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-neutral-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-neutral-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_neutral.json"
+    },
+    {
+      "id": "sad",
+      "category": "expression",
+      "label": "face_sad",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-sad-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-sad-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-sad-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-sad-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_sad.json"
+    },
+    {
+      "id": "sad2",
+      "category": "expression",
+      "label": "face_sad2",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-sad2-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-sad2-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-sad2-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-sad2-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_sad2.json"
+    },
+    {
+      "id": "shame",
+      "category": "expression",
+      "label": "face_shame",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-shame-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-shame-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-shame-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-shame-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_shame.json"
+    },
+    {
+      "id": "shock",
+      "category": "expression",
+      "label": "face_shock",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-shock-male-layer1.png",
+            "z": 101
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-shock-female-layer1.png",
+            "z": 101
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-shock-muscular-layer1.png",
+            "z": 101
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-shock-teen-layer1.png",
+            "z": 101
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_shock.json"
+    },
+    {
+      "id": "tears",
+      "category": "expression",
+      "label": "face_tears",
+      "sources": {
+        "male": [
+          {
+            "file": "expression-tears-male-layer1.png",
+            "z": 107
+          }
+        ],
+        "female": [
+          {
+            "file": "expression-tears-female-layer1.png",
+            "z": 107
+          }
+        ],
+        "muscular": [
+          {
+            "file": "expression-tears-muscular-layer1.png",
+            "z": 107
+          }
+        ],
+        "teen": [
+          {
+            "file": "expression-tears-teen-layer1.png",
+            "z": 107
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/faces/face_tears.json"
+    },
+    {
+      "id": "thick",
+      "category": "eyebrow",
+      "label": "굵은 눈썹",
+      "sources": {
+        "male": [
+          {
+            "file": "eyebrow-thick-male-layer1.png",
+            "z": 106
+          }
+        ],
+        "female": [
+          {
+            "file": "eyebrow-thick-female-layer1.png",
+            "z": 106
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyebrow-thick-muscular-layer1.png",
+            "z": 106
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyebrow-thick-teen-layer1.png",
+            "z": 106
+          }
+        ],
+        "child": [
+          {
+            "file": "eyebrow-thick-child-layer1.png",
+            "z": 106
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/eyebrows/eyebrows_thick.json"
+    },
+    {
+      "id": "thin",
+      "category": "eyebrow",
+      "label": "얇은 눈썹",
+      "sources": {
+        "male": [
+          {
+            "file": "eyebrow-thin-male-layer1.png",
+            "z": 106
+          }
+        ],
+        "female": [
+          {
+            "file": "eyebrow-thin-female-layer1.png",
+            "z": 106
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyebrow-thin-muscular-layer1.png",
+            "z": 106
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyebrow-thin-teen-layer1.png",
+            "z": 106
+          }
+        ],
+        "child": [
+          {
+            "file": "eyebrow-thin-child-layer1.png",
+            "z": 106
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/eyebrows/eyebrows_thin.json"
+    },
+    {
+      "id": "big",
+      "category": "nose",
+      "label": "큰 코",
+      "sources": {
+        "male": [
+          {
+            "file": "nose-big-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "nose-big-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "nose-big-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "nose-big-teen-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/nose/head_nose_big.json"
+    },
+    {
+      "id": "button",
+      "category": "nose",
+      "label": "버튼 코",
+      "sources": {
+        "male": [
+          {
+            "file": "nose-button-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "nose-button-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "nose-button-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "nose-button-teen-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/nose/head_nose_button.json"
+    },
+    {
+      "id": "elderly",
+      "category": "nose",
+      "label": "노년 코",
+      "sources": {
+        "male": [
+          {
+            "file": "nose-elderly-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "nose-elderly-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "nose-elderly-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "nose-elderly-teen-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/nose/head_nose_elderly.json"
+    },
+    {
+      "id": "large",
+      "category": "nose",
+      "label": "넓은 코",
+      "sources": {
+        "male": [
+          {
+            "file": "nose-large-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "nose-large-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "nose-large-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "nose-large-teen-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/nose/head_nose_large.json"
+    },
+    {
+      "id": "straight",
+      "category": "nose",
+      "label": "곧은 코",
+      "sources": {
+        "male": [
+          {
+            "file": "nose-straight-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "nose-straight-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "nose-straight-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "nose-straight-teen-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/nose/head_nose_straight.json"
+    },
+    {
+      "id": "cyclops",
+      "category": "eyes",
+      "label": "특수 눈 1",
+      "sources": {
+        "male": [
+          {
+            "file": "eyes-cyclops-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "eyes-cyclops-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyes-cyclops-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyes-cyclops-teen-layer1.png",
+            "z": 105
+          }
+        ],
+        "child": [
+          {
+            "file": "eyes-cyclops-child-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/eyes/eyes_cyclops.json"
+    },
+    {
+      "id": "cyclops2",
+      "category": "eyes",
+      "label": "특수 눈 2",
+      "sources": {
+        "male": [
+          {
+            "file": "eyes-cyclops2-male-layer1.png",
+            "z": 105
+          }
+        ],
+        "female": [
+          {
+            "file": "eyes-cyclops2-female-layer1.png",
+            "z": 105
+          }
+        ],
+        "muscular": [
+          {
+            "file": "eyes-cyclops2-muscular-layer1.png",
+            "z": 105
+          }
+        ],
+        "teen": [
+          {
+            "file": "eyes-cyclops2-teen-layer1.png",
+            "z": 105
+          }
+        ],
+        "child": [
+          {
+            "file": "eyes-cyclops2-child-layer1.png",
+            "z": 105
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/eyes/eyes_cyclops2.json"
+    },
+    {
+      "id": "wrinkles",
+      "category": "wrinkles",
+      "label": "주름",
+      "sources": {
+        "male": [
+          {
+            "file": "wrinkles-wrinkles-male-layer1.png",
+            "z": 102
+          }
+        ],
+        "female": [
+          {
+            "file": "wrinkles-wrinkles-female-layer1.png",
+            "z": 102
+          }
+        ],
+        "muscular": [
+          {
+            "file": "wrinkles-wrinkles-muscular-layer1.png",
+            "z": 102
+          }
+        ],
+        "teen": [
+          {
+            "file": "wrinkles-wrinkles-teen-layer1.png",
+            "z": 102
+          }
+        ]
+      },
+      "animations": [
+        "spellcast",
+        "thrust",
+        "walk",
+        "slash",
+        "shoot",
+        "hurt",
+        "climb",
+        "idle",
+        "jump",
+        "sit",
+        "emote",
+        "run",
+        "combat_idle"
+      ],
+      "definition": "head/head_wrinkles.json"
     }
   ]
 }

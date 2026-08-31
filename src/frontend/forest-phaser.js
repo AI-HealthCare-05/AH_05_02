@@ -19,7 +19,8 @@
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft",
     hat: "none", glasses: "none", face: "calm", accessory: "none",
     lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots",
-    lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright",
+    lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", bodyType: "male",
+    lpcExpression: "neutral", lpcEyebrow: "thick", lpcNose: "none", lpcEyes: "none", lpcWrinkles: "none",
     hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
   };
   const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };
@@ -73,12 +74,12 @@
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v1.png");
       this.load.image("avatar-modular-v3", "/static/assets/carrot-forest-modular-avatar-atlas-v3.png");
       Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
-      this.load.spritesheet("cat-pets", "/static/assets/carrot-forest-cat-pets-v1.png", { frameWidth: 887, frameHeight: 887 });
+      this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
     }
 
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
-      this.shadow = this.add.ellipse(0, 13, 34, 11, 0x16382a, 0.25);
+      this.shadow = this.add.ellipse(0, 0, 34, 8, 0x16382a, 0.28).setDepth(1);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.player.add(this.shadow);
       this.motionFx = this.add.graphics().setDepth(2);
@@ -91,8 +92,8 @@
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
       this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);
       this.player.add(this.premiumAvatar);
-      this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "cat-pets", 0).setOrigin(0.5, 1).setScale(0.045).setDepth(this.avatar.y - 1);
-      this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1);
+      this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "lpc-pets", 0).setOrigin(0.5, 1).setScale(1.2).setDepth(this.avatar.y - 1);
+      this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
       this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
@@ -105,7 +106,8 @@
       this.cursors = this.input.keyboard.createCursorKeys();
       this.input.keyboard.on("keydown-Q", () => window.dispatchEvent(new CustomEvent("forest-phaser-interact")));
       this.input.keyboard.on("keydown-C", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })));
-      this.input.keyboard.on("keydown-X", () => {
+      this.input.keyboard.on("keydown-X", (event) => {
+        if (event.repeat) return;
         this.playTogether(this.avatar.sitting ? "idle" : "sit", 900);
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
       });
@@ -131,11 +133,11 @@
       this.setPremiumFrame(this.avatar.direction, false, 0);
       this.nameplate?.setDepth(30).setText(this.avatar.name);
       const pet = c.pet;
-      const catPet = ["cat", "blue_eyes_white_cat", "gold_eyes_orange_cat"].includes(pet);
-      this.pet?.setVisible(catPet);
-      this.pet?.setFrame(pet === "gold_eyes_orange_cat" ? 1 : 0);
-      const glyphs = { white_pup: "🐶", brown_pup: "🐕", fox: "🦊" };
-      this.petEmoji?.setText(glyphs[pet] || "").setVisible(Boolean(glyphs[pet]));
+      const petColumns = { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 3, white_pup: 6 };
+      this.pet?.setVisible(Object.hasOwn(petColumns, pet));
+      this.petBaseColumn = petColumns[pet] || 0;
+      this.pet?.setFrame(this.petBaseColumn);
+      this.petEmoji?.setVisible(false);
       this.petTrail = [];
       this.petLastSampleAt = 0;
     }
@@ -211,7 +213,7 @@
           this.avatar = nextAvatar;
           this.setPremiumFrame(this.avatar.direction, false, performance.now());
           this.premiumAvatar.setY(9).setAlpha(0);
-          this.shadow.setY(16).setAlpha(0);
+          this.shadow.setY(0).setAlpha(0);
           this.motionFx.clear().lineStyle(4, 0xffef9a, 1).strokeCircle(0, 5, 10);
           this.tweens.add({
             targets: this.premiumAvatar,
@@ -322,11 +324,14 @@
       const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
       const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
       actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
-      actor.setFlipX?.(this.petFacing === "left");
+      const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[this.avatar.direction] || 0;
+      const petFrame = playerMoving ? Math.floor(time / 135) % 3 : 1;
+      this.pet?.setFrame(petDirectionRow * 9 + (this.petBaseColumn || 0) + petFrame);
+      actor.setFlipX?.(false);
       actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving ? gait * 2.2 : 0);
       if (this.pet?.visible) {
-        const baseScale = togetherSitting ? 0.041 : 0.045;
-        const squash = dancing ? Math.sin(time / 118) * 0.004 : playerMoving ? Math.abs(gait) * 0.0018 : 0;
+        const baseScale = togetherSitting ? 1.08 : 1.2;
+        const squash = dancing ? Math.sin(time / 118) * 0.08 : playerMoving ? Math.abs(gait) * 0.035 : 0;
         actor.setScale(baseScale + squash, baseScale - squash * 0.65);
       } else {
         const emojiScale = togetherSitting ? 0.88 : dancing ? 1 + Math.sin(time / 118) * 0.08 : 1;
@@ -382,13 +387,6 @@
       } else if (cosmetics.aura === "hearts") {
         this.motionFx.fillStyle(0xf27d9b, 0.75);
         this.motionFx.fillCircle(-28, -35, 3).fillCircle(28, -50, 2.5);
-      }
-      if (cosmetics.effect !== "none") {
-        const colors = { bubble: 0x8fe8ff, spark: 0xffe272, heart: 0xf27d9b, carrot: 0xef8632, leaf: 0x73c969 };
-        this.motionFx.fillStyle(colors[cosmetics.effect] || 0xffe272, 0.84);
-        const phase = frame % 4;
-        this.motionFx.fillCircle(-34 + phase * 3, -54 - phase * 2, phase % 2 ? 2.5 : 1.8);
-        this.motionFx.fillCircle(36 - phase * 2, -22 - phase * 3, phase % 2 ? 1.8 : 2.6);
       }
       if (!moving) return;
       const directionSign = direction === "left" ? 1 : direction === "right" ? -1 : 0;

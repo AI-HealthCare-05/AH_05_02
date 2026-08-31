@@ -4,10 +4,10 @@
 
 `당근의 숲` 아바타는 Universal LPC Spritesheet Character Generator의 호환 레이어를 선별해 동일한 `64×64` 프레임 규격으로 합성한다. 완성형 캐릭터 이미지를 잘라 붙이지 않고 몸·하의·신발·상의·헤어·안경·모자를 매 프레임 같은 좌표에 그리므로, 코디를 바꿔도 인접 스프라이트나 원래 의상이 비치지 않는다.
 
-- 성별 몸체: 남성형·여성형
-- 헤어 5종, 상의 5종, 하의 4종, 신발 3종, 모자 3종, 안경 3종
+- 체형: 성인 남성·성인 여성·근육형·슬림형·아이. 선택 체형을 실제로 지원하는 레이어만 목록에 표시한다.
+- 검증된 헤어·상의·하의·신발·모자·안경/눈 장식을 이미지 중심으로 제공한다. 개수보다 체형 호환성과 레이어 정렬을 우선한다.
 - 피부·헤어·상의·하의·신발 색상 필터
-- 표정 6종: 차분한 미소, 환한 미소, 윙크, 눈웃음, 살짝 걱정, 씩씩한 표정
+- 공식 LPC 표정 16종과 눈썹·코·특수 눈·주름 레이어. 기존 임의 제작 표정 오버레이는 사용하지 않는다.
 - 기본·걷기·달리기·앉기·점프·감정표현·수확·낚시·문 열기·공격 동작
 - 아우라·순간 이펙트·탈것·펫을 별도 레이어로 유지
 
@@ -28,13 +28,18 @@
 ## 재현
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/build_lpc_avatar_pack.py
+.\.venv\Scripts\python.exe scripts/build_lpc_avatar_pack.py `
+  --source "<Universal-LPC-Spritesheet-Character-Generator 경로>" `
+  --output src/frontend/assets/lpc-pack
+.\.venv\Scripts\python.exe scripts/build_lpc_pet_pack.py
 node --check src/frontend/lpc-avatar-engine.js
 node --check src/frontend/forest-phaser.js
 .\.venv\Scripts\python.exe -m pytest -q tests/test_carrot_forest_pixel_game.py
 ```
 
 생성 파일은 `src/frontend/assets/lpc-pack/`에 저장된다. `manifest.json`은 런타임 레이어·애니메이션 행을, `credits.json`은 각 원본 파일·저작자·라이선스를 기록한다. 새 아이템을 추가할 때는 빌드 스크립트의 카탈로그에 원본 레이어를 등록하고 pack을 다시 생성한다.
+
+아이템 카드는 그림과 선택 상태만 시각적으로 노출하고 이름은 접근성용 `aria-label`에 유지한다. 동작 탭은 보유 여부와 단축키만 확인하는 읽기 전용이며, 대량 레이어는 선택 시점에 지연 로딩한다.
 
 ## 출처와 라이선스
 

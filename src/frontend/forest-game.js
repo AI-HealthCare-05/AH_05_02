@@ -58,19 +58,57 @@
     lantern: { name: "숲 등불", kind: "object", icon: "🏮" },
     mushroom: { name: "버섯 장식", kind: "object", icon: "🍄" },
     bench: { name: "나무 벤치", kind: "object", icon: "🪵" },
+    stone_path: { name: "돌길", kind: "object", icon: "🪨" },
+    bird_bath: { name: "새 물그릇", kind: "object", icon: "⛲" },
+    carrot_crate: { name: "당근 상자", kind: "object", icon: "🥕" },
+    picnic_table: { name: "피크닉 탁자", kind: "object", icon: "🧺" },
+    flower_pot: { name: "꽃 화분", kind: "object", icon: "🪴" },
+    signpost: { name: "숲 표지판", kind: "object", icon: "🪧" },
+    stump: { name: "나무 그루터기", kind: "object", icon: "🪵" },
+    watering_can: { name: "물뿌리개", kind: "object", icon: "🚿" },
+    campfire: { name: "모닥불", kind: "object", icon: "🔥" },
+    hammock: { name: "해먹", kind: "object", icon: "🏕️" },
+    mailbox: { name: "우편함", kind: "object", icon: "📫" },
+    scarecrow: { name: "허수아비", kind: "object", icon: "🌾" },
+    beehive: { name: "벌통", kind: "object", icon: "🍯" },
+    fountain: { name: "작은 분수", kind: "object", icon: "⛲" },
+    arch: { name: "꽃 아치", kind: "object", icon: "🌸" },
+    wheelbarrow: { name: "손수레", kind: "object", icon: "🛒" },
+    reward_cow: { name: "행운의 젖소", kind: "object", icon: "🐄", rarity: "rare" },
+    tent: { name: "캠핑 텐트", kind: "object", icon: "⛺" },
+    light_tent: { name: "전구 텐트", kind: "object", icon: "⛺" },
+    bbq_table: { name: "바비큐 탁자", kind: "object", icon: "🍖" },
+    chair_green: { name: "초록 캠핑 의자", kind: "object", icon: "🪑" },
+    chair_red: { name: "빨간 캠핑 의자", kind: "object", icon: "🪑" },
+    picnic_blanket: { name: "피크닉 매트", kind: "object", icon: "🧺" },
+    pond: { name: "돌 연못", kind: "object", icon: "💧" },
+    fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
+    flower_cart: { name: "꽃수레", kind: "object", icon: "🌼" },
   };
-  const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
+  const storageObjectCodes = [
+    "tent", "light_tent", "picnic_table", "bbq_table", "chair_green",
+    "chair_red", "picnic_blanket", "pond", "lantern", "fence",
+    "flower_cart", "flower_pot", "mushroom", "bench", "campfire",
+    "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow",
+  ];
+  const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
+  const rewardPool = ["reward_cow"];
   const avatarCategories = [
+    { id: "bodyType", label: "체형", icon: "🧍" },
     { id: "skin", label: "피부", icon: "🎨" },
     { id: "lpcHair", label: "헤어", icon: "💇" },
     { id: "hairColor", label: "헤어 색", icon: "🖌️" },
     { id: "lpcOutfit", label: "상의", icon: "👕" },
-    { id: "outfitColor", label: "상의 색", icon: "🧵" },
+    { id: "outfitColor", label: "상의 색", icon: '<i class="thread-icon thread-green"></i>' },
     { id: "lpcBottom", label: "하의", icon: "👖" },
-    { id: "bottomColor", label: "하의 색", icon: "🟦" },
+    { id: "bottomColor", label: "하의 색", icon: '<i class="thread-icon thread-blue"></i>' },
     { id: "lpcShoes", label: "신발", icon: "👟" },
-    { id: "shoeColor", label: "신발 색", icon: "🟫" },
-    { id: "expression", label: "표정", icon: "😊" },
+    { id: "shoeColor", label: "신발 색", icon: '<i class="thread-icon thread-mono"></i>' },
+    { id: "lpcExpression", label: "표정", icon: "😊" },
+    { id: "lpcEyebrow", label: "눈썹", icon: "〰️" },
+    { id: "lpcNose", label: "코", icon: "👃" },
+    { id: "lpcEyes", label: "특수 눈", icon: "👁️" },
+    { id: "lpcWrinkles", label: "주름", icon: "🧓" },
     { id: "lpcHat", label: "모자", icon: "🧢" },
     { id: "lpcGlasses", label: "안경", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
@@ -81,6 +119,11 @@
     { id: "pose", label: "동작", icon: "🏃" },
   ];
   const avatarCatalog = {
+    bodyType: [
+      { id: "male", name: "성인 남성", visual: "🧑" }, { id: "female", name: "성인 여성", visual: "👩" },
+      { id: "muscular", name: "근육형", visual: "💪" }, { id: "teen", name: "슬림형", visual: "🧍" },
+      { id: "child", name: "아이", visual: "🧒" },
+    ],
     preset: [
       { id: "red_bow", name: "리본 정원사", isNew: true },
       { id: "cow_hood", name: "음메 목장지기", isNew: true }, { id: "midnight", name: "한밤 숲지기", isNew: true },
@@ -93,6 +136,9 @@
       { id: "deep", name: "깊은 갈색", visual: "#89503e", color: "#89503e", isNew: true },
       { id: "olive", name: "올리브", visual: "#a87f63", color: "#a87f63" },
       { id: "porcelain", name: "밝은 도자기빛", visual: "#f5cbb4", color: "#f5cbb4" },
+      { id: "sand", name: "샌드", color: "#d8a47f" }, { id: "golden", name: "골든", color: "#bb7a51" },
+      { id: "amber", name: "앰버", color: "#a96545" }, { id: "bronze", name: "브론즈", color: "#8d563c" },
+      { id: "espresso", name: "에스프레소", color: "#60392f" }, { id: "neutral", name: "뉴트럴", color: "#c68d71" },
     ],
     outfit: [
       { id: "forest", name: "숲지기 작업복", visual: "🧥" }, { id: "denim", name: "데님 산책복", visual: "👕" },
@@ -143,9 +189,8 @@
       { id: "hearts", name: "마음의 온기", visual: "💞" }, { id: "forest", name: "숲의 숨결", visual: "🍃", isNew: true },
     ],
     effect: [
-      { id: "none", name: "이펙트 없음", visual: "—" }, { id: "bubble", name: "비눗방울", visual: "🫧" },
-      { id: "spark", name: "별빛 반짝임", visual: "✨" }, { id: "heart", name: "마음 보내기", visual: "💗" },
-      { id: "carrot", name: "당근 팡", visual: "🥕" }, { id: "leaf", name: "나뭇잎 톡", visual: "🍂", isNew: true },
+      { id: "sword_arc", name: "검광", visual: "⚔️" }, { id: "magic_burst", name: "마법 파동", visual: "🔮" },
+      { id: "arrow_volley", name: "화살 연사", visual: "🏹" }, { id: "leaf_blade", name: "잎 칼날", visual: "🍃" },
     ],
     vehicle: [
       { id: "none", name: "걸어서 이동", visual: "👟" }, { id: "scooter", name: "숲 스쿠터", visual: "🛵" },
@@ -153,8 +198,6 @@
     ],
     pet: [
       { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
-      { id: "brown_pup", name: "밤톨이", visual: "🐕" }, { id: "cat", name: "구름이", visual: "🐈" },
-      { id: "fox", name: "단풍이", visual: "🦊" },
       { id: "blue_eyes_white_cat", name: "설빛 고양이", visual: "🐈", isNew: true },
       { id: "gold_eyes_orange_cat", name: "호박눈 고양이", visual: "🐈", isNew: true },
     ],
@@ -193,6 +236,7 @@
       { id: "wink", name: "윙크", visual: "😉" }, { id: "delighted", name: "눈웃음", visual: "😊" },
       { id: "worried", name: "살짝 걱정", visual: "😟" }, { id: "determined", name: "씩씩한 표정", visual: "😤" },
     ],
+    lpcExpression: [], lpcEyebrow: [], lpcNose: [], lpcEyes: [], lpcWrinkles: [],
     pose: [
       { id: "idle", name: "가만히", visual: "🧍" }, { id: "walk", name: "걷기", visual: "🚶" },
       { id: "run", name: "달리기", visual: "🏃" }, { id: "sit", name: "앉기", visual: "🧘" },
@@ -213,10 +257,36 @@
   avatarCatalog.outfitColor = colorChoices;
   avatarCatalog.bottomColor = colorChoices;
   avatarCatalog.shoeColor = colorChoices;
+  const lpcCatalogMap = {
+    lpcHair: ["hair", 12], lpcOutfit: ["outfit", 12], lpcBottom: ["bottom", 10],
+    lpcShoes: ["shoes", 9], lpcHat: ["hat", 12], lpcGlasses: ["eyewear", 12],
+    lpcExpression: ["expression", 16], lpcEyebrow: ["eyebrow", 2], lpcNose: ["nose", 5],
+    lpcEyes: ["eyes", 2], lpcWrinkles: ["wrinkles", 1],
+  };
+  const optionalLpcCategories = new Set(["lpcHat", "lpcGlasses", "lpcNose", "lpcEyes", "lpcWrinkles"]);
+
+  function syncLpcCatalog() {
+    if (!window.LpcAvatarEngine?.isReady()) return;
+    Object.entries(lpcCatalogMap).forEach(([uiCategory, [engineCategory, limit]]) => {
+      const records = window.LpcAvatarEngine.catalog(engineCategory).slice(0, limit);
+      avatarCatalog[uiCategory] = records.map((record) => ({
+        id: record.id, name: record.label || record.id, sources: record.sources || {}, visual: "",
+      }));
+      if (optionalLpcCategories.has(uiCategory)) avatarCatalog[uiCategory].unshift({ id: "none", name: "사용 안 함", sources: {} });
+    });
+  }
+
+  function avatarItemsForCategory(categoryId) {
+    const choices = avatarCatalog[categoryId] || [];
+    if (!lpcCatalogMap[categoryId]) return choices;
+    const bodyType = avatarDraft.bodyType || state.avatar.gender || "male";
+    return choices.filter((choice) => choice.id === "none" || choice.sources?.[bodyType] || choice.sources?.[state.avatar.gender] || choice.sources?.male);
+  }
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
-    aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
+    aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
     lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none",
+    bodyType: "male", lpcExpression: "neutral", lpcEyebrow: "thick", lpcNose: "none", lpcEyes: "none", lpcWrinkles: "none",
     expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown",
     hatColor: "brown", glassesColor: "brown",
   };
@@ -236,10 +306,10 @@
         { id: "m2", name: "빛샘", completed: 3 },
         { id: "m3", name: "준혁", completed: 3 },
         { id: "m4", name: "수인", completed: 3 },
-        { id: "m5", name: "숲지기", completed: 3 },
+        { id: "m5", name: "세준", completed: 3 },
       ],
       carrots: 100,
-      inventory: ["red_scarf", "flower_patch", "bench"],
+      inventory: ["red_scarf", ...storageObjectCodes],
       placed: [],
       rewardClaimed: false,
       gardenWatered: false,
@@ -280,8 +350,11 @@
     state.cosmeticSchemaVersion = 2;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
-    state.inventory = [...new Set(Array.isArray(value.inventory) ? value.inventory : fallback.inventory)]
+    state.members = state.members.map((member) => member.id === "m5" && member.name === "숲지기" ? { ...member, name: "세준" } : member);
+    state.inventory = [...new Set([...(Array.isArray(value.inventory) ? value.inventory : fallback.inventory), ...storageObjectCodes])]
       .filter((code) => itemCatalog[code]);
+    // 보상 풀이 바뀌기 전에 상자를 연 데모 사용자도 희귀 꾸미기 보상을 잃지 않도록 보정한다.
+    if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
     state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
     return state;
   }
@@ -348,6 +421,7 @@
   const cosmeticSpriteAtlas = new Image();
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
+  const rewardCowImage = new Image();
   const basicWalkAtlas = new Image();
   const basicScooterAtlas = new Image();
   const modularAvatarAtlas = new Image();
@@ -361,8 +435,9 @@
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
-  catPetAtlas.src = "/static/assets/carrot-forest-cat-pets-v1.png";
-  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
+  catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
+  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v2.png?v=20260831-1";
+  rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1";
   basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
   basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
   modularAvatarAtlas.src = "/static/assets/carrot-forest-modular-avatar-atlas-v3.png";
@@ -374,6 +449,7 @@
   cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  rewardCowImage.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   basicWalkAtlas.addEventListener("load", renderCanvas);
   basicScooterAtlas.addEventListener("load", renderCanvas);
   modularAvatarAtlas.addEventListener("load", () => {
@@ -387,8 +463,20 @@
   }));
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
   window.addEventListener("lpc-avatar-ready", () => {
+    syncLpcCatalog();
     renderCanvas();
     if ($("#avatar-studio").open) renderAvatarStudio();
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
+  window.LpcAvatarEngine?.ready().then(() => {
+    syncLpcCatalog();
+    renderCanvas();
+    if ($("#avatar-studio").open) renderAvatarStudio();
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
+  window.addEventListener("lpc-avatar-assets-updated", () => {
+    renderCanvas();
+    if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
 
@@ -605,8 +693,11 @@
     state.placed.forEach((item) => {
       const x = item.x;
       const y = item.y;
-      const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[item.code];
-      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 4, 1, x - 28, y - 34, 56, 56)) return;
+      if (item.code === "reward_cow" && rewardCowImage.complete) {
+        context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); return;
+      }
+      const storageIndex = storageObjectIndex[item.code];
+      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 5, 4, x - 32, y - 48, 64, 64)) return;
       if (item.code === "flower_patch") {
         fillPixelRect(x - 15, y - 7, 30, 14, "#4b8e3f");
         [[-10, -8, "#ffcf43"], [0, -12, "#f16d77"], [10, -7, "#fff2a8"]].forEach(([dx, dy, color]) => fillPixelRect(x + dx, y + dy, 7, 7, color));
@@ -652,7 +743,7 @@
   }
 
   function catPetSpriteIndex(itemId) {
-    return { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 1 }[itemId] ?? null;
+    return { blue_eyes_white_cat: 1, gold_eyes_orange_cat: 4, white_pup: 7 }[itemId] ?? null;
   }
 
   function drawAtlasCell(target, image, index, columns, rows, x, y, width, height) {
@@ -737,7 +828,7 @@
     drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
     const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
     const catIndex = catPetSpriteIndex(cosmetics.pet);
-    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
       drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
     }
     if (cosmetics.speech !== "none") {
@@ -762,7 +853,7 @@
     drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
     const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
     const catIndex = catPetSpriteIndex(cosmetics.pet);
-    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
       drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
     }
     if (avatar.mounted) {
@@ -879,15 +970,10 @@
       const glassColor = equipped === "star_glasses" ? "#e75e99" : "#354751";
       context.strokeStyle = glassColor; context.lineWidth = 2; context.strokeRect(x - 10, y - 15, 8, 7); context.strokeRect(x + 2, y - 15, 8, 7); fillPixelRect(x - 2, y - 13, 4, 2, glassColor);
     }
-    if (cosmetics.effect !== "none") {
-      const effects = { bubble: ["○", "#7edcf2"], spark: ["✦", "#ffd85a"], heart: ["♥", "#f15f8b"], carrot: ["◆", "#ed7a31"], leaf: ["❧", "#64ac4b"] };
-      const [glyph, color] = effects[cosmetics.effect] || effects.spark;
-      context.fillStyle = color; context.font = "bold 13px sans-serif"; context.fillText(glyph, x - 25, y - 28); context.fillText(glyph, x + 25, y + 2);
-    }
     if (cosmetics.pet !== "none") {
       const petGlyphs = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" };
       const catIndex = catPetSpriteIndex(cosmetics.pet);
-      if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+      if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
         context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet] || "🐾", x + 34, y + 34);
       }
     }
@@ -1124,9 +1210,12 @@
       const equipped = item.kind === "accessory" && state.avatar.equipped === code;
       const selected = item.kind === "object" && placementCode === code;
       if (item.kind === "object") {
-        const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[code];
-        const backgroundPosition = `${storageIndex * 100 / 3}% 0%`;
         const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
+        if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><span class="storage-reward-cow" aria-hidden="true"></span></button>`;
+        const storageIndex = storageObjectIndex[code];
+        const column = storageIndex % 5;
+        const row = Math.floor(storageIndex / 5);
+        const backgroundPosition = `${column * 25}% ${row * 100 / 3}%`;
         return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
@@ -1145,7 +1234,8 @@
   }
 
   function selectedAvatarItem(category, id = category === "pose" ? avatarPreviewPose : avatarDraft[category]) {
-    return avatarCatalog[category].find((item) => item.id === id) || avatarCatalog[category][0];
+    const choices = avatarItemsForCategory(category);
+    return choices.find((item) => item.id === id) || choices[0] || { id: "none", name: "" };
   }
 
   const avatarThumbnailIndexes = {
@@ -1170,7 +1260,7 @@
       const category = thumbnail.dataset.lpcCategory;
       const id = thumbnail.dataset.lpcItem;
       const cosmetics = { ...avatarDraft, [category]: id };
-      const pose = category === "expression" ? "idle" : avatarPreviewPose;
+      const pose = category === "lpcExpression" ? "idle" : avatarPreviewPose;
       window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
         direction: "down", pose, frame: avatarPreviewFrame,
       }, { x: 3, y: 3, width: 90, height: 90 });
@@ -1242,7 +1332,7 @@
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       target.imageSmoothingEnabled = true;
-      drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 2, 1, 7, 7, 82, 82);
+      drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 9, 4, 7, 7, 82, 82);
     });
   }
 
@@ -1333,13 +1423,19 @@
     drawAtlasCell(previewContext, cosmeticSpriteAtlas, vehicleIndex, 5, 4, 18, 213, 82, 65);
     const petIndex = cosmeticSpriteIndex("pet", avatarDraft.pet);
     const catIndex = catPetSpriteIndex(avatarDraft.pet);
-    if (!drawAtlasCell(previewContext, catPetAtlas, catIndex, 2, 1, 178, 188, 100, 100)) {
+    if (!drawAtlasCell(previewContext, catPetAtlas, catIndex, 9, 4, 178, 188, 100, 100)) {
       drawAtlasCell(previewContext, cosmeticSpriteAtlas, petIndex, 5, 4, 190, 205, 72, 72);
     }
     const speechIndex = cosmeticSpriteIndex("speech", avatarDraft.speech);
-    if (drawAtlasCell(previewContext, cosmeticSpriteAtlas, speechIndex, 5, 4, 175, 8, 96, 70)) {
+    if (avatarDraft.speech === "leaf") {
+      previewContext.font = "46px sans-serif"; previewContext.textAlign = "center"; previewContext.fillText("🍀", 223, 58);
+    } else if (avatarDraft.speech === "window") {
+      previewContext.fillStyle = "#eaf7ff"; previewContext.fillRect(186, 14, 74, 48);
+      previewContext.strokeStyle = "#4e9bd6"; previewContext.lineWidth = 4; previewContext.strokeRect(186, 14, 74, 48);
+      previewContext.beginPath(); previewContext.moveTo(223, 14); previewContext.lineTo(223, 62); previewContext.moveTo(186, 38); previewContext.lineTo(260, 38); previewContext.stroke();
+    } else if (avatarDraft.speech === "cat" && drawAtlasCell(previewContext, cosmeticSpriteAtlas, speechIndex, 5, 4, 175, 8, 96, 70)) {
       previewContext.textAlign = "center"; previewContext.font = "bold 9px sans-serif"; previewContext.fillStyle = "#30323b";
-      previewContext.fillText(avatarDraft.speech === "cat" ? "안녕하세요!" : avatarDraft.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요", 223, 42);
+      previewContext.fillText("안녕하세요!", 223, 42);
     }
   }
 
@@ -1366,14 +1462,14 @@
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
     const items = ["hair", "outfit"].includes(activeAvatarCategory)
       ? avatarCatalog[activeAvatarCategory].filter((item) => stylePresetByItem[item.id])
-      : avatarCatalog[activeAvatarCategory];
+      : avatarItemsForCategory(activeAvatarCategory);
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
       const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
       const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (["lpcHair", "lpcOutfit", "lpcBottom", "lpcShoes", "lpcHat", "lpcGlasses", "expression"].includes(activeAvatarCategory)) {
+      if (Object.hasOwn(lpcCatalogMap, activeAvatarCategory)) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${activeAvatarCategory}" data-lpc-item="${item.id}" aria-hidden="true"></canvas>`;
       } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "skin"].includes(activeAvatarCategory) && item.color) {
         visual = `<span class="item-visual lpc-color-swatch" style="--swatch:${item.color}" aria-hidden="true"></span>`;
@@ -1389,6 +1485,8 @@
           : index == null
             ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
             : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
+      } else if (activeAvatarCategory === "speech") {
+        visual = `<span class="item-visual speech-item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
       } else if (cosmeticIndex != null) {
@@ -1397,11 +1495,13 @@
         visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
       const selected = (activeAvatarCategory === "pose" ? avatarPreviewPose : avatarDraft[activeAvatarCategory]) === item.id;
-      return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${selected ? "선택됨" : "보유 아이템"}</small></button>`;
+      const shortcuts = { idle: "대기", walk: "WASD", run: "R", sit: "X", attack: "Z", dance: "0", harvest: "Q", fishing: "Q", door: "Q" };
+      const actionViewOnly = activeAvatarCategory === "pose";
+      return `<button class="avatar-item-card${actionViewOnly ? " action-view-only" : ""}" type="button" ${actionViewOnly ? "disabled" : `data-avatar-item="${item.id}"`} aria-label="${item.name}${selected ? ", 현재 선택" : ", 보유"}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}${actionViewOnly ? `<span class="shortcut-badge">${shortcuts[item.id] || "자동"}</span>` : ""}${selected ? '<span class="selected-check" aria-hidden="true">✓</span>' : ""}</button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
     $("#avatar-preview-name").textContent = state.avatar.name;
-    $("#avatar-selection-name").textContent = selectedAvatarItem(activeAvatarCategory).name;
+    $("#avatar-selection-name").textContent = activeAvatarCategory === "pose" ? "단축키로 실행" : selectedAvatarItem(activeAvatarCategory).name;
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
     for (const [key, value] of Object.entries(avatarTuningDraft)) {
       const input = document.querySelector(`[data-avatar-tuning="${key}"]`);
@@ -1601,14 +1701,18 @@
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
     if (!button) return;
-    if (activeAvatarCategory === "pose") {
-      avatarPreviewPose = button.dataset.avatarItem;
-      renderAvatarStudio();
-      return;
-    }
+    if (activeAvatarCategory === "pose") return;
     if (activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
+    if (activeAvatarCategory === "bodyType") {
+      if (["male", "muscular", "teen", "child"].includes(avatarDraft.bodyType)) state.avatar.gender = "male";
+      if (avatarDraft.bodyType === "female") state.avatar.gender = "female";
+      Object.keys(lpcCatalogMap).forEach((categoryId) => {
+        const available = avatarItemsForCategory(categoryId);
+        if (!available.some((choice) => choice.id === avatarDraft[categoryId])) avatarDraft[categoryId] = available[0]?.id || "none";
+      });
+    }
     const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : null;
     if (linkedPreset && presetBundles[linkedPreset]) {
       avatarDraft = { ...avatarDraft, ...presetDecorationReset, preset: linkedPreset, ...presetBundles[linkedPreset] };
@@ -1624,8 +1728,8 @@
   $("#avatar-randomize").addEventListener("click", () => {
     avatarDraftHistory.push({ ...avatarDraft });
     avatarCategories.filter(({ id }) => id !== "pose").forEach(({ id }) => {
-      const choices = avatarCatalog[id];
-      avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
+      const choices = avatarItemsForCategory(id);
+      if (choices.length) avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
     });
     renderAvatarStudio();
   });
@@ -1743,9 +1847,21 @@
 
   async function toggleSit() {
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
+    if (!state.avatar.sitting && currentScene === "world") {
+      const chair = state.placed
+        .filter((placed) => ["chair_green", "chair_red", "bench"].includes(placed.code))
+        .map((placed) => ({ ...placed, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .filter((placed) => placed.distance < 64)
+        .sort((left, right) => left.distance - right.distance)[0];
+      if (chair) {
+        state.avatar.x = chair.x;
+        state.avatar.y = chair.y + 4;
+        state.avatar.direction = "down";
+      }
+    }
     state.avatar.sitting = !state.avatar.sitting;
     renderCanvas();
-    await persist(state.avatar.sitting ? "풀밭에 앉아 잠시 쉬고 있어요." : "자리에서 일어났습니다.");
+    await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
   }
 
   async function toggleRide(requireNearby = true) {

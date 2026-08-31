@@ -26,6 +26,9 @@
 - 집·당근밭·연못 클릭 및 근접 `Q` 상호작용, 소파 휴식·옷장·물주기·낚시 연결
 - `R` 달리기, `C` 채팅, `X` 앉기, `E` 숲 스쿠터 승하차
 - 옷장(아바타 액세서리)과 창고(숲 오브젝트)를 분리한 에셋 관리
+- 창고에는 텐트·캠핑 의자·피크닉 매트·연못·랜턴·울타리·꽃수레·화분·버섯·벤치·모닥불 등 20개 농장 꾸미기 오브젝트를 기본 제공한다.
+- 공동 목표 보상은 희귀 꾸미기 오브젝트 `행운의 젖소`다. 획득 즉시 창고에 들어가며, 별도 정원 전용 기능 없이 다른 꾸미기 오브젝트와 동일하게 월드에 배치·이동·회수한다.
+- 배치한 의자나 벤치 가까이에서 `X`를 누르면 해당 자리에 정렬해 앉고, 다시 `X`를 누르면 일어난다.
 - 기존 퀘스트 화면의 연속 참여·퀘스트별 당근 보상 정보를 월드 스튜디오에 통합
 - 1536×1024 내부 Canvas를 768×512 월드 좌표에 2배 렌더링하는 고해상도 픽셀 파이프라인
 - 집·공동 당근밭·공동 나무·연못·울타리·꽃·스쿠터를 독립 레이어 함수로 세분화
@@ -47,6 +50,7 @@
 - 오리지널 투명 PNG 아틀라스 기반의 정교한 32-bit 치비 캐릭터 12종과 꾸미기 아이콘 20종 적용
 - 카드 썸네일은 원본 아틀라스를 안전하게 크롭하고, 미리보기·커스텀 월드는 레이어형 렌더러로 선택 조합을 정확히 표현한다.
 - 파란 눈의 흰 고양이와 노란 눈의 주황갈색 고양이를 전용 펫 아틀라스로 추가
+- [LPC Rat, Cat and Dog](https://opengameart.org/content/lpc-rat-cat-and-dog)의 강아지 1종·고양이 2종을 4방향 3프레임 펫 아틀라스로 재구성했다. 원저작자 표기는 `Rat/Cat/Dog by Tuomo Untinen`, 배포 라이선스는 CC-BY 3.0·CC-BY-SA 3.0·GPL 3.0·GPL 2.0이다.
 - Universal LPC 호환 레이어 팩을 도입해 몸·헤어·상의·하의·신발·모자·안경을 동일한 프레임 규격으로 실시간 합성
 - `Q` 당근 수확·낚시·문 열기, `Z` 공격, `0` 아바타·펫 동시 춤, `X` 아바타·펫 동시 앉기 동작 추가
 - 펫을 아바타에 고정하지 않고 최근 이동 경로를 시간차로 추적하는 독립 월드 액터로 변경
@@ -81,12 +85,14 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-avatar-*-normalized-v2.png`: 정수 셀과 하단 앵커를 적용한 실제 실행용 아틀라스
 - `src/frontend/assets/carrot-forest-avatar-manifest-v2.json`: 원본·정규화 프레임 경계와 방향 행 메타데이터
 - `src/frontend/assets/carrot-forest-cosmetics-atlas-v1.png`: 프로젝트용으로 생성한 오리지널 5×4 투명 꾸미기 아이콘 아틀라스
-- `src/frontend/assets/carrot-forest-cat-pets-v1.png`: 파란 눈 흰 고양이·노란 눈 주황갈색 고양이 2×1 투명 펫 아틀라스
+- `src/frontend/assets/carrot-forest-lpc-pets-v1.png`: LPC 동물 시트에서 재구성한 흰 고양이·주황 고양이·강아지의 4방향 보행 아틀라스
 - `src/frontend/assets/lpc-pack/`: Universal LPC에서 선별·정규화한 아바타 레이어와 파일별 크레딧
 - `scripts/build_lpc_avatar_pack.py`: LPC 레이어 팩 재현 빌드 스크립트
 - `src/frontend/lpc-avatar-engine.js`: 4방향 LPC 합성·표정·행동·탈것 렌더러
 - 라이선스와 확장 절차는 [`LPC_AVATAR_ENGINE.md`](LPC_AVATAR_ENGINE.md)에서 확인한다.
 - `src/frontend/assets/carrot-forest-storage-atlas-v1.png`: 꽃밭·등불·바르게 선 버섯·벤치 4×1 투명 창고 오브젝트 아틀라스
+- `src/frontend/assets/carrot-forest-storage-atlas-v2.png`: 텐트·캠핑 가구·연못·화분·버섯 등 20종 꾸미기 오브젝트 아틀라스
+- `src/frontend/assets/carrot-forest-reward-cow-v1.png`: 공동 목표 보상으로 창고에 지급되는 희귀 꾸미기 오브젝트 `행운의 젖소`
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
