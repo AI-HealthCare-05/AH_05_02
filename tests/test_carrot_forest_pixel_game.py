@@ -444,7 +444,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v32" in worker
+    assert "gandang-carrot-forest-pwa-v33" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
@@ -605,3 +605,26 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     assert "syncPlacedObjects" in phaser_script
     assert "animated-object-thumb" in css
     assert "carrot-forest-animated-objects-v1.png" in worker
+
+
+def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None:
+    import struct
+
+    atlas = ROOT / "src/frontend/assets/carrot-forest-storage-atlas-v3.png"
+    raw = atlas.read_bytes()
+    width, height = struct.unpack(">II", raw[16:24])
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert (width, height) == (256 * 5, 256 * 4)
+    assert (ROOT / "scripts/build_storage_object_atlas.py").is_file()
+    assert 'this.load.spritesheet("storage-objects"' in phaser_script
+    assert "storageObjectIndex" in phaser_script
+    assert 'item.code === "reward_cow"' in phaser_script
+    assert "outfitHistory" in game_script
+    assert "rememberCurrentOutfit" in game_script
+    assert "applyOutfitLook" in game_script
+    assert "data-outfit-look" in game_script
+    assert "inventory: [...storageObjectCodes]" in game_script
+    assert "carrot-forest-storage-atlas-v3.png" in css

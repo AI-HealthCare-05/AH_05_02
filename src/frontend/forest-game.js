@@ -309,13 +309,50 @@
   const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
 
+  function outfitSignature(avatar) {
+    return JSON.stringify({ gender: avatar.gender, preset: avatar.preset, cosmetics: avatar.cosmetics, tuning: avatar.tuning });
+  }
+
+  function createOutfitSnapshot(avatar, savedAt = Date.now()) {
+    return {
+      id: `look-${savedAt}-${Math.random().toString(36).slice(2, 7)}`,
+      savedAt,
+      label: presets[avatar.preset]?.label || "나만의 코디",
+      gender: avatar.gender,
+      preset: avatar.preset,
+      cosmetics: { ...defaultCosmetics, ...(avatar.cosmetics || {}) },
+      tuning: { ...defaultAvatarTuning, ...(avatar.tuning || {}) },
+      signature: outfitSignature(avatar),
+    };
+  }
+
+  function normalizeOutfitHistory(history, avatar) {
+    const normalized = (Array.isArray(history) ? history : []).filter((look) => look?.id && look?.cosmetics).map((look) => ({
+      ...look,
+      gender: look.gender || avatar.gender,
+      preset: look.preset || avatar.preset,
+      cosmetics: { ...defaultCosmetics, ...look.cosmetics },
+      tuning: { ...defaultAvatarTuning, ...(look.tuning || {}) },
+      signature: look.signature || outfitSignature(look),
+    }));
+    if (!normalized.length) normalized.push(createOutfitSnapshot(avatar));
+    return normalized.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)).slice(0, 8);
+  }
+
+  function rememberCurrentOutfit() {
+    const snapshot = createOutfitSnapshot(state.avatar);
+    const previous = Array.isArray(state.outfitHistory) ? state.outfitHistory : [];
+    state.outfitHistory = [snapshot, ...previous.filter((look) => look.signature !== snapshot.signature)].slice(0, 8);
+  }
+
   function defaultState() {
     const generatedNickname = generateNickname();
+    const avatar = { name: generatedNickname, gender: "male", engine: "lpc", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false };
     return {
       dateKey: TODAY,
       profileVersion: 1,
       cosmeticSchemaVersion: 2,
-      avatar: { name: generatedNickname, gender: "male", engine: "lpc", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
+      avatar,
       quests: { walk: false, meal: false, check: false },
       challengePlan: { onboarded: false, style: null, questIds: [], lastGeneratedAt: null },
       groupGoalMemo: "",
@@ -327,7 +364,8 @@
         { id: "m5", name: "세준", completed: 3 },
       ],
       carrots: 100,
-      inventory: ["red_scarf", ...storageObjectCodes],
+      inventory: [...storageObjectCodes],
+      outfitHistory: [createOutfitSnapshot(avatar)],
       placed: [],
       rewardClaimed: false,
       gardenWatered: false,
@@ -355,7 +393,8 @@
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
-      fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]) : fallback.inventory;
+      fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
+      fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
       return fallback;
     }
@@ -374,7 +413,8 @@
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
     state.members = state.members.map((member) => member.id === "m5" && member.name === "숲지기" ? { ...member, name: "세준" } : member);
     state.inventory = [...new Set([...(Array.isArray(value.inventory) ? value.inventory : fallback.inventory), ...storageObjectCodes])]
-      .filter((code) => itemCatalog[code]);
+      .filter((code) => itemCatalog[code]?.kind === "object");
+    state.outfitHistory = normalizeOutfitHistory(value.outfitHistory, state.avatar);
     // 보상 풀이 바뀌기 전에 상자를 연 데모 사용자도 희귀 꾸미기 보상을 잃지 않도록 보정한다.
     if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
     state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
@@ -459,7 +499,7 @@
   avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
-  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v2.png?v=20260831-1";
+  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1";
   rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1";
   basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
@@ -490,12 +530,14 @@
   window.addEventListener("lpc-avatar-ready", () => {
     syncLpcCatalog();
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
   window.LpcAvatarEngine?.ready().then(() => {
     syncLpcCatalog();
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
@@ -1250,8 +1292,51 @@
     $("#group-goal-memo").value = state.groupGoalMemo || "";
   }
 
+  function outfitCardMarkup(look, compact = false) {
+    const savedDate = new Date(Number(look.savedAt || Date.now()));
+    const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
+    return `<button class="recent-outfit-card${compact ? " is-compact" : ""}" type="button" data-outfit-look="${look.id}" aria-label="${look.label}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${look.id}" aria-hidden="true"></canvas><strong>${look.label}</strong><small>${timestamp}</small></button>`;
+  }
+
+  function drawWardrobeLookThumbnails() {
+    if (!window.LpcAvatarEngine?.isReady()) return;
+    document.querySelectorAll("canvas[data-outfit-canvas]").forEach((thumbnail) => {
+      const look = state.outfitHistory.find((item) => item.id === thumbnail.dataset.outfitCanvas);
+      if (!look) return;
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      window.LpcAvatarEngine.draw(target, { gender: look.gender, engine: "lpc", cosmetics: look.cosmetics }, {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: 5, y: 4, width: 86, height: 88 });
+    });
+  }
+
+  async function applyOutfitLook(lookId) {
+    const look = state.outfitHistory.find((item) => item.id === lookId);
+    if (!look) return;
+    state.avatar.gender = look.gender;
+    state.avatar.preset = look.preset;
+    state.avatar.engine = "lpc";
+    state.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
+    state.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
+    state.avatar.equipped = null;
+    $("#avatar-gender").value = state.avatar.gender;
+    $("#avatar-preset").value = state.avatar.preset;
+    renderInventory();
+    renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
+    await persist(`${look.label} 코디를 다시 착용했습니다.`);
+  }
+
   function renderInventoryDialog(view = "storage") {
     document.querySelectorAll("[data-inventory-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.inventoryView === view));
+    if (view === "wardrobe") {
+      $("#inventory-dialog-grid").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look, true)).join("");
+      $("#inventory-dialog").dataset.view = view;
+      drawWardrobeLookThumbnails();
+      return;
+    }
     const kind = view === "wardrobe" ? "accessory" : "object";
     const codes = state.inventory.filter((code) => itemCatalog[code]?.kind === kind);
     $("#inventory-dialog-grid").innerHTML = codes.map((code) => {
@@ -1283,8 +1368,9 @@
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
-    $("#wardrobe-list").innerHTML = renderItems("accessory") || "<p class=\"empty-assets\">획득한 의상이 없습니다.</p>";
+    $("#wardrobe-list").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look)).join("") || "<p class=\"empty-assets\">최근 저장한 코디가 없습니다.</p>";
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
+    drawWardrobeLookThumbnails();
     $("#cancel-placement").hidden = !placementCode;
     $("#placement-mode").textContent = placementCode ? `${itemCatalog[placementCode].name} 배치 위치를 맵에서 선택하세요` : "배치할 아이템 없음";
   }
@@ -1831,6 +1917,8 @@
       state.avatar.cosmetics = { ...state.avatar.cosmetics, ...presetBundles[state.avatar.preset] };
       state.avatar.equipped = null;
     }
+    rememberCurrentOutfit();
+    renderInventory();
     renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
   });
 
@@ -1921,6 +2009,7 @@
     state.avatar.cosmetics = { ...savedCosmetics };
     state.avatar.tuning = { ...avatarTuningDraft };
     state.avatar.equipped = avatarDraft.accessory === "none" ? null : avatarDraft.accessory;
+    rememberCurrentOutfit();
     $("#avatar-preset").value = state.avatar.preset;
     renderInventory();
     renderCanvas();
@@ -1930,6 +2019,11 @@
   });
 
   $("#asset-dock").addEventListener("click", async (event) => {
+    const lookButton = event.target.closest("[data-outfit-look]");
+    if (lookButton) {
+      await applyOutfitLook(lookButton.dataset.outfitLook);
+      return;
+    }
     const button = event.target.closest("[data-item]");
     if (!button) return;
     const code = button.dataset.item;
@@ -1945,9 +2039,6 @@
     setStatus(placementCode ? `${itemCatalog[code].name}을 놓을 위치를 맵에서 눌러 주세요.` : "오브젝트 배치를 취소했습니다.");
   });
 
-  $("#unequip-button").addEventListener("click", async () => {
-    state.avatar.equipped = null; state.avatar.cosmetics.accessory = "none"; renderInventory(); renderCanvas(); await persist("액세서리를 해제했습니다.");
-  });
   $("#cancel-placement").addEventListener("click", () => { placementCode = null; renderInventory(); setStatus("오브젝트 배치를 취소했습니다."); });
 
   $("#placed-list").addEventListener("click", async (event) => {
@@ -2147,7 +2238,13 @@
 
   $("#inventory-dialog-close").addEventListener("click", () => $("#inventory-dialog").close());
   document.querySelectorAll("[data-inventory-view]").forEach((button) => button.addEventListener("click", () => renderInventoryDialog(button.dataset.inventoryView)));
-  $("#inventory-dialog-grid").addEventListener("click", (event) => {
+  $("#inventory-dialog-grid").addEventListener("click", async (event) => {
+    const lookId = event.target.closest("[data-outfit-look]")?.dataset.outfitLook;
+    if (lookId) {
+      $("#inventory-dialog").close();
+      await applyOutfitLook(lookId);
+      return;
+    }
     const code = event.target.closest("[data-inventory-dialog-item]")?.dataset.inventoryDialogItem;
     if (!code) return;
     $("#inventory-dialog").close();
