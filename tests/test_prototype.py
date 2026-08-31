@@ -180,6 +180,33 @@ def test_challenge_grid_has_a_custom_challenge_slot() -> None:
     assert "나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
 
 
+def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="challenge-category-panel"' in html
+    assert 'id="challenge-detail-list"' in html
+    assert 'id="challenge-selection-count"' in html
+    for category in ("움직이기", "건강하게 먹기", "기록하기"):
+        assert category in script
+    for challenge in (
+        "빠르게 걷기",
+        "30분마다 일어나기",
+        "채소 먼저 먹기",
+        "통곡물·잡곡 선택",
+        "7~8시간 수면 기록",
+        "생활습관 돌아보기",
+        "무가당 음료 주 5일",
+        "채소 먹기 주 5일",
+        "통곡물 선택 주 3회",
+        "체중 추이 확인",
+    ):
+        assert challenge in script
+    assert 'api("/challenges")' in script
+    assert "state.selectedChallengeIds" in script
+    assert "챌린지는 최대 3개까지 선택할 수 있어요." in script
+
+
 def test_frontend_distinguishes_api_errors_without_demo_fallback() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
