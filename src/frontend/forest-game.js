@@ -116,6 +116,7 @@
   const avatarCategories = [
     { id: "bodyType", label: "체형", icon: "🧍" },
     { id: "skin", label: "피부", icon: "🎨" },
+    { id: "face", label: "얼굴", icon: "😊" },
     { id: "lpcHair", label: "헤어", icon: "💇" },
     { id: "hairColor", label: "헤어 색", icon: "🖌️" },
     { id: "lpcOutfit", label: "상의", icon: "👕" },
@@ -124,11 +125,6 @@
     { id: "bottomColor", label: "하의 색", icon: '<i class="thread-icon thread-blue"></i>' },
     { id: "lpcShoes", label: "신발", icon: "👟" },
     { id: "shoeColor", label: "신발 색", icon: '<i class="thread-icon thread-mono"></i>' },
-    { id: "lpcExpression", label: "얼굴·표정", icon: "😊" },
-    { id: "lpcEyebrow", label: "눈썹", icon: "〰️" },
-    { id: "lpcNose", label: "코", icon: "👃" },
-    { id: "lpcEyes", label: "특수 눈", icon: "👁️" },
-    { id: "lpcWrinkles", label: "주름", icon: "🧓" },
     { id: "lpcHat", label: "모자", icon: "🧢" },
     { id: "lpcGlasses", label: "안경", icon: "👓" },
     { id: "aura", label: "아우라", icon: "✨" },
@@ -137,6 +133,16 @@
     { id: "pet", label: "펫", icon: "🐾" },
     { id: "speech", label: "말풍선", icon: "💬" },
     { id: "pose", label: "동작", icon: "🏃" },
+  ];
+  const faceSections = [
+    { id: "lpcFaceShape", label: "얼굴형" },
+    { id: "lpcExpression", label: "표정" },
+    { id: "lpcEyeStyle", label: "눈" },
+    { id: "lpcEyes", label: "특수 눈" },
+    { id: "lpcEyebrow", label: "눈썹" },
+    { id: "lpcNose", label: "코" },
+    { id: "lpcMouth", label: "입" },
+    { id: "lpcWrinkles", label: "주름" },
   ];
   const avatarCatalog = {
     bodyType: [
@@ -258,6 +264,18 @@
       { id: "wink", name: "윙크", visual: "😉" }, { id: "delighted", name: "눈웃음", visual: "😊" },
       { id: "worried", name: "살짝 걱정", visual: "😟" }, { id: "determined", name: "씩씩한 표정", visual: "😤" },
     ],
+    lpcFaceShape: [
+      { id: "oval", name: "타원형", visual: "🙂" }, { id: "round", name: "둥근형", visual: "😊" },
+      { id: "angular", name: "각진형", visual: "😌" },
+    ],
+    lpcEyeStyle: [
+      { id: "round", name: "동그란 눈", visual: "● ●" }, { id: "soft", name: "부드러운 눈", visual: "⌒ ⌒" },
+      { id: "bright", name: "반짝이는 눈", visual: "✦ ✦" }, { id: "narrow", name: "가느다란 눈", visual: "― ―" },
+    ],
+    lpcMouth: [
+      { id: "smile", name: "미소", visual: "⌣" }, { id: "neutral", name: "차분한 입", visual: "―" },
+      { id: "grin", name: "활짝 웃는 입", visual: "◡" }, { id: "pout", name: "앙다문 입", visual: "•" },
+    ],
     lpcExpression: [], lpcEyebrow: [], lpcNose: [], lpcEyes: [], lpcWrinkles: [],
     pose: [
       { id: "idle", name: "가만히", visual: "🧍" }, { id: "walk", name: "걷기", visual: "🚶" },
@@ -280,8 +298,8 @@
   avatarCatalog.bottomColor = colorChoices;
   avatarCatalog.shoeColor = colorChoices;
   const lpcCatalogMap = {
-    lpcHair: ["hair", 12], lpcOutfit: ["outfit", 20], lpcBottom: ["bottom", 15],
-    lpcShoes: ["shoes", 9], lpcHat: ["hat", 12], lpcGlasses: ["eyewear", 12],
+    lpcHair: ["hair", 24], lpcOutfit: ["outfit", 20], lpcBottom: ["bottom", 15],
+    lpcShoes: ["shoes", 12], lpcHat: ["hat", 19], lpcGlasses: ["eyewear", 16],
     lpcExpression: ["expression", 16], lpcEyebrow: ["eyebrow", 2], lpcNose: ["nose", 5],
     lpcEyes: ["eyes", 2], lpcWrinkles: ["wrinkles", 1],
   };
@@ -308,7 +326,7 @@
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
     lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
-    bodyType: "male", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
+    bodyType: "male", lpcFaceShape: "oval", lpcExpression: "happy2", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
     expression: "bright", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
     hatColor: "brown", glassesColor: "brown",
   };
@@ -508,7 +526,8 @@
   let walkingUntil = 0;
   let walkAnimationFrame = 0;
   let currentScene = "world";
-  let activeAvatarCategory = "lpcHair";
+  let activeAvatarCategory = "bodyType";
+  let activeFaceSection = "lpcFaceShape";
   let avatarPreviewPose = "idle";
   let avatarPreviewFrame = 0;
   let lastAvatarPreviewAt = 0;
@@ -591,31 +610,34 @@
       this.audioContext = null;
       this.timer = null;
       this.step = 0;
-      this.notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
+      // C 장조 펜타토닉을 중심으로 음 사이를 넓혀 오래 들어도 피로하지 않게 한다.
+      this.notes = [261.63, 329.63, 392, 523.25, 440, 392, 329.63, 293.66, 349.23, 440, 523.25, 659.25, 523.25, 440, 392, 329.63];
+      this.bass = [130.81, 146.83, 174.61, 130.81];
     }
-    playNote(frequency, when) {
+    playNote(frequency, when, { type = "sine", volume = .025, duration = 1.25 } = {}) {
       const oscillator = this.audioContext.createOscillator();
       const gain = this.audioContext.createGain();
-      oscillator.type = "sine";
+      oscillator.type = type;
       oscillator.frequency.value = frequency;
       gain.gain.setValueAtTime(.0001, when);
-      gain.gain.exponentialRampToValueAtTime(.055, when + .04);
-      gain.gain.exponentialRampToValueAtTime(.0001, when + .7);
+      gain.gain.exponentialRampToValueAtTime(volume, when + .08);
+      gain.gain.exponentialRampToValueAtTime(.0001, when + duration);
       oscillator.connect(gain).connect(this.audioContext.destination);
       oscillator.start(when);
-      oscillator.stop(when + .75);
+      oscillator.stop(when + duration + .05);
     }
     async start() {
       this.audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
       await this.audioContext.resume();
       const playStep = () => {
         const now = this.audioContext.currentTime;
-        this.playNote(this.notes[this.step % this.notes.length], now);
-        if (this.step % 2 === 0) this.playNote(this.notes[(this.step + 2) % this.notes.length] / 2, now);
+        this.playNote(this.notes[this.step % this.notes.length], now, { type: "sine", volume: .022, duration: 1.15 });
+        if (this.step % 4 === 0) this.playNote(this.bass[(this.step / 4) % this.bass.length], now, { type: "triangle", volume: .012, duration: 2.8 });
+        if (this.step % 8 === 6) this.playNote(this.notes[(this.step + 2) % this.notes.length] * 2, now + .18, { type: "sine", volume: .007, duration: .8 });
         this.step += 1;
       };
       playStep();
-      this.timer = window.setInterval(playStep, 760);
+      this.timer = window.setInterval(playStep, 1080);
     }
     stop() {
       window.clearInterval(this.timer);
@@ -1406,9 +1428,18 @@
     $("#inventory-dialog-grid").innerHTML = codes.map((code) => {
       const item = itemCatalog[code];
       const animatedRow = animatedObjectRows[code];
-      const visual = animatedRow == null
-        ? `<span aria-hidden="true">${item.icon}</span>`
-        : `<span class="animated-object-thumb" style="--animated-row:${animatedRow};background-position-y:${animatedRow * 100 / 3}%" aria-hidden="true"></span>`;
+      let visual;
+      if (code === "reward_cow") visual = '<span class="storage-reward-cow" aria-hidden="true"></span>';
+      else if (animatedRow != null) visual = `<span class="animated-object-thumb" style="--animated-row:${animatedRow};background-position-y:${animatedRow * 100 / 3}%" aria-hidden="true"></span>`;
+      else {
+        const storageIndex = storageObjectIndex[code];
+        if (storageIndex == null) visual = `<span aria-hidden="true">${item.icon || "📦"}</span>`;
+        else {
+          const column = storageIndex % 5;
+          const row = Math.floor(storageIndex / 5);
+          visual = `<span class="storage-sprite-thumb" style="background-position:${column * 25}% ${row * 100 / 3}%" aria-hidden="true"></span>`;
+        }
+      }
       return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}">${visual}${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
     }).join("") || "<p>아직 보관 중인 아이템이 없습니다.</p>";
     $("#inventory-dialog").dataset.view = view;
@@ -1474,9 +1505,12 @@
       const id = thumbnail.dataset.lpcItem;
       const cosmetics = { ...avatarDraft, [category]: id };
       const pose = category === "lpcExpression" ? "idle" : avatarPreviewPose;
+      const faceCategory = faceSections.some((section) => section.id === category);
       window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
         direction: "down", pose, frame: avatarPreviewFrame,
-      }, { x: 3, y: 3, width: 90, height: 90 });
+      }, faceCategory
+        ? { x: -7, y: -10, width: 110, height: 110 }
+        : { x: 3, y: 3, width: 90, height: 90 });
     });
     document.querySelectorAll("canvas[data-preset-thumb]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
@@ -1672,33 +1706,37 @@
 
   function renderAvatarStudio() {
     $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
+    const effectiveCategory = activeAvatarCategory === "face" ? activeFaceSection : activeAvatarCategory;
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
-    const items = ["hair", "outfit"].includes(activeAvatarCategory)
-      ? avatarCatalog[activeAvatarCategory].filter((item) => stylePresetByItem[item.id])
-      : avatarItemsForCategory(activeAvatarCategory);
-    $("#avatar-category-title").textContent = category.label;
+    const items = ["hair", "outfit"].includes(effectiveCategory)
+      ? avatarCatalog[effectiveCategory].filter((item) => stylePresetByItem[item.id])
+      : avatarItemsForCategory(effectiveCategory);
+    const faceTabs = $("#face-section-tabs");
+    faceTabs.hidden = activeAvatarCategory !== "face";
+    faceTabs.innerHTML = activeAvatarCategory === "face" ? faceSections.map((section) => `<button type="button" role="tab" data-face-section="${section.id}" aria-selected="${activeFaceSection === section.id}">${section.label}</button>`).join("") : "";
+    $("#avatar-category-title").textContent = activeAvatarCategory === "face" ? `얼굴 · ${faceSections.find((section) => section.id === activeFaceSection)?.label}` : category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
-      const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
-      const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
+      const cosmeticIndex = cosmeticSpriteIndex(effectiveCategory, item.id);
+      const catIndex = effectiveCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (Object.hasOwn(lpcCatalogMap, activeAvatarCategory)) {
-        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${activeAvatarCategory}" data-lpc-item="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "skin"].includes(activeAvatarCategory) && item.color) {
+      if (Object.hasOwn(lpcCatalogMap, effectiveCategory) || ["lpcFaceShape", "lpcEyeStyle", "lpcMouth"].includes(effectiveCategory)) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${effectiveCategory}" data-lpc-item="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "skin"].includes(effectiveCategory) && item.color) {
         visual = `<span class="item-visual lpc-color-swatch" style="--swatch:${item.color}" aria-hidden="true"></span>`;
-      } else if (activeAvatarCategory === "preset") {
+      } else if (effectiveCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (["hair", "outfit"].includes(activeAvatarCategory)) {
+      } else if (["hair", "outfit"].includes(effectiveCategory)) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${stylePresetByItem[item.id]}" data-preset-crop="${activeAvatarCategory === "hair" ? "head" : "body"}" aria-hidden="true"></canvas>`;
-      } else if (["face", "accessory"].includes(activeAvatarCategory)) {
+      } else if (["face", "accessory"].includes(effectiveCategory)) {
         const itemPreset = stylePresetByItem[item.id];
-        const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
+        const index = avatarThumbnailIndexes[effectiveCategory][item.id];
         visual = itemPreset
           ? `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${itemPreset}" aria-hidden="true"></canvas>`
           : index == null
             ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
             : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
-      } else if (activeAvatarCategory === "speech") {
+      } else if (effectiveCategory === "speech") {
         visual = `<span class="item-visual speech-item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
@@ -1707,14 +1745,14 @@
       } else {
         visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
-      const selected = (activeAvatarCategory === "pose" ? avatarPreviewPose : avatarDraft[activeAvatarCategory]) === item.id;
+      const selected = (effectiveCategory === "pose" ? avatarPreviewPose : avatarDraft[effectiveCategory]) === item.id;
       const shortcuts = { idle: "대기", walk: "WASD", run: "R", sit: "X", attack: "Z", dance: "0", harvest: "Q", fishing: "Q", door: "Q" };
-      const actionViewOnly = activeAvatarCategory === "pose";
+      const actionViewOnly = effectiveCategory === "pose";
       return `<button class="avatar-item-card${actionViewOnly ? " action-view-only" : ""}" type="button" ${actionViewOnly ? "disabled" : `data-avatar-item="${item.id}"`} aria-label="${item.name}${selected ? ", 현재 선택" : ", 보유"}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}${actionViewOnly ? `<span class="shortcut-badge">${shortcuts[item.id] || "자동"}</span>` : ""}${selected ? '<span class="selected-check" aria-hidden="true">✓</span>' : ""}</button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
     $("#avatar-preview-name").textContent = state.avatar.name;
-    $("#avatar-selection-name").textContent = activeAvatarCategory === "pose" ? "단축키로 실행" : selectedAvatarItem(activeAvatarCategory).name;
+    $("#avatar-selection-name").textContent = effectiveCategory === "pose" ? "단축키로 실행" : selectedAvatarItem(effectiveCategory).name;
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
     for (const [key, value] of Object.entries(avatarTuningDraft)) {
       const input = document.querySelector(`[data-avatar-tuning="${key}"]`);
@@ -1731,7 +1769,8 @@
     avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "blue_cap" };
     avatarTuningDraft = { ...defaultAvatarTuning, ...(state.avatar.tuning || {}) };
     avatarDraftHistory = [];
-    activeAvatarCategory = "lpcHair";
+    activeAvatarCategory = "bodyType";
+    activeFaceSection = "lpcFaceShape";
     avatarPreviewPose = "idle";
     renderAvatarStudio();
     $("#avatar-studio").showModal();
@@ -1895,7 +1934,7 @@
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     await Promise.race([
-      animationDelay(reducedMotion ? 250 : 2300),
+      animationDelay(reducedMotion ? 250 : 1900),
       new Promise((resolve) => { rewardSkipResolve = resolve; }),
     ]);
     rewardSkipResolve = null;
@@ -1973,8 +2012,8 @@
 
   $("#group-goal-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 160);
-    await persist("우리 모임의 공동 목표 메모를 저장했습니다.");
+    state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 80);
+    await persist("오늘의 슬로건을 저장했습니다.");
   });
 
   $("#avatar-form").addEventListener("submit", async (event) => {
@@ -2026,14 +2065,21 @@
     activeAvatarCategory = button.dataset.avatarCategory;
     renderAvatarStudio();
   });
+  $("#face-section-tabs").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-face-section]");
+    if (!button) return;
+    activeFaceSection = button.dataset.faceSection;
+    renderAvatarStudio();
+  });
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
     if (!button) return;
-    if (activeAvatarCategory === "pose") return;
-    if (activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
+    const categoryId = activeAvatarCategory === "face" ? activeFaceSection : activeAvatarCategory;
+    if (categoryId === "pose") return;
+    if (categoryId !== "preset" && avatarDraft[categoryId] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
-    if (activeAvatarCategory === "bodyType") {
+    avatarDraft[categoryId] = button.dataset.avatarItem;
+    if (categoryId === "bodyType") {
       if (["male", "muscular", "teen", "child"].includes(avatarDraft.bodyType)) state.avatar.gender = "male";
       if (avatarDraft.bodyType === "female") state.avatar.gender = "female";
       Object.keys(lpcCatalogMap).forEach((categoryId) => {
@@ -2041,7 +2087,7 @@
         if (!available.some((choice) => choice.id === avatarDraft[categoryId])) avatarDraft[categoryId] = available[0]?.id || "none";
       });
     }
-    const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : null;
+    const linkedPreset = categoryId === "preset" ? button.dataset.avatarItem : null;
     if (linkedPreset && presetBundles[linkedPreset]) {
       avatarDraft = { ...avatarDraft, ...presetDecorationReset, preset: linkedPreset, ...presetBundles[linkedPreset] };
     }
@@ -2055,7 +2101,11 @@
   });
   $("#avatar-randomize").addEventListener("click", () => {
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarCategories.filter(({ id }) => id !== "pose").forEach(({ id }) => {
+    avatarCategories.filter(({ id }) => !["pose", "face"].includes(id)).forEach(({ id }) => {
+      const choices = avatarItemsForCategory(id);
+      if (choices.length) avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
+    });
+    faceSections.forEach(({ id }) => {
       const choices = avatarItemsForCategory(id);
       if (choices.length) avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
     });

@@ -213,6 +213,53 @@
     );
   }
 
+  // 일부 LPC 표정은 볼터치처럼 얼굴의 일부분만 포함한다. 선택한 표정 파일이
+  // 비어 있거나 부분 레이어여도 눈·코·입이 사라지지 않도록 코드 기반 얼굴을
+  // 헤어와 안경보다 먼저 그린다.
+  function drawFaceDetails(context, destination, direction, cosmetics = {}) {
+    if (direction === "up") return;
+    const eyeStyle = cosmetics.lpcEyeStyle || "round";
+    const mouthStyle = cosmetics.lpcMouth || "smile";
+    const faceShape = cosmetics.lpcFaceShape || "oval";
+    const skinShadow = {
+      porcelain: "#e2aa94", peach: "#c98770", rose: "#ca7c79", sand: "#a66f54",
+      golden: "#8e5e3f", amber: "#74462f", bronze: "#5c3728", espresso: "#35221c",
+      olive: "#826349", neutral: "#9a6a55", warm: "#996047", deep: "#553527",
+    }[cosmetics.skin] || "#9b624d";
+    const eye = cosmetics.hairColor === "blue" ? "#274f77" : cosmetics.hairColor === "green" ? "#315c45" : "#2d2524";
+    const mouth = "#9d4d4c";
+    const positions = direction === "down"
+      ? { eyes: [[25, 29], [37, 29]], nose: [31, 33], mouth: [31, 36], cheeks: [[20, 33], [43, 33]] }
+      : direction === "left"
+        ? { eyes: [[25, 29]], nose: [22, 33], mouth: [23, 36], cheeks: [[19, 33]] }
+        : { eyes: [[38, 29]], nose: [41, 33], mouth: [40, 36], cheeks: [[44, 33]] };
+
+    positions.cheeks.forEach(([x, y]) => {
+      const offset = faceShape === "round" ? 0 : faceShape === "angular" ? 2 : 1;
+      drawPixel(context, destination, x, y + offset, 2, 2, skinShadow);
+    });
+    positions.eyes.forEach(([x, y]) => {
+      if (eyeStyle === "soft") drawPixel(context, destination, x - 1, y, 4, 1, eye);
+      else if (eyeStyle === "narrow") drawPixel(context, destination, x - 1, y + 1, 4, 1, eye);
+      else {
+        drawPixel(context, destination, x, y, 2, 3, eye);
+        if (eyeStyle === "bright") drawPixel(context, destination, x, y, 1, 1, "#ffffff");
+      }
+    });
+    drawPixel(context, destination, positions.nose[0], positions.nose[1], 1, 1, skinShadow);
+    const [mouthX, mouthY] = positions.mouth;
+    if (mouthStyle === "neutral") drawPixel(context, destination, mouthX - 2, mouthY, 4, 1, mouth);
+    else if (mouthStyle === "grin") {
+      drawPixel(context, destination, mouthX - 3, mouthY, 6, 1, mouth);
+      drawPixel(context, destination, mouthX - 2, mouthY + 1, 4, 1, "#fff3df");
+    } else if (mouthStyle === "pout") drawPixel(context, destination, mouthX - 1, mouthY, 2, 2, mouth);
+    else {
+      drawPixel(context, destination, mouthX - 2, mouthY, 1, 1, mouth);
+      drawPixel(context, destination, mouthX - 1, mouthY + 1, 3, 1, mouth);
+      drawPixel(context, destination, mouthX + 2, mouthY, 1, 1, mouth);
+    }
+  }
+
   function drawScooter(context, destination, direction, moving, frame) {
     if (direction === "up") return;
     const scaleX = destination.width / FRAME;
@@ -257,7 +304,12 @@
     context.save();
     context.imageSmoothingEnabled = false;
     if (avatar.mounted) drawScooter(context, target, direction, Boolean(options.moving), frameIndex);
+    let faceDetailsDrawn = false;
     selectedLayers(avatar).forEach((layer) => {
+      if (!faceDetailsDrawn && ["hair", "eyewear", "hat"].includes(layer.category)) {
+        drawFaceDetails(context, target, direction, avatar.cosmetics || {});
+        faceDetailsDrawn = true;
+      }
       const image = images.get(layer.file);
       if (!image) { ensureImage(layer.file); return; }
       context.save();
@@ -268,6 +320,7 @@
       );
       context.restore();
     });
+    if (!faceDetailsDrawn) drawFaceDetails(context, target, direction, avatar.cosmetics || {});
     drawActionProp(context, target, direction, options.pose, frameIndex, avatar.cosmetics || {});
     context.restore();
     return true;

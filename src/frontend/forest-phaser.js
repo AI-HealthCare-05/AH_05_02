@@ -28,7 +28,7 @@
     hat: "none", glasses: "none", face: "calm", accessory: "none",
     lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
     lpcHat: "none", lpcGlasses: "none", expression: "bright", bodyType: "male",
-    lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
+    lpcFaceShape: "oval", lpcExpression: "happy2", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
     hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
   };
   const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };
@@ -137,23 +137,26 @@
       this.rebuildAvatar();
       this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E,F");
       this.cursors = this.input.keyboard.createCursorKeys();
-      this.input.keyboard.on("keydown-Q", () => window.dispatchEvent(new CustomEvent("forest-phaser-interact")));
-      this.input.keyboard.on("keydown-C", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })));
+      // Phaser가 Space를 가로채면 슬로건 textarea에서 띄어쓰기가 되지 않는다.
+      this.input.keyboard.removeCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);
+      const formFocused = () => ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(document.activeElement?.tagName);
+      this.input.keyboard.on("keydown-Q", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-interact")); });
+      this.input.keyboard.on("keydown-C", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })); });
       this.input.keyboard.on("keydown-X", (event) => {
-        if (event.repeat) return;
+        if (event.repeat || formFocused()) return;
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
       });
       this.input.keyboard.on("keydown-F", (event) => {
-        if (event.repeat) return;
+        if (event.repeat || formFocused()) return;
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "feed" }));
       });
-      this.input.keyboard.on("keydown-E", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })));
+      this.input.keyboard.on("keydown-E", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })); });
       this.input.keyboard.on("keydown-Z", (event) => {
-        if (event.repeat) return;
+        if (event.repeat || formFocused()) return;
         this.playAction("attack", 760);
       });
       this.input.keyboard.on("keydown", (event) => {
-        if (event.key !== "0" || event.repeat) return;
+        if (event.key !== "0" || event.repeat || formFocused()) return;
         event.preventDefault();
         this.playTogether("dance", 1800);
       });
@@ -503,7 +506,7 @@
       const autoHunting = this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
       const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
       const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
-      const follow = autoHunting ? Math.min(0.42, Math.max(0.16, delta / 78)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
+      const follow = autoHunting ? Math.min(0.22, Math.max(0.07, delta / 150)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
       const actor = petActor;
       const previousX = this.petFollowX;
       this.petFollowX += (targetX - this.petFollowX) * follow;
@@ -511,7 +514,7 @@
       const togetherSitting = this.avatar.sitting;
       const dancing = this.petAction === "dance" && time < this.petActionUntil;
       if (Math.abs(this.petFollowX - previousX) > 0.08) this.petFacing = this.petFollowX < previousX ? "left" : "right";
-      const gait = playerMoving || autoHunting ? Math.sin(time / 82) : 0;
+      const gait = playerMoving || autoHunting ? Math.sin(time / (autoHunting ? 132 : 82)) : 0;
       const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
       const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving || autoHunting ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
       actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
@@ -522,7 +525,7 @@
         petDirection = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
       }
       const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[petDirection] || 0;
-      const petFrame = playerMoving || autoHunting ? Math.floor(time / 105) % 3 : 1;
+      const petFrame = playerMoving || autoHunting ? Math.floor(time / (autoHunting ? 155 : 105)) % 3 : 1;
       this.pet?.setFrame(petDirectionRow * 9 + (this.petBaseColumn || 0) + petFrame);
       actor.setFlipX?.(false);
       actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving || autoHunting ? gait * 2.2 : 0);
@@ -535,10 +538,10 @@
         actor.setScale(emojiScale, emojiScale);
       }
       if (time >= this.petActionUntil) this.petAction = null;
-      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 900) {
+      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 1600) {
         this.lastPetAttackAt = time;
         this.petAction = "attack";
-        this.petActionUntil = time + 520;
+        this.petActionUntil = time + 760;
         const eventId = this.ratEventId;
         this.dismissRat(time, true);
         window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, source: "pet" } }));
