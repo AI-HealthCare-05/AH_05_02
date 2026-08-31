@@ -362,7 +362,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v26" in html
+    assert "forest-local-pwa-reset-v27" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -444,7 +444,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v34" in worker
+    assert "gandang-carrot-forest-pwa-v35" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
@@ -569,6 +569,16 @@ def test_attack_effects_use_matching_lpc_motion() -> None:
     assert 'if (effect === "arrow_volley") return "shoot"' in engine_script
     assert 'if (effect === "leaf_blade") return "thrust"' in engine_script
     assert 'return "slash"' in engine_script
+
+
+def test_local_daily_reset_preserves_profile_but_reopens_daily_reward() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    assert "function resetTodayProgress(current)" in game_script
+    assert 'next.quests = { walk: false, meal: false, check: false }' in game_script
+    assert "next.rewardClaimed = false" in game_script
+    assert "completed: member.me ? 0 : 3" in game_script
+    assert 'localDemoOrigin && params.get("resetToday") === "1"' in game_script
 
 
 def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:

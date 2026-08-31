@@ -433,6 +433,20 @@
     return state;
   }
 
+  function resetTodayProgress(current) {
+    const next = normalizeState(current);
+    next.quests = { walk: false, meal: false, check: false };
+    next.challengeCarrotClaims = {};
+    next.members = next.members.map((member) => ({ ...member, completed: member.me ? 0 : 3 }));
+    next.rewardClaimed = false;
+    next.gardenWatered = false;
+    next.fishCaught = false;
+    next.fishing = false;
+    next.petFedCount = 0;
+    next.avatar = { ...next.avatar, sitting: false, mounted: false, x: 384, y: 352, direction: "down" };
+    return next;
+  }
+
   function pendingChallengeCarrots() {
     return Object.values(state.challengeCarrotClaims || {}).reduce((total, claim) => total + (claim.harvested ? 0 : claim.amount), 0);
   }
@@ -2500,9 +2514,16 @@
 
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
   adapter.load().then((loaded) => {
-    state = loaded;
+    const params = new URLSearchParams(window.location.search);
+    const localReset = localDemoOrigin && params.get("resetToday") === "1";
+    state = localReset ? resetTodayProgress(loaded) : loaded;
+    if (localReset) {
+      adapter.save(state);
+      params.delete("resetToday");
+      window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+    }
     renderAll();
-    setStatus("당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
+    setStatus(localReset ? "오늘의 과업과 공동 진행, 보물상자 수령 상태를 초기화했습니다." : "당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);
   });
 })();
