@@ -224,9 +224,9 @@
   // 모든 얼굴 요소는 같은 64x64 LPC 기준 좌표를 사용한다. 바디 스프라이트가
   // 방향별로 바뀌어도 눈·코·입은 이 앵커만 따라가며, 헤어·안경은 이후에 그려진다.
   const faceAnchors = {
-    down: { eyes: [[25, 29], [37, 29]], brows: [[24, 26], [36, 26]], nose: [31, 33], mouth: [31, 37], cheeks: [[20, 34], [43, 34]] },
-    left: { eyes: [[24, 29]], brows: [[23, 26]], nose: [20, 33], mouth: [22, 37], cheeks: [[18, 34]] },
-    right: { eyes: [[38, 29]], brows: [[37, 26]], nose: [42, 33], mouth: [40, 37], cheeks: [[44, 34]] },
+    down: { eyes: [[25, 29], [37, 29]], brows: [[24, 26], [36, 26]], nose: [31, 33], mouth: [31, 37], cheeks: [[20, 34], [43, 34]], chin: [29, 40, 7] },
+    left: { eyes: [[24, 29]], brows: [[23, 26]], nose: [20, 33], mouth: [22, 37], cheeks: [[18, 34]], chin: [20, 40, 5] },
+    right: { eyes: [[38, 29]], brows: [[37, 26]], nose: [42, 33], mouth: [40, 37], cheeks: [[44, 34]], chin: [39, 40, 5] },
   };
 
   function drawEye(context, destination, x, y, options) {
@@ -311,6 +311,8 @@
     const noseWidth = ["big", "large"].includes(cosmetics.lpcNose) ? 2 : 1;
     drawPixel(context, destination, noseX, noseY, noseWidth, cosmetics.lpcNose === "straight" ? 2 : 1, palette.shadow);
     drawMouth(context, destination, anchors.mouth[0], anchors.mouth[1], mouthStyle, expression);
+    // 턱선은 목 시작점보다 한 픽셀 앞에 놓아 머리가 몸 위에 자연스럽게 얹힌다.
+    drawPixel(context, destination, anchors.chin[0], anchors.chin[1], anchors.chin[2], 1, palette.shadow);
 
     if (["blush", "happy", "happy2", "shame"].includes(expression)) {
       anchors.cheeks.forEach(([x, y]) => drawPixel(context, destination, x - 1, y, 4, 2, palette.blush));

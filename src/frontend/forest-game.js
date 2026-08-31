@@ -134,16 +134,6 @@
     { id: "speech", label: "말풍선", icon: "💬" },
     { id: "pose", label: "동작", icon: "🏃" },
   ];
-  const faceSections = [
-    { id: "lpcFaceShape", label: "얼굴형" },
-    { id: "lpcExpression", label: "표정" },
-    { id: "lpcEyeStyle", label: "눈" },
-    { id: "lpcEyes", label: "특수 눈" },
-    { id: "lpcEyebrow", label: "눈썹" },
-    { id: "lpcNose", label: "코" },
-    { id: "lpcMouth", label: "입" },
-    { id: "lpcWrinkles", label: "주름" },
-  ];
   const avatarCatalog = {
     bodyType: [
       { id: "male", name: "성인 남성", visual: "🧑" }, { id: "female", name: "성인 여성", visual: "👩" },
@@ -194,9 +184,12 @@
       { id: "teal_bob", name: "미소 갈색 단발", visual: "💇" },
     ],
     face: [
-      { id: "calm", name: "차분한 표정", visual: "🙂" }, { id: "smile", name: "환한 미소", visual: "😊" },
-      { id: "sparkle", name: "반짝이는 눈", visual: "🤩", isNew: true }, { id: "blush", name: "수줍은 볼", visual: "☺️" },
-      { id: "wink", name: "윙크", visual: "😉" }, { id: "cool", name: "도도한 표정", visual: "😌" },
+      { id: "calm", name: "차분한 얼굴", bundle: { lpcFaceShape: "oval", lpcExpression: "neutral", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none" } },
+      { id: "smile", name: "환한 미소", bundle: { lpcFaceShape: "round", lpcExpression: "happy", lpcEyeStyle: "soft", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "grin", lpcEyes: "none", lpcWrinkles: "none" } },
+      { id: "sparkle", name: "반짝이는 눈", isNew: true, bundle: { lpcFaceShape: "round", lpcExpression: "neutral", lpcEyeStyle: "bright", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "cyclops2", lpcWrinkles: "none" } },
+      { id: "blush", name: "수줍은 얼굴", bundle: { lpcFaceShape: "round", lpcExpression: "blush", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none" } },
+      { id: "wink", name: "윙크", bundle: { lpcFaceShape: "oval", lpcExpression: "closing", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none" } },
+      { id: "cool", name: "씩씩한 얼굴", bundle: { lpcFaceShape: "angular", lpcExpression: "neutral", lpcEyeStyle: "narrow", lpcEyebrow: "thick", lpcNose: "straight", lpcMouth: "neutral", lpcEyes: "none", lpcWrinkles: "none" } },
     ],
     hat: [
       { id: "none", name: "모자 없음", visual: "—" }, { id: "cap", name: "산책 캡", visual: "🧢" },
@@ -322,6 +315,10 @@
     const bodyType = avatarDraft.bodyType || state.avatar.gender || "male";
     return choices.filter((choice) => choice.id === "none" || choice.sources?.[bodyType] || choice.sources?.[state.avatar.gender] || choice.sources?.male);
   }
+  function applyUnifiedFace(cosmetics) {
+    const facePreset = avatarCatalog.face.find((item) => item.id === cosmetics.face) || avatarCatalog.face[0];
+    return { ...cosmetics, ...(facePreset?.bundle || {}) };
+  }
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
@@ -375,7 +372,7 @@
     return {
       dateKey: TODAY,
       profileVersion: 1,
-      cosmeticSchemaVersion: 3,
+      cosmeticSchemaVersion: 4,
       avatar,
       quests: { walk: false, meal: false, check: false },
       challengeCarrotClaims: {},
@@ -408,6 +405,7 @@
       const previousCosmetics = { ...defaultCosmetics, ...(previousAvatar.cosmetics || {}) };
       if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(previousCosmetics, presetDecorationReset, { glasses: "none" });
       if ((value.cosmeticSchemaVersion || 0) < 3 && previousCosmetics.lpcExpression === "happy2") previousCosmetics.lpcExpression = "neutral";
+      Object.assign(previousCosmetics, applyUnifiedFace(previousCosmetics));
       fallback.profileVersion = 1;
       fallback.avatar = {
         ...fallback.avatar,
@@ -434,7 +432,8 @@
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
     if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
     if ((value.cosmeticSchemaVersion || 0) < 3 && state.avatar.cosmetics.lpcExpression === "happy2") state.avatar.cosmetics.lpcExpression = "neutral";
-    state.cosmeticSchemaVersion = 3;
+    state.avatar.cosmetics = applyUnifiedFace(state.avatar.cosmetics);
+    state.cosmeticSchemaVersion = 4;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.challengeCarrotClaims = Object.fromEntries(Object.entries(value.challengeCarrotClaims || {})
       .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
@@ -529,7 +528,6 @@
   let walkAnimationFrame = 0;
   let currentScene = "world";
   let activeAvatarCategory = "bodyType";
-  let activeFaceSection = "lpcFaceShape";
   let avatarPreviewPose = "idle";
   let avatarPreviewFrame = 0;
   let lastAvatarPreviewAt = 0;
@@ -1498,6 +1496,34 @@
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
 
   function renderCatalogThumbnailCanvases() {
+    document.querySelectorAll("canvas[data-lpc-body-type], canvas[data-lpc-skin]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const cosmetics = {
+        ...avatarDraft,
+        bodyType: thumbnail.dataset.lpcBodyType || avatarDraft.bodyType,
+        skin: thumbnail.dataset.lpcSkin || avatarDraft.skin,
+        lpcHair: "none", lpcHat: "none", lpcGlasses: "none",
+        lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none",
+        aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none",
+      };
+      window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: 3, y: 2, width: 90, height: 90 });
+    });
+    document.querySelectorAll("canvas[data-face-preset]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const preset = avatarCatalog.face.find((item) => item.id === thumbnail.dataset.facePreset);
+      const cosmetics = { ...avatarDraft, ...(preset?.bundle || {}), lpcHat: "none", lpcGlasses: "none" };
+      window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: -12, y: -18, width: 120, height: 120 });
+    });
     document.querySelectorAll("canvas[data-lpc-category]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
@@ -1507,7 +1533,7 @@
       const id = thumbnail.dataset.lpcItem;
       const cosmetics = { ...avatarDraft, [category]: id };
       const pose = category === "lpcExpression" ? "idle" : avatarPreviewPose;
-      const faceCategory = faceSections.some((section) => section.id === category);
+      const faceCategory = ["lpcFaceShape", "lpcExpression", "lpcEyeStyle", "lpcEyes", "lpcEyebrow", "lpcNose", "lpcMouth", "lpcWrinkles"].includes(category);
       window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics }, {
         direction: "down", pose, frame: avatarPreviewFrame,
       }, faceCategory
@@ -1708,29 +1734,32 @@
 
   function renderAvatarStudio() {
     $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
-    const effectiveCategory = activeAvatarCategory === "face" ? activeFaceSection : activeAvatarCategory;
+    const effectiveCategory = activeAvatarCategory;
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
     const items = ["hair", "outfit"].includes(effectiveCategory)
       ? avatarCatalog[effectiveCategory].filter((item) => stylePresetByItem[item.id])
       : avatarItemsForCategory(effectiveCategory);
-    const faceTabs = $("#face-section-tabs");
-    faceTabs.hidden = activeAvatarCategory !== "face";
-    faceTabs.innerHTML = activeAvatarCategory === "face" ? faceSections.map((section) => `<button type="button" role="tab" data-face-section="${section.id}" aria-selected="${activeFaceSection === section.id}">${section.label}</button>`).join("") : "";
-    $("#avatar-category-title").textContent = activeAvatarCategory === "face" ? `얼굴 · ${faceSections.find((section) => section.id === activeFaceSection)?.label}` : category.label;
+    $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
       const cosmeticIndex = cosmeticSpriteIndex(effectiveCategory, item.id);
       const catIndex = effectiveCategory === "pet" ? catPetSpriteIndex(item.id) : null;
       let visual;
-      if (Object.hasOwn(lpcCatalogMap, effectiveCategory) || ["lpcFaceShape", "lpcEyeStyle", "lpcMouth"].includes(effectiveCategory)) {
+      if (effectiveCategory === "bodyType") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-body-type="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "skin") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-skin="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "face") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-face-preset="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (Object.hasOwn(lpcCatalogMap, effectiveCategory) || ["lpcFaceShape", "lpcEyeStyle", "lpcMouth"].includes(effectiveCategory)) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${effectiveCategory}" data-lpc-item="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "skin"].includes(effectiveCategory) && item.color) {
+      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor"].includes(effectiveCategory) && item.color) {
         visual = `<span class="item-visual lpc-color-swatch" style="--swatch:${item.color}" aria-hidden="true"></span>`;
       } else if (effectiveCategory === "preset") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
       } else if (["hair", "outfit"].includes(effectiveCategory)) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${stylePresetByItem[item.id]}" data-preset-crop="${activeAvatarCategory === "hair" ? "head" : "body"}" aria-hidden="true"></canvas>`;
-      } else if (["face", "accessory"].includes(effectiveCategory)) {
+      } else if (effectiveCategory === "accessory") {
         const itemPreset = stylePresetByItem[item.id];
         const index = avatarThumbnailIndexes[effectiveCategory][item.id];
         visual = itemPreset
@@ -1772,7 +1801,6 @@
     avatarTuningDraft = { ...defaultAvatarTuning, ...(state.avatar.tuning || {}) };
     avatarDraftHistory = [];
     activeAvatarCategory = "bodyType";
-    activeFaceSection = "lpcFaceShape";
     avatarPreviewPose = "idle";
     renderAvatarStudio();
     $("#avatar-studio").showModal();
@@ -2067,20 +2095,18 @@
     activeAvatarCategory = button.dataset.avatarCategory;
     renderAvatarStudio();
   });
-  $("#face-section-tabs").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-face-section]");
-    if (!button) return;
-    activeFaceSection = button.dataset.faceSection;
-    renderAvatarStudio();
-  });
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
     if (!button) return;
-    const categoryId = activeAvatarCategory === "face" ? activeFaceSection : activeAvatarCategory;
+    const categoryId = activeAvatarCategory;
     if (categoryId === "pose") return;
     if (categoryId !== "preset" && avatarDraft[categoryId] === button.dataset.avatarItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[categoryId] = button.dataset.avatarItem;
+    if (categoryId === "face") {
+      const facePreset = avatarCatalog.face.find((item) => item.id === avatarDraft.face);
+      if (facePreset?.bundle) Object.assign(avatarDraft, facePreset.bundle);
+    }
     if (categoryId === "bodyType") {
       if (["male", "muscular", "teen", "child"].includes(avatarDraft.bodyType)) state.avatar.gender = "male";
       if (avatarDraft.bodyType === "female") state.avatar.gender = "female";
@@ -2103,14 +2129,12 @@
   });
   $("#avatar-randomize").addEventListener("click", () => {
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarCategories.filter(({ id }) => !["pose", "face"].includes(id)).forEach(({ id }) => {
+    avatarCategories.filter(({ id }) => id !== "pose").forEach(({ id }) => {
       const choices = avatarItemsForCategory(id);
       if (choices.length) avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
     });
-    faceSections.forEach(({ id }) => {
-      const choices = avatarItemsForCategory(id);
-      if (choices.length) avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
-    });
+    const facePreset = avatarCatalog.face.find((item) => item.id === avatarDraft.face);
+    if (facePreset?.bundle) Object.assign(avatarDraft, facePreset.bundle);
     renderAvatarStudio();
   });
   $("#avatar-tuning-controls").addEventListener("input", (event) => {

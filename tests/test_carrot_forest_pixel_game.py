@@ -222,7 +222,7 @@ def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> No
     )
     assert "...presetDecorationReset, preset: linkedPreset" in script
     assert 'categoryId !== "preset" && avatarDraft[categoryId]' in script
-    assert "cosmeticSchemaVersion: 3" in script
+    assert "cosmeticSchemaVersion: 4" in script
     assert "Object.assign(state.avatar.cosmetics, presetDecorationReset" in script
     assert 'glasses: "round"' not in script
     assert "context.ellipse(lensX, 123 + headAdjustmentY + glassesOffsetY, 14, 10" in compositor
@@ -365,7 +365,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v32" in html
+    assert "forest-local-pwa-reset-v35" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -423,8 +423,10 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     manifest = (ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
 
-    for category in ("bodyType", "face", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles"):
+    for category in ("bodyType", "face"):
         assert f'id: "{category}"' in game_script
+    for face_part in ("lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles"):
+        assert f"{face_part}:" in game_script
     assert "selected-check" in game_script
     assert "action-view-only" in game_script
     assert "storageObjectCodes" in game_script
@@ -446,7 +448,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v40" in worker
+    assert "gandang-carrot-forest-pwa-v43" in worker
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
@@ -457,9 +459,12 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
 
-    assert 'id="face-section-tabs"' in html
-    for label in ("얼굴형", "표정", "눈", "특수 눈", "눈썹", "코", "입", "주름"):
-        assert f'label: "{label}"' in game_script
+    assert 'id="face-section-tabs"' not in html
+    assert 'data-face-preset="${item.id}"' in game_script
+    assert 'data-lpc-body-type="${item.id}"' in game_script
+    assert 'data-lpc-skin="${item.id}"' in game_script
+    assert 'if (categoryId === "face")' in game_script
+    assert "facePreset?.bundle" in game_script
     assert 'lpcHair: ["hair", 24]' in game_script
     assert 'lpcOutfit: ["outfit", 20]' in game_script
     assert 'lpcBottom: ["bottom", 15]' in game_script
@@ -469,7 +474,6 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert "time - this.lastPetAttackAt > 1600" in phaser_script
     assert "window.setInterval(playStep, 1080)" in game_script
     assert "storage-reward-cow" in game_script
-    assert ".face-section-tabs" in css
     assert ".reward-rays,.reward-particles{display:none}" in css
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
@@ -568,7 +572,8 @@ def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> Non
     assert 'value="lpc_male_default"' in html
     assert 'value="lpc_female_default"' in html
     assert 'lpcExpression: "neutral"' in game_script
-    assert "cosmeticSchemaVersion: 3" in game_script
+    assert "cosmeticSchemaVersion: 4" in game_script
+    assert "applyUnifiedFace" in game_script
     assert 'lpcNose: "button"' in game_script
     assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
     assert "skinPalettes" in engine_script

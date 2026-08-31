@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v32";
+      const resetKey = "forest-local-pwa-reset-v35";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -41,10 +41,10 @@
   </script>
   <link rel="stylesheet" href="/static/forest-game.css?v=20260831-10" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/lpc-avatar-engine.js?v=20260831-8" defer></script>
+  <script src="/static/lpc-avatar-engine.js?v=20260831-9" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260831-10" defer></script>
-  <script src="/static/forest-game.js?v=20260831-14" defer></script>
+  <script src="/static/forest-game.js?v=20260831-17" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -223,7 +223,6 @@
       <nav id="avatar-category-nav" class="avatar-category-nav" aria-label="아바타 꾸미기 카테고리"></nav>
       <section class="avatar-item-browser" aria-labelledby="avatar-category-title">
         <div class="avatar-browser-heading"><div><p class="section-kicker">COLLECTION</p><h3 id="avatar-category-title">피부</h3></div><span id="avatar-item-count">0개</span></div>
-        <div id="face-section-tabs" class="face-section-tabs" role="tablist" aria-label="얼굴 세부 설정" hidden></div>
         <div id="avatar-item-grid" class="avatar-item-grid"></div>
       </section>
       <aside class="avatar-preview-panel" aria-label="아바타 미리보기">
