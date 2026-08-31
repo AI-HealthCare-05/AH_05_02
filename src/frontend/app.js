@@ -2086,7 +2086,7 @@ $("#education-list").addEventListener("click", async (event) => {
   const releaseBusy = setButtonBusy(button, "완료 처리 중…");
   try {
     const result = await api(`/education-contents/${button.dataset.id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: button.dataset.answer }) });
-    showMessage(result.is_correct ? "정답입니다. 교육 콘텐츠를 완료했습니다." : "내용을 다시 확인해 주세요.", result.is_correct ? "success" : "error");
+    if (!result.is_correct) showMessage("내용을 다시 확인해 주세요.", "error");
     await loadEducation();
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
