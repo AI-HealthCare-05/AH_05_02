@@ -25,11 +25,21 @@
     return `${adjective} ${noun}${String(random[2] % 1000).padStart(3, "0")}`;
   }
 
-  const quests = [
-    { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
-    { id: "meal", icon: "🥗", category: "식사 돌아보기", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기", reward: 20 },
-    { id: "check", icon: "📝", category: "건강 기록", title: "건강 기록 확인하기", description: "입력한 생활습관 다시 보기", reward: 15 },
-  ];
+  const questCatalog = {
+    walk: { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
+    stretch: { id: "stretch", icon: "🙆", category: "몸 풀기", title: "편안하게 스트레칭하기", description: "무리하지 않고 몸 상태 확인", reward: 15 },
+    strength: { id: "strength", icon: "🪑", category: "근력 활동", title: "의자에서 천천히 일어나기", description: "가능한 범위에서 가볍게 실천", reward: 20 },
+    meal: { id: "meal", icon: "🥗", category: "식사 돌아보기", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기", reward: 20 },
+    vegetable: { id: "vegetable", icon: "🥬", category: "식사 구성", title: "채소가 포함됐는지 확인하기", description: "먹은 내용을 있는 그대로 기록", reward: 15 },
+    water: { id: "water", icon: "💧", category: "수분 기록", title: "물 마신 횟수 기록하기", description: "특정 섭취량을 권하지 않고 횟수만 기록", reward: 15 },
+    check: { id: "check", icon: "📝", category: "생활습관 기록", title: "오늘 기록 돌아보기", description: "입력한 생활습관 다시 보기", reward: 15 },
+  };
+  const questPlans = {
+    exercise: ["walk", "stretch", "strength"],
+    diet: ["meal", "vegetable", "water"],
+    balanced: ["walk", "meal", "check"],
+  };
+  let quests = questPlans.balanced.map((id) => questCatalog[id]);
   const presets = {
     custom: { label: "나만의 조합", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
     sprout: { label: "새싹 정원사", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
@@ -301,6 +311,8 @@
       cosmeticSchemaVersion: 2,
       avatar: { name: generatedNickname, gender: "male", engine: "lpc", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
       quests: { walk: false, meal: false, check: false },
+      challengePlan: { onboarded: false, style: null, questIds: [], lastGeneratedAt: null },
+      groupGoalMemo: "",
       members: [
         { id: "me", name: "나", completed: 0, me: true },
         { id: "m2", name: "빛샘", completed: 3 },
@@ -335,6 +347,8 @@
       };
       fallback.avatar.tuning = { ...defaultAvatarTuning, ...(previousAvatar.tuning || {}) };
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
+      fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
+      fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]) : fallback.inventory;
       fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
       return fallback;
@@ -349,6 +363,8 @@
     if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
     state.cosmeticSchemaVersion = 2;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
+    state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
+    state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
     state.members = state.members.map((member) => member.id === "m5" && member.name === "숲지기" ? { ...member, name: "세준" } : member);
     state.inventory = [...new Set([...(Array.isArray(value.inventory) ? value.inventory : fallback.inventory), ...storageObjectCodes])]
@@ -519,7 +535,15 @@
   }
 
   function setStatus(message) { $("#game-status").textContent = message; }
-  function personalCompleted() { return Object.values(state.quests).filter(Boolean).length; }
+  function activeQuestIds() {
+    const selected = state.challengePlan?.questIds;
+    return Array.isArray(selected) && selected.length === 3 ? selected : questPlans.balanced;
+  }
+  function syncActiveQuests() {
+    quests = activeQuestIds().map((id) => questCatalog[id]).filter(Boolean).slice(0, 3);
+    if (quests.length !== 3) quests = questPlans.balanced.map((id) => questCatalog[id]);
+  }
+  function personalCompleted() { return state.challengePlan?.onboarded ? activeQuestIds().filter((id) => state.quests[id]).length : 0; }
   function groupCompleted() { return state.members.reduce((total, member) => total + member.completed, 0); }
   async function persist(message = null) {
     await adapter.save(state);
@@ -1183,7 +1207,12 @@
   }
 
   function renderQuests() {
-    $("#quest-list").innerHTML = quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("");
+    syncActiveQuests();
+    const ready = Boolean(state.challengePlan?.onboarded);
+    $("#start-prediction-flow").textContent = ready ? "당뇨 예측 기반 퀘스트 다시 만들기" : "당뇨 예측 진행";
+    $("#quest-list").innerHTML = ready
+      ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")
+      : '<div class="quest-empty"><span aria-hidden="true">🌱</span><strong>첫 챌린지를 준비해 주세요</strong><p>이동 가능 확인부터 챌린지 방식 선택까지 마치면 오늘의 퀘스트 3개가 생성됩니다.</p></div>';
     const completed = personalCompleted();
     state.members.find((member) => member.me).completed = completed;
     $("#personal-progress").textContent = `${completed}/3`;
@@ -1202,6 +1231,18 @@
     const rewardButton = $("#reward-button");
     rewardButton.disabled = completed < 15 || state.rewardClaimed;
     rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
+    $("#group-goal-memo").value = state.groupGoalMemo || "";
+  }
+
+  function renderInventoryDialog(view = "storage") {
+    document.querySelectorAll("[data-inventory-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.inventoryView === view));
+    const kind = view === "wardrobe" ? "accessory" : "object";
+    const codes = state.inventory.filter((code) => itemCatalog[code]?.kind === kind);
+    $("#inventory-dialog-grid").innerHTML = codes.map((code) => {
+      const item = itemCatalog[code];
+      return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}"><span aria-hidden="true">${item.icon}</span>${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
+    }).join("") || "<p>아직 보관 중인 아이템이 없습니다.</p>";
+    $("#inventory-dialog").dataset.view = view;
   }
 
   function renderInventory(highlightCode = null) {
@@ -1565,13 +1606,85 @@
     $("#profile-dialog").showModal();
   }
 
+  let challengeFlowStep = 1;
+  function showChallengeFlowStep(step) {
+    challengeFlowStep = Math.max(1, Math.min(4, step));
+    document.querySelectorAll("[data-flow-step]").forEach((section) => {
+      const active = Number(section.dataset.flowStep) === challengeFlowStep;
+      section.hidden = !active;
+      section.classList.toggle("is-active", active);
+    });
+    document.querySelectorAll("[data-flow-indicator]").forEach((indicator) => {
+      const number = Number(indicator.dataset.flowIndicator);
+      indicator.classList.toggle("is-active", number === challengeFlowStep);
+      indicator.classList.toggle("is-complete", number < challengeFlowStep);
+    });
+    $("#challenge-flow-back").hidden = challengeFlowStep === 1;
+    $("#challenge-flow-next").hidden = challengeFlowStep === 4;
+    $("#challenge-flow-generate").hidden = challengeFlowStep !== 4;
+  }
+
+  function openChallengeFlow() {
+    const form = $("#challenge-flow-form");
+    form.reset();
+    $("#custom-quest-picker").hidden = true;
+    showChallengeFlowStep(1);
+    $("#challenge-flow-dialog").showModal();
+  }
+
+  async function startPredictionFlow() {
+    if (!state.challengePlan?.onboarded) { openChallengeFlow(); return; }
+    const style = state.challengePlan.style || "balanced";
+    const customIds = style === "custom" ? activeQuestIds() : [];
+    await generateChallengeQuests(style, customIds);
+  }
+
+  function validateChallengeFlowStep() {
+    const section = document.querySelector(`[data-flow-step="${challengeFlowStep}"]`);
+    const control = section?.querySelector("input:required, select:required");
+    if (control && !control.checkValidity()) { control.reportValidity(); return false; }
+    return true;
+  }
+
+  async function generateChallengeQuests(style, customIds = []) {
+    const status = $("#quest-generation-status");
+    status.hidden = false;
+    $("#quest-list").innerHTML = '<div class="quest-loading" aria-hidden="true"><i></i><i></i><i></i></div>';
+    activateInspectorPanel("quests-panel");
+    await animationDelay(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 1050);
+    const questIds = style === "custom" ? customIds : (questPlans[style] || questPlans.balanced);
+    state.challengePlan = { onboarded: true, style, questIds: questIds.slice(0, 3), lastGeneratedAt: new Date().toISOString() };
+    for (const id of questIds) if (!(id in state.quests)) state.quests[id] = false;
+    syncActiveQuests();
+    status.hidden = true;
+    renderQuests();
+    renderGroup();
+    await persist("오늘까지의 기록과 선택한 방식으로 퀘스트 3개를 만들었습니다.");
+  }
+
+  function ragGuideFor(question) {
+    const normalized = question.toLowerCase();
+    if (/식사|채소|음식|식단/.test(normalized)) return {
+      answer: "완벽한 식단을 요구하기보다 오늘 먹은 시간과 구성을 먼저 기록해 보세요. 기록은 다음 챌린지를 조정하는 자료로 사용됩니다.",
+      source: "CDC PreventT2 생활습관 변화 교육과정", url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+    };
+    if (/수면|잠|피곤/.test(normalized)) return {
+      answer: "취침·기상 시각과 다음 날의 컨디션을 함께 기록하면 생활 리듬을 돌아보는 데 도움이 됩니다.",
+      source: "WHO 신체활동 및 좌식행동 지침", url: "https://www.who.int/publications/i/item/9789240015128",
+    };
+    return {
+      answer: "몸 상태에 맞는 작은 활동부터 시작하고, 수행 여부를 꾸준히 기록해 보세요. 통증이나 불편이 있으면 중단하고 의료진의 안내를 우선하세요.",
+      source: "WHO 신체활동 및 좌식행동 지침", url: "https://www.who.int/publications/i/item/9789240015128",
+    };
+  }
+
   function renderAll() {
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
     $("#avatar-gender").value = state.avatar.gender;
     $("#avatar-preset").value = state.avatar.preset;
-    renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); updateProfileUI();
+    syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); updateProfileUI();
   }
 
   function deterministicReward() {
@@ -1651,6 +1764,42 @@
     await persist(`${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 퀘스트를 ${checkbox.checked ? "완료" : "미완료"}로 기록했습니다.`);
   });
 
+  $("#start-prediction-flow").addEventListener("click", startPredictionFlow);
+  $("#challenge-flow-close").addEventListener("click", () => $("#challenge-flow-dialog").close());
+  $("#challenge-flow-back").addEventListener("click", () => showChallengeFlowStep(challengeFlowStep - 1));
+  $("#challenge-flow-next").addEventListener("click", () => {
+    if (validateChallengeFlowStep()) showChallengeFlowStep(challengeFlowStep + 1);
+  });
+  document.querySelectorAll('input[name="challenge-style"]').forEach((input) => input.addEventListener("change", () => {
+    $("#custom-quest-picker").hidden = input.value !== "custom" || !input.checked;
+  }));
+  $("#custom-quest-picker").addEventListener("change", (event) => {
+    const checked = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')];
+    if (checked.length > 3) { event.target.checked = false; setStatus("커스터마이징 챌린지는 3개까지만 선택할 수 있어요."); }
+  });
+  $("#challenge-flow-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const style = new FormData(event.currentTarget).get("challenge-style");
+    if (!style) return;
+    const customIds = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
+    if (style === "custom" && customIds.length !== 3) { setStatus("내가 조합하기는 챌린지 3개를 선택해 주세요."); return; }
+    $("#challenge-flow-dialog").close();
+    await generateChallengeQuests(style, customIds);
+  });
+
+  $("#forest-rag-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const question = $("#forest-rag-question").value.trim();
+    const guide = ragGuideFor(question);
+    $("#forest-rag-result").innerHTML = `<strong>${guide.answer}</strong><a href="${guide.url}" target="_blank" rel="noopener">검색 근거 · ${guide.source}</a><small>일반적인 건강교육 정보이며 진단·처방이 아닙니다.</small>`;
+  });
+
+  $("#group-goal-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 160);
+    await persist("우리 모임의 공동 목표 메모를 저장했습니다.");
+  });
+
   $("#avatar-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     state.avatar.name = $("#avatar-name").value.trim();
@@ -1668,7 +1817,7 @@
   $("#avatar-studio").addEventListener("click", (event) => {
     if (event.target === $("#avatar-studio")) $("#avatar-studio").close();
   });
-  $("#open-profile").addEventListener("click", openProfile);
+  $("#open-profile").addEventListener("click", () => { window.location.href = "/?step=2"; });
   $("#profile-close").addEventListener("click", () => $("#profile-dialog").close());
   $("#profile-dialog").addEventListener("click", (event) => {
     if (event.target === $("#profile-dialog")) $("#profile-dialog").close();
@@ -1953,12 +2102,24 @@
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", String(active));
       });
-      if (button.dataset.workspaceTarget === "team-inspector") activateInspectorPanel("team-inspector");
+      if (button.dataset.workspaceTarget === "avatar-editor") { openAvatarStudio(); return; }
+      if (button.dataset.workspaceTarget === "asset-dock") { renderInventoryDialog("storage"); $("#inventory-dialog").showModal(); return; }
+      if (button.dataset.workspaceTarget === "team-inspector") activateInspectorPanel("team-inspector", true);
       const target = document.getElementById(button.dataset.workspaceTarget);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       target?.classList.add("workspace-focus");
       window.setTimeout(() => target?.classList.remove("workspace-focus"), 700);
     });
+  });
+
+  $("#inventory-dialog-close").addEventListener("click", () => $("#inventory-dialog").close());
+  document.querySelectorAll("[data-inventory-view]").forEach((button) => button.addEventListener("click", () => renderInventoryDialog(button.dataset.inventoryView)));
+  $("#inventory-dialog-grid").addEventListener("click", (event) => {
+    const code = event.target.closest("[data-inventory-dialog-item]")?.dataset.inventoryDialogItem;
+    if (!code) return;
+    $("#inventory-dialog").close();
+    document.querySelector(`#asset-dock [data-item="${code}"]`)?.click();
+    $("#asset-dock").scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
   document.querySelectorAll("[data-inspector-tab]").forEach((button) => {

@@ -39,12 +39,12 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260831-4" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260831-5" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260831-4" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260831-4" defer></script>
-  <script src="/static/forest-game.js?v=20260831-4" defer></script>
+  <script src="/static/forest-game.js?v=20260831-5" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -156,7 +156,15 @@
         <section id="quests-panel" class="inspector-panel" role="tabpanel" aria-labelledby="quest-title" tabindex="-1">
           <div class="panel-title"><div><p class="eyebrow">TODAY QUEST</p><h2 id="quest-title">오늘의 퀘스트</h2></div><strong id="personal-progress">0/3</strong></div>
           <p class="panel-description">사진 인증 없이 체크만으로 기록할 수 있어요.</p>
+          <button id="start-prediction-flow" class="prediction-flow-button" type="button">당뇨 예측 진행</button>
+          <p id="quest-generation-status" class="quest-generation-status" role="status" aria-live="polite" hidden>오늘까지의 챌린지 결과를 토대로 챌린지 생성 중</p>
           <div id="quest-list" class="quest-list"></div>
+          <section class="rag-guide" aria-labelledby="rag-guide-title">
+            <div class="rag-guide-heading"><span aria-hidden="true">🧭</span><div><p class="eyebrow">EVIDENCE GUIDE · DEMO RETRIEVER</p><h3 id="rag-guide-title">내 생활습관 지도(RAG)</h3></div></div>
+            <p>궁금한 생활습관을 입력하면 확인된 자료에서 근거를 찾아 안내해요.</p>
+            <form id="forest-rag-form"><label class="sr-only" for="forest-rag-question">생활습관 질문</label><input id="forest-rag-question" maxlength="80" placeholder="예: 식사 습관은 어떻게 기록할까요?" required><button type="submit">근거 찾기</button></form>
+            <div id="forest-rag-result" class="rag-result" aria-live="polite"><p>운동·식사·수면 중 궁금한 내용을 물어보세요.</p></div>
+          </section>
         </section>
 
         <section id="team-inspector" class="inspector-panel" role="tabpanel" aria-labelledby="group-title" tabindex="-1" hidden>
@@ -164,8 +172,10 @@
           <div class="group-mission-card"><span aria-hidden="true">🌳</span><div><strong>다섯 명이 오늘 3개씩 실천하기</strong><p id="group-remaining">공동 보상까지 3개 남았어요.</p></div></div>
           <div class="progress-track" role="progressbar" aria-label="공동 목표 진행률" aria-valuemin="0" aria-valuemax="15" aria-valuenow="12"><span id="group-progress-bar"></span></div>
           <ul id="member-list" class="member-list" aria-label="구성원별 퀘스트 진행 상태"></ul>
+          <form id="group-goal-form" class="group-goal-form"><label for="group-goal-memo">우리 모임 메모</label><textarea id="group-goal-memo" maxlength="160" rows="3" placeholder="예: 이번 주에는 저녁 산책을 서로 응원해요."></textarea><button type="submit">공동 목표 저장</button></form>
           <button id="reward-button" class="reward-button" type="button" disabled>15개 완료 후 무료 보물상자 열기</button>
           <p id="group-reward-help" class="group-reward-help">모두 합쳐 15개를 완료하면 옷장 또는 창고 아이템 1개를 받아요.</p>
+          <a id="add-family-colleague" class="add-member-button" href="/?step=8&amp;workspace=together">+ 가족/동료 추가하기</a>
         </section>
       </aside>
 
@@ -242,6 +252,25 @@
     <h2 id="world-dialog-title">우리 집</h2>
     <p id="world-dialog-copy">집에서 편안하게 쉬어가세요.</p>
     <div id="world-dialog-actions" class="dialog-actions"></div>
+  </dialog>
+
+  <dialog id="challenge-flow-dialog" class="flow-dialog" aria-labelledby="challenge-flow-title">
+    <header><div><p class="eyebrow">FIRST CHALLENGE SETUP</p><h2 id="challenge-flow-title">오늘의 챌린지 만들기</h2></div><button id="challenge-flow-close" class="dialog-close" type="button" aria-label="챌린지 만들기 닫기">×</button></header>
+    <ol class="flow-stepper" aria-label="챌린지 생성 단계"><li class="is-active" data-flow-indicator="1">이동 가능 확인</li><li data-flow-indicator="2">건강정보 입력</li><li data-flow-indicator="3">분석결과</li><li data-flow-indicator="4">챌린지</li></ol>
+    <form id="challenge-flow-form">
+      <section class="flow-step is-active" data-flow-step="1"><h3>안전하게 움직일 수 있나요?</h3><p>오늘 몸 상태를 먼저 확인해 주세요. 불편하거나 의료진에게 운동 제한을 안내받았다면 무리하지 마세요.</p><label class="flow-check"><input id="mobility-confirmed" type="checkbox" required><span>오늘 가벼운 생활 활동이 가능합니다.</span></label></section>
+      <section class="flow-step" data-flow-step="2" hidden><h3>오늘의 생활습관 정보</h3><p>챌린지 구성에만 사용하는 간단한 입력입니다.</p><label>오늘 가능한 활동 시간<select id="available-minutes"><option value="10">10분</option><option value="20" selected>20분</option><option value="30">30분 이상</option></select></label><label>오늘 식사 기록 상태<select id="meal-readiness"><option value="easy">간단히 기록할 수 있어요</option><option value="normal" selected>보통이에요</option><option value="hard">식사 기록이 어려워요</option></select></label></section>
+      <section class="flow-step" data-flow-step="3" hidden><h3>생활습관 분석 결과</h3><div class="flow-analysis"><strong>작게 시작할 수 있는 상태예요</strong><p>입력한 활동 가능 시간과 식사 기록 상태를 기준으로 챌린지를 구성합니다. 이 결과는 당뇨병 진단이나 처방이 아닙니다.</p></div></section>
+      <section class="flow-step" data-flow-step="4" hidden><h3>어떤 방식으로 실천할까요?</h3><div class="challenge-style-grid"><label><input type="radio" name="challenge-style" value="exercise" required><span>🏃<strong>운동 중심</strong><small>걷기·스트레칭·근력</small></span></label><label><input type="radio" name="challenge-style" value="diet"><span>🥗<strong>식단 중심</strong><small>식사·채소·물 기록</small></span></label><label><input type="radio" name="challenge-style" value="custom"><span>🧩<strong>내가 조합하기</strong><small>원하는 3개를 선택</small></span></label></div><fieldset id="custom-quest-picker" hidden><legend>3개를 선택해 주세요</legend><label><input type="checkbox" value="walk">가볍게 걷기</label><label><input type="checkbox" value="stretch">몸 풀기</label><label><input type="checkbox" value="meal">식사 기록</label><label><input type="checkbox" value="vegetable">채소 포함 확인</label><label><input type="checkbox" value="water">물 마신 횟수 기록</label><label><input type="checkbox" value="check">생활습관 돌아보기</label></fieldset></section>
+      <div class="flow-actions"><button id="challenge-flow-back" type="button" hidden>이전</button><button id="challenge-flow-next" class="primary-button" type="button">다음</button><button id="challenge-flow-generate" class="primary-button" type="submit" hidden>3개 퀘스트 만들기</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="inventory-dialog" class="inventory-dialog" aria-labelledby="inventory-dialog-title">
+    <header><div><p class="eyebrow">MY INVENTORY</p><h2 id="inventory-dialog-title">창고 인벤토리</h2></div><button id="inventory-dialog-close" class="dialog-close" type="button" aria-label="창고 닫기">×</button></header>
+    <div class="inventory-dialog-tabs"><button class="is-active" type="button" data-inventory-view="storage">창고</button><button type="button" data-inventory-view="wardrobe">옷장</button></div>
+    <div id="inventory-dialog-grid" class="inventory-dialog-grid"></div>
+    <p>오브젝트를 선택하면 숲 배치 모드로 전환됩니다. 옷장 아이템은 아바타에 바로 적용됩니다.</p>
   </dialog>
 
   <dialog id="profile-dialog" class="profile-dialog" aria-labelledby="profile-title">

@@ -180,6 +180,35 @@ def test_group_tabs_reward_ceremony_and_profile_are_interactive() -> None:
     assert "newItemArrival" in css
 
 
+def test_forest_onboarding_rag_collaboration_and_tool_routes_are_connected() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    app_script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    for control_id in (
+        "start-prediction-flow",
+        "challenge-flow-dialog",
+        "forest-rag-form",
+        "group-goal-form",
+        "add-family-colleague",
+        "inventory-dialog",
+    ):
+        assert f'id="{control_id}"' in html
+    for step in ("이동 가능 확인", "건강정보 입력", "분석결과", "챌린지"):
+        assert step in html
+    for style in ("운동 중심", "식단 중심", "내가 조합하기"):
+        assert style in html
+    assert "오늘까지의 챌린지 결과를 토대로 챌린지 생성 중" in html
+    assert "내 생활습관 지도(RAG)" in html
+    assert "who.int/publications" in script
+    assert "cdc.gov/diabetes-prevention" in script
+    assert 'window.location.href = "/?step=2"' in script
+    assert "/?step=8&amp;workspace=together" in html
+    assert "renderInventoryDialog" in script
+    assert "groupGoalMemo" in script
+    assert 'requestedView.get("workspace")' in app_script
+
+
 def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> None:
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
@@ -415,7 +444,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v30" in worker
+    assert "gandang-carrot-forest-pwa-v31" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html

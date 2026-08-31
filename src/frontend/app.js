@@ -704,3 +704,12 @@ $("#download-report").addEventListener("click", async () => {
   } catch (error) { showMessage(error.message); }
 });
 $("#restart").addEventListener("click", () => window.location.reload());
+
+const requestedView = new URLSearchParams(window.location.search);
+const requestedStep = Number(requestedView.get("step"));
+if (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 8) showStep(requestedStep);
+const requestedWorkspace = requestedView.get("workspace");
+const allowedRequestedWorkspaces = new Set(["home", "challenge", "report", "together", "forest", "tools"]);
+if (requestedStep === 8 && allowedRequestedWorkspaces.has(requestedWorkspace)) {
+  showWorkspace(requestedWorkspace, { moveFocus: false });
+}
