@@ -404,6 +404,8 @@ function unlockReturningUserRoutes() {
   if (state.cycle?.user_challenges?.length) state.visitedSteps.add(8);
   showStep(2, { recordHistory: false });
   $("#signup-form").hidden = true;
+  $("#login-form").hidden = true;
+  $("#auth-mode-switch").hidden = true;
   $("#returning-user-panel").hidden = false;
   $("#return-dashboard").disabled = !state.cycle?.user_challenges?.length;
   $("#returning-route-note").textContent = state.requiresEligibility
@@ -412,6 +414,21 @@ function unlockReturningUserRoutes() {
       ? "이전 안전 확인 결과에 따라 의료기관 안내를 먼저 확인해 주세요."
       : "이전 이용 가능 확인 기록을 사용합니다. 로그인할 때마다 다시 확인하지 않습니다.";
   $("#returning-user-panel").focus({ preventScroll: true });
+}
+
+function showAuthMode(mode, { moveFocus = true } = {}) {
+  const isLogin = mode === "login";
+  $("#auth-mode-switch").hidden = false;
+  $("#returning-user-panel").hidden = true;
+  $("#signup-form").hidden = isLogin;
+  $("#login-form").hidden = !isLogin;
+  $("#auth-mode-signup").classList.toggle("active", !isLogin);
+  $("#auth-mode-signup").setAttribute("aria-selected", String(!isLogin));
+  $("#auth-mode-login").classList.toggle("active", isLogin);
+  $("#auth-mode-login").setAttribute("aria-selected", String(isLogin));
+  $("#auth-title-eyebrow").textContent = isLogin ? "기존 회원 로그인" : "가입 및 건강정보 동의";
+  $("#signup-title").textContent = isLogin ? "기존 계정으로 로그인해 주세요" : "계정과 동의 정보를 입력해 주세요";
+  if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
 }
 
 function openReturningUserHealthEdit() {
@@ -1464,6 +1481,7 @@ $("#font-toggle").addEventListener("click", (event) => {
   event.currentTarget.setAttribute("aria-pressed", String(enabled));
   event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
 });
+$$('[data-auth-mode]').forEach((button) => button.addEventListener("click", () => showAuthMode(button.dataset.authMode)));
 $("#signup-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#eligibility-guidance").hidden = true;
@@ -1916,14 +1934,11 @@ document.addEventListener("click", (event) => {
 $("#gender").addEventListener("change", syncLifestyleAvatar);
 $("#eligibility-birth-date").addEventListener("change", syncLifestyleAvatar);
 [$("#height"), $("#weight")].forEach((input) => input.addEventListener("input", syncLifestyleAvatar));
-$("#login-existing").addEventListener("click", async () => {
-  if (!$("#email").checkValidity() || !$("#password").checkValidity()) {
-    $("#email").checkValidity() ? $("#password").reportValidity() : $("#email").reportValidity();
-    return;
-  }
-  const releaseBusy = setFormBusy($("#signup-form"), $("#login-existing"), "로그인 중…");
+$("#login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "로그인 중…");
   try {
-    const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#email").value, password: $("#password").value }) });
+    const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#login-email").value, password: $("#login-password").value }) });
     state.token = login.access_token;
     const profile = await api("/users/me");
     if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
@@ -1996,9 +2011,7 @@ $("#return-login-back").addEventListener("click", () => {
   state.cycle = null;
   syncReturningEligibilityState(null);
   state.returningDestination = null;
-  $("#returning-user-panel").hidden = true;
-  $("#signup-form").hidden = false;
-  $("#email").focus();
+  showAuthMode("login");
 });
 $("#dashboard-edit-health").addEventListener("click", () => {
   openReturningUserHealthEdit();

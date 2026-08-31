@@ -150,6 +150,22 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'renderPredictionStatus("failed", { errorCode:' in script
 
 
+def test_signup_and_existing_login_use_separate_forms() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="auth-mode-signup"' in html
+    assert 'id="auth-mode-login"' in html
+    assert 'id="signup-form"' in html
+    assert 'id="login-form" class="login-form" hidden' in html
+    assert 'id="login-email" type="email"' in html
+    assert 'id="login-password" type="password"' in html
+    assert "생년월일과 성별은 가입할 때 저장한 정보를 불러옵니다." in html
+    assert '$("#login-form").addEventListener("submit"' in script
+    assert 'email: $("#login-email").value, password: $("#login-password").value' in script
+    assert '$("#login-existing")' not in script
+
+
 def test_frontend_distinguishes_api_errors_without_demo_fallback() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 

@@ -51,7 +51,11 @@
       <section class="screen" data-step="2" aria-labelledby="signup-title">
         <div class="screen-title-with-mascot">
           <img src="/static/assets/hyeoldangi-consent.png" alt="동의 내용을 차분히 확인하는 혈당이">
-          <div><p class="eyebrow">가입 및 건강정보 동의</p><h2 id="signup-title">계정과 동의 정보를 입력해 주세요</h2></div>
+          <div><p class="eyebrow" id="auth-title-eyebrow">가입 및 건강정보 동의</p><h2 id="signup-title">계정과 동의 정보를 입력해 주세요</h2></div>
+        </div>
+        <div class="auth-mode-switch" id="auth-mode-switch" role="tablist" aria-label="계정 이용 방식">
+          <button class="auth-mode-button active" id="auth-mode-signup" type="button" role="tab" aria-selected="true" aria-controls="signup-form" data-auth-mode="signup">처음 가입하기</button>
+          <button class="auth-mode-button" id="auth-mode-login" type="button" role="tab" aria-selected="false" aria-controls="login-form" data-auth-mode="login">기존 계정으로 로그인</button>
         </div>
         <form id="signup-form" class="two-column">
           <div class="form-row"><label for="email">이메일</label><input id="email" type="email" placeholder="name@example.com" autocomplete="email" required></div>
@@ -63,7 +67,19 @@
             <label class="check-card consent-card"><input id="health-consent" type="checkbox" required><span><strong>건강정보 수집·이용</strong><small>[간당간당]의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
             <label class="check-card consent-card"><input id="analytics-consent" type="checkbox"><span><strong>서비스 개선을 위한 이용기록 분석</strong><small>선택하지 않아도 건강정보 입력과 위험 확인 기능을 이용할 수 있습니다.</small><em class="optional">선택</em></span></label>
           </div>
-          <div class="actions full"><button class="secondary back" type="button">이전</button><button class="secondary" id="login-existing" type="button">기존 계정으로 로그인</button><button class="primary" type="submit">가입·동의하고 계속</button></div>
+          <div class="actions full"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">가입·동의하고 계속</button></div>
+        </form>
+        <form id="login-form" class="login-form" hidden>
+          <div class="login-form-heading">
+            <p class="eyebrow">기존 회원</p>
+            <h3>이메일과 비밀번호로 로그인해 주세요</h3>
+            <p>생년월일과 성별은 가입할 때 저장한 정보를 불러옵니다.</p>
+          </div>
+          <div class="two-column">
+            <div class="form-row"><label for="login-email">이메일</label><input id="login-email" type="email" placeholder="name@example.com" autocomplete="email" required></div>
+            <div class="form-row"><label for="login-password">비밀번호</label><input id="login-password" type="password" placeholder="8자 이상 입력" minlength="8" autocomplete="current-password" required></div>
+          </div>
+          <div class="actions"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">로그인</button></div>
         </form>
         <section id="returning-user-panel" class="returning-user-panel" aria-labelledby="returning-user-title" tabindex="-1" hidden>
           <p class="eyebrow">기존 회원 로그인 완료</p>
