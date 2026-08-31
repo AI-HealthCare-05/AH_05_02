@@ -55,8 +55,8 @@
     teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
   };
   const presetBundles = {
-    lpc_male_default: { bodyType: "male", lpcHair: "messy", lpcOutfit: "formal", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "blue", outfitColor: "black", bottomColor: "black", shoeColor: "black" },
-    lpc_female_default: { bodyType: "female", lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "blue", outfitColor: "orange", bottomColor: "blue", shoeColor: "black", hatColor: "black" },
+    lpc_male_default: { bodyType: "male", lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown" },
+    lpc_female_default: { bodyType: "female", lpcHair: "long", lpcOutfit: "blouse", lpcBottom: "long_pants", lpcShoes: "shoes", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "brown", outfitColor: "green", bottomColor: "navy", shoeColor: "brown" },
     sprout: { lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown" },
     red_bow: { lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "leggings", lpcShoes: "shoes", lpcHat: "bandana", lpcGlasses: "none", expression: "bright", hairColor: "red", outfitColor: "navy", bottomColor: "cream", shoeColor: "brown" },
     cow_hood: { lpcHair: "afro", lpcOutfit: "tshirt", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "bowler", lpcGlasses: "none", expression: "delighted", hairColor: "brown", outfitColor: "orange", bottomColor: "brown", shoeColor: "brown" },
@@ -262,7 +262,7 @@
     pose: [
       { id: "idle", name: "가만히", visual: "🧍" }, { id: "walk", name: "걷기", visual: "🚶" },
       { id: "run", name: "달리기", visual: "🏃" }, { id: "sit", name: "앉기", visual: "🧘" },
-      { id: "jump", name: "점프", visual: "🙌" }, { id: "dance", name: "함께 춤추기", visual: "💃" },
+      { id: "jump", name: "점프", visual: "🙌" }, { id: "dance", name: "댄스", visual: "💃" },
       { id: "harvest", name: "당근 수확", visual: "🥕" }, { id: "fishing", name: "낚시", visual: "🎣" },
       { id: "door", name: "문 열기", visual: "🚪" }, { id: "attack", name: "공격", visual: "⚔️" },
       { id: "spellcast", name: "반짝임 만들기", visual: "✨" }, { id: "hurt", name: "깜짝 놀라기", visual: "😲" },
@@ -280,7 +280,7 @@
   avatarCatalog.bottomColor = colorChoices;
   avatarCatalog.shoeColor = colorChoices;
   const lpcCatalogMap = {
-    lpcHair: ["hair", 12], lpcOutfit: ["outfit", 12], lpcBottom: ["bottom", 10],
+    lpcHair: ["hair", 12], lpcOutfit: ["outfit", 20], lpcBottom: ["bottom", 15],
     lpcShoes: ["shoes", 9], lpcHat: ["hat", 12], lpcGlasses: ["eyewear", 12],
     lpcExpression: ["expression", 16], lpcEyebrow: ["eyebrow", 2], lpcNose: ["nose", 5],
     lpcEyes: ["eyes", 2], lpcWrinkles: ["wrinkles", 1],
@@ -307,9 +307,9 @@
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
-    lpcHair: "messy", lpcOutfit: "formal", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
+    lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
     bodyType: "male", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
-    expression: "bright", hairColor: "blue", outfitColor: "black", bottomColor: "black", shoeColor: "black",
+    expression: "bright", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
     hatColor: "brown", glassesColor: "brown",
   };
   const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };

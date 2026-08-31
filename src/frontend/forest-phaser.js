@@ -26,10 +26,10 @@
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft",
     hat: "none", glasses: "none", face: "calm", accessory: "none",
-    lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots",
-    lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", bodyType: "male",
-    lpcExpression: "neutral", lpcEyebrow: "thick", lpcNose: "none", lpcEyes: "none", lpcWrinkles: "none",
-    hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
+    lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
+    lpcHat: "none", lpcGlasses: "none", expression: "bright", bodyType: "male",
+    lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
+    hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
   };
   const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };
   const hairPresetByStyle = {

@@ -362,7 +362,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v25" in html
+    assert "forest-local-pwa-reset-v26" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -444,7 +444,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v33" in worker
+    assert "gandang-carrot-forest-pwa-v34" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
@@ -471,7 +471,7 @@ def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
     assert len(manifest["items"]) >= 24
     for action in ("harvest", "fishing", "door", "attack", "dance"):
         assert action in engine_script
-    for key_label in ("공격", "함께 춤"):
+    for key_label in ("공격", "댄스"):
         assert key_label in html
     assert "playTogether" in phaser_script
     assert "this.petTrail" in phaser_script
@@ -544,7 +544,31 @@ def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> Non
     assert 'lpcExpression: "happy2"' in game_script
     assert 'lpcNose: "button"' in game_script
     assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
+    assert '["expression", "neutral", "neutral", "natural"]' in engine_script
+    assert 'selectedExpression === "neutral"' in engine_script
     assert '["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"]' in engine_script
+
+
+def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+
+    assert 'data-action="sit"' in html
+    assert "state.avatar.sitting = !state.avatar.sitting" in game_script
+    assert "avatar.sitting && !options.pose" in engine_script
+    assert "cycles[cycles.length - 1]" in engine_script
+    assert 'lpcOutfit: ["outfit", 20]' in game_script
+    assert 'lpcBottom: ["bottom", 15]' in game_script
+
+
+def test_attack_effects_use_matching_lpc_motion() -> None:
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+
+    assert 'if (effect === "magic_burst") return "spellcast"' in engine_script
+    assert 'if (effect === "arrow_volley") return "shoot"' in engine_script
+    assert 'if (effect === "leaf_blade") return "thrust"' in engine_script
+    assert 'return "slash"' in engine_script
 
 
 def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:

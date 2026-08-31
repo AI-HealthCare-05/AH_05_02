@@ -93,12 +93,16 @@
     const cosmetics = avatar.cosmetics || {};
     const gender = avatar.gender === "female" ? "female" : "male";
     const bodyType = cosmetics.bodyType || gender;
+    const selectedExpression = cosmetics.lpcExpression || "neutral";
     const selections = [
       ["body", "body", "body", cosmetics.skin || "peach"],
       ["bottom", cosmetics.lpcBottom, "pants", cosmetics.bottomColor || "navy"],
       ["shoes", cosmetics.lpcShoes, "shoes", cosmetics.shoeColor || "brown"],
       ["outfit", cosmetics.lpcOutfit, "overalls", cosmetics.outfitColor || "green"],
-      ["expression", cosmetics.lpcExpression, "neutral", "natural"],
+      // happy2·blush처럼 얼굴의 일부만 담은 표정도 있다. 중립 얼굴을
+      // 바탕에 항상 그린 뒤 선택 표정을 겹쳐 눈·코·입이 비지 않게 한다.
+      ["expression", "neutral", "neutral", "natural"],
+      ...(selectedExpression === "neutral" ? [] : [["expression", selectedExpression, "neutral", "natural"]]),
       ["eyebrow", cosmetics.lpcEyebrow, "thick", cosmetics.hairColor || "brown"],
       ["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"],
       ["eyes", cosmetics.lpcEyes, "cyclops", "natural"],
@@ -118,6 +122,13 @@
   }
 
   function resolvedAnimation(avatar, options) {
+    if (options.pose === "attack") {
+      const effect = avatar.cosmetics?.effect || "sword_arc";
+      if (effect === "magic_burst") return "spellcast";
+      if (effect === "arrow_volley") return "shoot";
+      if (effect === "leaf_blade") return "thrust";
+      return "slash";
+    }
     if (poseAnimationAliases[options.pose]) return poseAnimationAliases[options.pose];
     if (options.pose && animationCycles[options.pose]) return options.pose;
     if (avatar.sitting) return "sit";
@@ -127,7 +138,7 @@
   }
 
   function drawActionProp(context, destination, direction, pose, frame, cosmetics = {}) {
-    if (!pose || direction === "up") return;
+    if (!pose) return;
     const scaleX = destination.width / FRAME;
     const scaleY = destination.height / FRAME;
     context.save();
@@ -154,16 +165,37 @@
       const effect = cosmetics.effect || "sword_arc";
       const cx = destination.x + 32 * scaleX;
       const cy = destination.y + 34 * scaleY;
+      const horizontal = direction === "left" ? -1 : 1;
       if (effect === "magic_burst") {
-        context.strokeStyle = "rgba(165, 117, 255, .95)"; context.lineWidth = Math.max(2, 2 * scaleX);
-        for (let index = 0; index < 3; index += 1) { context.beginPath(); context.arc(cx, cy, (10 + frame * 2 + index * 6) * scaleX, 0, Math.PI * 2); context.stroke(); }
+        const pulse = 8 + (frame % 7) * 3;
+        context.strokeStyle = "rgba(153, 116, 255, .95)"; context.lineWidth = Math.max(2, 2 * scaleX);
+        context.beginPath(); context.arc(cx, cy, pulse * scaleX, 0, Math.PI * 2); context.stroke();
+        context.fillStyle = "rgba(220, 201, 255, .95)";
+        for (let index = 0; index < 5; index += 1) {
+          const angle = index * Math.PI * .4 + frame * .18;
+          context.fillRect(cx + Math.cos(angle) * pulse * scaleX, cy + Math.sin(angle) * pulse * scaleY, Math.max(2, 2 * scaleX), Math.max(2, 2 * scaleY));
+        }
       } else if (effect === "arrow_volley") {
-        context.strokeStyle = "#f1d39a"; context.lineWidth = Math.max(1, scaleX);
-        for (let index = -1; index <= 1; index += 1) { context.beginPath(); context.moveTo(cx, cy + index * 7 * scaleY); context.lineTo(cx + (direction === "left" ? -34 : 34) * scaleX, cy + index * 7 * scaleY); context.stroke(); }
+        context.strokeStyle = "#805331"; context.fillStyle = "#f1d39a"; context.lineWidth = Math.max(1, scaleX);
+        for (let index = -1; index <= 1; index += 1) {
+          const tipX = cx + horizontal * (22 + frame * 2) * scaleX;
+          const arrowY = cy + index * 7 * scaleY;
+          context.beginPath(); context.moveTo(cx, arrowY); context.lineTo(tipX, arrowY); context.stroke();
+          context.beginPath(); context.moveTo(tipX, arrowY); context.lineTo(tipX - horizontal * 5 * scaleX, arrowY - 3 * scaleY); context.lineTo(tipX - horizontal * 5 * scaleX, arrowY + 3 * scaleY); context.closePath(); context.fill();
+        }
+      } else if (effect === "leaf_blade") {
+        context.fillStyle = "rgba(104, 190, 93, .95)";
+        for (let index = 0; index < 4; index += 1) {
+          const leafX = cx + horizontal * (12 + frame * 3 + index * 7) * scaleX;
+          const leafY = cy + (index - 1.5) * 6 * scaleY;
+          context.save(); context.translate(leafX, leafY); context.rotate(horizontal * (.5 + index * .2));
+          context.beginPath(); context.ellipse(0, 0, 6 * scaleX, 3 * scaleY, 0, 0, Math.PI * 2); context.fill(); context.restore();
+        }
       } else {
-        context.strokeStyle = effect === "leaf_blade" ? "rgba(111, 191, 101, .95)" : "rgba(255, 227, 119, .95)";
+        context.strokeStyle = "rgba(255, 224, 113, .96)";
         context.lineWidth = Math.max(2, 3 * scaleX); context.beginPath();
-        context.arc(cx, cy, (18 + frame) * scaleX, -1.25, 0.75); context.stroke();
+        const start = horizontal > 0 ? -1.35 : 2.35;
+        context.arc(cx, cy, (18 + frame) * scaleX, start, start + horizontal * 2.15, horizontal < 0); context.stroke();
       }
     } else if (pose === "door") {
       drawPixel(context, destination, direction === "left" ? 15 : 47, 34, 2, 2, "#ffe69a");
@@ -216,7 +248,9 @@
       ? (options.direction || avatar.direction) : "down";
     const animation = resolvedAnimation(avatar, options);
     const cycles = animationCycles[animation] || animationCycles.idle;
-    const frameIndex = cycles[Math.abs(Number(options.frame || 0)) % cycles.length];
+    const frameIndex = avatar.sitting && !options.pose
+      ? cycles[cycles.length - 1]
+      : cycles[Math.abs(Number(options.frame || 0)) % cycles.length];
     const rowBase = manifest.animationRows[animation] ?? manifest.animationRows.idle;
     const directionRow = animation === "hurt" || animation === "climb" ? 0 : manifest.directionRows[direction];
 
