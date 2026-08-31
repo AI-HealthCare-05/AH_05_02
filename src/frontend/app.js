@@ -1120,7 +1120,7 @@ function renderChallengeChoices() {
   challengeList.innerHTML = emptyMessage + Object.entries(challengeCategories).map(([key, category]) => {
     const count = state.challengeCatalog.filter((item) => item.category === key).length;
     return `<button class="challenge-category-card ${state.activeChallengeCategory === key ? "active" : ""}" type="button" data-challenge-category="${key}" aria-pressed="${state.activeChallengeCategory === key}">
-      <img src="${category.mascot}" alt="${category.mascotAlt}"><strong>${category.title}</strong><small>${category.description}</small><em>${count}개 세부 목표</em>
+      <img src="${category.mascot}" alt="${category.mascotAlt}"><span class="challenge-category-copy"><strong>${category.title}</strong><small>${category.description}</small><em>${count}개 세부 목표</em></span>
     </button>`;
   }).join("") + customChallengeSlot();
   renderChallengeDetails();
