@@ -104,9 +104,9 @@ const localNotionChallenges = [
 ].map(([challenge_id, category, title, daily_goal]) => ({ challenge_id, category, title, daily_goal }));
 
 const challengeCategories = {
-  activity: { title: "움직이기", description: "걷기·근력·짧은 움직임", icon: "↗" },
-  diet: { title: "건강하게 먹기", description: "물·채소·통곡물 선택", icon: "○" },
-  tracking: { title: "기록하기", description: "식사·수면·생활습관 확인", icon: "✓" },
+  activity: { title: "움직이기", description: "걷기·근력·짧은 움직임", mascot: "/static/assets/hyeoldangi-challenge-walking.png", mascotAlt: "활기차게 걷는 혈당이" },
+  diet: { title: "건강하게 먹기", description: "물·채소·통곡물 선택", mascot: "/static/assets/hyeoldangi-challenge-meal.png", mascotAlt: "건강한 식사를 들고 있는 혈당이" },
+  tracking: { title: "기록하기", description: "식사·수면·생활습관 확인", mascot: "/static/assets/hyeoldangi-daily-record.png", mascotAlt: "오늘의 생활습관을 기록하는 혈당이" },
 };
 
 function challengeMascot(item) {
@@ -1120,7 +1120,7 @@ function renderChallengeChoices() {
   challengeList.innerHTML = emptyMessage + Object.entries(challengeCategories).map(([key, category]) => {
     const count = state.challengeCatalog.filter((item) => item.category === key).length;
     return `<button class="challenge-category-card ${state.activeChallengeCategory === key ? "active" : ""}" type="button" data-challenge-category="${key}" aria-pressed="${state.activeChallengeCategory === key}">
-      <b aria-hidden="true">${category.icon}</b><strong>${category.title}</strong><small>${category.description}</small><em>${count}개 세부 목표</em>
+      <img src="${category.mascot}" alt="${category.mascotAlt}"><strong>${category.title}</strong><small>${category.description}</small><em>${count}개 세부 목표</em>
     </button>`;
   }).join("") + customChallengeSlot();
   renderChallengeDetails();

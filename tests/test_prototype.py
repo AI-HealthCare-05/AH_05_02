@@ -189,6 +189,12 @@ def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> Non
     assert 'id="challenge-selection-count"' in html
     for category in ("움직이기", "건강하게 먹기", "기록하기"):
         assert category in script
+    for mascot in (
+        "hyeoldangi-challenge-walking.png",
+        "hyeoldangi-challenge-meal.png",
+        "hyeoldangi-daily-record.png",
+    ):
+        assert mascot in script
     for challenge in (
         "빠르게 걷기",
         "30분마다 일어나기",
