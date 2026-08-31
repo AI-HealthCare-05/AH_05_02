@@ -124,9 +124,24 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
     for label in (
-        "피부", "헤어", "헤어 색", "상의", "상의 색", "하의", "하의 색",
-        "신발", "신발 색", "표정", "모자", "안경", "아우라",
-        "이펙트", "탈것", "펫", "말풍선", "동작",
+        "피부",
+        "헤어",
+        "헤어 색",
+        "상의",
+        "상의 색",
+        "하의",
+        "하의 색",
+        "신발",
+        "신발 색",
+        "표정",
+        "모자",
+        "안경",
+        "아우라",
+        "이펙트",
+        "탈것",
+        "펫",
+        "말풍선",
+        "동작",
     ):
         assert f'label: "{label}"' in script
     assert "찌르기 이펙트" not in script
@@ -339,7 +354,18 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
     assert "/static/forest-phaser.js" in html
-    for category in ("lpcHair", "lpcOutfit", "lpcBottom", "lpcShoes", "aura", "effect", "vehicle", "pet", "speech", "pose"):
+    for category in (
+        "lpcHair",
+        "lpcOutfit",
+        "lpcBottom",
+        "lpcShoes",
+        "aura",
+        "effect",
+        "vehicle",
+        "pet",
+        "speech",
+        "pose",
+    ):
         assert f'id: "{category}"' in game_script
     for event_name in (
         "forest-avatar-updated",
