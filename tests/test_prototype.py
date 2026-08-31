@@ -147,7 +147,8 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert "API 연결 전이라 기존 회원 화면 확인 모드로 로그인했습니다." not in script
     assert 'data-demo-status="timeout"' not in html
     assert 'data-demo-status="model_not_ready"' not in html
-    assert 'renderPredictionStatus("failed", { errorCode:' in script
+    assert 'renderPredictionStatus("failed", {' in script
+    assert 'errorCode: isTimeout ? "TIMEOUT"' in script
 
 
 def test_signup_and_existing_login_use_separate_forms() -> None:
@@ -234,6 +235,32 @@ def test_frontend_distinguishes_api_errors_without_demo_fallback() -> None:
     assert "챌린지 목록을 불러오지 못했습니다." in script
     assert "현재 선택할 수 있는 챌린지가 없습니다." in script
     assert "기본 예시를 표시합니다." not in script
+
+
+def test_rf25_ml_errors_have_safe_actionable_frontend_guidance() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+    expected_guidance = {
+        "ML_INPUT_MISSING": "필수 건강정보를 확인해 주세요",
+        "ML_INPUT_OUT_OF_RANGE": "건강정보의 입력값을 확인해 주세요",
+        "ML_POPULATION_UNSUPPORTED": "현재 연령은 미래 발병 예측 대상이 아닙니다",
+        "ML_POPULATION_INELIGIBLE": "현재는 미래 발병 예측을 진행하지 않습니다",
+        "ML_MODEL_UNAVAILABLE": "현재 예측 모델을 준비하고 있습니다",
+        "ML_MODEL_CONTRACT_ERROR": "예측 모델 연결을 점검하고 있습니다",
+    }
+    assert "const predictionFailureGuidance = {" in script
+    for error_code, user_title in expected_guidance.items():
+        assert error_code in script
+        assert user_title in script
+
+    assert "fallbackApiErrorMessage(resolvedCode)" in script
+    assert "failureGuidance?.message || error.message" in script
+    assert "실패는 높은 위험을 의미하지 않습니다." in script
+    assert "임의 점수나 위험 범주를 표시하지 않습니다." in script
+    assert "점수·확률·위험 범주를 만들거나 표시하지 않습니다." in script
+    for error_code in ("ML_MODEL_UNAVAILABLE", "ML_MODEL_CONTRACT_ERROR"):
+        assert f'data-error-code="{error_code}"' in styles
 
 
 def test_signup_and_login_block_duplicate_requests_while_busy() -> None:

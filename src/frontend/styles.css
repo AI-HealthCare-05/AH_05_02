@@ -131,14 +131,14 @@
 .status-demo-panel button:focus-visible{outline:3px solid #2f7f73;outline-offset:2px}
 .prediction-status-card[data-status="queued"]{border-color:#92bfe8}
 .prediction-status-card[data-status="failed"]{border-color:#e79a93}
-.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"],.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"]{border-color:#e2b84d}
+.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"],.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"],.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_UNAVAILABLE"],.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_CONTRACT_ERROR"]{border-color:#e2b84d}
 .status-symbol{display:grid;place-items:center;width:96px;height:96px;margin:0 auto 12px;border:4px solid var(--green);border-radius:50%;background:var(--mint);color:var(--green);font-size:36px;font-weight:900}
 .prediction-status-card[data-status="queued"] .status-symbol{border-color:#3279bd;color:#3279bd;background:#eef7ff}
 .prediction-status-card[data-status="failed"] .status-symbol{border-color:#b5443c;color:#b5443c;background:#fff4f2}
-.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"] .status-symbol,.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"] .status-symbol{border-color:#d8a313;color:#9c760a;background:#fff8df}
+.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"] .status-symbol,.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"] .status-symbol,.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_UNAVAILABLE"] .status-symbol,.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_CONTRACT_ERROR"] .status-symbol{border-color:#d8a313;color:#9c760a;background:#fff8df}
 .prediction-status-card h3{font-size:32px;margin:0 0 12px;color:var(--green-dark)}
 .prediction-status-card[data-status="failed"] h3{color:#b5443c}
-.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"] h3,.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"] h3{color:#8a6400}
+.prediction-status-card[data-status="failed"][data-error-code="TIMEOUT"] h3,.prediction-status-card[data-status="failed"][data-error-code="MODEL_NOT_READY"] h3,.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_UNAVAILABLE"] h3,.prediction-status-card[data-status="failed"][data-error-code="ML_MODEL_CONTRACT_ERROR"] h3{color:#8a6400}
 .prediction-status-card p{color:var(--muted);font-size:20px;margin:0 0 30px}
 .prediction-status-track{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:30px auto 0;padding:22px 0 0;border-top:1px solid var(--line);max-width:860px}
 .prediction-status-track li{display:flex;align-items:center;justify-content:center;gap:12px;color:var(--muted);font-size:17px;font-weight:900}

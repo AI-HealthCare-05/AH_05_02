@@ -145,12 +145,65 @@ function fallbackApiErrorMessage(code) {
     UNAUTHENTICATED: "로그인 정보가 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.",
     CONFLICT: "이미 등록된 정보와 겹칩니다. 입력 내용을 확인해 주세요.",
     VALIDATION_ERROR: "입력값의 형식과 범위를 확인해 주세요.",
+    ML_INPUT_MISSING: "분석에 필요한 건강정보가 빠져 있습니다. 입력정보를 확인해 주세요.",
+    ML_INPUT_OUT_OF_RANGE: "분석할 수 있는 범위를 벗어난 건강정보가 있습니다. 입력값을 확인해 주세요.",
+    ML_POPULATION_UNSUPPORTED: "현재 연령은 미래 발병 위험 예측 대상에 포함되지 않습니다.",
+    ML_POPULATION_INELIGIBLE: "현재 입력정보로는 미래 발병 위험 예측을 진행할 수 없습니다.",
+    ML_MODEL_UNAVAILABLE: "현재 예측 모델을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.",
+    ML_MODEL_CONTRACT_ERROR: "예측 모델 연결을 점검하고 있습니다. 입력정보는 안전하게 유지됩니다.",
     MODEL_NOT_READY: "현재 예측 모델을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
     TIMEOUT: "요청 처리 시간이 초과되었습니다. 입력정보는 유지되며 다시 시도할 수 있습니다.",
     SERVER_ERROR: "서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     REQUEST_FAILED: "요청을 처리하지 못했습니다.",
   }[code] || "요청을 처리하지 못했습니다.";
 }
+
+const predictionFailureGuidance = {
+  ML_INPUT_MISSING: {
+    eyebrow: "입력정보 확인 필요", title: "필수 건강정보를 확인해 주세요", stage: "입력 확인", icon: "!",
+    message: "분석에 필요한 건강정보가 빠져 있어 예측을 시작하지 않았습니다.",
+    policy: "입력정보 확인하기를 눌러 빠진 항목을 입력한 뒤 다시 요청할 수 있습니다.",
+    failureTitle: "분석에 필요한 정보가 부족합니다",
+    failureMessage: "입력정보는 유지되어 있습니다. 빠진 항목을 확인해 주세요.",
+  },
+  ML_INPUT_OUT_OF_RANGE: {
+    eyebrow: "입력 범위 확인 필요", title: "건강정보의 입력값을 확인해 주세요", stage: "범위 확인", icon: "!",
+    message: "분석할 수 있는 범위를 벗어난 값이 있어 예측을 진행하지 않았습니다.",
+    policy: "임의로 값을 바꾸거나 결과를 만들지 않습니다. 입력한 수치를 확인해 주세요.",
+    failureTitle: "입력 범위를 벗어난 항목이 있습니다",
+    failureMessage: "입력정보 확인하기를 눌러 키·몸무게·운동시간 등의 값을 확인해 주세요.",
+  },
+  ML_POPULATION_UNSUPPORTED: {
+    eyebrow: "예측 대상 연령 확인", title: "현재 연령은 미래 발병 예측 대상이 아닙니다", stage: "대상 확인", icon: "!",
+    message: "RF25 미래 발병 위험 예측은 만 45~105세 범위에서만 진행합니다.",
+    policy: "예측 대상이 아니어도 이용 가능한 현재 건강 신호와 생활습관 챌린지는 계속 안내합니다.",
+    failureTitle: "미래 발병 위험 예측 대상 연령이 아닙니다",
+    failureMessage: "연령을 다시 확인하거나 이용 가능한 건강정보·생활습관 기능을 이용해 주세요.",
+  },
+  ML_POPULATION_INELIGIBLE: {
+    eyebrow: "예측 대상 확인", title: "현재는 미래 발병 예측을 진행하지 않습니다", stage: "대상 확인", icon: "!",
+    message: "기존 당뇨병 진단 여부 등 적용 기준을 확인한 결과 예측 대상에 포함되지 않습니다.",
+    policy: "미래 발병 위험 예측 대신 의료진 안내와 이용 가능한 생활습관 기능을 우선합니다.",
+    failureTitle: "현재 입력정보는 예측 대상에 해당하지 않습니다",
+    failureMessage: "당뇨병 진단 여부와 이용 가능 확인 내용을 다시 확인해 주세요.",
+  },
+  ML_MODEL_UNAVAILABLE: {
+    eyebrow: "모델 준비 중", title: "현재 예측 모델을 준비하고 있습니다", stage: "모델 준비", icon: "!",
+    mascot: "/static/assets/hyeoldangi-analyzing.png",
+    message: "서버에서 검증된 모델을 불러오지 못해 예측을 진행하지 않았습니다.",
+    policy: "임의 점수나 위험 범주를 표시하지 않습니다. 잠시 후 다시 시도해 주세요.",
+    failureTitle: "예측 모델을 불러오지 못했습니다",
+    failureMessage: "입력정보는 유지되어 있습니다. 잠시 후 같은 정보로 다시 시도할 수 있습니다.",
+  },
+  ML_MODEL_CONTRACT_ERROR: {
+    eyebrow: "모델 연결 점검 중", title: "예측 모델 연결을 점검하고 있습니다", stage: "연결 점검", icon: "!",
+    mascot: "/static/assets/hyeoldangi-analyzing.png",
+    message: "모델 버전과 입력 규격을 확인하는 동안 예측 결과를 제공하지 않습니다.",
+    policy: "계약이 확인되기 전에는 점수·확률·위험 범주를 만들거나 표시하지 않습니다.",
+    failureTitle: "예측 모델의 연결 규격을 확인하고 있습니다",
+    failureMessage: "사용자가 수정할 문제는 아닙니다. 입력정보는 유지되며 서버 점검 후 다시 시도할 수 있습니다.",
+  },
+};
 
 const eligibilityGuidance = {
   URGENT_MEDICAL_ATTENTION: {
@@ -592,7 +645,7 @@ function setPredictionTrack(status, errorCode = "") {
     ready.querySelector("span").textContent = "✓";
   }
   if (status === "failed") {
-    const isWarning = errorCode === "TIMEOUT" || errorCode === "MODEL_NOT_READY";
+    const isWarning = ["TIMEOUT", "MODEL_NOT_READY", "ML_MODEL_UNAVAILABLE", "ML_MODEL_CONTRACT_ERROR"].includes(errorCode);
     analysis.classList.add(isWarning ? "warning" : "failed");
     analysis.querySelector("span").textContent = isWarning ? "!" : "×";
   }
@@ -655,6 +708,8 @@ function renderPredictionStatus(status, options = {}) {
     mascot: "/static/assets/hyeoldangi-analyzing.png", message: "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다.",
     policy: "승인 전 확률·점수·위험 범주는 사용자 화면에 표시하지 않습니다.",
   });
+  const failureGuidance = predictionFailureGuidance[errorCode];
+  if (status === "failed" && failureGuidance) Object.assign(config, failureGuidance);
   const statusCard = $("#prediction-status-card");
   if (statusCard) {
     statusCard.dataset.status = status;
@@ -673,16 +728,16 @@ function renderPredictionStatus(status, options = {}) {
   $("#probability-policy").querySelector("p").textContent = config.policy;
   $("#analysis-failure").hidden = status !== "failed";
   if (!$("#analysis-failure").hidden) {
-    $("#analysis-failure-title").textContent = errorCode === "TIMEOUT"
+    $("#analysis-failure-title").textContent = failureGuidance?.failureTitle || (errorCode === "TIMEOUT"
       ? "분석 시간이 초과되었습니다"
       : errorCode === "MODEL_NOT_READY"
         ? "현재 모델을 검증하고 있습니다"
-        : "분석을 완료하지 못했습니다";
-    $("#analysis-failure-message").textContent = errorCode === "TIMEOUT"
+        : "분석을 완료하지 못했습니다");
+    $("#analysis-failure-message").textContent = failureGuidance?.failureMessage || (errorCode === "TIMEOUT"
       ? "입력정보는 보존되어 있습니다. 잠시 후 다시 시도할 수 있습니다."
       : errorCode === "MODEL_NOT_READY"
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.";
+        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
   }
   const canShowResult = config.showNext && options.resultAvailable === true;
   $("#retry-analysis").hidden = !config.showRetry;
@@ -914,8 +969,9 @@ async function api(path, options = {}) {
       : null;
     const message = typeof detail === "string" ? detail : validationMessage || detail?.message || payload.error?.message;
     const fallbackCode = fallbackApiErrorCode(response.status);
-    throw new ApiError(message || fallbackApiErrorMessage(fallbackCode), {
-      code: detail?.error_code || payload.error_code || payload.error?.code || detail?.code || payload.code || fallbackCode,
+    const resolvedCode = detail?.error_code || payload.error_code || payload.error?.code || detail?.code || payload.code || fallbackCode;
+    throw new ApiError(message || fallbackApiErrorMessage(resolvedCode), {
+      code: resolvedCode,
       status: response.status,
       retryable: detail?.retryable ?? payload.retryable ?? payload.error?.retryable ?? response.status >= 500,
       retryAfterSeconds: detail?.retry_after_seconds ?? payload.retry_after_seconds ?? payload.error?.retry_after_seconds,
@@ -1029,8 +1085,12 @@ async function runPrediction() {
   } catch (error) {
     const isTimeout = error.code === "TIMEOUT";
     const isModelNotReady = error.code === "MODEL_NOT_READY";
-    renderPredictionStatus("failed", { errorCode: isTimeout ? "TIMEOUT" : isModelNotReady ? "MODEL_NOT_READY" : error.code, message: error.message });
-    if (!isModelNotReady) {
+    const failureGuidance = predictionFailureGuidance[error.code];
+    renderPredictionStatus("failed", {
+      errorCode: isTimeout ? "TIMEOUT" : isModelNotReady ? "MODEL_NOT_READY" : error.code,
+      message: failureGuidance?.message || error.message,
+    });
+    if (!isModelNotReady && !failureGuidance) {
       $("#analysis-failure-title").textContent = isTimeout
         ? "분석 시간이 초과되었습니다"
         : "분석을 완료하지 못했습니다";
