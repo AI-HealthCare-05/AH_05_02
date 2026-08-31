@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], customChallenge: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -1045,18 +1045,41 @@ async function loadChallenges() {
     startButton.disabled = true;
   }
   if (!items.length) {
-    challengeList.innerHTML = '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다.</p>';
+    state.challengeRecommendations = [];
+    renderChallengeChoices();
     return;
   }
-  challengeList.innerHTML = items.map((item) => {
+  state.challengeRecommendations = items;
+  renderChallengeChoices();
+  if (!result.medical_guidance_required_first) startButton.disabled = false;
+  syncWalkingLevelPicker();
+}
+
+function customChallengeSlot() {
+  if (!state.customChallenge) {
+    return `<button class="challenge-add-card" id="open-custom-challenge" type="button">
+      <b aria-hidden="true">+</b><strong>나만의 챌린지 추가</strong><small>내 생활에 맞는 목표를 직접 적어보세요.</small>
+    </button>`;
+  }
+  return `<article class="challenge-card custom-challenge-slot">
+    <label>
+      <input id="custom-challenge-choice" type="checkbox" name="custom-challenge">
+      <span><span class="custom-challenge-icon" aria-hidden="true">+</span><div class="challenge-card-copy"><strong>${escapeHtml(state.customChallenge.title)}</strong><small>목표: ${escapeHtml(state.customChallenge.goal)}</small><em>직접 추가 · ${escapeHtml(state.customChallenge.recordLabel)}</em></div></span>
+    </label>
+    <button class="text-button edit-custom-challenge" type="button">수정</button>
+  </article>`;
+}
+
+function renderChallengeChoices() {
+  const challengeList = $("#challenge-list");
+  const emptyMessage = state.challengeRecommendations.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 나만의 챌린지를 직접 추가할 수 있어요.</p>';
+  challengeList.innerHTML = emptyMessage + state.challengeRecommendations.map((item) => {
     const mascot = challengeMascot(item);
     return `<label class="challenge-card">
     <input type="checkbox" name="challenge" value="${item.challenge_id}" data-challenge-kind="${item.title.includes("걷") ? "walking" : "general"}">
     <span><img class="challenge-mascot" src="${mascot.src}" alt="${mascot.alt}"><div class="challenge-card-copy"><strong>${item.title}</strong><small>목표: ${item.daily_goal}</small></div></span>
   </label>`;
-  }).join("");
-  if (!result.medical_guidance_required_first) startButton.disabled = false;
-  syncWalkingLevelPicker();
+  }).join("") + customChallengeSlot();
 }
 
 function syncWalkingLevelPicker() {
@@ -1097,8 +1120,9 @@ function renderDailyRecordList() {
   }).join("");
 }
 
-function createLocalDemoCycle(ids) {
+function createLocalDemoCycle(ids, customChallenge = null) {
   const selected = fallbackChallenges.filter((challenge) => ids.includes(challenge.challenge_id));
+  if (customChallenge) selected.push({ challenge_id: "custom", title: customChallenge.title });
   return {
     cycle_id: "local-demo-cycle",
     cycle_number: 1,
@@ -1712,6 +1736,40 @@ $("#challenge-list").addEventListener("change", (event) => {
     $("#walking-level-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 });
+$("#challenge-list").addEventListener("click", (event) => {
+  if (!event.target.closest("#open-custom-challenge, .edit-custom-challenge")) return;
+  const editor = $("#custom-challenge-editor");
+  editor.hidden = false;
+  $("#custom-challenge-title").value = state.customChallenge?.title || "";
+  $("#custom-challenge-goal").value = state.customChallenge?.goal || "";
+  $("#custom-challenge-record-type").value = state.customChallenge?.recordType || "simple";
+  editor.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("#custom-challenge-title").focus({ preventScroll: true });
+});
+$("#cancel-custom-challenge").addEventListener("click", () => {
+  $("#custom-challenge-editor").hidden = true;
+  $("#open-custom-challenge, .edit-custom-challenge")?.focus();
+});
+$("#save-custom-challenge").addEventListener("click", () => {
+  const titleInput = $("#custom-challenge-title");
+  const goalInput = $("#custom-challenge-goal");
+  if (!titleInput.reportValidity() || !goalInput.reportValidity()) return;
+  const recordType = $("#custom-challenge-record-type").value;
+  const selectedRecommendationIds = new Set($$("input[name='challenge']:checked").map((input) => input.value));
+  state.customChallenge = {
+    title: titleInput.value.trim(),
+    goal: goalInput.value.trim(),
+    recordType,
+    recordLabel: { simple: "간편 체크", time: "시간 입력", count: "횟수 입력" }[recordType],
+  };
+  renderChallengeChoices();
+  $$("input[name='challenge']").forEach((input) => { input.checked = selectedRecommendationIds.has(input.value); });
+  $("#custom-challenge-editor").hidden = true;
+  $("#custom-challenge-choice").checked = true;
+  syncWalkingLevelPicker();
+  $("#custom-challenge-choice").focus();
+  showMessage("나만의 챌린지를 추가했어요.", "success");
+});
 $("#walking-level-picker").addEventListener("change", (event) => {
   if (event.target.name === "walking-level") state.walkingLevel = event.target.value;
 });
@@ -1723,14 +1781,19 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     return;
   }
   const ids = $$("input[name='challenge']:checked").map((input) => Number(input.value));
-  if (!ids.length) return showMessage("챌린지를 하나 이상 선택해 주세요.");
+  const customSelected = $("#custom-challenge-choice")?.checked === true;
+  if (!ids.length && !customSelected) return showMessage("챌린지를 하나 이상 선택해 주세요.");
   state.walkingLevel = selectedRadioValue("walking-level") || "starter";
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "챌린지 시작 중…");
   try {
     if (isLocalPreview()) {
-      renderCycle(createLocalDemoCycle(ids));
+      renderCycle(createLocalDemoCycle(ids, customSelected ? state.customChallenge : null));
       renderLocalDemoDashboard();
       showStep(8);
+      return;
+    }
+    if (customSelected) {
+      showMessage("나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요. 작성한 내용은 현재 화면에 유지됩니다.");
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({

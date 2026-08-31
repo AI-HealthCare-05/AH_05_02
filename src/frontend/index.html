@@ -360,6 +360,19 @@
         </div>
         <form id="challenge-form">
           <div class="challenge-grid" id="challenge-list"></div>
+          <section class="custom-challenge-editor" id="custom-challenge-editor" aria-labelledby="custom-challenge-editor-title" hidden>
+            <div>
+              <p class="eyebrow">나만의 챌린지</p>
+              <h3 id="custom-challenge-editor-title">직접 실천할 목표를 추가해 주세요</h3>
+              <p>작고 구체적인 목표로 적으면 매일 기록하기 쉬워요.</p>
+            </div>
+            <div class="two-column">
+              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" required></div>
+              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" required></div>
+              <div class="form-row full"><label for="custom-challenge-record-type">기록 방법</label><select id="custom-challenge-record-type"><option value="simple">간편 체크</option><option value="time">시간 입력</option><option value="count">횟수 입력</option></select></div>
+            </div>
+            <div class="custom-challenge-actions"><button class="secondary" id="cancel-custom-challenge" type="button">취소</button><button class="primary" id="save-custom-challenge" type="button">이 항목 추가하기</button></div>
+          </section>
           <fieldset class="walking-level-picker" id="walking-level-picker" aria-labelledby="walking-level-title" hidden>
             <legend id="walking-level-title">걷기 실천 수준을 선택해 주세요</legend>
             <p>현재 몸 상태에 맞는 수준부터 시작하고, 무리가 없다면 천천히 늘려 주세요.</p>
