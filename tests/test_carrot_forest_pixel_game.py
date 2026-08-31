@@ -365,7 +365,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v30" in html
+    assert "forest-local-pwa-reset-v31" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -446,7 +446,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v38" in worker
+    assert "gandang-carrot-forest-pwa-v39" in worker
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
@@ -570,9 +570,12 @@ def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> Non
     assert 'lpcExpression: "happy2"' in game_script
     assert 'lpcNose: "button"' in game_script
     assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
-    assert '["expression", "neutral", "neutral", "natural"]' in engine_script
-    assert 'selectedExpression === "neutral"' in engine_script
-    assert '["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"]' in engine_script
+    assert "skinPalettes" in engine_script
+    assert "faceAnchors" in engine_script
+    assert "drawEye" in engine_script
+    assert "drawMouth" in engine_script
+    assert 'if (direction === "up") return' in engine_script
+    assert 'const palette = skinPalettes[cosmetics.skin] || skinPalettes.peach' in engine_script
 
 
 def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() -> None:

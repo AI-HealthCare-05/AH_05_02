@@ -93,20 +93,13 @@
     const cosmetics = avatar.cosmetics || {};
     const gender = avatar.gender === "female" ? "female" : "male";
     const bodyType = cosmetics.bodyType || gender;
-    const selectedExpression = cosmetics.lpcExpression || "neutral";
     const selections = [
       ["body", "body", "body", cosmetics.skin || "peach"],
       ["bottom", cosmetics.lpcBottom, "pants", cosmetics.bottomColor || "navy"],
       ["shoes", cosmetics.lpcShoes, "shoes", cosmetics.shoeColor || "brown"],
       ["outfit", cosmetics.lpcOutfit, "overalls", cosmetics.outfitColor || "green"],
-      // happy2·blush처럼 얼굴의 일부만 담은 표정도 있다. 중립 얼굴을
-      // 바탕에 항상 그린 뒤 선택 표정을 겹쳐 눈·코·입이 비지 않게 한다.
-      ["expression", "neutral", "neutral", "natural"],
-      ...(selectedExpression === "neutral" ? [] : [["expression", selectedExpression, "neutral", "natural"]]),
-      ["eyebrow", cosmetics.lpcEyebrow, "thick", cosmetics.hairColor || "brown"],
-      ["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"],
-      ["eyes", cosmetics.lpcEyes, "cyclops", "natural"],
-      ["wrinkles", cosmetics.lpcWrinkles, "wrinkles", cosmetics.skin || "peach"],
+      // 얼굴은 아래 drawFaceDetails에서 한 규격으로 합성한다. 서로 다른 LPC
+      // 부분 얼굴 이미지를 겹치지 않아 눈·코·입이 사라지는 현상을 방지한다.
       ["hair", cosmetics.lpcHair, "bob", cosmetics.hairColor || "brown"],
       ["eyewear", cosmetics.lpcGlasses, "round", cosmetics.glassesColor || "brown"],
       ["hat", cosmetics.lpcHat, "leather_cap", cosmetics.hatColor || "brown"],
@@ -213,50 +206,120 @@
     );
   }
 
-  // 일부 LPC 표정은 볼터치처럼 얼굴의 일부분만 포함한다. 선택한 표정 파일이
-  // 비어 있거나 부분 레이어여도 눈·코·입이 사라지지 않도록 코드 기반 얼굴을
-  // 헤어와 안경보다 먼저 그린다.
+  const skinPalettes = {
+    porcelain: { shadow: "#d49a82", contour: "#b87968", blush: "#ef9aa2" },
+    peach: { shadow: "#c98770", contour: "#a86458", blush: "#ed8f96" },
+    rose: { shadow: "#c57c79", contour: "#a45f61", blush: "#e68193" },
+    warm: { shadow: "#9c6048", contour: "#794432", blush: "#d77b7b" },
+    sand: { shadow: "#a66f54", contour: "#80503d", blush: "#d98482" },
+    golden: { shadow: "#8e5e3f", contour: "#70442d", blush: "#cd7770" },
+    amber: { shadow: "#74462f", contour: "#593221", blush: "#bc6967" },
+    bronze: { shadow: "#5c3728", contour: "#45251c", blush: "#a95d61" },
+    espresso: { shadow: "#3f261e", contour: "#281713", blush: "#8f4d56" },
+    olive: { shadow: "#826349", contour: "#624632", blush: "#c87c78" },
+    neutral: { shadow: "#966650", contour: "#714838", blush: "#d47f80" },
+    deep: { shadow: "#553527", contour: "#382019", blush: "#97535b" },
+  };
+
+  // 모든 얼굴 요소는 같은 64x64 LPC 기준 좌표를 사용한다. 바디 스프라이트가
+  // 방향별로 바뀌어도 눈·코·입은 이 앵커만 따라가며, 헤어·안경은 이후에 그려진다.
+  const faceAnchors = {
+    down: { eyes: [[25, 29], [37, 29]], brows: [[24, 26], [36, 26]], nose: [31, 33], mouth: [31, 37], cheeks: [[20, 34], [43, 34]] },
+    left: { eyes: [[24, 29]], brows: [[23, 26]], nose: [20, 33], mouth: [22, 37], cheeks: [[18, 34]] },
+    right: { eyes: [[38, 29]], brows: [[37, 26]], nose: [42, 33], mouth: [40, 37], cheeks: [[44, 34]] },
+  };
+
+  function drawEye(context, destination, x, y, options) {
+    const { style, expression, color, special, closed, lookOffset } = options;
+    if (closed || ["closed", "closing", "happy", "happy2"].includes(expression)) {
+      drawPixel(context, destination, x - 2, y + 1, 2, 1, color);
+      drawPixel(context, destination, x, y + 2, 2, 1, color);
+      drawPixel(context, destination, x + 2, y + 1, 1, 1, color);
+      return;
+    }
+    if (style === "soft" || style === "narrow") {
+      drawPixel(context, destination, x - 2, y + (style === "narrow" ? 2 : 1), 5, 1, color);
+      if (style === "soft") drawPixel(context, destination, x - 1, y + 2, 3, 1, color);
+      return;
+    }
+    const iris = special && special !== "none" ? "#6d66d9" : color;
+    drawPixel(context, destination, x - 1 + lookOffset, y, 4, 4, "#fffaf4");
+    drawPixel(context, destination, x + lookOffset, y, 3, 4, iris);
+    drawPixel(context, destination, x + 1 + lookOffset, y + 1, 2, 3, "#241f25");
+    drawPixel(context, destination, x + 1 + lookOffset, y, 1, 1, "#ffffff");
+    if (style === "bright" || special !== "none") drawPixel(context, destination, x - 1 + lookOffset, y + 1, 1, 1, "#ffffff");
+  }
+
+  function drawMouth(context, destination, x, y, style, expression) {
+    const color = "#9e4c58";
+    if (["shock", "tears"].includes(expression)) {
+      drawPixel(context, destination, x - 1, y, 3, 3, color);
+      drawPixel(context, destination, x, y, 1, 1, "#f7b6b2");
+    } else if (["sad", "sad2", "shame"].includes(expression)) {
+      drawPixel(context, destination, x - 2, y + 1, 1, 1, color);
+      drawPixel(context, destination, x - 1, y, 3, 1, color);
+      drawPixel(context, destination, x + 2, y + 1, 1, 1, color);
+    } else if (style === "neutral" || ["angry", "angry2"].includes(expression)) {
+      drawPixel(context, destination, x - 2, y, 5, 1, color);
+    } else if (style === "grin" || ["happy", "happy2"].includes(expression)) {
+      drawPixel(context, destination, x - 3, y, 7, 1, color);
+      drawPixel(context, destination, x - 2, y + 1, 5, 2, "#fff7eb");
+      drawPixel(context, destination, x - 1, y + 3, 3, 1, "#e98b92");
+    } else if (style === "pout") {
+      drawPixel(context, destination, x - 1, y, 3, 2, color);
+    } else {
+      drawPixel(context, destination, x - 2, y, 1, 1, color);
+      drawPixel(context, destination, x - 1, y + 1, 3, 1, color);
+      drawPixel(context, destination, x + 2, y, 1, 1, color);
+    }
+  }
+
+  // 피부는 바디 레이어 전체에 적용되고, 얼굴 세부 묘사도 같은 skin 키의 팔레트를
+  // 사용한다. 따라서 얼굴·귀·손의 색이 따로 노는 현상을 만들지 않는다.
   function drawFaceDetails(context, destination, direction, cosmetics = {}) {
     if (direction === "up") return;
+    const anchors = faceAnchors[direction] || faceAnchors.down;
+    const expression = cosmetics.lpcExpression || "neutral";
     const eyeStyle = cosmetics.lpcEyeStyle || "round";
     const mouthStyle = cosmetics.lpcMouth || "smile";
     const faceShape = cosmetics.lpcFaceShape || "oval";
-    const skinShadow = {
-      porcelain: "#e2aa94", peach: "#c98770", rose: "#ca7c79", sand: "#a66f54",
-      golden: "#8e5e3f", amber: "#74462f", bronze: "#5c3728", espresso: "#35221c",
-      olive: "#826349", neutral: "#9a6a55", warm: "#996047", deep: "#553527",
-    }[cosmetics.skin] || "#9b624d";
-    const eye = cosmetics.hairColor === "blue" ? "#274f77" : cosmetics.hairColor === "green" ? "#315c45" : "#2d2524";
-    const mouth = "#9d4d4c";
-    const positions = direction === "down"
-      ? { eyes: [[25, 29], [37, 29]], nose: [31, 33], mouth: [31, 36], cheeks: [[20, 33], [43, 33]] }
-      : direction === "left"
-        ? { eyes: [[25, 29]], nose: [22, 33], mouth: [23, 36], cheeks: [[19, 33]] }
-        : { eyes: [[38, 29]], nose: [41, 33], mouth: [40, 36], cheeks: [[44, 33]] };
+    const palette = skinPalettes[cosmetics.skin] || skinPalettes.peach;
+    const eyeColor = cosmetics.hairColor === "blue" ? "#315f91" : cosmetics.hairColor === "green" ? "#386a4e" : "#34282b";
+    const lookOffset = expression === "look_l" ? -1 : expression === "look_r" ? 1 : 0;
+    const winkIndex = expression === "closing" ? (direction === "right" ? 0 : 1) : -1;
 
-    positions.cheeks.forEach(([x, y]) => {
-      const offset = faceShape === "round" ? 0 : faceShape === "angular" ? 2 : 1;
-      drawPixel(context, destination, x, y + offset, 2, 2, skinShadow);
+    anchors.cheeks.forEach(([x, y]) => {
+      const shapeOffset = faceShape === "round" ? 0 : faceShape === "angular" ? 1 : 0;
+      drawPixel(context, destination, x, y + shapeOffset, faceShape === "round" ? 3 : 2, 2, palette.shadow);
     });
-    positions.eyes.forEach(([x, y]) => {
-      if (eyeStyle === "soft") drawPixel(context, destination, x - 1, y, 4, 1, eye);
-      else if (eyeStyle === "narrow") drawPixel(context, destination, x - 1, y + 1, 4, 1, eye);
-      else {
-        drawPixel(context, destination, x, y, 2, 3, eye);
-        if (eyeStyle === "bright") drawPixel(context, destination, x, y, 1, 1, "#ffffff");
-      }
+    anchors.brows.forEach(([x, y], index) => {
+      const angry = ["angry", "angry2"].includes(expression);
+      const sad = ["sad", "sad2", "shame", "tears"].includes(expression);
+      const width = cosmetics.lpcEyebrow === "thick" ? 5 : 4;
+      const browY = y + ((angry && index === 0) || (sad && index === 1) ? 1 : 0);
+      drawPixel(context, destination, x - 1, browY, width, cosmetics.lpcEyebrow === "thick" ? 2 : 1, palette.contour);
     });
-    drawPixel(context, destination, positions.nose[0], positions.nose[1], 1, 1, skinShadow);
-    const [mouthX, mouthY] = positions.mouth;
-    if (mouthStyle === "neutral") drawPixel(context, destination, mouthX - 2, mouthY, 4, 1, mouth);
-    else if (mouthStyle === "grin") {
-      drawPixel(context, destination, mouthX - 3, mouthY, 6, 1, mouth);
-      drawPixel(context, destination, mouthX - 2, mouthY + 1, 4, 1, "#fff3df");
-    } else if (mouthStyle === "pout") drawPixel(context, destination, mouthX - 1, mouthY, 2, 2, mouth);
-    else {
-      drawPixel(context, destination, mouthX - 2, mouthY, 1, 1, mouth);
-      drawPixel(context, destination, mouthX - 1, mouthY + 1, 3, 1, mouth);
-      drawPixel(context, destination, mouthX + 2, mouthY, 1, 1, mouth);
+    anchors.eyes.forEach(([x, y], index) => drawEye(context, destination, x, y, {
+      style: eyeStyle,
+      expression,
+      color: eyeColor,
+      special: cosmetics.lpcEyes || "none",
+      closed: index === winkIndex,
+      lookOffset,
+    }));
+    const [noseX, noseY] = anchors.nose;
+    const noseWidth = ["big", "large"].includes(cosmetics.lpcNose) ? 2 : 1;
+    drawPixel(context, destination, noseX, noseY, noseWidth, cosmetics.lpcNose === "straight" ? 2 : 1, palette.shadow);
+    drawMouth(context, destination, anchors.mouth[0], anchors.mouth[1], mouthStyle, expression);
+
+    if (["blush", "happy", "happy2", "shame"].includes(expression)) {
+      anchors.cheeks.forEach(([x, y]) => drawPixel(context, destination, x - 1, y, 4, 2, palette.blush));
+    }
+    if (["tears", "sad2"].includes(expression)) {
+      anchors.eyes.forEach(([x, y]) => drawPixel(context, destination, x + 1, y + 4, 1, 3, "#72bdeb"));
+    }
+    if (cosmetics.lpcWrinkles === "wrinkles") {
+      anchors.eyes.forEach(([x, y]) => drawPixel(context, destination, x - 3, y + 4, 2, 1, palette.contour));
     }
   }
 
