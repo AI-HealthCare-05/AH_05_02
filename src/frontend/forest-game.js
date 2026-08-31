@@ -1329,7 +1329,7 @@
   function renderQuests() {
     syncActiveQuests();
     const ready = Boolean(state.challengePlan?.onboarded);
-    $("#start-prediction-flow").textContent = ready ? "당뇨 예측 기반 퀘스트 다시 만들기" : "당뇨 예측 진행";
+    $("#start-prediction-flow").textContent = ready ? "당뇨 예방 챌린지 다시 만들기" : "당뇨 예방 챌린지";
     $("#quest-list").innerHTML = ready
       ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")
       : '<div class="quest-empty"><span aria-hidden="true">🌱</span><strong>첫 챌린지를 준비해 주세요</strong><p>이동 가능 확인부터 챌린지 방식 선택까지 마치면 오늘의 퀘스트 3개가 생성됩니다.</p></div>';

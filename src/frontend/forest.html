@@ -24,7 +24,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v29";
+      const resetKey = "forest-local-pwa-reset-v30";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -44,7 +44,7 @@
   <script src="/static/lpc-avatar-engine.js?v=20260831-7" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260831-9" defer></script>
-  <script src="/static/forest-game.js?v=20260831-12" defer></script>
+  <script src="/static/forest-game.js?v=20260831-13" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
@@ -162,13 +162,11 @@
 
         <section id="quests-panel" class="inspector-panel" role="tabpanel" aria-labelledby="quest-title" tabindex="-1">
           <div class="panel-title"><div><p class="eyebrow">TODAY QUEST</p><h2 id="quest-title">오늘의 퀘스트</h2></div><strong id="personal-progress">0/3</strong></div>
-          <p class="panel-description">사진 인증 없이 체크만으로 기록할 수 있어요.</p>
-          <button id="start-prediction-flow" class="prediction-flow-button" type="button">당뇨 예측 진행</button>
+          <button id="start-prediction-flow" class="prediction-flow-button" type="button">당뇨 예방 챌린지</button>
           <p id="quest-generation-status" class="quest-generation-status" role="status" aria-live="polite" hidden>오늘까지의 챌린지 결과를 토대로 챌린지 생성 중</p>
           <div id="quest-list" class="quest-list"></div>
           <section class="rag-guide" aria-labelledby="rag-guide-title">
-            <div class="rag-guide-heading"><span aria-hidden="true">🧭</span><div><p class="eyebrow">EVIDENCE GUIDE · DEMO RETRIEVER</p><h3 id="rag-guide-title">내 생활습관 지도(RAG)</h3></div></div>
-            <p>궁금한 생활습관을 입력하면 확인된 자료에서 근거를 찾아 안내해요.</p>
+            <div class="rag-guide-heading"><span aria-hidden="true">🧭</span><h3 id="rag-guide-title">내 생활습관 지도</h3></div>
             <form id="forest-rag-form"><label class="sr-only" for="forest-rag-question">생활습관 질문</label><input id="forest-rag-question" maxlength="80" placeholder="예: 식사 습관은 어떻게 기록할까요?" required><button type="submit">근거 찾기</button></form>
             <div id="forest-rag-result" class="rag-result" aria-live="polite"><p>운동·식사·수면 중 궁금한 내용을 물어보세요.</p></div>
           </section>
