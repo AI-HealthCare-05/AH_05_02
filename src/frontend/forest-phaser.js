@@ -81,6 +81,7 @@
       this.ratDirection = "left";
       this.ratEventId = 0;
       this.lastRatAttackAt = 0;
+      this.lastPetAttackAt = 0;
     }
 
     preload() {
@@ -112,10 +113,12 @@
       this.presetSources.modular = { image: this.textures.get("avatar-modular-v3").getSourceImage(), rows: 11 };
       if (this.textures.exists("avatar-composite")) this.textures.remove("avatar-composite");
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
-      this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.96).setDepth(3);
+      // LPC의 실제 발바닥은 합성 캔버스 y=250 부근이다. 그 점을 컨테이너 원점(그림자)에 맞춘다.
+      this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.87).setDepth(3);
       this.player.add(this.premiumAvatar);
       this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "lpc-pets", 0).setOrigin(0.5, 1).setScale(1.2).setDepth(this.avatar.y - 1);
       this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
+      this.petHeart = this.add.text(this.avatar.x + 31, this.avatar.y - 28, "💚", { fontSize: "23px" }).setOrigin(0.5).setDepth(999).setVisible(false);
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
       this.ratActor = this.add.container(0, 0).setVisible(false);
@@ -132,14 +135,17 @@
       }).setOrigin(0.5).setStroke("#ffffff", 2);
       this.player.add(this.nameplate);
       this.rebuildAvatar();
-      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E");
+      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E,F");
       this.cursors = this.input.keyboard.createCursorKeys();
       this.input.keyboard.on("keydown-Q", () => window.dispatchEvent(new CustomEvent("forest-phaser-interact")));
       this.input.keyboard.on("keydown-C", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })));
       this.input.keyboard.on("keydown-X", (event) => {
         if (event.repeat) return;
-        this.playTogether(this.avatar.sitting ? "idle" : "sit", 900);
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
+      });
+      this.input.keyboard.on("keydown-F", (event) => {
+        if (event.repeat) return;
+        window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "feed" }));
       });
       this.input.keyboard.on("keydown-E", () => window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })));
       this.input.keyboard.on("keydown-Z", (event) => {
@@ -237,12 +243,26 @@
         this.playAction(detail.pose || detail, Number(detail.duration) || 1100);
       };
       window.addEventListener("forest-avatar-action", this.onAction);
+      this.onPetFed = () => this.showPetHeart();
+      window.addEventListener("forest-pet-fed", this.onPetFed);
     }
 
     detachWindowEvents() {
       window.removeEventListener("forest-avatar-updated", this.onAvatar);
       window.removeEventListener("forest-state-updated", this.onState);
       window.removeEventListener("forest-avatar-action", this.onAction);
+      window.removeEventListener("forest-pet-fed", this.onPetFed);
+    }
+
+    showPetHeart() {
+      const actor = this.pet?.visible ? this.pet : this.petEmoji;
+      if (!actor || !actor.visible) return;
+      this.petHeart.setPosition(actor.x, actor.y - 35).setAlpha(1).setScale(0.7).setVisible(true);
+      this.tweens.killTweensOf(this.petHeart);
+      this.tweens.add({
+        targets: this.petHeart, y: actor.y - 62, alpha: 0, scale: 1.35, duration: 1150, ease: "Back.easeOut",
+        onComplete: () => this.petHeart.setVisible(false),
+      });
     }
 
     playAction(pose, duration = 1100) {
@@ -478,25 +498,34 @@
       const delayed = playerMoving
         ? [...this.petTrail].reverse().find((point) => point.time <= time - 330)
         : null;
-      const targetX = delayed ? delayed.x : this.avatar.x + directionOffset[0];
-      const targetY = delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
-      const follow = playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
-      const actor = this.pet?.visible ? this.pet : this.petEmoji;
+      const petActor = this.pet?.visible ? this.pet : this.petEmoji;
+      const ratDistanceFromPlayer = this.ratActive ? Phaser.Math.Distance.Between(this.ratActor.x, this.ratActor.y, this.avatar.x, this.avatar.y) : Infinity;
+      const autoHunting = this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
+      const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
+      const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
+      const follow = autoHunting ? Math.min(0.42, Math.max(0.16, delta / 78)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
+      const actor = petActor;
       const previousX = this.petFollowX;
       this.petFollowX += (targetX - this.petFollowX) * follow;
       this.petFollowY += (targetY - this.petFollowY) * follow;
       const togetherSitting = this.avatar.sitting;
       const dancing = this.petAction === "dance" && time < this.petActionUntil;
       if (Math.abs(this.petFollowX - previousX) > 0.08) this.petFacing = this.petFollowX < previousX ? "left" : "right";
-      const gait = playerMoving ? Math.sin(time / 82) : 0;
+      const gait = playerMoving || autoHunting ? Math.sin(time / 82) : 0;
       const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
-      const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
+      const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving || autoHunting ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
       actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
-      const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[this.avatar.direction] || 0;
-      const petFrame = playerMoving ? Math.floor(time / 135) % 3 : 1;
+      let petDirection = this.avatar.direction;
+      if (autoHunting) {
+        const dx = this.ratActor.x - this.petFollowX;
+        const dy = this.ratActor.y - this.petFollowY;
+        petDirection = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+      }
+      const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[petDirection] || 0;
+      const petFrame = playerMoving || autoHunting ? Math.floor(time / 105) % 3 : 1;
       this.pet?.setFrame(petDirectionRow * 9 + (this.petBaseColumn || 0) + petFrame);
       actor.setFlipX?.(false);
-      actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving ? gait * 2.2 : 0);
+      actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving || autoHunting ? gait * 2.2 : 0);
       if (this.pet?.visible) {
         const baseScale = togetherSitting ? 1.08 : 1.2;
         const squash = dancing ? Math.sin(time / 118) * 0.08 : playerMoving ? Math.abs(gait) * 0.035 : 0;
@@ -506,6 +535,14 @@
         actor.setScale(emojiScale, emojiScale);
       }
       if (time >= this.petActionUntil) this.petAction = null;
+      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 900) {
+        this.lastPetAttackAt = time;
+        this.petAction = "attack";
+        this.petActionUntil = time + 520;
+        const eventId = this.ratEventId;
+        this.dismissRat(time, true);
+        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, source: "pet" } }));
+      }
     }
 
     setPremiumFrame(direction, moving, time, running = false) {
@@ -537,7 +574,7 @@
       const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
       this.premiumAvatar.setScale(worldScale);
       this.shadow.setScale(worldScale / AVATAR_RENDER_SCALE);
-      this.nameplate?.setY(-Math.round(288 * worldScale * 0.96) - 7);
+      this.nameplate?.setY(-Math.round(288 * worldScale * 0.87) - 7);
     }
 
     drawMotionEffects(direction, moving, frame) {

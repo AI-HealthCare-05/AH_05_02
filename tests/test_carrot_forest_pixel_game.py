@@ -82,7 +82,7 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
         assert f'id="{control_id}"' in html
     assert 'id="wardrobe-list"' in html
     assert 'id="storage-list"' in html
-    assert html.count("data-action=") == 7
+    assert html.count("data-action=") == 8
     for key in (
         'event.key === "q"',
         'event.key === "r"',
@@ -133,7 +133,7 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
         "하의 색",
         "신발",
         "신발 색",
-        "표정",
+        "얼굴·표정",
         "모자",
         "안경",
         "아우라",
@@ -499,6 +499,52 @@ def test_wild_rat_is_a_separate_attack_reward_event() -> None:
     assert "carrot-forest-lpc-rat-v1.png" in worker
     assert (ROOT / "src/frontend/assets/carrot-forest-lpc-rat-v1.png").is_file()
     assert 'id: "rat"' not in game_script
+
+
+def test_completed_challenges_grow_harvestable_carrots_in_the_garden() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    for control_id in ("garden-harvest-panel", "pending-harvest-carrots", "harvest-challenge-carrots"):
+        assert f'id="{control_id}"' in html
+    for contract in (
+        "challengeCarrotClaims",
+        "pendingChallengeCarrots",
+        "accrueChallengeCarrots",
+        "harvestChallengeCarrots",
+        'data-world-action="harvest_challenge"',
+    ):
+        assert contract in game_script
+    assert "if (state.challengeCarrotClaims?.[questId]) return 0" in game_script
+    assert "if (!claim.harvested) claim.harvested = true" in game_script
+
+
+def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    assert "arcade-deck" in html
+    assert 'data-action="feed"' in html
+    assert "async function feedPet" in game_script
+    assert 'new CustomEvent("forest-pet-fed"' in game_script
+    assert "showPetHeart" in phaser_script
+    assert "autoHunting" in phaser_script
+    assert 'source: "pet"' in phaser_script
+    assert 'this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.87)' in phaser_script
+
+
+def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+
+    assert 'value="lpc_male_default"' in html
+    assert 'value="lpc_female_default"' in html
+    assert 'lpcExpression: "happy2"' in game_script
+    assert 'lpcNose: "button"' in game_script
+    assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
+    assert '["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"]' in engine_script
 
 
 def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:

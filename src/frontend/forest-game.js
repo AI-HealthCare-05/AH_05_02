@@ -41,6 +41,8 @@
   };
   let quests = questPlans.balanced.map((id) => questCatalog[id]);
   const presets = {
+    lpc_male_default: { label: "기본 남자 캐릭터", hair: "#23334f", outfit: "#20252e", accent: "#7ba8ff" },
+    lpc_female_default: { label: "기본 여자 캐릭터", hair: "#2e5a8c", outfit: "#ed9147", accent: "#222733" },
     custom: { label: "나만의 조합", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
     sprout: { label: "새싹 정원사", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
     carrot: { label: "당근 탐험가", hair: "#7b3d20", outfit: "#f07b32", accent: "#ffe078" },
@@ -53,6 +55,8 @@
     teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
   };
   const presetBundles = {
+    lpc_male_default: { bodyType: "male", lpcHair: "messy", lpcOutfit: "formal", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "blue", outfitColor: "black", bottomColor: "black", shoeColor: "black" },
+    lpc_female_default: { bodyType: "female", lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "blue", outfitColor: "orange", bottomColor: "blue", shoeColor: "black", hatColor: "black" },
     sprout: { lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown" },
     red_bow: { lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "leggings", lpcShoes: "shoes", lpcHat: "bandana", lpcGlasses: "none", expression: "bright", hairColor: "red", outfitColor: "navy", bottomColor: "cream", shoeColor: "brown" },
     cow_hood: { lpcHair: "afro", lpcOutfit: "tshirt", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "bowler", lpcGlasses: "none", expression: "delighted", hairColor: "brown", outfitColor: "orange", bottomColor: "brown", shoeColor: "brown" },
@@ -120,7 +124,7 @@
     { id: "bottomColor", label: "하의 색", icon: '<i class="thread-icon thread-blue"></i>' },
     { id: "lpcShoes", label: "신발", icon: "👟" },
     { id: "shoeColor", label: "신발 색", icon: '<i class="thread-icon thread-mono"></i>' },
-    { id: "lpcExpression", label: "표정", icon: "😊" },
+    { id: "lpcExpression", label: "얼굴·표정", icon: "😊" },
     { id: "lpcEyebrow", label: "눈썹", icon: "〰️" },
     { id: "lpcNose", label: "코", icon: "👃" },
     { id: "lpcEyes", label: "특수 눈", icon: "👁️" },
@@ -141,6 +145,8 @@
       { id: "child", name: "아이", visual: "🧒" },
     ],
     preset: [
+      { id: "lpc_male_default", name: "기본 남자 캐릭터", isNew: true },
+      { id: "lpc_female_default", name: "기본 여자 캐릭터", isNew: true },
       { id: "red_bow", name: "리본 정원사", isNew: true },
       { id: "cow_hood", name: "음메 목장지기", isNew: true }, { id: "midnight", name: "한밤 숲지기", isNew: true },
       { id: "blue_cap", name: "파란 모자 농부", isNew: true }, { id: "teal_bob", name: "미소 정원사", isNew: true },
@@ -301,9 +307,9 @@
   const defaultCosmetics = {
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
-    lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none",
-    bodyType: "male", lpcExpression: "neutral", lpcEyebrow: "thick", lpcNose: "none", lpcEyes: "none", lpcWrinkles: "none",
-    expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown",
+    lpcHair: "messy", lpcOutfit: "formal", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
+    bodyType: "male", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
+    expression: "bright", hairColor: "blue", outfitColor: "black", bottomColor: "black", shoeColor: "black",
     hatColor: "brown", glassesColor: "brown",
   };
   const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
@@ -347,13 +353,14 @@
 
   function defaultState() {
     const generatedNickname = generateNickname();
-    const avatar = { name: generatedNickname, gender: "male", engine: "lpc", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false };
+    const avatar = { name: generatedNickname, gender: "male", engine: "lpc", preset: "lpc_male_default", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false };
     return {
       dateKey: TODAY,
       profileVersion: 1,
       cosmeticSchemaVersion: 2,
       avatar,
       quests: { walk: false, meal: false, check: false },
+      challengeCarrotClaims: {},
       challengePlan: { onboarded: false, style: null, questIds: [], lastGeneratedAt: null },
       groupGoalMemo: "",
       members: [
@@ -371,6 +378,7 @@
       gardenWatered: false,
       fishCaught: false,
       fishing: false,
+      petFedCount: 0,
     };
   }
 
@@ -408,6 +416,10 @@
     if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
     state.cosmeticSchemaVersion = 2;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
+    state.challengeCarrotClaims = Object.fromEntries(Object.entries(value.challengeCarrotClaims || {})
+      .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
+      .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
+    state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -419,6 +431,19 @@
     if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
     state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
     return state;
+  }
+
+  function pendingChallengeCarrots() {
+    return Object.values(state.challengeCarrotClaims || {}).reduce((total, claim) => total + (claim.harvested ? 0 : claim.amount), 0);
+  }
+
+  function accrueChallengeCarrots(questId) {
+    if (state.challengeCarrotClaims?.[questId]) return 0;
+    const quest = questCatalog[questId];
+    if (!quest) return 0;
+    state.challengeCarrotClaims ||= {};
+    state.challengeCarrotClaims[questId] = { amount: quest.reward, harvested: false };
+    return quest.reward;
   }
 
   class DemoForestAdapter {
@@ -1182,7 +1207,7 @@
     if (target) prompt.querySelector("span").textContent = {
       home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기", vehicle: "숲 스쿠터",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
-      crops: "당근 돌보기", exit_garden: "숲으로 돌아가기",
+      crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
   }
 
@@ -1190,13 +1215,13 @@
     const dialog = $("#world-dialog");
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
-      garden: { icon: "🥕", title: "공동 당근밭", copy: `우리 모임은 오늘 ${groupCompleted()}/15개의 퀘스트를 완료했어요. 밭 안으로 들어가 당근을 돌봐요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
+      garden: { icon: "🥕", title: "공동 당근밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
       pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
       vehicle: { icon: "🛵", title: "숲 스쿠터", copy: "스쿠터를 타면 숲길을 더 빠르게 이동할 수 있어요.", actions: `<button type="button" data-world-action="ride">${state.avatar.mounted ? "스쿠터에서 내리기" : "스쿠터 타기"}</button>` },
       sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
       wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
       exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
-      crops: { icon: "🥕", title: "공동 당근", copy: "오늘의 실천이 모일수록 공동 당근이 튼튼하게 자라요.", actions: `<button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button><button type="button" data-world-action="team">공동 진행 보기</button>` },
+      crops: { icon: "🥕", title: "챌린지 당근 수확", copy: pendingChallengeCarrots() ? `완료한 챌린지 보상 당근 ${pendingChallengeCarrots()}개를 수확할 수 있어요.` : "오늘 완료한 챌린지 보상은 모두 수확했어요.", actions: `<button type="button" data-world-action="harvest_challenge" ${pendingChallengeCarrots() ? "" : "disabled"}>${pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확하기` : "수확 완료"}</button><button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button>` },
       exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "공동 당근밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
     }[target];
     if (!content) { setStatus("상호작용할 대상 가까이 이동해 주세요."); return; }
@@ -1227,6 +1252,7 @@
     placementCode = null;
     renderInventory();
     renderCanvas();
+    renderGardenHarvest();
     canvas.focus();
   }
 
@@ -1290,6 +1316,30 @@
     rewardButton.disabled = completed < 15 || state.rewardClaimed;
     rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
     $("#group-goal-memo").value = state.groupGoalMemo || "";
+  }
+
+  function renderGardenHarvest() {
+    const panel = $("#garden-harvest-panel");
+    if (!panel) return;
+    const pending = pendingChallengeCarrots();
+    panel.hidden = currentScene !== "garden";
+    $("#pending-harvest-carrots").textContent = String(pending);
+    const button = $("#harvest-challenge-carrots");
+    button.disabled = pending === 0;
+    button.textContent = pending ? `Q · 당근 ${pending}개 수확` : "수확할 당근을 키우는 중";
+  }
+
+  async function harvestChallengeCarrots() {
+    const pending = pendingChallengeCarrots();
+    if (!pending) { setStatus("완료한 챌린지 보상이 생기면 이 밭에서 수확할 수 있어요."); return; }
+    Object.values(state.challengeCarrotClaims).forEach((claim) => { if (!claim.harvested) claim.harvested = true; });
+    state.carrots += pending;
+    const panel = $("#garden-harvest-panel");
+    panel?.classList.add("is-harvesting");
+    window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1500 } }));
+    window.setTimeout(() => panel?.classList.remove("is-harvesting"), 1500);
+    renderAll();
+    await persist(`챌린지로 자란 당근 ${pending}개를 수확했습니다!`);
   }
 
   function outfitCardMarkup(look, compact = false) {
@@ -1792,7 +1842,7 @@
     $("#avatar-name").value = state.avatar.name;
     $("#avatar-gender").value = state.avatar.gender;
     $("#avatar-preset").value = state.avatar.preset;
-    syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); updateProfileUI();
+    syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
   }
 
   function deterministicReward() {
@@ -1867,9 +1917,14 @@
   $("#quest-list").addEventListener("change", async (event) => {
     const checkbox = event.target.closest("[data-quest]");
     if (!checkbox) return;
+    const wasChecked = Boolean(state.quests[checkbox.dataset.quest]);
     state.quests[checkbox.dataset.quest] = checkbox.checked;
+    const grown = checkbox.checked && !wasChecked ? accrueChallengeCarrots(checkbox.dataset.quest) : 0;
     renderQuests(); renderGroup();
-    await persist(`${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 퀘스트를 ${checkbox.checked ? "완료" : "미완료"}로 기록했습니다.`);
+    renderGardenHarvest();
+    await persist(grown
+      ? `${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 완료! 당근밭에 당근 ${grown}개가 자랐습니다.`
+      : `${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 퀘스트를 ${checkbox.checked ? "완료" : "미완료"}로 기록했습니다.`);
   });
 
   $("#start-prediction-flow").addEventListener("click", startPredictionFlow);
@@ -2137,6 +2192,17 @@
     await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
   }
 
+  async function feedPet() {
+    const pet = state.avatar.cosmetics?.pet;
+    if (!pet || pet === "none") { setStatus("아바타 꾸미기에서 함께 걸을 펫을 먼저 선택해 주세요."); return; }
+    if (state.carrots < 1) { setStatus("펫에게 줄 당근이 없어요. 챌린지를 완료하고 당근밭에서 수확해 보세요."); return; }
+    state.carrots -= 1;
+    state.petFedCount = (state.petFedCount || 0) + 1;
+    window.dispatchEvent(new CustomEvent("forest-pet-fed", { detail: { pet, amount: 1 } }));
+    renderAll();
+    await persist("펫에게 당근 1개를 주었어요. 펫이 아주 좋아합니다! 💚");
+  }
+
   async function toggleRide(requireNearby = true) {
     if (currentScene !== "world") { setStatus("탈것은 숲 월드에서 이용할 수 있어요."); return; }
     if (!state.avatar.mounted && requireNearby && distanceTo(470, 376) >= 72) {
@@ -2169,9 +2235,12 @@
     if (event.detail === "chat") toggleChat();
     if (event.detail === "sit") await toggleSit();
     if (event.detail === "ride") await toggleRide();
+    if (event.detail === "feed") await feedPet();
   });
   window.addEventListener("forest-rat-appeared", () => {
-    setStatus("숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
+    setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"
+      ? "야생 쥐가 나타났어요. 가까이 가면 펫이 자동으로 달려가고, 직접 Z로도 잡을 수 있어요!"
+      : "숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
   });
   window.addEventListener("forest-rat-caught", async (event) => {
     const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
@@ -2179,19 +2248,22 @@
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
     $("#profile-carrots").textContent = String(state.carrots);
-    await persist(`야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
+    await persist(event.detail?.source === "pet"
+      ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
+      : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
   });
 
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "0"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "0"].includes(event.key)) event.preventDefault();
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
     if (event.key === "c" || event.key === "C") { toggleChat(); return; }
     if (event.key === "x" || event.key === "X") { toggleSit(); return; }
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
     if (event.key === "z" || event.key === "Z") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "attack", duration: 760 } })); return; }
+    if (event.key === "f" || event.key === "F") { feedPet(); return; }
     if (event.key === "0") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } })); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
@@ -2211,7 +2283,10 @@
     if (action === "ride") await toggleRide();
     if (action === "attack") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "attack", duration: 760 } }));
     if (action === "dance") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } }));
+    if (action === "feed") await feedPet();
   }));
+
+  $("#harvest-challenge-carrots").addEventListener("click", harvestChallengeCarrots);
 
   $("#large-text-toggle").addEventListener("click", (event) => {
     const enabled = document.body.classList.toggle("large-text");
@@ -2287,7 +2362,9 @@
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("garden");
-      await persist("공동 당근밭 안으로 들어왔습니다. 당근 가까이에서 물을 줄 수 있어요.");
+      await persist(pendingChallengeCarrots()
+        ? `공동 당근밭에 들어왔습니다. 챌린지로 자란 당근 ${pendingChallengeCarrots()}개를 수확해 보세요.`
+        : "공동 당근밭에 들어왔습니다. 챌린지를 완료하면 이곳에 당근이 자라요.");
     }
     if (action === "exit_scene") {
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
@@ -2318,6 +2395,10 @@
       $("#world-dialog").close();
       renderCanvas();
       await persist("공동 당근밭에 물을 주고 당근 10개를 받았습니다.");
+    }
+    if (action === "harvest_challenge") {
+      $("#world-dialog").close();
+      await harvestChallengeCarrots();
     }
     if (action === "team") {
       $("#world-dialog").close();
