@@ -2,9 +2,10 @@
 
 | 항목 | 내용 |
 |---|---|
-| 문서 버전 | v2.0 |
+| 문서 버전 | v2.1 |
 | 작성일 | 2026-08-19 |
-| 상태 | Sprint 2 구현 기준선 |
+| 최종 갱신일 | 2026-08-28 |
+| 상태 | Sprint 2 구현 기준선 (당근의 숲 게임 API 반영) |
 | API Base URL | `/api/v1` |
 | 인증 방식 | Bearer Access Token |
 | 데이터 형식 | `application/json`, `snake_case` |
@@ -32,6 +33,7 @@
 | DEC-002 | 질환 범위 | 고혈압은 후속 확장 대상 | Sprint 2는 `diabetes_incidence`만 활성화 |
 | DEC-003 | 예측 출력 | 미래 발병 이진분류와 사용자 표시를 구분해야 함 | 내부 확률은 저장하고 공개 화면은 `낮음·주의·높음` 범주 표시 |
 | DEC-004 | 예측 작업 | 비동기 상태와 영속 이력을 분리해야 함 | Redis는 최소 작업 상태, DB는 요청·완료·실패·모델 버전 최소 이력 |
+| DEC-005 | AI 작업 라우터 | `app/apis/v1/ai_job_routers.py`가 구현돼 있으나 `v1_routers`에 등록되지 않아 비활성 상태 | 실제 사용 여부를 확정한 뒤 등록하거나 코드 정리, 확정 전까지 API 명세에서 제외 |
 
 ## 2. 공통 규칙
 
@@ -91,6 +93,11 @@
 | `500` | 서버 내부 오류 |
 | `503` | DB·모델 서버 준비되지 않음 |
 | `504` | 작업 접수 전 동기식 게이트웨이·모델 준비 확인의 시간 초과. `202` 접수 후 시간초과에는 사용하지 않음 |
+
+### 2.5 데모 모드
+
+- `DEMO_MODE` 활성화 시 `/api/v1/health`, `/api/v1/ready` 응답의 `redis` 값이 `embedded-demo`로 표시되며 외부 Redis 연결 없이 동작한다.
+- 데모 모드는 시연·로컬 개발 전용이며 운영 환경 적용 여부는 별도로 확정한다.
 
 ## 3. API 목록
 
@@ -175,17 +182,22 @@
 | PATCH | `/challenge-cycles/{cycle_id}/status` | 사용자 중단 또는 기진단 확인에 따른 상태 변경 | `challenge_cycles` | REQ-CHAL-005 |
 | PUT | `/user-challenges/{user_challenge_id}/logs/{log_date}` | 날짜별 수행 여부·측정값 생성 또는 정정 | `challenge_logs` | REQ-CHAL-004~005 |
 | GET | `/user-challenges/{user_challenge_id}/logs` | 기간별 수행 기록 조회 | `challenge_logs` | REQ-CHAL-004~006 |
+| POST | `/user-challenges/{user_challenge_id}/verifications` | 사진·위치 등 인증 유형별 증빙 등록 | `challenge_verifications` | REQ-CHAL-004~006 |
+| GET | `/daily-challenge-rewards/{reward_date}` | 해당 날짜 일일 보상 지급 대상·수령 여부 조회 | `daily_challenge_rewards` | REQ-CHAL-006 |
+| POST | `/daily-challenge-rewards/{reward_date}/claim` | 선택한 챌린지 완료 후 일일 보상 수령(멱등, 중복 지급 방지) | `daily_challenge_rewards`, `reward_transactions` | REQ-CHAL-006 |
 
 ### 3.6 대시보드·후속조치·추천·피드백
 
 | Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
 |---|---|---|---|---|
 | GET | `/dashboard/summary` | 최신 위험 범주·현재 챌린지 통합 요약 | 조회 집계 | REQ-DASH-001~003 |
-| GET | `/dashboard/risk-trends` | 질환별 예측 시계열 | `predictions` | REQ-DASH-003 |
 | GET | `/dashboard/challenge-progress` | 최근 7일·4주 달성률 | 챌린지 엔터티 | REQ-DASH-002 |
+| GET | `/dashboard/reassessment-trend` | 재평가 이력·챌린지 수행 변화 조회 (설계 확정, 구현 대기) | 예측·검진·챌린지 집계 | REQ-DASH-003 |
 | GET | `/follow-up-actions` | 의료기관 상담 권고 이력 조회 | `follow_up_actions` | REQ-PRED-006 |
 | PATCH | `/follow-up-actions/{action_id}/acknowledge` | 권고 확인 시각 저장 | `follow_up_actions` | REQ-PRED-006 |
 | GET | `/recommendations` | 검토된 예방 행동·챌린지 설명과 출처 조회 | `recommendations` | REQ-RECO-001 |
+
+`/dashboard/reassessment-trend`는 4주 챌린지 사이클이 끝날 때마다 생성되는 재평가 검진(`checkup_type=reassessment`)을 기준으로, 최초 검진부터 현재까지의 재평가 이력과 그 사이 챌린지 수행률 변화를 보여준다. `/predictions/changes`가 계산하는 내부 확률 변화값은 그대로 노출하지 않으며, 응답은 시점별 `checkup_type`, `checkup_date`, 승인된 위험 범주(`risk_category`, 미승인 시 `모델 검증 중`), 해당 구간 챌린지 수행률만 포함한다. 화면 문구는 `SERVICE_SCOPE_AND_SAFETY_COPY.md` 5절의 대체 표현("4주간 챌린지 수행률과 건강정보 입력 변화를 보여드립니다")을 따르며, "위험이 O% 감소했습니다"처럼 원시 확률 변화를 개선율로 표현하지 않는다. 2026-08-28 기준 설계만 확정됐고 구현은 아직 진행되지 않았다.
 
 의료기관 권고 생성은 적합성 또는 예측 서비스 내부에서 수행한다. `trigger_source`는 `eligibility_check` 또는 `prediction`, `trigger_entity_id`는 해당 레코드 ID로 저장한다.
 
@@ -255,18 +267,51 @@
 ```json
 {
   "checkup_type": "initial",
-  "checkup_date": "2026-08-01",
+  "checkup_date": "2026-08-31",
+  "height_cm": 160.0,
   "weight_kg": 67.5,
   "waist_cm": 91.0,
+  "systolic_bp": 120,
+  "diastolic_bp": 80,
+  "self_rated_health": "good",
+  "meal_count_yesterday": 3,
   "smoking_status": "never",
-  "drinking_frequency": "monthly_or_less",
-  "physical_activity_level": "insufficient",
-  "has_family_history_diabetes": true,
-  "feature_contract_version": "diabetes-incidence-input-v1"
+  "regular_exercise": true,
+  "current_drinker": false,
+  "exercise_days_per_week": 3,
+  "exercise_minutes": 30,
+  "annual_household_income_10k_krw": null,
+  "health_satisfaction_score": null,
+  "economic_satisfaction_score": null,
+  "overall_quality_of_life_score": null,
+  "hypertension_diagnosis": null,
+  "cancer_diagnosis": null,
+  "chronic_lung_disease_diagnosis": null,
+  "liver_disease_diagnosis": null,
+  "heart_disease_diagnosis": null,
+  "cerebrovascular_disease_diagnosis": null,
+  "psychiatric_disease_diagnosis": null,
+  "arthritis_rheumatism_diagnosis": null,
+  "education_level": null,
+  "marital_status": null,
+  "household_structure": null,
+  "depressed_feeling_last_week": null,
+  "sleep_difficulty_last_week": null,
+  "feature_schema_version": "klosa_stage3_25features_v1"
 }
 ```
 
-응답에는 생성된 `checkup_id`, 입력값의 단위와 검증 결과를 포함한다. 위 필드는 계약 예시이며 실제 필수·선택 입력은 양준혁 담당 모델 입력 계약으로 고정한다. 라벨을 직접 결정하거나 기준 시점 이후에 관측된 값은 입력에서 제외한다.
+필수 필드는 `checkup_date`, `height_cm`, `weight_kg`, `self_rated_health`, `meal_count_yesterday`, `smoking_status`, `regular_exercise`, `current_drinker`, `exercise_days_per_week`, `exercise_minutes`이다. `checkup_type`과 `feature_schema_version`은 생략하면 서버 기본값을 사용한다. 나머지 검진·질환·사회인구학 필드는 선택 입력이며 `null`을 허용한다.
+
+검증 규칙은 다음과 같다.
+
+- `height_cm`: 120~220cm, `weight_kg`: 25~250kg, `waist_cm`: 45~180cm
+- `systolic_bp`: 70~250mmHg, `diastolic_bp`: 40~150mmHg. 두 값을 모두 보내면 수축기 혈압이 이완기 혈압보다 커야 한다.
+- `meal_count_yesterday`: 0~10회, `exercise_days_per_week`: 0~7일, `exercise_minutes`: 0~720분
+- `regular_exercise=false`이면 서버가 운동 일수와 시간을 0으로 저장한다.
+- 라벨을 직접 결정하거나 기준 시점 이후에 관측된 값은 모델 입력에서 제외한다.
+
+`201 Created` 응답은 생성된 `checkup_id`, 서버가 계산한 `bmi`, 적용된 `feature_schema_version`, `created_at`, `validation.status=valid`를 포함한다.
 
 ### 4.4 비동기 예측 요청
 
@@ -470,7 +515,7 @@
 
 - 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs`를 포함한 핵심 사용자 흐름(End-to-End)을 구현했다.
 - 작업 상태는 `queued/running/succeeded/failed`, 생성 시각은 `created_at`으로 통일했다.
-- `klosa-diabetes-incident-v1` 입력 계약과 교체 가능한 `PredictionProvider`를 적용했다.
+- `klosa_stage3_25features_v1` 특징 스키마와 교체 가능한 `PredictionProvider`를 적용했다. 실제 값은 배포 환경의 `PREDICTION_FEATURE_SCHEMA_VERSION`과 `/api/v1/models/active`를 기준으로 한다.
 - 기본 `development` provider는 시스템 연결만 검증하며 위험 범주·내부 점수·확률을 생성하거나 공개하지 않는다.
 - 승인 전 위험요인 API는 `not_available`과 빈 목록을 반환한다.
 - 챌린지·4주 사이클·일일 기록·기본 대시보드와 의료기관 후속조치 API를 연결했다.
@@ -486,9 +531,34 @@
 | 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
 | 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
 | 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
+| 채소 식사 사진 자동 인증 | POST | `/api/v1/user-challenges/{id}/meal-photo-verifications` | multipart 사진 업로드, 채소 포함 여부·시각적 비율(%)만 자동 판별해 챌린지 인증·기록, 칼로리·영양·치료 판정 금지, 원본 이미지 미저장(SHA-256 다이제스트만 보관) |
 | OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 허용 필드만 반환, 건강검진 기록 자동 저장 금지 |
 | 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
 | 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
 | 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |
 
 주간 리포트의 `record_summary`는 생성형 모델이 사실을 보충하는 방식이 아니라 저장된 수행률과 장벽 기록만 사용하는 `deterministic_template_v1`이다.
+
+## 9. 2026-08-28 당근의 숲(Carrot Forest) 게임 API
+
+Sprint 2 이후 추가된 공동 아바타·보상 게임 기능이다. 예측·챌린지 판정과는 별개로 동작하며, 진단·치료 관련 판단에는 사용하지 않는다.
+
+| 영역 | Method | Endpoint | 설명 |
+|---|---|---|---|
+| 지갑·인벤토리 | GET | `/api/v1/wallet` | 보유 당근 잔액 조회 |
+| 지갑·인벤토리 | GET | `/api/v1/inventory-items` | 구매 가능한 아이템 카탈로그 조회 |
+| 지갑·인벤토리 | GET | `/api/v1/inventory` | 보유 아이템·수량 조회 |
+| 지갑·인벤토리 | POST | `/api/v1/inventory/items/{item_id}/purchase` | 당근으로 아이템 구매 |
+| 아바타 | GET | `/api/v1/avatar` | 아바타 구성·장착 상태 조회 |
+| 아바타 | PUT | `/api/v1/avatar/equipment` | 보유 아이템만 장착 가능하도록 장비 구성 변경 |
+| 숲 공간 | GET | `/api/v1/forest/catalog` | 배치 가능한 오브젝트 카탈로그 조회 |
+| 숲 공간 | POST | `/api/v1/forest/spaces` | 공동 챌린지 그룹의 숲 공간 생성 |
+| 숲 공간 | GET | `/api/v1/forest/spaces/{group_id}` | 숲 공간·배치된 오브젝트·진행도 조회 |
+| 숲 공간 | PATCH | `/api/v1/forest/avatar` | 숲에 표시되는 아바타 저장 |
+| 숲 공간 | POST | `/api/v1/forest/spaces/{group_id}/rewards/group-daily` | 공동 목표 달성 시 일일 공동 보상 상자 지급 |
+| 숲 공간 | POST | `/api/v1/forest/spaces/{group_id}/objects` | 보유 오브젝트를 숲에 배치 |
+| 숲 공간 | DELETE | `/api/v1/forest/spaces/{group_id}/objects/{object_id}` | 본인이 배치한 오브젝트 회수. 본인 소유만 가능하며 반복 요청은 이미 회수된 상태로 성공 처리(멱등), 당근은 환불하지 않는다 |
+
+메인 화면에서 `/forest` 진입 시 인증 토큰과 활성 공동 챌린지가 있으면 위 Live API를 사용하고, 조건이 없거나 초기 연결에 실패하면 프론트엔드 Demo Adapter로 전환한다. 상세 구현·검증 근거는 `CARROT_FOREST_PIXEL_GAME_MVP.md`, `DAILY_QUEST_API_FIELD_MAPPING_20260827.md`, `REWARD_IDEMPOTENCY_RULES_20260827.md`, `MENTORING_DEMO_INTEGRATION_CHECK_20260828.md`를 따른다.
+
+미확정 사항: 게임 아이템 카탈로그 등록·가격 변경 담당자, Live API 연결 실패 시 Demo fallback을 운영 환경에서도 허용할지 여부.
