@@ -94,14 +94,20 @@
     pond: { name: "돌 연못", kind: "object", icon: "💧" },
     fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
     flower_cart: { name: "꽃수레", kind: "object", icon: "🌼" },
+    duck_float: { name: "둥실 오리 튜브", kind: "object", icon: "🛟", animated: true },
+    animated_fountain: { name: "물결 분수", kind: "object", icon: "⛲", animated: true },
+    firefly_lantern: { name: "반딧불 랜턴", kind: "object", icon: "🏮", animated: true },
+    garden_pinwheel: { name: "정원 바람개비", kind: "object", icon: "🎡", animated: true },
   };
   const storageObjectCodes = [
     "tent", "light_tent", "picnic_table", "bbq_table", "chair_green",
     "chair_red", "picnic_blanket", "pond", "lantern", "fence",
     "flower_cart", "flower_pot", "mushroom", "bench", "campfire",
     "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow",
+    "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel",
   ];
   const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
+  const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
   const rewardPool = ["reward_cow"];
   const avatarCategories = [
     { id: "bodyType", label: "체형", icon: "🧍" },
@@ -437,6 +443,7 @@
   const cosmeticSpriteAtlas = new Image();
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
+  const animatedObjectAtlas = new Image();
   const rewardCowImage = new Image();
   const basicWalkAtlas = new Image();
   const basicScooterAtlas = new Image();
@@ -453,6 +460,7 @@
   cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v2.png?v=20260831-1";
+  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1";
   rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1";
   basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
   basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
@@ -465,6 +473,7 @@
   cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  animatedObjectAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   rewardCowImage.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   basicWalkAtlas.addEventListener("load", renderCanvas);
   basicScooterAtlas.addEventListener("load", renderCanvas);
@@ -548,7 +557,7 @@
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed } }));
     if (message) setStatus(message);
   }
 
@@ -717,6 +726,13 @@
     state.placed.forEach((item) => {
       const x = item.x;
       const y = item.y;
+      const animatedRow = animatedObjectRows[item.code];
+      if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
+        const frame = Math.floor(performance.now() / 220) % 4;
+        const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
+        context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
+        return;
+      }
       if (item.code === "reward_cow" && rewardCowImage.complete) {
         context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); return;
       }
@@ -1071,7 +1087,7 @@
   function animateWorld(timestamp) {
     let needsRender = false;
     if (!document.hidden && timestamp - lastAnimationAt > 420) {
-      animationFrame = (animationFrame + 1) % 2;
+      animationFrame = (animationFrame + 1) % 4;
       lastAnimationAt = timestamp;
       needsRender = true;
     }
@@ -1240,7 +1256,11 @@
     const codes = state.inventory.filter((code) => itemCatalog[code]?.kind === kind);
     $("#inventory-dialog-grid").innerHTML = codes.map((code) => {
       const item = itemCatalog[code];
-      return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}"><span aria-hidden="true">${item.icon}</span>${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
+      const animatedRow = animatedObjectRows[code];
+      const visual = animatedRow == null
+        ? `<span aria-hidden="true">${item.icon}</span>`
+        : `<span class="animated-object-thumb" style="--animated-row:${animatedRow};background-position-y:${animatedRow * 100 / 3}%" aria-hidden="true"></span>`;
+      return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}">${visual}${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
     }).join("") || "<p>아직 보관 중인 아이템이 없습니다.</p>";
     $("#inventory-dialog").dataset.view = view;
   }
@@ -1253,6 +1273,8 @@
       if (item.kind === "object") {
         const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
         if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><span class="storage-reward-cow" aria-hidden="true"></span></button>`;
+        const animatedRow = animatedObjectRows[code];
+        if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><span class="animated-object-thumb" style="--animated-row:${animatedRow};background-position-y:${animatedRow * 100 / 3}%" aria-hidden="true"></span></button>`;
         const storageIndex = storageObjectIndex[code];
         const column = storageIndex % 5;
         const row = Math.floor(storageIndex / 5);
@@ -1935,10 +1957,9 @@
     renderPlaced(); renderCanvas(); await persist(`${itemCatalog[removed.code].name}을 창고로 돌려놓았습니다.`);
   });
 
-  canvas.addEventListener("click", async (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    const x = Math.round((event.clientX - bounds.left) * WORLD_WIDTH / bounds.width / 4) * 4;
-    const y = Math.round((event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height / 4) * 4;
+  async function handleWorldPointer(pointerX, pointerY) {
+    const x = Math.round(pointerX / 4) * 4;
+    const y = Math.round(pointerY / 4) * 4;
     if (!placementCode) {
       canvas.focus();
       if (currentScene === "home") {
@@ -1965,6 +1986,18 @@
     const name = itemCatalog[placementCode].name;
     placementCode = null;
     renderInventory(); renderPlaced(); renderCanvas(); await persist(`${name}을 숲에 배치했습니다.`);
+  }
+
+  canvas.addEventListener("click", async (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) * WORLD_WIDTH / bounds.width;
+    const y = (event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height;
+    await handleWorldPointer(x, y);
+  });
+  window.addEventListener("forest-world-pointer", async (event) => {
+    const detail = event.detail || {};
+    if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
+    await handleWorldPointer(detail.x, detail.y);
   });
 
   $("#reward-button").addEventListener("click", async () => {

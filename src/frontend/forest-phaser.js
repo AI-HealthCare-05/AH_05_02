@@ -8,6 +8,7 @@
   const AVATAR_RENDER_SCALE = 0.43;
   const NAMEPLATE_Y = -126;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
+  const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
   const premiumPresets = {
     red_bow: { path: "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png", rows: 6 },
     cow_hood: { path: "/static/assets/carrot-forest-avatar-cow_hood-normalized-v2.png", rows: 5 },
@@ -83,10 +84,14 @@
       Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
+      this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1", { frameWidth: 128, frameHeight: 128 });
     }
 
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
+      this.createAnimatedObjectAnimations();
+      this.placedObjectActors = [];
+      this.syncPlacedObjects(storedState().placed || []);
       this.shadow = this.add.ellipse(0, 0, 34, 8, 0x16382a, 0.28).setDepth(1);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.player.add(this.shadow);
@@ -144,7 +149,38 @@
       window.carrotForestPhaserActive = true;
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
       this.input.once("pointerdown", () => document.getElementById("phaser-world")?.focus());
+      this.input.on("pointerdown", (pointer) => {
+        window.dispatchEvent(new CustomEvent("forest-world-pointer", { detail: { x: pointer.worldX, y: pointer.worldY } }));
+      });
       this.emitPosition(true);
+    }
+
+    createAnimatedObjectAnimations() {
+      Object.entries(animatedObjectRows).forEach(([code, row]) => {
+        const key = `forest-object-${code}`;
+        if (this.anims.exists(key)) return;
+        this.anims.create({
+          key,
+          frames: this.anims.generateFrameNumbers("animated-objects", { start: row * 4, end: row * 4 + 3 }),
+          frameRate: code === "garden_pinwheel" ? 7 : code === "firefly_lantern" ? 4 : 5,
+          repeat: -1,
+        });
+      });
+    }
+
+    syncPlacedObjects(placed = []) {
+      this.placedObjectActors?.forEach((actor) => actor.destroy());
+      this.placedObjectActors = [];
+      placed.filter((item) => Object.hasOwn(animatedObjectRows, item.code)).forEach((item) => {
+        const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
+        const actor = this.add.sprite(item.x, item.y, "animated-objects", animatedObjectRows[item.code] * 4)
+          .setOrigin(0.5, 0.84)
+          .setDisplaySize(size, size)
+          .setDepth(item.y - 2)
+          .setVisible(this.sceneName === "world")
+          .play(`forest-object-${item.code}`);
+        this.placedObjectActors.push(actor);
+      });
     }
 
     rebuildAvatar() {
@@ -171,6 +207,7 @@
           this.applyAvatarUpdate(nextAvatar);
         }
         if (detail.scene) this.setScene(detail.scene);
+        if (Array.isArray(detail.placed)) this.syncPlacedObjects(detail.placed);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
       window.addEventListener("forest-state-updated", this.onState);
@@ -262,6 +299,7 @@
       this.sceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
       this.ratActor?.setVisible(this.sceneName === "world" && this.ratActive);
+      this.placedObjectActors?.forEach((actor) => actor.setVisible(this.sceneName === "world"));
     }
 
     nudge(direction) {

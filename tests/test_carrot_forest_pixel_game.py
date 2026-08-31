@@ -444,7 +444,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v31" in worker
+    assert "gandang-carrot-forest-pwa-v32" in worker
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
@@ -580,3 +580,28 @@ def test_pwa_route_response_contracts() -> None:
     assert manifest_response.headers["cache-control"] == "no-cache"
     assert worker_response.media_type == "text/javascript"
     assert worker_response.headers["service-worker-allowed"] == "/forest"
+
+
+def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
+    import struct
+
+    atlas = ROOT / "src/frontend/assets/carrot-forest-animated-objects-v1.png"
+    raw = atlas.read_bytes()
+    width, height = struct.unpack(">II", raw[16:24])
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+
+    assert (width, height) == (512, 512)
+    assert (ROOT / "scripts/build_animated_object_atlas.py").is_file()
+    for code in ("duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"):
+        assert code in game_script
+        assert code in phaser_script
+    assert 'new CustomEvent("forest-world-pointer"' in phaser_script
+    assert 'window.addEventListener("forest-world-pointer"' in game_script
+    assert 'this.load.spritesheet("animated-objects"' in phaser_script
+    assert "repeat: -1" in phaser_script
+    assert "syncPlacedObjects" in phaser_script
+    assert "animated-object-thumb" in css
+    assert "carrot-forest-animated-objects-v1.png" in worker
