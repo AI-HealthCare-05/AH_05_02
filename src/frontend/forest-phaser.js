@@ -28,7 +28,7 @@
     hat: "none", glasses: "none", face: "calm", accessory: "none",
     lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
     lpcHat: "none", lpcGlasses: "none", expression: "bright", bodyType: "male",
-    lpcFaceShape: "oval", lpcExpression: "happy2", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
+    lpcFaceShape: "oval", lpcExpression: "neutral", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
     hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown", hatColor: "brown", glassesColor: "brown",
   };
   const defaultTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: AVATAR_RENDER_SCALE };

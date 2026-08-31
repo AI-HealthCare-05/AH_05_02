@@ -222,7 +222,7 @@ def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> No
     )
     assert "...presetDecorationReset, preset: linkedPreset" in script
     assert 'categoryId !== "preset" && avatarDraft[categoryId]' in script
-    assert "cosmeticSchemaVersion: 2" in script
+    assert "cosmeticSchemaVersion: 3" in script
     assert "Object.assign(state.avatar.cosmetics, presetDecorationReset" in script
     assert 'glasses: "round"' not in script
     assert "context.ellipse(lensX, 123 + headAdjustmentY + glassesOffsetY, 14, 10" in compositor
@@ -365,7 +365,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v31" in html
+    assert "forest-local-pwa-reset-v32" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -446,7 +446,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v39" in worker
+    assert "gandang-carrot-forest-pwa-v40" in worker
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
@@ -567,7 +567,8 @@ def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> Non
 
     assert 'value="lpc_male_default"' in html
     assert 'value="lpc_female_default"' in html
-    assert 'lpcExpression: "happy2"' in game_script
+    assert 'lpcExpression: "neutral"' in game_script
+    assert "cosmeticSchemaVersion: 3" in game_script
     assert 'lpcNose: "button"' in game_script
     assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
     assert "skinPalettes" in engine_script

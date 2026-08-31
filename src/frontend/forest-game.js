@@ -55,8 +55,8 @@
     teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
   };
   const presetBundles = {
-    lpc_male_default: { bodyType: "male", lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown" },
-    lpc_female_default: { bodyType: "female", lpcHair: "long", lpcOutfit: "blouse", lpcBottom: "long_pants", lpcShoes: "shoes", lpcHat: "none", lpcGlasses: "none", lpcExpression: "happy2", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "brown", outfitColor: "green", bottomColor: "navy", shoeColor: "brown" },
+    lpc_male_default: { bodyType: "male", lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none", lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown" },
+    lpc_female_default: { bodyType: "female", lpcHair: "long", lpcOutfit: "blouse", lpcBottom: "long_pants", lpcShoes: "shoes", lpcHat: "none", lpcGlasses: "none", lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", hairColor: "brown", outfitColor: "green", bottomColor: "navy", shoeColor: "brown" },
     sprout: { lpcHair: "bob", lpcOutfit: "overalls", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "leather_cap", lpcGlasses: "none", expression: "bright", hairColor: "brown", outfitColor: "green", bottomColor: "cream", shoeColor: "brown" },
     red_bow: { lpcHair: "long", lpcOutfit: "cardigan", lpcBottom: "leggings", lpcShoes: "shoes", lpcHat: "bandana", lpcGlasses: "none", expression: "bright", hairColor: "red", outfitColor: "navy", bottomColor: "cream", shoeColor: "brown" },
     cow_hood: { lpcHair: "afro", lpcOutfit: "tshirt", lpcBottom: "pants", lpcShoes: "boots", lpcHat: "bowler", lpcGlasses: "none", expression: "delighted", hairColor: "brown", outfitColor: "orange", bottomColor: "brown", shoeColor: "brown" },
@@ -326,7 +326,7 @@
     skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
     aura: "wings", effect: "sword_arc", vehicle: "scooter", pet: "none", speech: "none",
     lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
-    bodyType: "male", lpcFaceShape: "oval", lpcExpression: "happy2", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
+    bodyType: "male", lpcFaceShape: "oval", lpcExpression: "neutral", lpcEyeStyle: "round", lpcEyebrow: "thin", lpcNose: "button", lpcMouth: "smile", lpcEyes: "none", lpcWrinkles: "none",
     expression: "bright", hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
     hatColor: "brown", glassesColor: "brown",
   };
@@ -375,7 +375,7 @@
     return {
       dateKey: TODAY,
       profileVersion: 1,
-      cosmeticSchemaVersion: 2,
+      cosmeticSchemaVersion: 3,
       avatar,
       quests: { walk: false, meal: false, check: false },
       challengeCarrotClaims: {},
@@ -407,6 +407,7 @@
       const previousAvatar = value.avatar || {};
       const previousCosmetics = { ...defaultCosmetics, ...(previousAvatar.cosmetics || {}) };
       if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(previousCosmetics, presetDecorationReset, { glasses: "none" });
+      if ((value.cosmeticSchemaVersion || 0) < 3 && previousCosmetics.lpcExpression === "happy2") previousCosmetics.lpcExpression = "neutral";
       fallback.profileVersion = 1;
       fallback.avatar = {
         ...fallback.avatar,
@@ -432,7 +433,8 @@
     if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
     if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
-    state.cosmeticSchemaVersion = 2;
+    if ((value.cosmeticSchemaVersion || 0) < 3 && state.avatar.cosmetics.lpcExpression === "happy2") state.avatar.cosmetics.lpcExpression = "neutral";
+    state.cosmeticSchemaVersion = 3;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
     state.challengeCarrotClaims = Object.fromEntries(Object.entries(value.challengeCarrotClaims || {})
       .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
