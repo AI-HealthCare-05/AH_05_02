@@ -2,12 +2,21 @@
 
 ## 바로 실행
 
+Windows PowerShell:
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-ai-pipeline.ps1
 ```
 
-`start-local.ps1`은 Windows 한글 경로에서 Docker Compose의 동시 빌드가 실패하는 경우를 피하기 위해 FastAPI와 AI Worker 이미지를 순서대로 빌드한다.
+macOS Terminal:
+
+```bash
+./scripts/setup-macos.sh
+./scripts/start-local.sh
+```
+
+초기 설정이 끝난 macOS에서는 이후 `./scripts/start-local.sh`만 실행하면 된다. 두 운영체제의 실행 스크립트는 FastAPI와 AI Worker 이미지를 순서대로 빌드하고 동일한 Docker Compose 서비스를 기동한다.
 
 Swagger UI: <http://localhost/api/docs>
 
