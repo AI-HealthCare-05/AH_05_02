@@ -407,20 +407,20 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         "carrot-forest-storage-atlas-v2.png",
         "carrot-forest-reward-cow-v1.png",
         "carrot-forest-lpc-pets-v1.png",
-        "forest-main-breeze-original.wav",
+        "town-pro-sensory-cc0.mp3",
         "forest-canopy-original.wav",
         "carrot-forest-original.wav",
-        "avatar-studio-original.wav",
+        "peaceful-forest-samza-cc0.wav",
     ):
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v81" in worker
-    assert "forest-main-breeze-original.wav" in worker
+    assert "gandang-carrot-forest-pwa-v86" in worker
+    assert "town-pro-sensory-cc0.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
-    assert "avatar-studio-original.wav" in worker
+    assert "peaceful-forest-samza-cc0.wav" in worker
     assert "reward-chest-success.mp3" in worker
 
 
@@ -448,8 +448,8 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert "time - this.lastPetAttackAt > 2600" in phaser_script
     assert "delta / 260" in phaser_script
     assert "this.motionFx?.clear()" in phaser_script
-    assert 'forest: new Audio("/static/assets/forest-main-breeze-original.wav")' in game_script
-    assert 'avatar: new Audio("/static/assets/avatar-studio-original.wav")' in game_script
+    assert 'forest: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
+    assert 'avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
     assert 'home: new Audio("/static/assets/forest-canopy-original.wav")' in game_script
     assert 'garden: new Audio("/static/assets/carrot-forest-original.wav")' in game_script
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
@@ -655,14 +655,21 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
 def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    assert "const OUTFIT_DEFAULT_VERSION = 4" in game_script
+    assert "const OUTFIT_DEFAULT_VERSION = 5" in game_script
     assert 'gender: "female", engine: "lpc"' in game_script
     assert 'normalizeGenderDefaultOutfit(null, "female", Date.now())' in game_script
     assert 'normalizeGenderDefaultOutfit(null, "male", Date.now() - 1)' in game_script
     assert 'applyGenderDefaultOutfit(target, "female")' in game_script
     assert "const applied = applyGenderDefaultOutfit(state, selectedGender)" in game_script
-    assert "history.find((look) => look.label === preset.sourceLabel)" in game_script
+    assert "const existing = forceCanonical ? null : roleLook || namedLook" in game_script
     assert "history.find((look) => look.presetRole === gender)" in game_script
+    assert 'lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara"' in game_script
+    assert 'lpcBottom: "official_legs_skirts_legs_skirt_straight"' in game_script
+    assert 'vehicle: "wings_monarch_wings_monarch_edge", pet: "blue_eyes_white_cat"' in game_script
+    assert 'lpcOutfit: "official_torso_jacket_torso_jacket_santa"' in game_script
+    assert 'lpcBottom: "official_legs_pants_legs_formal_striped"' in game_script
+    assert 'lpcTool: "none", lpcWeapon: "bow", vehicle: "none", pet: "white_pup"' in game_script
+    assert '$("#avatar-gender").addEventListener("change"' in game_script
     assert "기본 프리셋 이름은 변경할 수 없습니다." in game_script
     assert "fixed-preset-name" in game_script
 

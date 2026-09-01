@@ -60,6 +60,8 @@
 - 파란 눈의 흰 고양이와 노란 눈의 주황갈색 고양이를 전용 펫 아틀라스로 추가
 - [LPC Rat, Cat and Dog](https://opengameart.org/content/lpc-rat-cat-and-dog)의 강아지 1종·고양이 2종을 4방향 3프레임 펫 아틀라스로 재구성했다. 원저작자 표기는 `Rat/Cat/Dog by Tuomo Untinen`, 배포 라이선스는 CC-BY 3.0·CC-BY-SA 3.0·GPL 3.0·GPL 2.0이다.
 - Universal LPC 호환 레이어 팩을 도입해 몸·헤어·상의·하의·신발·모자·안경을 동일한 프레임 규격으로 실시간 합성
+- 고정 성별 프리셋은 브라우저 임시 저장값이 아닌 코드의 검증된 전체 코디로 관리한다. 최초 진입은 여성형 `농부`, 성별을 남성형으로 바꾸면 `사냥꾼` 코디가 즉시 적용되며 다시 여성형을 선택하면 농부 코디로 복귀한다.
+- `농부`는 나만의 코디 10에서 확정한 여성형 튜닉·스커트·마법봉·공식 나비 날개·흰 고양이 조합, `사냥꾼`은 나만의 코디 8에서 확정한 남성형 코트·줄무늬 바지·활·흰 강아지 조합을 기준으로 한다.
 - `Q` 당근 수확·낚시·문 열기, `Z` 공격, `0` 댄스, `X` 아바타·펫 동시 앉기 동작 추가
 - 펫을 아바타에 고정하지 않고 최근 이동 경로를 시간차로 추적하는 독립 월드 액터로 변경
 - 오늘 완료한 챌린지의 당근 보상은 즉시 잔액에 더하지 않고 공동 당근밭에 누적한다. 당근밭 장면에서 `Q` 또는 수확 버튼으로 미수확분을 한 번에 받으며, 퀘스트별 수령 장부로 체크 해제·재체크에 따른 중복 적립을 막는다.
@@ -119,10 +121,12 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
-- `src/frontend/assets/forest-main-breeze-original.wav`: 당근의 숲 메인 화면용 111초 오리지널 루프 BGM. 느린 3박자 위에 따뜻한 베이스·나무 악기·드문 벨이 쌓이는 포근하고 아련한 숲속 레스토랑 분위기다.
+- `src/frontend/assets/town-pro-sensory-cc0.mp3`: 당근의 숲 메인 화면용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
+- `src/frontend/assets/peaceful-forest-samza-cc0.wav`: 아바타 꾸미기 전용 무료 BGM `Peaceful Forest`. 느린 현악·저음 중심의 차분한 곡이며 Samza가 CC0로 공개했다. 출처: https://opengameart.org/content/peaceful-forest
+- `src/frontend/assets/forest-main-breeze-original.wav`: 이전 메인 화면용 오리지널 BGM. 무료 외부 음원의 대체·장애 대응 후보로 보존한다.
 - `src/frontend/assets/forest-canopy-original.wav`: 집 내부용 96초 오리지널 루프 BGM. 잔잔하게 시작해 밝은 벨과 높은 음역이 단계적으로 추가된다.
 - `src/frontend/assets/carrot-forest-original.wav`: 당근밭 전용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
-- `src/frontend/assets/avatar-studio-original.wav`: 아바타 꾸미기 화면용 오리지널 루프 BGM. 꾸미기 창을 닫으면 숲 배경음악으로 복귀한다.
+- `src/frontend/assets/avatar-studio-original.wav`: 이전 아바타 꾸미기 화면용 오리지널 루프 BGM. 대체 후보로 보존한다.
 - `src/frontend/assets/reward-chest-success.mp3`: 사용자가 제공한 오늘의 보물상자 개봉 전용 효과음. 개봉 중 배경음악 볼륨을 낮추고 연출 종료·건너뛰기 시 원래 볼륨으로 복구한다.
 - 첨부 화면은 픽셀 밀도·치비 비율·카드 가독성의 참고 자료로만 사용했으며 기존 캐릭터·아이템·로고·UI 이미지는 복제하지 않았다.
 - 원본 모음판을 갱신한 경우 `pip install -r requirements-assets.txt` 후 `python scripts/build_carrot_avatar_atlases.py`로 실행용 아틀라스를 재생성한다.

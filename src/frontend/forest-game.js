@@ -288,23 +288,34 @@
     hatColor: "brown", glassesColor: "brown", mobilityColor: "black",
   };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
-  const OUTFIT_DEFAULT_VERSION = 4;
+  const OUTFIT_DEFAULT_VERSION = 5;
   const genderDefaultOutfits = {
     female: {
       label: "농부",
       sourceLabel: "나만의 코디 10",
       cosmetics: {
-        bodyType: "female", lpcHead: "human_female", lpcHair: "long",
-        lpcOutfit: "cardigan", lpcBottom: "plain_skirt", lpcShoes: "shoes",
-        hairColor: "brown", outfitColor: "green", bottomColor: "navy", shoeColor: "brown",
+        bodyType: "female", skin: "porcelain", lpcHead: "human_female",
+        lpcExpression: "angry", lpcEyebrow: "thin", lpcNose: "button",
+        lpcEyes: "none", lpcWrinkles: "none", lpcHair: "long",
+        lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+        lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara",
+        lpcBottom: "official_legs_skirts_legs_skirt_straight", lpcShoes: "shoes",
+        lpcTool: "none", lpcWeapon: "wand",
+        vehicle: "wings_monarch_wings_monarch_edge", pet: "blue_eyes_white_cat",
+        hairColor: "brown", outfitColor: "blue", bottomColor: "blue", shoeColor: "brown",
       },
     },
     male: {
       label: "사냥꾼",
       sourceLabel: "나만의 코디 8",
       cosmetics: {
-        bodyType: "male", lpcHead: "human_male", lpcHair: "messy",
-        lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
+        bodyType: "male", skin: "peach", lpcHead: "human_male",
+        lpcExpression: "blush", lpcEyebrow: "thin", lpcNose: "button",
+        lpcEyes: "none", lpcWrinkles: "none", lpcHair: "curtains",
+        lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+        lpcOutfit: "official_torso_jacket_torso_jacket_santa",
+        lpcBottom: "official_legs_pants_legs_formal_striped", lpcShoes: "shoe_revised",
+        lpcTool: "none", lpcWeapon: "bow", vehicle: "none", pet: "white_pup",
         hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
       },
     },
@@ -368,18 +379,15 @@
     };
   }
 
-  function ensureGenderDefaultOutfits(target, preferSourceLabels = false) {
+  function ensureGenderDefaultOutfits(target, forceCanonical = false) {
     const history = Array.isArray(target.outfitHistory) ? target.outfitHistory : [];
     const defaults = ["female", "male"].map((gender, index) => {
       const preset = genderDefaultOutfits[gender];
       const roleLook = history.find((look) => look.presetRole === gender);
       const namedLook = history.find((look) => look.label === preset.label);
-      const sourceLook = history.find((look) => look.label === preset.sourceLabel);
-      // 버전 마이그레이션 때만 지정 번호의 실제 코디를 기존 프리셋보다 우선한다.
-      // 이후 같은 번호가 다시 생겨도 고정 프리셋으로 오인하지 않는다.
-      const existing = preferSourceLabels
-        ? sourceLook || namedLook || roleLook
-        : roleLook || namedLook;
+      // 고정 프리셋 버전이 바뀌면 브라우저의 오래된 복사본보다 코드에
+      // 검증해 둔 농부·사냥꾼 구성을 우선해 캐시 초기화 후에도 풀리지 않게 한다.
+      const existing = forceCanonical ? null : roleLook || namedLook;
       return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
     });
     const defaultIds = new Set(defaults.map((look) => look.id));
@@ -697,10 +705,10 @@
   class CozyForestMusic {
     constructor() {
       this.tracks = {
-        forest: new Audio("/static/assets/forest-main-breeze-original.wav"),
+        forest: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         home: new Audio("/static/assets/forest-canopy-original.wav"),
         garden: new Audio("/static/assets/carrot-forest-original.wav"),
-        avatar: new Audio("/static/assets/avatar-studio-original.wav"),
+        avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
       };
       Object.values(this.tracks).forEach((track) => {
         track.loop = true;
@@ -2270,6 +2278,13 @@
     state.avatar.name = nextName;
     renderInventory();
     renderCanvas(); await persist(`${state.avatar.name} 아바타에 ${applied?.label || "기본 코디"}를 적용했습니다.`);
+  });
+  $("#avatar-gender").addEventListener("change", async (event) => {
+    const applied = applyGenderDefaultOutfit(state, event.currentTarget.value);
+    renderInventory();
+    renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
+    await persist(`${applied?.label || "기본 코디"} 코디로 전환했습니다.`);
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
