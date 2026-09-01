@@ -2140,6 +2140,9 @@ $("#challenge-list").addEventListener("click", (event) => {
   if (!event.target.closest("#open-custom-challenge, .edit-custom-challenge")) return;
   const editor = $("#custom-challenge-editor");
   editor.hidden = false;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = false;
+  });
   $("#custom-challenge-title").value = state.customChallenge?.title || "";
   $("#custom-challenge-goal").value = state.customChallenge?.goal || "";
   $("#custom-challenge-record-type").value = state.customChallenge?.recordType || "simple";
@@ -2172,6 +2175,9 @@ $("#challenge-detail-list").addEventListener("change", (event) => {
 });
 $("#cancel-custom-challenge").addEventListener("click", () => {
   $("#custom-challenge-editor").hidden = true;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = true;
+  });
   $("#open-custom-challenge, .edit-custom-challenge")?.focus();
 });
 $("#save-custom-challenge").addEventListener("click", () => {
@@ -2192,6 +2198,9 @@ $("#save-custom-challenge").addEventListener("click", () => {
   state.customChallengeSelected = true;
   renderChallengeChoices();
   $("#custom-challenge-editor").hidden = true;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = true;
+  });
   syncWalkingLevelPicker();
   $("#custom-challenge-choice").focus();
   showMessage("나만의 챌린지를 추가했어요.", "success");
