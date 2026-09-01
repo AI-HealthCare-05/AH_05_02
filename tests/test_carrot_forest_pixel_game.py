@@ -416,7 +416,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v87" in worker
+    assert "gandang-carrot-forest-pwa-v88" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
@@ -518,6 +518,9 @@ def test_original_forest_sound_effects_are_generated_cached_and_event_driven() -
         "pet-feed",
         "dance",
         "place-object",
+        "object-on",
+        "object-off",
+        "cow-toggle",
     }
     for name in expected:
         asset = ROOT / "src/frontend/assets/sfx" / f"{name}.wav"
@@ -531,6 +534,27 @@ def test_original_forest_sound_effects_are_generated_cached_and_event_driven() -
     assert 'playSfx("rat-caught"' in game_script
     assert 'playSfx("door-open"' in game_script
     assert "weaponSfxName" in game_script
+
+
+def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    for code in ("reward_cow", "campfire", "lantern", "firefly_lantern", "light_tent"):
+        assert f"{code}:" in game_script
+        assert f"{code}:" in phaser_script
+    assert "interactiveObjectTypes" in game_script
+    assert "normalizePlacedObjects" in game_script
+    assert "nearbyPlacedObject" in game_script
+    assert "togglePlacedObject" in game_script
+    assert 'target.startsWith("object:")' in game_script
+    assert "item.active = !item.active" in game_script
+    assert "item.activatedAt = item.active ? Date.now() : null" in game_script
+    assert 'item.active ? "작동 중" : "꺼짐·정지"' in game_script
+    assert "applyPlacedObjectState" in phaser_script
+    assert 'actor.setData("interactive", true)' in phaser_script
+    assert "if (!type || item.active)" in phaser_script
+    assert "this.tweens.killTweensOf(actor)" in phaser_script
 
 
 def test_wild_rat_is_a_separate_attack_reward_event() -> None:

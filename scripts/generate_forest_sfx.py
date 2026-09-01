@@ -150,6 +150,19 @@ def main() -> None:
             (tone(0.16, 783.99, volume=0.14), 0.28),
         ),
         "place-object.wav": mix((tone(0.1, 240, 180, volume=0.18), 0), (tone(0.15, 440, 660, volume=0.12), 0.1)),
+        "object-on.wav": mix(
+            (tone(0.12, 360, 620, volume=0.17), 0),
+            (tone(0.2, 620, 880, volume=0.13), 0.09),
+        ),
+        "object-off.wav": mix(
+            (tone(0.16, 520, 260, volume=0.16, wave_kind="triangle"), 0),
+            (tone(0.1, 220, 150, volume=0.1), 0.11),
+        ),
+        "cow-toggle.wav": mix(
+            (tone(0.18, 190, 145, volume=0.17, wave_kind="triangle"), 0),
+            (tone(0.22, 155, 118, volume=0.15, wave_kind="triangle"), 0.14),
+            (tone(0.12, 520, 680, volume=0.08), 0.3),
+        ),
     }
     for name, samples in effects.items():
         write(name, samples)

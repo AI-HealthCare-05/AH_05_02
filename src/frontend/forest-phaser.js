@@ -9,6 +9,9 @@
   const NAMEPLATE_Y = -126;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const interactiveObjectTypes = {
+    reward_cow: "cow", campfire: "fire", lantern: "light", firefly_lantern: "light", light_tent: "light",
+  };
   const storageObjectCodes = [
     "tent", "light_tent", "picnic_table", "bbq_table", "chair_green",
     "chair_red", "picnic_blanket", "pond", "lantern", "fence",
@@ -195,8 +198,7 @@
           const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
           actor = this.add.sprite(item.x, item.y, "animated-objects", animatedObjectRows[item.code] * 4)
             .setOrigin(0.5, 0.84)
-            .setDisplaySize(size, size)
-            .play(`forest-object-${item.code}`);
+            .setDisplaySize(size, size);
         } else if (item.code === "reward_cow") {
           actor = this.add.image(item.x, item.y, "reward-cow").setOrigin(0.5, 0.9).setDisplaySize(82, 82);
         } else if (Object.hasOwn(storageObjectIndex, item.code)) {
@@ -212,11 +214,40 @@
           .setAlpha(preview ? .72 : 1)
           .setDepth(preview ? 998 : item.y - 2)
           .setVisible(this.sceneName === "world");
+        this.applyPlacedObjectState(actor, item);
         return actor;
     }
 
+    applyPlacedObjectState(actor, item) {
+      const type = interactiveObjectTypes[item.code];
+      if (Object.hasOwn(animatedObjectRows, item.code)) {
+        if (!type || item.active) actor.play(`forest-object-${item.code}`);
+        else actor.stop().setFrame(animatedObjectRows[item.code] * 4);
+      }
+      if (!type) return;
+      actor.setData("interactive", true).setData("active", Boolean(item.active));
+      this.tweens.killTweensOf(actor);
+      actor.setPosition(item.x, item.y).setAlpha(item.active ? 1 : .58);
+      if (!item.active) {
+        actor.setTint(0x6f756d);
+        return;
+      }
+      actor.clearTint();
+      if (type === "cow") {
+        this.tweens.add({
+          targets: actor, y: item.y - 4, angle: (Number(item.rotation) || 0) + 3,
+          duration: 330, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+        });
+      } else {
+        this.tweens.add({
+          targets: actor, alpha: { from: .82, to: 1 }, duration: type === "fire" ? 180 : 620,
+          yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+        });
+      }
+    }
+
     syncPlacedObjects(placed = []) {
-      this.placedObjectActors?.forEach((actor) => actor.destroy());
+      this.placedObjectActors?.forEach((actor) => { this.tweens.killTweensOf(actor); actor.destroy(); });
       this.placedObjectActors = placed.map((item) => this.createPlacedObjectActor(item)).filter(Boolean);
     }
 

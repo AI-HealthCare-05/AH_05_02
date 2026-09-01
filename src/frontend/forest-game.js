@@ -86,6 +86,13 @@
   ];
   const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const interactiveObjectTypes = {
+    reward_cow: "cow",
+    campfire: "fire",
+    lantern: "light",
+    firefly_lantern: "light",
+    light_tent: "light",
+  };
   const rewardPool = ["reward_cow"];
   const avatarCategories = [
     { id: "bodyType", label: "체형", icon: "▸" },
@@ -515,7 +522,7 @@
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
-      fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+      fallback.placed = normalizePlacedObjects(value.placed);
       if (!["male", "female", "muscular", "teen"].includes(fallback.avatar.cosmetics.bodyType)) {
         fallback.avatar.cosmetics.bodyType = "male";
         fallback.avatar.cosmetics.lpcHead = "human_male";
@@ -561,8 +568,21 @@
     applyRequestedDefaultOutfit(state, value.outfitDefaultVersion);
     // 보상 풀이 바뀌기 전에 상자를 연 데모 사용자도 희귀 꾸미기 보상을 잃지 않도록 보정한다.
     if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
-    state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+    state.placed = normalizePlacedObjects(value.placed);
     return state;
+  }
+
+  function normalizePlacedObjects(placed) {
+    if (!Array.isArray(placed)) return [];
+    return placed
+      .filter((item) => itemCatalog[item?.code] && Number.isFinite(Number(item.x)) && Number.isFinite(Number(item.y)))
+      .map((item) => ({
+        ...item,
+        x: Number(item.x),
+        y: Number(item.y),
+        rotation: Number(item.rotation) || 0,
+        ...(interactiveObjectTypes[item.code] ? { active: Boolean(item.active) } : {}),
+      }));
   }
 
   function resetTodayProgress(current) {
@@ -745,7 +765,7 @@
       this.tracks = Object.fromEntries([
         "step-grass", "run-grass", "door-open", "sit-cloth", "mount", "harvest", "water",
         "fishing-cast", "fishing-catch", "attack-sword", "attack-bow", "attack-magic",
-        "rat-caught", "pet-feed", "dance", "place-object",
+        "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off", "cow-toggle",
       ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
       Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
       this.lastPlayed = new Map();
@@ -970,9 +990,21 @@
       context.translate(item.x, item.y);
       context.rotate((Number(item.rotation) || 0) * Math.PI / 180);
       context.globalAlpha = preview ? .72 : 1;
+      const interactionType = interactiveObjectTypes[item.code];
+      const interactionActive = interactionType && Boolean(item.active);
+      if (interactionType && !interactionActive) context.globalAlpha *= .58;
+      if (interactionActive && interactionType === "cow") {
+        context.rotate(Math.sin(performance.now() / 170) * .045);
+        context.translate(0, -Math.abs(Math.sin(performance.now() / 190)) * 3);
+      }
+      if (interactionActive && ["fire", "light"].includes(interactionType)) {
+        const pulse = 1 + Math.sin(performance.now() / 150) * .025;
+        context.scale(pulse, pulse);
+        context.globalAlpha *= .9 + Math.sin(performance.now() / 130) * .1;
+      }
       const animatedRow = animatedObjectRows[item.code];
       if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
-        const frame = Math.floor(performance.now() / 220) % 4;
+        const frame = interactionType && !interactionActive ? 0 : Math.floor(performance.now() / 220) % 4;
         const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
         context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
         context.restore();
@@ -1337,6 +1369,35 @@
     return Math.hypot(state.avatar.x - x, state.avatar.y - y);
   }
 
+  function nearbyPlacedObject(x = state.avatar.x, y = state.avatar.y, maxDistance = 72) {
+    if (currentScene !== "world") return null;
+    return state.placed
+      .map((item, index) => ({ item, index, distance: Math.hypot(x - item.x, y - item.y) }))
+      .filter(({ item, distance }) => interactiveObjectTypes[item.code] && distance <= maxDistance)
+      .sort((left, right) => left.distance - right.distance)[0] || null;
+  }
+
+  function objectInteractionLabel(item) {
+    const type = interactiveObjectTypes[item.code];
+    if (type === "cow") return item.active ? "젖소 쉬게 하기" : "젖소 움직이기";
+    if (type === "fire") return item.active ? "모닥불 끄기" : "모닥불 피우기";
+    return item.active ? `${itemCatalog[item.code].name} 끄기` : `${itemCatalog[item.code].name} 켜기`;
+  }
+
+  async function togglePlacedObject(index) {
+    const item = state.placed[index];
+    const type = interactiveObjectTypes[item?.code];
+    if (!item || !type) return;
+    item.active = !item.active;
+    item.activatedAt = item.active ? Date.now() : null;
+    if (type === "cow") playSfx("cow-toggle", { volume: .34, rate: item.active ? 1 : .88 });
+    else playSfx(item.active ? "object-on" : "object-off", { volume: .3 });
+    renderPlaced();
+    emitPlacementUpdate();
+    await persist(`${itemCatalog[item.code].name}${type === "cow" ? (item.active ? "가 신나게 움직이기 시작했습니다." : "가 편안히 쉬고 있습니다.") : (item.active ? "을 켰습니다." : "을 껐습니다.")}`);
+    updateInteractionPrompt();
+  }
+
   function nearbyInteraction() {
     if (currentScene === "home") {
       if (distanceTo(292, 246) < 95) return "sofa";
@@ -1349,6 +1410,8 @@
       if (distanceTo(384, 430) < 78) return "exit_garden";
       return null;
     }
+    const placed = nearbyPlacedObject();
+    if (placed) return `object:${placed.index}`;
     if (distanceTo(200, 270) < 95) return "home";
     if (distanceTo(600, 255) < 110) return "garden";
     if (distanceTo(285, 405) < 105) return "pond";
@@ -1359,7 +1422,10 @@
     const target = nearbyInteraction();
     const prompt = $("#interaction-prompt");
     prompt.hidden = !target;
-    if (target) prompt.querySelector("span").textContent = {
+    if (target?.startsWith("object:")) {
+      const item = state.placed[Number(target.split(":")[1])];
+      prompt.querySelector("span").textContent = item ? objectInteractionLabel(item) : "오브젝트 사용하기";
+    } else if (target) prompt.querySelector("span").textContent = {
       home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
       crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
@@ -1386,8 +1452,12 @@
     dialog.showModal();
   }
 
-  function interact(target = nearbyInteraction()) {
+  async function interact(target = nearbyInteraction()) {
     if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
+    if (target.startsWith("object:")) {
+      await togglePlacedObject(Number(target.split(":")[1]));
+      return;
+    }
     const pose = {
       crops: "harvest", pond: "fishing", home: "door", garden: "door",
       exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
@@ -1487,8 +1557,13 @@
     if (!placementCode || !placementDraft) { setStatus("먼저 초록 격자에서 배치 위치를 선택해 주세요."); return; }
     if (!placementCellValid(placementDraft.x, placementDraft.y)) { setStatus("현재 위치에는 오브젝트를 놓을 수 없습니다."); return; }
     const existing = state.placed.findIndex((item) => item.code === placementCode);
+    const previousActive = existing >= 0 ? Boolean(state.placed[existing].active) : false;
     if (existing >= 0) state.placed.splice(existing, 1);
-    const placed = { ...placementDraft, rotation: Number(placementDraft.rotation) || 0 };
+    const placed = {
+      ...placementDraft,
+      rotation: Number(placementDraft.rotation) || 0,
+      ...(interactiveObjectTypes[placementCode] ? { active: previousActive } : {}),
+    };
     const name = itemCatalog[placementCode].name;
     state.placed.push(placed);
     placementCode = null;
@@ -1698,7 +1773,10 @@
   function renderPlaced() {
     $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
-      ? state.placed.map((item, index) => `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`).join("")
+      ? state.placed.map((item, index) => {
+        const stateLabel = interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
+        return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong>${stateLabel}<button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
+      }).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
 
@@ -2522,10 +2600,14 @@
         if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
         else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
-      } else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) interact("home");
-      else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) interact("garden");
-      else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) interact("pond");
-      else setStatus("집·당근밭·연못을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      } else {
+        const placedTarget = nearbyPlacedObject(x, y, 58);
+        if (placedTarget) await interact(`object:${placedTarget.index}`);
+        else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
+        else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
+        else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");
+        else setStatus("집·당근밭·연못·상호작용 오브젝트를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      }
       return;
     }
     if (currentScene !== "world") { setStatus("숲 오브젝트는 월드 장면에서만 배치할 수 있어요."); return; }
