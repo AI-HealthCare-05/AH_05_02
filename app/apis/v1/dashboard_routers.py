@@ -104,9 +104,7 @@ async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -
             "recent_7_days": {
                 "completed": recent_completed,
                 "planned": recent_planned,
-                "completion_rate": round(recent_completed / recent_planned * 100, 1)
-                if recent_planned
-                else 0.0,
+                "completion_rate": round(recent_completed / recent_planned * 100, 1) if recent_planned else 0.0,
             },
             "four_weeks": {
                 "completed": sum(1 for item in logs if item.is_completed),

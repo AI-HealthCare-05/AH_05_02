@@ -69,9 +69,7 @@ class HealthRepository:
         return await PredictionRiskCurvePoint.filter(prediction_id=prediction_id).order_by("age")
 
     async def latest_prediction_for_model_key(self, user_id: int, model_key: str) -> Prediction | None:
-        return (
-            await Prediction.filter(user_id=user_id, model_key=model_key).order_by("-predicted_at", "-id").first()
-        )
+        return await Prediction.filter(user_id=user_id, model_key=model_key).order_by("-predicted_at", "-id").first()
 
     async def active_cycle(self, user_id: int) -> ChallengeCycle | None:
         return await ChallengeCycle.filter(user_id=user_id, status__in=["scheduled", "active"]).order_by("-id").first()
@@ -80,9 +78,11 @@ class HealthRepository:
         return await ChallengeCycle.get_or_none(id=cycle_id, user_id=user_id)
 
     async def cycle_for_date(self, user_id: int, target_date: date) -> ChallengeCycle | None:
-        return await ChallengeCycle.filter(
-            user_id=user_id, start_date__lte=target_date, end_date__gte=target_date
-        ).order_by("-id").first()
+        return (
+            await ChallengeCycle.filter(user_id=user_id, start_date__lte=target_date, end_date__gte=target_date)
+            .order_by("-id")
+            .first()
+        )
 
     async def list_user_challenges(self, cycle_id: int, user_id: int) -> list[UserChallenge]:
         return await UserChallenge.filter(cycle_id=cycle_id, user_id=user_id).order_by("id")

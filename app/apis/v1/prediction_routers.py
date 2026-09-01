@@ -264,8 +264,7 @@ async def read_risk_curve(
             "model_key": item.model_key,
             "output_definition_version": item.output_definition_version,
             "points": [
-                {"age": p.age, "cumulative_risk": p.cumulative_risk, "lower": p.lower, "upper": p.upper}
-                for p in points
+                {"age": p.age, "cumulative_risk": p.cumulative_risk, "lower": p.lower, "upper": p.upper} for p in points
             ],
             "summary": _risk_curve_summary(points),
             "disclaimer": "이 전망은 통계적 위험 추정치이며 개인의 확정된 미래를 의미하지 않습니다.",
