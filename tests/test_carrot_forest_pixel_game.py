@@ -420,7 +420,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v90" in worker
+    assert "gandang-carrot-forest-pwa-v91" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -576,6 +576,9 @@ def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
     assert "updateWorldAtmosphere(time)" in phaser_script
     assert "this.nightOverlay" in phaser_script
     assert "this.lightFx" in phaser_script
+    assert ".setDepth(0.5).setAlpha(0).setVisible(false)" in phaser_script
+    assert "this.add.graphics().setDepth(1.5)" in phaser_script
+    assert "[218, 430, 30]" in phaser_script
     assert "this.waterRippleFx" in phaser_script
     assert "strokeEllipse" in phaser_script
     assert 'new Set(["duck_float", "animated_fountain"])' in game_script

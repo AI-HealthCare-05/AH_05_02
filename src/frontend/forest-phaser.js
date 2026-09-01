@@ -110,9 +110,12 @@
       this.placementPreview = null;
       this.placedObjectActors = [];
       this.syncPlacedObjects(storedState().placed || []);
+      // Darken only the map. Actors and placed objects stay above this layer,
+      // otherwise their bodies appear to vanish against the night overlay.
       this.nightOverlay = this.add.rectangle(WORLD.width / 2, WORLD.height / 2, WORLD.width, WORLD.height, 0x07172d, 1)
-        .setDepth(900).setAlpha(0).setVisible(false);
-      this.lightFx = this.add.graphics().setDepth(901).setBlendMode(Phaser.BlendModes.ADD);
+        .setDepth(0.5).setAlpha(0).setVisible(false);
+      // Local light sits above the map and below placed objects.
+      this.lightFx = this.add.graphics().setDepth(1.5).setBlendMode(Phaser.BlendModes.ADD);
       this.lastLightingRefresh = 0;
       this.nightStrength = 0;
       this.player = this.add.container(this.avatar.x, this.avatar.y);
@@ -297,7 +300,9 @@
       if (!worldVisible) return;
 
       const ripplePhase = time / 780;
-      [[92, 382, 42], [150, 420, 58], [220, 360, 36], [263, 438, 46]].forEach(([x, y, width], index) => {
+      // Keep every ripple inside the irregular pond shoreline. In particular,
+      // the lower-right bank narrows sharply beside the dock.
+      [[82, 382, 36], [138, 420, 46], [205, 360, 32], [218, 430, 30]].forEach(([x, y, width], index) => {
         const wave = (Math.sin(ripplePhase + index * 1.3) + 1) / 2;
         this.waterRippleFx.lineStyle(1.5, 0xb8f3ff, .16 + wave * .18)
           .strokeEllipse(x + Math.sin(ripplePhase + index) * 3, y, width + wave * 12, 7 + wave * 3);
