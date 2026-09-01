@@ -1339,6 +1339,15 @@
     updateInteractionPrompt();
   }
 
+  function reactToCow(index, reaction = "body") {
+    const item = state.placed[index];
+    if (item?.code !== "reward_cow") return;
+    const headTouch = reaction === "head";
+    playSfx("cow-toggle", { volume: .3, rate: headTouch ? 1.12 : .92 });
+    window.dispatchEvent(new CustomEvent("forest-cow-react", { detail: { index, reaction } }));
+    setStatus(headTouch ? "행운의 젖소 머리를 쓰다듬었어요. 기분 좋게 고개를 흔듭니다." : "행운의 젖소 몸을 토닥였어요. 신나게 몸을 흔듭니다.");
+  }
+
   let lastAnimationAt = 0;
   let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
@@ -1781,7 +1790,7 @@
     $("#placed-list").innerHTML = state.placed.length
       ? state.placed.map((item, index) => {
         const stateLabel = interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
-        return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong>${stateLabel}<button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
+        return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><div class="placed-object-copy"><strong>${itemCatalog[item.code].name}</strong>${stateLabel}</div><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
       }).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
@@ -2608,7 +2617,10 @@
         else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
       } else {
         const placedTarget = nearbyPlacedObject(x, y, 58);
-        if (placedTarget) await interact(`object:${placedTarget.index}`);
+        if (placedTarget?.item.code === "reward_cow") {
+          const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
+          reactToCow(placedTarget.index, reaction);
+        } else if (placedTarget) await interact(`object:${placedTarget.index}`);
         else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
         else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
         else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");

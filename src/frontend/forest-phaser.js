@@ -219,10 +219,17 @@
           actor = this.add.container(item.x, item.y, [base, body]);
           actor.setData("motionTarget", body);
         } else if (item.code === "campfire") {
-          const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(82, 82);
-          const onFire = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.campfire).setOrigin(0.5, 0.9).setDisplaySize(82, 82);
-          actor = this.add.container(item.x, item.y, [offFire, onFire]);
+          const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
+          const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(94, 94);
+          const onFire = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.campfire).setOrigin(0.5, 0.9).setDisplaySize(94, 94);
+          actor = this.add.container(item.x, item.y, [shadow, offFire, onFire]);
           actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire);
+        } else if (item.code === "lantern") {
+          const shadow = this.add.ellipse(0, -2, 42, 12, 0x1b241d, .32);
+          const lantern = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.lantern)
+            .setOrigin(0.5, 0.9).setDisplaySize(82, 82);
+          actor = this.add.container(item.x, item.y, [shadow, lantern]);
+          actor.setData("visualTarget", lantern);
         } else if (Object.hasOwn(storageObjectIndex, item.code)) {
           const largeObjects = new Set(["tent", "light_tent", "picnic_table", "bbq_table", "pond", "fence", "flower_cart", "carrot_crate"]);
           const smallObjects = new Set(["chair_green", "chair_red", "lantern", "mailbox", "watering_can"]);
@@ -232,9 +239,10 @@
             .setDisplaySize(size, size);
         }
         if (!actor) return null;
+        const interactiveDepthBoost = interactiveObjectTypes[item.code] ? 6 : 0;
         actor.setAngle(Number(item.rotation) || 0)
           .setAlpha(preview ? .72 : 1)
-          .setDepth(preview ? 998 : item.y - 2)
+          .setDepth(preview ? 998 : item.y - 2 + interactiveDepthBoost)
           .setVisible(this.sceneName === "world");
         actor.setData("item", { ...item });
         this.applyPlacedObjectState(actor, item);
@@ -253,18 +261,44 @@
         actor.getData("fireOffTarget")?.setVisible(!item.active);
         actor.getData("fireOnTarget")?.setVisible(Boolean(item.active));
       }
-      const motionTarget = actor.getData("motionTarget") || actor;
-      this.tweens.killTweensOf(motionTarget);
+      const motionTarget = actor.getData("motionTarget");
+      this.tweens.killTweensOf(motionTarget || actor);
       actor.setPosition(item.x, item.y).setAlpha(1);
-      motionTarget.setPosition?.(0, item.code === "reward_cow" ? -7 : 0);
-      motionTarget.setAngle?.(0);
+      if (motionTarget) {
+        motionTarget.setPosition(0, item.code === "reward_cow" ? -7 : 0);
+        motionTarget.setAngle(0);
+        motionTarget.setScale(1);
+      }
       if (!item.active) return;
-      if (type === "cow") {
+      if (type === "cow" && motionTarget) {
         this.tweens.add({
-          targets: motionTarget, y: -11, angle: 3,
-          duration: 330, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+          targets: motionTarget, x: 3, y: -12, angle: 4, scaleX: 1.03,
+          duration: 420, yoyo: true, repeat: -1, repeatDelay: 420, ease: "Sine.easeInOut",
         });
       }
+    }
+
+    reactCow(index, reaction = "body") {
+      const actor = this.placedObjectActors[index];
+      const item = actor?.getData?.("item");
+      if (!actor || item?.code !== "reward_cow") return;
+      const target = actor.getData("motionTarget");
+      this.tweens.killTweensOf(target);
+      target.setPosition(0, -7).setAngle(0).setScale(1);
+      const headTouch = reaction === "head";
+      this.tweens.add({
+        targets: target,
+        x: headTouch ? 0 : 7,
+        y: headTouch ? -17 : -10,
+        angle: headTouch ? -5 : 7,
+        scaleX: headTouch ? 1.08 : .98,
+        scaleY: headTouch ? .94 : 1.04,
+        duration: headTouch ? 190 : 140,
+        yoyo: true,
+        repeat: headTouch ? 1 : 2,
+        ease: headTouch ? "Back.easeOut" : "Sine.easeInOut",
+        onComplete: () => this.applyPlacedObjectState(actor, actor.getData("item")),
+      });
     }
 
     syncPlacedObjects(placed = []) {
@@ -383,6 +417,8 @@
         this.updateWorldAtmosphere(performance.now());
       };
       window.addEventListener("forest-atmosphere-updated", this.onAtmosphere);
+      this.onCowReaction = (event) => this.reactCow(Number(event.detail?.index), event.detail?.reaction);
+      window.addEventListener("forest-cow-react", this.onCowReaction);
     }
 
     detachWindowEvents() {
@@ -392,6 +428,7 @@
       window.removeEventListener("forest-pet-fed", this.onPetFed);
       window.removeEventListener("forest-placement-updated", this.onPlacement);
       window.removeEventListener("forest-atmosphere-updated", this.onAtmosphere);
+      window.removeEventListener("forest-cow-react", this.onCowReaction);
     }
 
     showPetHeart() {

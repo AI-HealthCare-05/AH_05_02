@@ -103,3 +103,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .stage-footer.arcade-deck{grid-template-areas:"marquee controls"}
 .arcade-marquee strong{font-size:14px}
 @media(max-width:900px){.stage-footer.arcade-deck{grid-template-areas:"marquee" "controls"}}
+
+.placed-object-row{grid-template-columns:24px minmax(64px,1fr) 122px;gap:8px;padding:9px}
+.placed-object-copy{min-width:0}
+.placed-object-copy strong,.placed-object-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.placed-object-row .remove-object{display:inline-flex;align-items:center;justify-content:center;width:122px;min-width:122px;min-height:40px;padding:7px 10px;line-height:1.2}

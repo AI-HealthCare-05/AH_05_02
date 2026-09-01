@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v94" in worker
+    assert "gandang-carrot-forest-pwa-v95" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -546,6 +546,7 @@ def test_original_forest_sound_effects_are_generated_cached_and_event_driven() -
 def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
 
     for code in ("reward_cow", "campfire", "lantern", "firefly_lantern", "light_tent"):
         assert f"{code}:" in game_script
@@ -566,6 +567,15 @@ def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
     assert 'actor.getData("fireOnTarget")?.setVisible(Boolean(item.active))' in phaser_script
     assert "actor.setPosition(item.x, item.y).setAlpha(1)" in phaser_script
     assert 'actor.setData("motionTarget", body)' in phaser_script
+    assert 'const motionTarget = actor.getData("motionTarget")' in phaser_script
+    assert 'actor.getData("motionTarget") || actor' not in phaser_script
+    assert 'item.code === "lantern"' in phaser_script
+    assert "interactiveDepthBoost" in phaser_script
+    assert "forest-cow-react" in game_script
+    assert "reactToCow" in game_script
+    assert 'reaction = y < placedTarget.item.y - 28 ? "head" : "body"' in game_script
+    assert "placed-object-copy" in game_script
+    assert "width:122px" in css
 
 
 def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
