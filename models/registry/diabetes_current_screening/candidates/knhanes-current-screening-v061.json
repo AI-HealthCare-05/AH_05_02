@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_current_screening",
+  "task_type": "current_cross_sectional_screening",
+  "model_version": "knhanes-current-diabetes-recall-v0.6.1",
+  "promotion_status": "challenger_requires_external_validation",
+  "operational_model_activated": false,
+  "artifact_local_path": "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib",
+  "artifact_source_path": "outputs/ml/knhanes_current_screening_recall_v061/knhanes-current-diabetes-recall-v0.6.1.joblib",
+  "artifact_sha256": "ffc6743849973676308703dd6bd5af0f8d557d5f45a8886e6660f86c81b85178",
+  "artifact_size_bytes": 13392929,
+  "feature_schema_version": "knhanes-current-diabetes-screening-v4-waist-residual",
+  "threshold_version": "validation-2021-2022-spec042-v3",
+  "threshold": 0.02323125331773926,
+  "features": [
+    "age", "height_cm", "weight_kg", "waist_cm", "bmi", "walking_days",
+    "energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg",
+    "waist_height_ratio", "waist_was_estimated", "waist_expected_cm", "waist_minus_expected_cm",
+    "sex", "region", "urban", "education", "income_quartile",
+    "household_income_quartile", "hypertension_family_history",
+    "diabetes_family_history", "current_smoker", "alcohol_frequency", "aerobic_activity"
+  ],
+  "metrics": {
+    "validation_recall": 0.9590361445783132,
+    "test_recall": 0.9384615384615385,
+    "test_specificity": 0.40662294376948716,
+    "test_auroc": 0.771187272391444,
+    "test_auprc": 0.11383364684234738,
+    "test_brier": 0.0375451666953896,
+    "true_positive": 366,
+    "false_negative": 24
+  },
+  "waist_fallback": {
+    "policy": "use_observed_else_estimate_inside_training_contract",
+    "oof_mae_cm": 3.0638770105807893,
+    "oof_r2": 0.8517222644843819
+  },
+  "prohibited_use": [
+    "diagnosis", "future_incidence_probability", "prescription",
+    "medication_change", "emergency_triage", "score_combination_with_diabetes_incidence"
+  ]
+}
