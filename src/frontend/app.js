@@ -454,24 +454,86 @@ function showHealthInputPanel(panel) {
 function eligibilityCapabilities(eligibility) {
   const age = Number(eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
   const reasonCodes = eligibility?.reason_codes || [];
+  const hasExplicitCurrentHealth = Object.prototype.hasOwnProperty.call(eligibility || {}, "current_health_check_eligible");
+  const hasExplicitFuture = Object.prototype.hasOwnProperty.call(eligibility || {}, "future_prediction_eligible");
+  const hasExplicitModelEligible = Object.prototype.hasOwnProperty.call(eligibility || {}, "model_eligible");
+  const hasExplicitChallenge = Object.prototype.hasOwnProperty.call(eligibility || {}, "challenge_eligible");
+  const explicitFutureByReason = reasonCodes.some((code) => (
+    code === "MODEL_AGE_OUT_OF_RANGE" || code === "CHALLENGE_ONLY_AGE" || code === "UNDER_MINIMUM_SERVICE_AGE" || code === "MODEL_POPULATION_OUT_OF_SCOPE"
+  ));
   const safetyBlocked = reasonCodes.some((code) => code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES");
+  const inferredCurrentHealth = Number.isFinite(age) && age >= 19 && !safetyBlocked;
+  const inferredFuturePrediction = Number.isFinite(age) && age >= 45 && !safetyBlocked;
+  let futurePrediction = hasExplicitFuture ? eligibility.future_prediction_eligible : null;
+  if (!futurePrediction && hasExplicitModelEligible) futurePrediction = eligibility.model_eligible;
+  if (futurePrediction === null) {
+    futurePrediction = explicitFutureByReason ? false : inferredFuturePrediction;
+  }
   return {
-    challenge: eligibility?.challenge_eligible ?? (Number.isFinite(age) && age >= 14 && !safetyBlocked),
-    currentHealth: eligibility?.current_health_check_eligible ?? (Number.isFinite(age) && age >= 19 && !safetyBlocked),
-    futurePrediction: eligibility?.future_prediction_eligible ?? eligibility?.model_eligible ?? false,
+    challenge: hasExplicitChallenge
+      ? eligibility.challenge_eligible
+      : Number.isFinite(age) && age >= 14 && !safetyBlocked,
+    currentHealth: hasExplicitCurrentHealth
+      ? eligibility.current_health_check_eligible
+      : inferredCurrentHealth,
+    futurePrediction,
   };
+}
+
+function inferFuturePredictionCapability(eligibility = state.eligibility) {
+  const age = Number(eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
+  if (!Number.isFinite(age)) return false;
+  const reasonCodes = eligibility?.reason_codes || [];
+  if (reasonCodes.some((code) => (
+    code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "CONSENT_REQUIRED" || code === "UNDER_MINIMUM_SERVICE_AGE"
+  ))) return false;
+  if (reasonCodes.includes("MODEL_AGE_OUT_OF_RANGE") || reasonCodes.includes("CHALLENGE_ONLY_AGE")
+      || reasonCodes.includes("MODEL_POPULATION_OUT_OF_SCOPE")) return false;
+
+  if (Object.prototype.hasOwnProperty.call(eligibility || {}, "future_prediction_eligible")) {
+    if (eligibility?.future_prediction_eligible === true) return true;
+    if (eligibility?.future_prediction_eligible === false) return false;
+  }
+  if (Object.prototype.hasOwnProperty.call(eligibility || {}, "model_eligible")) {
+    if (eligibility?.model_eligible === true) return true;
+    if (eligibility?.model_eligible === false) return false;
+  }
+
+  const activeModel = eligibility?.active_model || {};
+  const minAge = Number(activeModel.min_age);
+  const maxAge = Number(activeModel.max_age);
+  if (Number.isFinite(minAge) && age < minAge) return false;
+  if (Number.isFinite(maxAge) && age > maxAge) return false;
+  if (Number.isFinite(minAge) || Number.isFinite(maxAge)) return true;
+  return age >= 45;
 }
 
 function syncReturningEligibilityState(eligibility) {
   const reasonCodes = eligibility?.reason_codes || [];
+  const inferredFuturePrediction = inferFuturePredictionCapability(eligibility);
   state.eligibility = eligibility;
   state.capabilities = eligibilityCapabilities(eligibility);
+  state.capabilities.futurePrediction = state.capabilities.futurePrediction || inferredFuturePrediction;
   state.currentHealthOnly = state.capabilities.currentHealth && !state.capabilities.futurePrediction;
   state.modelOutOfRange = state.currentHealthOnly;
   state.requiresEligibility = !eligibility;
   state.medicalGuidanceRequired = reasonCodes.some((code) => (
     code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "UNDER_MINIMUM_SERVICE_AGE"
   ));
+}
+
+function shouldRunPredictionAfterHealthEdit() {
+  if (state.currentHealthOnly) return false;
+  if (state.medicalGuidanceRequired) return false;
+  if (state.capabilities.futurePrediction) return true;
+  if (!state.returningUser) return true;
+  if (inferFuturePredictionCapability(state.eligibility)) return true;
+  const age = Number(state.eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
+  const hasExplicitEligibility = Boolean(state.eligibility);
+  const reasonCodes = state.eligibility?.reason_codes || [];
+  if (!hasExplicitEligibility && Number.isFinite(age)) return age >= 45;
+  if (reasonCodes.includes("MODEL_AGE_OUT_OF_RANGE") || reasonCodes.includes("CHALLENGE_ONLY_AGE")) return false;
+  return state.eligibility?.future_prediction_eligible === true || state.eligibility?.model_eligible === true || false;
 }
 
 function beginReturningEligibility(destination) {
@@ -525,7 +587,7 @@ function showAuthMode(mode, { moveFocus = true } = {}) {
 
 function healthSubmitLabel() {
   if (state.currentHealthOnly) return "저장하고 현재 건강 신호 확인";
-  if (state.returningUser && state.capabilities.futurePrediction) return "저장하고 다시 분석하기";
+  if (state.returningUser && shouldRunPredictionAfterHealthEdit()) return "저장하고 다시 분석하기";
   if (state.returningUser) return "건강정보 저장하기";
   return "이 내용으로 분석하기";
 }
@@ -776,11 +838,11 @@ function renderPredictionStatus(status, options = {}) {
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
         : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
   }
-  const canShowResult = config.showNext && options.resultAvailable === true;
+  const canShowResult = config.showNext && options.showResult !== false;
   $("#retry-analysis").hidden = !config.showRetry;
   $("#result-next").hidden = !canShowResult;
   $("#result-next").disabled = !canShowResult;
-  $("#result-next").textContent = "결과 확인하기";
+  $("#result-next").textContent = "결과 확인";
   $("#high-guidance").hidden = true;
   $$("[data-demo-status]").forEach((button) => {
     const selected = button.dataset.demoStatus === status;
@@ -1173,10 +1235,7 @@ function renderPrediction(prediction, factors) {
   const hasApprovedExplanation = isApprovedRisk
     && factors?.status === "approved"
     && factors?.shap_claimed === true;
-  renderPredictionStatus(
-    canDisplayRisk ? "succeeded" : "failed",
-    canDisplayRisk ? { resultAvailable: true } : { errorCode: "MODEL_NOT_READY" },
-  );
+  renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true });
   $("#probability-policy").querySelector("p").textContent = isApprovedRisk
     ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."
     : developmentPreviewRisk
@@ -1201,8 +1260,8 @@ function renderPrediction(prediction, factors) {
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
-  $("#result-next").hidden = !canDisplayRisk;
-  $("#result-next").disabled = !canDisplayRisk;
+  $("#result-next").hidden = false;
+  $("#result-next").disabled = false;
 }
 async function runPrediction() {
   state.developmentPreviewRiskCategory = null;
@@ -2044,8 +2103,7 @@ $("#health-form").addEventListener("submit", async (event) => {
     return;
   }
   submit.disabled = true;
-  const shouldRequestPrediction = !state.currentHealthOnly
-    && (!state.returningUser || state.capabilities.futurePrediction);
+  const shouldRequestPrediction = shouldRunPredictionAfterHealthEdit();
   submit.textContent = shouldRequestPrediction ? "분석 요청 중…" : "건강정보 저장 중…";
   try {
     if (isLocalPreview()) {
@@ -2075,7 +2133,7 @@ $("#health-form").addEventListener("submit", async (event) => {
       showMessage("건강정보를 저장했습니다. 현재 건강 신호 결과 영역을 확인해 주세요.", "success");
       return;
     }
-    if (state.returningUser && state.capabilities.futurePrediction) {
+    if (state.returningUser && shouldRequestPrediction) {
       showStep(5);
       await runPrediction();
       return;
