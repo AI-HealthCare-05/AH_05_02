@@ -156,9 +156,9 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "risk_category": public_category,
         "risk_category_label": RISK_LABELS.get(public_category) if public_category else None,
         "screening_signal_detected": screening_signal,
-        "screening_result_label": (
-            "검사 권고" if screening_signal else "현재 위험 신호 낮음"
-        ) if screening_signal is not None else None,
+        "screening_result_label": ("검사 권고" if screening_signal else "현재 위험 신호 낮음")
+        if screening_signal is not None
+        else None,
         "model_version": item.model_version,
         "feature_schema_version": item.feature_schema_version,
         "input_schema_version": item.input_schema_version,
@@ -174,7 +174,9 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "disclaimer": (
             "현재 당뇨 관련 위험 신호를 선별하는 건강교육용 결과이며 진단이 아닙니다."
             if is_current_screening and public_category
-            else PUBLIC_DISCLAIMER if public_category else DEVELOPMENT_DISCLAIMER
+            else PUBLIC_DISCLAIMER
+            if public_category
+            else DEVELOPMENT_DISCLAIMER
         ),
         "raw_probability_exposed": False,
     }

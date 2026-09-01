@@ -65,12 +65,8 @@ class Config(BaseSettings):
     CURRENT_SCREENING_TARGET_DEFINITION_VERSION: str = "current-diabetes-signal-v1"
     CURRENT_SCREENING_THRESHOLD_VERSION: str = "validation-2021-2022-spec042-v1"
     CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.023227178771059433
-    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = (
-        "c257ebc7785d4a1b36a7cda6d9aeeb107dbfa1b6afbf4c64c806849b8969370e"
-    )
-    CURRENT_SCREENING_MODEL_URI: str = (
-        "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
-    )
+    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = "c257ebc7785d4a1b36a7cda6d9aeeb107dbfa1b6afbf4c64c806849b8969370e"
+    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
     )

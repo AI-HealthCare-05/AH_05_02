@@ -181,7 +181,8 @@ class HealthService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="건강정보 처리 동의가 필요합니다.")
         if eligibility is None or not eligibility.service_eligible:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="건강정보를 저장할 수 있는 적합성 확인을 먼저 완료해 주세요."
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="건강정보를 저장할 수 있는 적합성 확인을 먼저 완료해 주세요.",
             )
         if eligibility.has_diabetes_diagnosis or eligibility.has_urgent_warning_sign:
             raise HTTPException(
