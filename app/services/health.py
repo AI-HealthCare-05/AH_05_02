@@ -21,12 +21,24 @@ def age_on(reference_date: date, birth_date: date) -> int:
 
 
 def eligibility_payload(item: EligibilityCheck) -> dict[str, object]:
+    reason_codes = set(item.reason_codes)
+    if 14 <= item.age < 19 and "UNDER_MINIMUM_SERVICE_AGE" in reason_codes:
+        reason_codes.remove("UNDER_MINIMUM_SERVICE_AGE")
+        reason_codes.add("CHALLENGE_ONLY_AGE")
+    has_safety_blocker = bool({"URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES"} & reason_codes)
+    has_consent = "CONSENT_REQUIRED" not in reason_codes
+    challenge_eligible = item.age >= 14 and has_consent and not has_safety_blocker
+    current_health_check_eligible = item.age >= 19 and item.service_eligible and not has_safety_blocker
     return {
         "eligibility_check_id": item.id,
+        "age": item.age,
         "service_eligible": item.service_eligible,
+        "challenge_eligible": challenge_eligible,
+        "current_health_check_eligible": current_health_check_eligible,
+        "future_prediction_eligible": item.model_eligible,
         "target_segment": item.target_segment,
         "model_eligible": item.model_eligible,
-        "reason_codes": item.reason_codes,
+        "reason_codes": sorted(reason_codes),
         "next_action": item.next_action,
         "active_model": {
             "model_key": item.model_key,
@@ -50,7 +62,8 @@ def eligibility_reason_codes(
     population_in_scope: bool,
 ) -> list[str]:
     checks = (
-        (age < 19, "UNDER_MINIMUM_SERVICE_AGE"),
+        (age < 14, "UNDER_MINIMUM_SERVICE_AGE"),
+        (14 <= age < 19, "CHALLENGE_ONLY_AGE"),
         (not has_consent, "CONSENT_REQUIRED"),
         (has_diabetes_diagnosis, "DIAGNOSED_DIABETES"),
         (has_urgent_warning_sign, "URGENT_MEDICAL_ATTENTION"),
@@ -63,15 +76,23 @@ def eligibility_reason_codes(
     return [code for condition, code in checks if condition]
 
 
-def eligibility_next_action(request: EligibilityCreateRequest, *, model_eligible: bool, service_eligible: bool) -> str:
+def eligibility_next_action(
+    request: EligibilityCreateRequest,
+    *,
+    model_eligible: bool,
+    current_health_check_eligible: bool,
+    challenge_eligible: bool,
+) -> str:
     if request.has_urgent_warning_sign:
         return "urgent_medical_guidance"
     if request.has_diabetes_diagnosis:
         return "clinician_guidance"
     if model_eligible:
         return "health_checkup_input"
-    if service_eligible:
-        return "general_health_information"
+    if current_health_check_eligible:
+        return "current_health_checkup_input"
+    if challenge_eligible:
+        return "challenge_selection"
     return "public_information"
 
 
@@ -109,10 +130,20 @@ class HealthService:
             population_in_scope=request.population_in_scope,
         )
 
-        service_eligible = age >= 19 and active_consent is not None
-        target_segment = "primary_45_plus" if age >= 45 else "adult_19_44"
+        has_consent = active_consent is not None
+        service_eligible = age >= 19 and has_consent
+        challenge_eligible = (
+            age >= 14 and has_consent and not (request.has_diabetes_diagnosis or request.has_urgent_warning_sign)
+        )
+        current_health_check_eligible = service_eligible and not (
+            request.has_diabetes_diagnosis or request.has_urgent_warning_sign
+        )
+        target_segment = (
+            "full_prediction_45_plus" if age >= 45 else "current_signal_19_44" if age >= 19 else "challenge_only_14_18"
+        )
         model_blockers = {
             "UNDER_MINIMUM_SERVICE_AGE",
+            "CHALLENGE_ONLY_AGE",
             "CONSENT_REQUIRED",
             "DIAGNOSED_DIABETES",
             "URGENT_MEDICAL_ATTENTION",
@@ -123,7 +154,8 @@ class HealthService:
         next_action = eligibility_next_action(
             request,
             model_eligible=model_eligible,
-            service_eligible=service_eligible,
+            current_health_check_eligible=current_health_check_eligible,
+            challenge_eligible=challenge_eligible,
         )
 
         item = await self.repo.create_eligibility(
@@ -147,13 +179,18 @@ class HealthService:
             (code for code in ("URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES") if code in reason_codes), None
         )
         if priority_code is not None:
-            await FollowUpAction.create(
-                user_id=user.id,
-                trigger_source="eligibility_check",
-                trigger_entity_id=item.id,
-                reason_code=priority_code,
-                safety_copy_version=config.SAFETY_COPY_VERSION,
+            existing_actions = await self.repo.list_follow_ups(user.id)
+            has_same_open_action = any(
+                action.reason_code == priority_code and action.acknowledged_at is None for action in existing_actions
             )
+            if not has_same_open_action:
+                await FollowUpAction.create(
+                    user_id=user.id,
+                    trigger_source="eligibility_check",
+                    trigger_entity_id=item.id,
+                    reason_code=priority_code,
+                    safety_copy_version=config.SAFETY_COPY_VERSION,
+                )
             await self.repo.stop_active_cycles(user.id, priority_code)
         return item
 
@@ -162,10 +199,13 @@ class HealthService:
         eligibility = await self.repo.latest_eligibility(user.id)
         if consent is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="건강정보 처리 동의가 필요합니다.")
-        if eligibility is None or not eligibility.model_eligible:
+        if eligibility is None or not eligibility.service_eligible:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="예측 가능한 적합성 확인을 먼저 완료해 주세요."
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="현재 건강 신호를 확인할 수 있는 적합성 확인을 먼저 완료해 주세요.",
             )
+        if eligibility.has_diabetes_diagnosis or eligibility.has_urgent_warning_sign:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="의료기관 안내를 먼저 확인해 주세요.")
         if request.feature_schema_version != ACTIVE_MODEL.feature_schema_version:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -176,16 +216,17 @@ class HealthService:
             )
         bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
         sex = "female" if user.gender == Gender.FEMALE else "male"
-        PredictionFeatures(
-            age=eligibility.age,
-            bmi=bmi,
-            self_rated_health=request.self_rated_health,
-            meal_count_yesterday=request.meal_count_yesterday,
-            sex=sex,
-            regular_exercise=request.regular_exercise,
-            current_smoker=request.current_smoker,
-            current_drinker=request.current_drinker,
-        )
+        if eligibility.model_eligible:
+            PredictionFeatures(
+                age=eligibility.age,
+                bmi=bmi,
+                self_rated_health=request.self_rated_health,
+                meal_count_yesterday=request.meal_count_yesterday,
+                sex=sex,
+                regular_exercise=request.regular_exercise,
+                current_smoker=request.current_smoker,
+                current_drinker=request.current_drinker,
+            )
         return await self.repo.create_checkup(
             user_id=user.id,
             eligibility_check_id=eligibility.id,
@@ -216,16 +257,17 @@ class HealthService:
                 },
             )
         bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
-        PredictionFeatures(
-            age=item.age,
-            bmi=bmi,
-            self_rated_health=request.self_rated_health,
-            meal_count_yesterday=request.meal_count_yesterday,
-            sex=item.sex,
-            regular_exercise=request.regular_exercise,
-            current_smoker=request.current_smoker,
-            current_drinker=request.current_drinker,
-        )
+        if item.age >= ACTIVE_MODEL.min_age:
+            PredictionFeatures(
+                age=item.age,
+                bmi=bmi,
+                self_rated_health=request.self_rated_health,
+                meal_count_yesterday=request.meal_count_yesterday,
+                sex=item.sex,
+                regular_exercise=request.regular_exercise,
+                current_smoker=request.current_smoker,
+                current_drinker=request.current_drinker,
+            )
         for field, value in request.model_dump().items():
             setattr(item, field, value)
         item.bmi = bmi
