@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 
 from app.main import app, carrot_forest, forest_manifest, forest_service_worker
@@ -123,27 +124,11 @@ def test_avatar_studio_has_renamed_categories_live_preview_and_save_flow() -> No
     assert 'id="avatar-studio"' in html
     assert 'id="avatar-preview-canvas" width="560" height="640"' in html
     assert 'id="avatar-item-grid"' in html
-    for label in (
-        "피부",
-        "헤어",
-        "헤어 색",
-        "상의",
-        "상의 색",
-        "하의",
-        "하의 색",
-        "신발",
-        "신발 색",
-        "얼굴",
-        "모자",
-        "안경",
-        "아우라",
-        "이펙트",
-        "탈것",
-        "펫",
-        "말풍선",
-        "동작",
-    ):
+    for label in ("체형", "피부", "얼굴", "헤어", "모자", "팔", "상의", "하의", "신발", "도구", "무기", "탈것", "펫"):
         assert f'label: "{label}"' in script
+    assert 'id="avatar-strip-basics"' in html
+    assert 'id="avatar-restore-outfit"' in html
+    assert 'id="avatar-tuning-controls"' not in html
     assert "찌르기 이펙트" not in script
     for behavior in ("renderAvatarStudio", "renderAvatarPreview", "avatarDraftHistory", "avatar-studio-save"):
         assert behavior in script
@@ -212,91 +197,65 @@ def test_forest_onboarding_rag_collaboration_and_tool_routes_are_connected() -> 
     assert 'requestedView.get("workspace")' in app_script
 
 
-def test_full_preset_clears_loose_decorations_and_uses_valid_glasses_ids() -> None:
+def test_legacy_presets_are_removed_and_lpc_schema_migrates_once() -> None:
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
-    compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
 
-    assert (
-        'const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" }'
-        in script
-    )
-    assert "...presetDecorationReset, preset: linkedPreset" in script
-    assert 'categoryId !== "preset" && avatarDraft[categoryId]' in script
-    assert "cosmeticSchemaVersion: 4" in script
-    assert "Object.assign(state.avatar.cosmetics, presetDecorationReset" in script
-    assert 'glasses: "round"' not in script
-    assert "context.ellipse(lensX, 123 + headAdjustmentY + glassesOffsetY, 14, 10" in compositor
+    assert "presetBundles" not in script
+    assert "presetDecorationReset" not in script
+    assert "cosmeticSchemaVersion = 8" in script
+    assert 'aura: "none"' in script
+    assert 'state.avatar.cosmetics.aura === "wings"' not in script
+    assert 'state.avatar.cosmetics.vehicle = "none"' in script
+    assert 'lpcHead: "human_male"' in script
 
 
-def test_avatar_spacing_and_world_scale_can_be_tuned_by_user() -> None:
+def test_avatar_editor_uses_item_colors_and_quick_outfit_actions_instead_of_manual_offsets() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     compositor = (ROOT / "src/frontend/avatar-compositor.js").read_text(encoding="utf-8")
     phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
 
-    for key in ("headOffsetY", "outfitOffsetY", "glassesOffsetY", "worldScale"):
-        assert f'data-avatar-tuning="{key}"' in html
-        assert key in script
-    assert 'id="avatar-tuning-reset"' in html
+    assert 'id="avatar-tuning-controls"' not in html
+    assert 'id="avatar-color-controls"' not in html
+    assert 'id="avatar-strip-basics"' in html
+    assert 'id="avatar-restore-outfit"' in html
+    for key in ("skin", "hairColor", "outfitColor", "bottomColor", "shoeColor", "hatColor", "glassesColor"):
+        assert f'{key}:' in script or f'"{key}":' in script
+    assert 'id="avatar-tuning-reset"' not in html
     assert "avatarTuningDraft" in script
     assert "headOffsetY" in compositor
     assert "this.avatar.tuning.worldScale" in phaser
 
 
-def test_basic_avatar_has_four_direction_walk_and_integrated_scooter_animation() -> None:
+def test_official_lpc_avatar_replaces_legacy_world_atlases() -> None:
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
-    assets = (
-        ROOT / "src/frontend/assets/carrot-forest-basic-walk-atlas-v1.png",
-        ROOT / "src/frontend/assets/carrot-forest-basic-scooter-atlas-v1.png",
-    )
-
-    for asset in assets:
-        assert asset.exists()
-        assert asset.stat().st_size > 100_000
-        assert asset.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
-        assert asset.name in worker
-    assert "drawAnimatedBasicWorldAvatar" in script
-    assert "const directionRow = { down: 0, up: 1, left: 2, right: 3 }" in script
-    assert "const directionColumn = { down: 0, up: 1, left: 2, right: 3 }" in script
+    for retired in (
+        "carrot-forest-avatar-atlas-v1.png",
+        "carrot-forest-basic-walk-atlas-v1.png",
+        "carrot-forest-modular-avatar-atlas-v3.png",
+        "carrot-forest-cosmetics-atlas-v1.png",
+    ):
+        assert retired not in worker
+    assert 'engine: "lpc"' in script
+    assert "Never expose the retired hand-drawn or preset-atlas avatar" in script
     assert "walkingUntil" in script
     assert "walkAnimationFrame" in script
     assert "state.avatar.direction = direction" in script
-    assert "drawLayeredAvatarPreview" in script
     assert "renderCatalogThumbnailCanvases" in script
 
 
-def test_five_extra_presets_keep_directional_walk_vehicle_and_accessory_layers() -> None:
+def test_official_lpc_catalog_replaces_handmade_preset_selector() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
-    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
-    preset_assets = (
-        "carrot-forest-preset-red-bow-v1.png",
-        "carrot-forest-preset-cow-hood-v1.png",
-        "carrot-forest-preset-midnight-v1.png",
-        "carrot-forest-preset-blue-cap-v1.png",
-        "carrot-forest-preset-teal-bob-v1.png",
-    )
 
-    for preset in ("red_bow", "cow_hood", "midnight", "blue_cap", "teal_bob"):
-        assert f'value="{preset}"' in html
-        assert f"{preset}:" in script
-    for asset_name in preset_assets:
-        asset = ROOT / "src/frontend/assets" / asset_name
-        assert asset.exists()
-        assert asset.stat().st_size > 100_000
-        assert asset_name in worker
-    assert "presetBundles" in script
-    assert "stylePresetByItem" in script
-    assert "drawAnimatedAccessoryOverlay" in script
-    assert "drawPreviewAccessoryOverlay" in script
-    assert '{ id: "lpcHair", label: "헤어"' in script
-    assert '{ id: "lpcOutfit", label: "상의"' in script
-    assert '{ id: "lpcBottom", label: "하의"' in script
-    assert '{ id: "lpcShoes", label: "신발"' in script
-    assert "if (drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return" in script
-    assert "basicWalkAtlas.complete && basicWalkAtlas.naturalWidth" in script
-    assert "motionRow * 4 + directionColumn" in script
+    assert 'id="avatar-preset"' not in html
+    assert "presetBundles" not in script
+    assert 'lpcHead: "head"' in script
+    assert "window.LpcAvatarEngine.catalog(engineCategory)" in script
+    assert ".slice(0, limit)" not in script
+    for category in ("head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons"):
+        assert f'id: "{category}"' in script
 
 
 def test_avatar_studio_uses_original_pixel_sprite_atlases_instead_of_emoji_previews() -> None:
@@ -322,7 +281,7 @@ def test_world_scene_transitions_visual_storage_cats_and_fishing_are_connected()
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
     asset_names = (
-        "carrot-forest-world-v2.png",
+        "carrot-forest-world-v3.png",
         "carrot-forest-home-v1.png",
         "carrot-forest-garden-v1.png",
         "carrot-forest-cat-pets-v1.png",
@@ -365,7 +324,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v35" in html
+    assert "forest-local-pwa-reset-v38" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -373,8 +332,9 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "Promise.allSettled" in worker
     assert 'serviceWorker.register("/forest-sw.js", { scope: "/forest" })' in script
     assert 'url.pathname.startsWith("/api/")' in worker
-    assert "carrot-forest-avatar-atlas-v1.png" in worker
-    assert "carrot-forest-cosmetics-atlas-v1.png" in worker
+    assert "carrot-forest-avatar-atlas-v1.png" not in worker
+    assert "carrot-forest-cosmetics-atlas-v1.png" not in worker
+    assert "lpc-pack/manifest.json" in worker
 
 
 def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None:
@@ -385,18 +345,7 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
     assert "/static/forest-phaser.js" in html
-    for category in (
-        "lpcHair",
-        "lpcOutfit",
-        "lpcBottom",
-        "lpcShoes",
-        "aura",
-        "effect",
-        "vehicle",
-        "pet",
-        "speech",
-        "pose",
-    ):
+    for category in ("bodyType", "skin", "head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle", "pet"):
         assert f'id: "{category}"' in game_script
     for event_name in (
         "forest-avatar-updated",
@@ -423,7 +372,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     manifest = (ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
 
-    for category in ("bodyType", "face"):
+    for category in ("bodyType", "head"):
         assert f'id: "{category}"' in game_script
     for face_part in ("lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles"):
         assert f"{face_part}:" in game_script
@@ -437,7 +386,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert 'state.rewardClaimed && !state.inventory.includes("reward_cow")' in game_script
     assert 'name: "세준"' in game_script
     assert "event.repeat" in phaser_script
-    assert "this.add.ellipse(0, 0" in phaser_script
+    assert "this.add.ellipse(0, 0, 34, 8" not in phaser_script
     assert "pendingImages" in engine
     assert '"category": "expression"' in manifest
     for asset in (
@@ -448,7 +397,12 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v43" in worker
+    assert "gandang-carrot-forest-pwa-v68" in worker
+    assert "when-the-morning-comes.mp3" in worker
+    assert "avatar-title.mp3" in worker
+    assert "home-elfwood.mp3" in worker
+    assert "garden-floral-life.mp3" in worker
+    assert "reward-chest-success.mp3" in worker
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
@@ -460,19 +414,30 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
 
     assert 'id="face-section-tabs"' not in html
-    assert 'data-face-preset="${item.id}"' in game_script
+    assert 'data-lpc-category="${itemSlot}"' in game_script
     assert 'data-lpc-body-type="${item.id}"' in game_script
     assert 'data-lpc-skin="${item.id}"' in game_script
-    assert 'if (categoryId === "face")' in game_script
-    assert "facePreset?.bundle" in game_script
-    assert 'lpcHair: ["hair", 24]' in game_script
-    assert 'lpcOutfit: ["outfit", 20]' in game_script
-    assert 'lpcBottom: ["bottom", 15]' in game_script
-    assert 'lpcShoes: ["shoes", 12]' in game_script
-    assert "drawFaceDetails" in engine
+    assert "groupedCategories.includes(categoryId)" in game_script
+    assert "groupedItem?.slot" in game_script
+    assert 'lpcHair: "hair"' in game_script
+    assert 'lpcOutfit: "outfit"' in game_script
+    assert 'lpcBottom: "bottom"' in game_script
+    assert 'lpcShoes: "shoes"' in game_script
+    assert "drawFaceDetails" not in engine
+    assert '["head", cosmetics.lpcHead' in engine
     assert "KeyCodes.SPACE" in phaser_script
-    assert "time - this.lastPetAttackAt > 1600" in phaser_script
-    assert "window.setInterval(playStep, 1080)" in game_script
+    assert "time - this.lastPetAttackAt > 2600" in phaser_script
+    assert "delta / 260" in phaser_script
+    assert "this.motionFx?.clear()" in phaser_script
+    assert 'forest: new Audio("/static/assets/when-the-morning-comes.mp3")' in game_script
+    assert 'avatar: new Audio("/static/assets/avatar-title.mp3")' in game_script
+    assert 'home: new Audio("/static/assets/home-elfwood.mp3")' in game_script
+    assert 'garden: new Audio("/static/assets/garden-floral-life.mp3")' in game_script
+    assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
+    assert "musicEngine?.switchTo(sceneMusicName(scene))" in game_script
+    assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
+    assert "activeBackgroundTrack.volume = .08" in game_script
+    assert "activeBackgroundTrack.volume = .24" in game_script
     assert "storage-reward-cow" in game_script
     assert ".reward-rays,.reward-particles{display:none}" in css
     assert "/static/assets/lpc-pack/manifest.json" in worker
@@ -569,19 +534,17 @@ def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> Non
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
-    assert 'value="lpc_male_default"' in html
-    assert 'value="lpc_female_default"' in html
+    assert 'id="avatar-preset"' not in html
     assert 'lpcExpression: "neutral"' in game_script
-    assert "cosmeticSchemaVersion: 4" in game_script
-    assert "applyUnifiedFace" in game_script
+    assert "cosmeticSchemaVersion = 8" in game_script
+    assert "applyUnifiedFace" not in game_script
+    assert 'lpcHead: "human_male"' in game_script
     assert 'lpcNose: "button"' in game_script
     assert '["body", "body", "body", cosmetics.skin || "peach"]' in engine_script
-    assert "skinPalettes" in engine_script
-    assert "faceAnchors" in engine_script
-    assert "drawEye" in engine_script
-    assert "drawMouth" in engine_script
-    assert 'if (direction === "up") return' in engine_script
-    assert 'const palette = skinPalettes[cosmetics.skin] || skinPalettes.peach' in engine_script
+    assert '["head", cosmetics.lpcHead' in engine_script
+    assert '["expression", cosmetics.lpcExpression' in engine_script
+    assert "skinPalettes" not in engine_script
+    assert "faceAnchors" not in engine_script
 
 
 def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() -> None:
@@ -591,19 +554,36 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
 
     assert 'data-action="sit"' in html
     assert "state.avatar.sitting = !state.avatar.sitting" in game_script
-    assert "avatar.sitting && !options.pose" in engine_script
+    assert "(avatar.sitting || avatar.mounted) && !options.pose" in engine_script
     assert "cycles[cycles.length - 1]" in engine_script
-    assert 'lpcOutfit: ["outfit", 20]' in game_script
-    assert 'lpcBottom: ["bottom", 15]' in game_script
+    assert 'lpcOutfit: "outfit"' in game_script
+    assert 'lpcBottom: "bottom"' in game_script
 
 
-def test_attack_effects_use_matching_lpc_motion() -> None:
+def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
-    assert 'if (effect === "magic_burst") return "spellcast"' in engine_script
-    assert 'if (effect === "arrow_volley") return "shoot"' in engine_script
-    assert 'if (effect === "leaf_blade") return "thrust"' in engine_script
-    assert 'return "slash"' in engine_script
+    assert 'wand: ["slash", "spellcast", "thrust"]' in engine_script
+    assert 'bow: ["shoot", "slash"]' in engine_script
+    assert 'cane: ["thrust", "slash"]' in engine_script
+    assert 'dagger: ["slash", "thrust", "halfslash"]' in engine_script
+    assert 'arming_sword: ["slash", "halfslash", "backslash"]' in engine_script
+    assert 'options.pose === "attack" && cosmetics.lpcWeapon !== "none"' in engine_script
+    assert 'supported.includes(animation)' in engine_script
+
+
+def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_on_selection() -> None:
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    assert '["axe", "hammer", "pickaxe"].includes(tool)' in engine_script
+    assert 'drawPixel(context, destination, side, 44, 4, 7, "#ed7c2e")' not in engine_script
+    assert 'activeAvatarCategory === "tools"' in game_script
+    assert 'avatarPreviewPose = "harvest"' in game_script
+    assert 'targetSlot === "lpcWeapon"' in game_script
+    assert 'avatarPreviewPose = "attack"' in game_script
+    assert 'const layerFrameSize = Number(layer.frameSize || FRAME)' in engine_script
+    assert 'destinationX = target.x - (destinationWidth - target.width) / 2' in engine_script
 
 
 def test_local_daily_reset_preserves_profile_but_reopens_daily_reward() -> None:
@@ -625,7 +605,24 @@ def test_modular_avatar_separates_the_base_body_from_hair_layers() -> None:
     assert "bodyTarget.y + target.height * BASE_BODY_START / CELL_HEIGHT" in compositor
     assert "if (usesBackHair) drawSource(context, source.image, hair, hairTarget)" in compositor
     assert "drawSource(context, source.image, outfit, bodyTarget)" in compositor
-    assert "기본 몸 높이" in html
+    assert 'id="avatar-strip-basics"' in html
+
+
+def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    assert "나만의 코디 1" in game_script
+    assert "nextOutfitNumber" in game_script
+    assert "data-outfit-name-form" in game_script
+    assert '<strong>${safeLabel}</strong>' not in game_script
+    assert 'value="${safeLabel}"' in game_script
+    assert "renameOutfit" in game_script
+    assert "applyRequestedDefaultOutfit" in game_script
+    assert "saved.getHours() === 22 && saved.getMinutes() === 30" in game_script
+    assert 'lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none"' not in game_script
+    assert "아이템을 선택해주세요" in html
+    assert 'record?.sources?.[gender] || record?.sources?.male' in (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
 
 def test_each_preset_uses_directional_walk_and_vehicle_motion_in_world() -> None:
@@ -644,7 +641,7 @@ def test_each_preset_uses_directional_walk_and_vehicle_motion_in_world() -> None
     assert "this.avatar.mounted" in phaser
 
 
-def test_modular_avatar_v3_has_exact_layer_cells_and_runtime_wiring() -> None:
+def test_retired_modular_avatar_is_not_loaded_by_runtime() -> None:
     import struct
 
     atlas = ROOT / "src/frontend/assets/carrot-forest-modular-avatar-atlas-v3.png"
@@ -659,8 +656,33 @@ def test_modular_avatar_v3_has_exact_layer_cells_and_runtime_wiring() -> None:
     for row in range(1, 11):
         assert f": {row}" in compositor
     assert "drawModularFrame" in compositor
-    assert "carrot-forest-modular-avatar-atlas-v3.png" in game_script
-    assert "carrot-forest-modular-avatar-atlas-v3.png" in phaser_script
+    assert "carrot-forest-modular-avatar-atlas-v3.png" not in game_script
+    assert "carrot-forest-modular-avatar-atlas-v3.png" not in phaser_script
+
+
+def test_official_lpc_mobility_aprons_and_transient_actions_are_complete() -> None:
+    import json
+
+    manifest = json.loads((ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8"))
+    engine = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    game = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    items = manifest["items"]
+
+    mobility = {item["id"] for item in items if item["category"] == "mobility"}
+    tools = {item["id"] for item in items if item["category"] == "tool"}
+    aprons = [item for item in items if "/aprons/" in item.get("definition", "")]
+
+    assert {"wheelchair", "feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"}.issubset(mobility)
+    assert all({"idle", "walk", "run", "sit"}.issubset(item["animations"]) for item in items if item["id"] == "wheelchair")
+    assert len(aprons) >= 3
+    assert "carrot" not in tools
+    assert 'options.pose === "attack"' in engine
+    assert '["harvest", "fishing"].includes(options.pose)' in engine
+    assert 'outfitIsOverlay ? [["outfit", "tshirt"' in engine
+    assert "this.premiumAvatar.setVisible(false)" in phaser
+    assert '{ id: "vehicle", label: "탈것", icon: "▸" }' in game
+    assert '{ id: "pet", label: "펫", icon: "▸" }' in game
 
 
 def test_normalized_avatar_atlases_have_exact_cells_and_reproducible_manifest() -> None:
@@ -718,8 +740,10 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     assert 'this.load.spritesheet("animated-objects"' in phaser_script
     assert "repeat: -1" in phaser_script
     assert "syncPlacedObjects" in phaser_script
-    assert "animated-object-thumb" in css
     assert "carrot-forest-animated-objects-v1.png" in worker
+    assert 'data-animated-object-row="${animatedRow}"' in game_script
+    assert "drawAnimatedObjectThumbnails" in game_script
+    assert "animated-object-thumbnail-canvas" in css
 
 
 def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None:
@@ -743,3 +767,86 @@ def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None
     assert "data-outfit-look" in game_script
     assert "inventory: [...storageObjectCodes]" in game_script
     assert "carrot-forest-storage-atlas-v3.png" in css
+
+
+def test_avatar_catalog_cards_render_actual_lpc_previews_instead_of_emoji() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+
+    assert 'data-lpc-color-category="${itemSlot}"' in game_script
+    assert 'canvas[data-lpc-color-category]' in game_script
+    assert 'data-lpc-pose="${item.id}"' in game_script
+    assert 'canvas[data-lpc-pose]' in game_script
+    assert 'data-speech-thumb="${item.id}"' in game_script
+    assert 'canvas[data-speech-thumb]' in game_script
+    assert 'effect: { magic_burst: 5, sword_arc: 6, arrow_volley: 8, leaf_blade: 9 }' not in game_script
+    assert 'data-lpc-category="lpcMobility"' in game_script
+    assert 'canvas[data-empty-preview]' in game_script
+    assert 'class="item-visual lpc-color-swatch"' not in game_script
+    assert 'class="item-visual speech-item-visual"' not in game_script
+    assert "lpcChoiceSupportsBody" in game_script
+    assert '"lpcOutfit", "lpcBottom", "lpcShoes"' in game_script
+    assert 'const layerAnimation = supported.includes(requestedAnimation)' in engine_script
+    assert 'layerFrame * layerFrameSize' in engine_script
+
+
+def test_avatar_preview_stays_visible_and_muscular_body_keeps_basic_clothes() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert ".avatar-preview-panel{position:sticky;top:0" in css
+    assert ".avatar-studio-layout{align-items:start;overflow-x:hidden;overflow-y:auto}" in css
+    assert 'const matchingAdult = bodyType === "female" ? "female" : "male"' in game_script
+    assert 'lpcOutfit: "tshirt", outfitColor: "white"' in game_script
+
+
+def test_shoe_catalog_only_contains_complete_footwear() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    builder = (ROOT / "scripts/build_lpc_avatar_pack.py").read_text(encoding="utf-8")
+    manifest = (ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8")
+
+    assert "isCompleteFootwear" in game_script
+    assert 'definition.includes("/shoes/")' in game_script
+    assert 'definition.includes("/boots/")' in game_script
+    assert 'path.endswith("feet_armour.json")' in builder
+    for excluded in ("sandals", "slippers", "ankle_socks", "high_socks", "plate_toe"):
+        assert f'"id": "{excluded}"' not in manifest
+
+
+def test_wheelchair_uses_64px_frames_and_stays_visible_while_moving() -> None:
+    builder = (ROOT / "scripts/build_lpc_avatar_pack.py").read_text(encoding="utf-8")
+    engine = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    manifest = json.loads((ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8"))
+
+    assert 'frame_counts = {"idle": 2, "walk": 9, "run": 8, "sit": 3}' in builder
+    assert 'source_frame = frame % 2' in builder
+    assert 'FRAME if item.item_id == "wheelchair"' in builder
+    wheelchair = next(item for item in manifest["items"] if item["category"] == "mobility" and item["id"] == "wheelchair")
+    assert all(layer["frameSize"] == 64 for layers in wheelchair["sources"].values() for layer in layers)
+    assert 'layer.category === "mobility" && avatar.mounted && options.moving' in engine
+
+
+def test_lpc_editor_matches_official_top_level_structure_without_child_or_pregnant_body() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    builder = (ROOT / "scripts/build_lpc_avatar_pack.py").read_text(encoding="utf-8")
+
+    expected = ("bodyType", "skin", "head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle", "pet")
+    positions = [game_script.index(f'{{ id: "{category}"') for category in expected]
+    assert positions == sorted(positions)
+    assert 'BODY_TYPES = ("male", "female", "muscular", "teen")' in builder
+    assert 'id: "child"' not in game_script
+    assert 'id: "pregnant"' not in game_script
+    manifest = (ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8")
+    for vehicle in ("wheelchair", "feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"):
+        assert f'"id": "{vehicle}"' in manifest
+    assert 'lpcMobility: "mobility"' in game_script
+    assert 'avatarCatalog.mobilityColor = colorChoices' in game_script
+    assert 'slot: "mobilityColor", group: "색상"' in game_script
+    assert 'discover_official_clothing(source)' in builder
+    assert 'discover_official_mobility(source)' in builder
+    assert '"category": "outfit"' in manifest
+    assert manifest.count('"category": "outfit"') >= 40
+    assert '"id": "tshirt"' in manifest
+    assert '"id": "cardigan"' in manifest
+    assert 'backpack_contents' not in manifest
+    assert manifest.count('"category": "mobility"') >= 10

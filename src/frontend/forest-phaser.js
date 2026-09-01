@@ -85,11 +85,9 @@
     }
 
     preload() {
-      this.load.image("world-bg", "/static/assets/carrot-forest-world-v2.png");
+      this.load.image("world-bg", "/static/assets/carrot-forest-world-v3.png?v=20260831-1");
       this.load.image("home-bg", "/static/assets/carrot-forest-home-v1.png");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v1.png");
-      this.load.image("avatar-modular-v3", "/static/assets/carrot-forest-modular-avatar-atlas-v3.png");
-      Object.entries(premiumPresets).forEach(([key, config]) => this.load.spritesheet(`preset-${key}`, config.path, { frameWidth: 224, frameHeight: 288 }));
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1", { frameWidth: 128, frameHeight: 128 });
@@ -102,15 +100,12 @@
       this.createAnimatedObjectAnimations();
       this.placedObjectActors = [];
       this.syncPlacedObjects(storedState().placed || []);
-      this.shadow = this.add.ellipse(0, 0, 34, 8, 0x16382a, 0.28).setDepth(1);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
-      this.player.add(this.shadow);
       this.motionFx = this.add.graphics().setDepth(2);
       this.player.add(this.motionFx);
-      this.presetSources = Object.fromEntries(Object.entries(premiumPresets).map(([preset, config]) => [preset, {
-        image: this.textures.get(`preset-${preset}`).getSourceImage(), rows: config.rows,
-      }]));
-      this.presetSources.modular = { image: this.textures.get("avatar-modular-v3").getSourceImage(), rows: 11 };
+      // The world renderer deliberately owns no legacy avatar textures.  The
+      // official LPC engine is the single visual source for the player.
+      this.presetSources = {};
       if (this.textures.exists("avatar-composite")) this.textures.remove("avatar-composite");
       this.compositeTexture = this.textures.createCanvas("avatar-composite", 224, 288);
       // LPC의 실제 발바닥은 합성 캔버스 y=250 부근이다. 그 점을 컨테이너 원점(그림자)에 맞춘다.
@@ -153,7 +148,7 @@
       this.input.keyboard.on("keydown-E", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })); });
       this.input.keyboard.on("keydown-Z", (event) => {
         if (event.repeat || formFocused()) return;
-        this.playAction("attack", 760);
+        this.playAction("attack", this.equippedWeaponDuration());
       });
       this.input.keyboard.on("keydown", (event) => {
         if (event.key !== "0" || event.repeat || formFocused()) return;
@@ -278,6 +273,16 @@
       }
     }
 
+    equippedWeaponDuration() {
+      return {
+        bow: 1280,
+        wand: 980,
+        cane: 860,
+        dagger: 680,
+        sword: 780,
+      }[this.avatar.cosmetics?.lpcWeapon] || 780;
+    }
+
     playTogether(pose, duration = 1600) {
       this.playAction(pose, duration);
       this.petAction = pose;
@@ -303,38 +308,30 @@
       this.mountTransitioning = true;
       this.tweens.killTweensOf(this.premiumAvatar);
       this.motionFx.clear();
-      this.motionFx.lineStyle(3, 0xffd76a, 0.9).strokeCircle(0, 4, 18);
+      this.actionPose = "jump";
+      this.actionUntil = performance.now() + 520;
+      let swapped = false;
       this.tweens.add({
-        targets: [this.premiumAvatar, this.shadow],
-        alpha: 0,
-        y: "-=10",
-        duration: 120,
-        ease: "Quad.easeIn",
+        targets: this.premiumAvatar,
+        y: -12,
+        duration: 210,
+        yoyo: true,
+        ease: "Sine.easeOut",
+        onUpdate: (tween) => {
+          if (!swapped && tween.progress >= 0.5) {
+            swapped = true;
+            this.avatar = nextAvatar;
+          }
+          this.setPremiumFrame(this.avatar.direction, false, performance.now());
+        },
         onComplete: () => {
           this.avatar = nextAvatar;
-          this.setPremiumFrame(this.avatar.direction, false, performance.now());
-          this.premiumAvatar.setY(9).setAlpha(0);
-          this.shadow.setY(0).setAlpha(0);
-          this.motionFx.clear().lineStyle(4, 0xffef9a, 1).strokeCircle(0, 5, 10);
-          this.tweens.add({
-            targets: this.premiumAvatar,
-            alpha: 1,
-            y: 0,
-            duration: 190,
-            ease: "Back.easeOut",
-          });
-          this.tweens.add({
-            targets: this.shadow,
-            alpha: 1,
-            y: 13,
-            duration: 170,
-            ease: "Quad.easeOut",
-            onComplete: () => {
-              this.mountTransitioning = false;
-              this.motionFx.clear();
-              this.rebuildAvatar();
-            },
-          });
+          this.actionPose = null;
+          this.actionUntil = 0;
+          this.premiumAvatar.setY(0);
+          this.mountTransitioning = false;
+          this.motionFx.clear();
+          this.rebuildAvatar();
         },
       });
     }
@@ -506,7 +503,7 @@
       const autoHunting = this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
       const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
       const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
-      const follow = autoHunting ? Math.min(0.22, Math.max(0.07, delta / 150)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
+      const follow = autoHunting ? Math.min(0.12, Math.max(0.035, delta / 260)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
       const actor = petActor;
       const previousX = this.petFollowX;
       this.petFollowX += (targetX - this.petFollowX) * follow;
@@ -514,7 +511,7 @@
       const togetherSitting = this.avatar.sitting;
       const dancing = this.petAction === "dance" && time < this.petActionUntil;
       if (Math.abs(this.petFollowX - previousX) > 0.08) this.petFacing = this.petFollowX < previousX ? "left" : "right";
-      const gait = playerMoving || autoHunting ? Math.sin(time / (autoHunting ? 132 : 82)) : 0;
+      const gait = playerMoving || autoHunting ? Math.sin(time / (autoHunting ? 190 : 82)) : 0;
       const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
       const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving || autoHunting ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
       actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
@@ -525,7 +522,7 @@
         petDirection = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
       }
       const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[petDirection] || 0;
-      const petFrame = playerMoving || autoHunting ? Math.floor(time / (autoHunting ? 155 : 105)) % 3 : 1;
+      const petFrame = playerMoving || autoHunting ? Math.floor(time / (autoHunting ? 210 : 105)) % 3 : 1;
       this.pet?.setFrame(petDirectionRow * 9 + (this.petBaseColumn || 0) + petFrame);
       actor.setFlipX?.(false);
       actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving || autoHunting ? gait * 2.2 : 0);
@@ -538,7 +535,7 @@
         actor.setScale(emojiScale, emojiScale);
       }
       if (time >= this.petActionUntil) this.petAction = null;
-      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 1600) {
+      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 2600) {
         this.lastPetAttackAt = time;
         this.petAction = "attack";
         this.petActionUntil = time + 760;
@@ -559,58 +556,17 @@
       const usedLpc = this.avatar.engine === "lpc" && window.LpcAvatarEngine?.draw(context, this.avatar, {
         direction, moving, running, pose, frame: Math.floor(time / rate),
       }, { x: 16, y: 58, width: 192, height: 192 });
-      if (!usedLpc) window.CarrotAvatarCompositor.drawFrame(context, this.presetSources, {
-        preset: this.avatar.preset,
-        hairPreset: hairPresetByStyle[cosmetics.hair] || this.avatar.preset,
-        outfitPreset: outfitPresetByStyle[cosmetics.outfit] || this.avatar.preset,
-        direction,
-        mounted: this.avatar.mounted,
-        moving,
-        frame: Math.floor(time / rate) % 4,
-        accessory: cosmetics.accessory,
-        hat: cosmetics.hat,
-        glasses: cosmetics.glasses,
-        ...this.avatar.tuning,
-      });
+      if (!usedLpc) this.premiumAvatar.setVisible(false);
+      else this.premiumAvatar.setVisible(true);
       this.compositeTexture.refresh();
       this.drawMotionEffects(direction, moving, Math.floor(time / rate) % 4);
       const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
       this.premiumAvatar.setScale(worldScale);
-      this.shadow.setScale(worldScale / AVATAR_RENDER_SCALE);
       this.nameplate?.setY(-Math.round(288 * worldScale * 0.87) - 7);
     }
 
-    drawMotionEffects(direction, moving, frame) {
-      if (!this.motionFx || this.mountTransitioning) return;
-      this.motionFx.clear();
-      const cosmetics = this.avatar.cosmetics || {};
-      if (cosmetics.aura === "halo") {
-        this.motionFx.lineStyle(2, 0xffe272, 0.8).strokeEllipse(0, -73, 30, 8);
-      } else if (cosmetics.aura === "wings") {
-        this.motionFx.lineStyle(2, 0x8fe8ff, 0.82);
-        this.motionFx.strokeEllipse(-27, -27, 23, 38).strokeEllipse(27, -27, 23, 38);
-      } else if (cosmetics.aura === "forest") {
-        this.motionFx.fillStyle(0x73c969, 0.72);
-        this.motionFx.fillCircle(-29, -18 + (frame % 3) * 3, 3).fillCircle(31, -32 + ((frame + 1) % 3) * 4, 2.5);
-      } else if (cosmetics.aura === "hearts") {
-        this.motionFx.fillStyle(0xf27d9b, 0.75);
-        this.motionFx.fillCircle(-28, -35, 3).fillCircle(28, -50, 2.5);
-      }
-      if (!moving) return;
-      const directionSign = direction === "left" ? 1 : direction === "right" ? -1 : 0;
-      if (this.avatar.mounted) {
-        this.motionFx.lineStyle(2, 0xffffff, 0.68);
-        const baseX = directionSign ? directionSign * 30 : -22;
-        for (let index = 0; index < 3; index += 1) {
-          const lineY = 2 + index * 6 + (frame % 2) * 2;
-          this.motionFx.lineBetween(baseX, lineY, baseX + directionSign * 13 - (directionSign ? 0 : 12), lineY);
-        }
-        this.motionFx.fillStyle(0xe8d6a2, 0.55);
-        this.motionFx.fillCircle(directionSign ? directionSign * 25 : -18, 12, frame % 2 ? 3 : 2);
-      } else if (frame % 2 === 1) {
-        this.motionFx.fillStyle(0xe8d6a2, 0.42);
-        this.motionFx.fillCircle(direction === "left" ? 13 : -13, 13, 2.5);
-      }
+    drawMotionEffects() {
+      this.motionFx?.clear();
     }
   }
 

@@ -103,6 +103,10 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-lpc-rat-v1.png`: 펫과 분리된 야생 쥐 이벤트용 4방향 보행 아틀라스
 - `src/frontend/assets/lpc-pack/`: Universal LPC에서 선별·정규화한 아바타 레이어와 파일별 크레딧
 - `scripts/build_lpc_avatar_pack.py`: LPC 레이어 팩 재현 빌드 스크립트
+- 공식 LPC 단일 렌더링 경로: 구형 아바타 아틀라스는 PWA 캐시와 실행 경로에서 제외
+- 공식 이동 보조: 휠체어 및 날개류만 제공하며 휠체어 2프레임을 표준 이동·앉기 행으로 정규화
+- 공식 코디: 셔츠·코트·드레스·앞치마를 매니페스트로 관리하고 앞치마는 기본 상의 위에 합성
+- 일시적 장비 표시: 무기는 `Z`, 도구는 `Q` 동작 중에만 표시
 - `src/frontend/lpc-avatar-engine.js`: 4방향 LPC 합성·표정·행동·탈것 렌더러
 - 라이선스와 확장 절차는 [`LPC_AVATAR_ENGINE.md`](LPC_AVATAR_ENGINE.md)에서 확인한다.
 - `src/frontend/assets/carrot-forest-storage-atlas-v1.png`: 꽃밭·등불·바르게 선 버섯·벤치 4×1 투명 창고 오브젝트 아틀라스
@@ -115,6 +119,11 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
+- `src/frontend/assets/when-the-morning-comes.mp3`: 사용자가 제공한 로컬 시연용 배경음악. 외부 배포 전 저작권·배포 권한을 확인하고, 권한이 불명확하면 라이선스가 확인된 대체 음원으로 교체한다.
+- `src/frontend/assets/avatar-title.mp3`: 사용자가 제공한 아바타 꾸미기 화면 전용 음악. 꾸미기 창을 닫으면 숲 배경음악으로 복귀하며, 외부 배포 전 사용 권한을 별도로 확인한다.
+- `src/frontend/assets/home-elfwood.mp3`: 사용자가 제공한 집 내부 전용 배경음악. 집 입장 시 전환되고 집 밖으로 나오면 숲 배경음악으로 복귀한다.
+- `src/frontend/assets/garden-floral-life.mp3`: 사용자가 제공한 당근밭 전용 배경음악. 당근밭 입장 시 전환되고 밖으로 나오면 숲 배경음악으로 복귀한다.
+- `src/frontend/assets/reward-chest-success.mp3`: 사용자가 제공한 오늘의 보물상자 개봉 전용 효과음. 개봉 중 배경음악 볼륨을 낮추고 연출 종료·건너뛰기 시 원래 볼륨으로 복구한다.
 - 첨부 화면은 픽셀 밀도·치비 비율·카드 가독성의 참고 자료로만 사용했으며 기존 캐릭터·아이템·로고·UI 이미지는 복제하지 않았다.
 - 원본 모음판을 갱신한 경우 `pip install -r requirements-assets.txt` 후 `python scripts/build_carrot_avatar_atlases.py`로 실행용 아틀라스를 재생성한다.
 

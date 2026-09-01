@@ -44,7 +44,10 @@ async def home() -> FileResponse:
 
 @app.get("/forest", include_in_schema=False)
 async def carrot_forest() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "forest.html")
+    response = FileResponse(FRONTEND_DIR / "forest.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @app.get("/manifest.webmanifest", include_in_schema=False)

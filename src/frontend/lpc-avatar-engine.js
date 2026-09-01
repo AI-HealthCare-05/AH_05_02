@@ -31,9 +31,7 @@
     spellcast: "반짝임 만들기", thrust: "앞으로 뻗기", slash: "힘차게 휘두르기", shoot: "멀리 가리키기",
     hurt: "깜짝 놀라기", combat_idle: "준비 자세",
   };
-  const poseAnimationAliases = {
-    harvest: "thrust", fishing: "shoot", door: "thrust", attack: "slash", dance: "emote",
-  };
+  const poseAnimationAliases = { fishing: "shoot", door: "thrust", dance: "emote" };
 
   let manifest = null;
   const items = new Map();
@@ -51,7 +49,7 @@
     });
   }
 
-  const readyPromise = fetch(`${BASE}manifest.json?v=20260831-1`)
+  const readyPromise = fetch(`${BASE}manifest.json?v=20260901-10`)
     .then((response) => {
       if (!response.ok) throw new Error("LPC manifest load failed");
       return response.json();
@@ -89,26 +87,46 @@
     pendingImages.set(file, request);
   }
 
-  function selectedLayers(avatar) {
+  function selectedLayers(avatar, options = {}) {
     const cosmetics = avatar.cosmetics || {};
     const gender = avatar.gender === "female" ? "female" : "male";
     const bodyType = cosmetics.bodyType || gender;
+    const selectedOutfit = item("outfit", cosmetics.lpcOutfit, "tshirt");
+    const outfitIsOverlay = selectedOutfit?.definition?.includes("/aprons/");
     const selections = [
       ["body", "body", "body", cosmetics.skin || "peach"],
       ["bottom", cosmetics.lpcBottom, "pants", cosmetics.bottomColor || "navy"],
       ["shoes", cosmetics.lpcShoes, "shoes", cosmetics.shoeColor || "brown"],
+      ...(outfitIsOverlay ? [["outfit", "tshirt", "tshirt", "white"]] : []),
       ["outfit", cosmetics.lpcOutfit, "overalls", cosmetics.outfitColor || "green"],
-      // 얼굴은 아래 drawFaceDetails에서 한 규격으로 합성한다. 서로 다른 LPC
-      // 부분 얼굴 이미지를 겹치지 않아 눈·코·입이 사라지는 현상을 방지한다.
+      ["arms", cosmetics.lpcArms, "gloves", cosmetics.outfitColor || "green"],
+      ["head", cosmetics.lpcHead, gender === "female" ? "human_female" : "human_male", cosmetics.skin || "peach"],
+      ["expression", cosmetics.lpcExpression, "neutral", cosmetics.skin || "peach"],
+      ["nose", cosmetics.lpcNose, "button", cosmetics.skin || "peach"],
+      ["eyebrow", cosmetics.lpcEyebrow, "thin", cosmetics.hairColor || "brown"],
+      ["eyes", cosmetics.lpcEyes, "cyclops", "natural"],
+      ["wrinkles", cosmetics.lpcWrinkles, "wrinkles", cosmetics.skin || "peach"],
       ["hair", cosmetics.lpcHair, "bob", cosmetics.hairColor || "brown"],
       ["eyewear", cosmetics.lpcGlasses, "round", cosmetics.glassesColor || "brown"],
       ["hat", cosmetics.lpcHat, "leather_cap", cosmetics.hatColor || "brown"],
     ];
+    if (options.pose === "attack" && cosmetics.lpcWeapon !== "none") {
+      selections.push(["weapon", cosmetics.lpcWeapon, "arming_sword", "natural"]);
+    }
+    if (["harvest", "fishing"].includes(options.pose) && cosmetics.lpcTool !== "none") {
+      selections.push(["tool", cosmetics.lpcTool, "axe", "natural"]);
+    }
+    if ((avatar.mounted || options.previewMobility) && cosmetics.vehicle !== "none") {
+      selections.push(["mobility", cosmetics.vehicle, "wheelchair", cosmetics.mobilityColor || "black"]);
+    }
     const output = [];
     selections.forEach(([category, selected, fallback, color]) => {
       if (selected === "none") return;
       const record = item(category, selected, fallback);
-      const layers = record?.sources?.[bodyType] || record?.sources?.[gender] || record?.sources?.male || [];
+      let layers = record?.sources?.[bodyType] || [];
+      if (!layers.length && ["bottom", "shoes", "outfit", "arms", "tool", "weapon", "mobility", "hair", "eyewear", "hat"].includes(category)) {
+        layers = record?.sources?.[gender] || record?.sources?.male || record?.sources?.female || [];
+      }
       layers.forEach((layer) => output.push({ ...layer, color, category, item: record }));
     });
     return output.sort((left, right) => left.z - right.z);
@@ -116,11 +134,24 @@
 
   function resolvedAnimation(avatar, options) {
     if (options.pose === "attack") {
-      const effect = avatar.cosmetics?.effect || "sword_arc";
-      if (effect === "magic_burst") return "spellcast";
-      if (effect === "arrow_volley") return "shoot";
-      if (effect === "leaf_blade") return "thrust";
-      return "slash";
+      const weapon = avatar.cosmetics?.lpcWeapon || "arming_sword";
+      const supported = item("weapon", weapon, "arming_sword")?.animations || [];
+      const preferences = {
+        wand: ["slash", "spellcast", "thrust"],
+        bow: ["shoot", "slash"],
+        cane: ["thrust", "slash"],
+        dagger: ["slash", "thrust", "halfslash"],
+        arming_sword: ["slash", "halfslash", "backslash"],
+      }[weapon] || ["slash", "thrust", "shoot", "spellcast"];
+      return preferences.find((animation) => supported.includes(animation)) || "slash";
+    }
+    if (options.pose === "harvest") {
+      const tool = avatar.cosmetics?.lpcTool || "axe";
+      const supported = item("tool", tool, "axe")?.animations || [];
+      const preferences = ["axe", "hammer", "pickaxe"].includes(tool)
+        ? ["slash", "thrust"]
+        : ["thrust", "slash"];
+      return preferences.find((animation) => supported.includes(animation)) || "thrust";
     }
     if (poseAnimationAliases[options.pose]) return poseAnimationAliases[options.pose];
     if (options.pose && animationCycles[options.pose]) return options.pose;
@@ -149,47 +180,6 @@
       context.beginPath(); context.moveTo(endX, endY); context.quadraticCurveTo(endX + 8 * scaleX, endY + 12 * scaleY, endX + 3 * scaleX, destination.y + 61 * scaleY); context.stroke();
       context.fillStyle = "#e85d48";
       context.fillRect(endX + 2 * scaleX, destination.y + 59 * scaleY, 2 * scaleX, 2 * scaleY);
-    } else if (pose === "harvest") {
-      const side = direction === "left" ? 17 : 43;
-      drawPixel(context, destination, side, 44, 4, 7, "#ed7c2e");
-      drawPixel(context, destination, side - 1, 42, 3, 3, "#559c45");
-      drawPixel(context, destination, side + 2, 41, 3, 3, "#6fb659");
-    } else if (pose === "attack") {
-      const effect = cosmetics.effect || "sword_arc";
-      const cx = destination.x + 32 * scaleX;
-      const cy = destination.y + 34 * scaleY;
-      const horizontal = direction === "left" ? -1 : 1;
-      if (effect === "magic_burst") {
-        const pulse = 8 + (frame % 7) * 3;
-        context.strokeStyle = "rgba(153, 116, 255, .95)"; context.lineWidth = Math.max(2, 2 * scaleX);
-        context.beginPath(); context.arc(cx, cy, pulse * scaleX, 0, Math.PI * 2); context.stroke();
-        context.fillStyle = "rgba(220, 201, 255, .95)";
-        for (let index = 0; index < 5; index += 1) {
-          const angle = index * Math.PI * .4 + frame * .18;
-          context.fillRect(cx + Math.cos(angle) * pulse * scaleX, cy + Math.sin(angle) * pulse * scaleY, Math.max(2, 2 * scaleX), Math.max(2, 2 * scaleY));
-        }
-      } else if (effect === "arrow_volley") {
-        context.strokeStyle = "#805331"; context.fillStyle = "#f1d39a"; context.lineWidth = Math.max(1, scaleX);
-        for (let index = -1; index <= 1; index += 1) {
-          const tipX = cx + horizontal * (22 + frame * 2) * scaleX;
-          const arrowY = cy + index * 7 * scaleY;
-          context.beginPath(); context.moveTo(cx, arrowY); context.lineTo(tipX, arrowY); context.stroke();
-          context.beginPath(); context.moveTo(tipX, arrowY); context.lineTo(tipX - horizontal * 5 * scaleX, arrowY - 3 * scaleY); context.lineTo(tipX - horizontal * 5 * scaleX, arrowY + 3 * scaleY); context.closePath(); context.fill();
-        }
-      } else if (effect === "leaf_blade") {
-        context.fillStyle = "rgba(104, 190, 93, .95)";
-        for (let index = 0; index < 4; index += 1) {
-          const leafX = cx + horizontal * (12 + frame * 3 + index * 7) * scaleX;
-          const leafY = cy + (index - 1.5) * 6 * scaleY;
-          context.save(); context.translate(leafX, leafY); context.rotate(horizontal * (.5 + index * .2));
-          context.beginPath(); context.ellipse(0, 0, 6 * scaleX, 3 * scaleY, 0, 0, Math.PI * 2); context.fill(); context.restore();
-        }
-      } else {
-        context.strokeStyle = "rgba(255, 224, 113, .96)";
-        context.lineWidth = Math.max(2, 3 * scaleX); context.beginPath();
-        const start = horizontal > 0 ? -1.35 : 2.35;
-        context.arc(cx, cy, (18 + frame) * scaleX, start, start + horizontal * 2.15, horizontal < 0); context.stroke();
-      }
     } else if (pose === "door") {
       drawPixel(context, destination, direction === "left" ? 15 : 47, 34, 2, 2, "#ffe69a");
     }
@@ -206,152 +196,6 @@
     );
   }
 
-  const skinPalettes = {
-    porcelain: { shadow: "#d49a82", contour: "#b87968", blush: "#ef9aa2" },
-    peach: { shadow: "#c98770", contour: "#a86458", blush: "#ed8f96" },
-    rose: { shadow: "#c57c79", contour: "#a45f61", blush: "#e68193" },
-    warm: { shadow: "#9c6048", contour: "#794432", blush: "#d77b7b" },
-    sand: { shadow: "#a66f54", contour: "#80503d", blush: "#d98482" },
-    golden: { shadow: "#8e5e3f", contour: "#70442d", blush: "#cd7770" },
-    amber: { shadow: "#74462f", contour: "#593221", blush: "#bc6967" },
-    bronze: { shadow: "#5c3728", contour: "#45251c", blush: "#a95d61" },
-    espresso: { shadow: "#3f261e", contour: "#281713", blush: "#8f4d56" },
-    olive: { shadow: "#826349", contour: "#624632", blush: "#c87c78" },
-    neutral: { shadow: "#966650", contour: "#714838", blush: "#d47f80" },
-    deep: { shadow: "#553527", contour: "#382019", blush: "#97535b" },
-  };
-
-  // 모든 얼굴 요소는 같은 64x64 LPC 기준 좌표를 사용한다. 바디 스프라이트가
-  // 방향별로 바뀌어도 눈·코·입은 이 앵커만 따라가며, 헤어·안경은 이후에 그려진다.
-  const faceAnchors = {
-    down: { eyes: [[25, 29], [37, 29]], brows: [[24, 26], [36, 26]], nose: [31, 33], mouth: [31, 37], cheeks: [[20, 34], [43, 34]], chin: [29, 40, 7] },
-    left: { eyes: [[24, 29]], brows: [[23, 26]], nose: [20, 33], mouth: [22, 37], cheeks: [[18, 34]], chin: [20, 40, 5] },
-    right: { eyes: [[38, 29]], brows: [[37, 26]], nose: [42, 33], mouth: [40, 37], cheeks: [[44, 34]], chin: [39, 40, 5] },
-  };
-
-  function drawEye(context, destination, x, y, options) {
-    const { style, expression, color, special, closed, lookOffset } = options;
-    if (closed || ["closed", "closing", "happy", "happy2"].includes(expression)) {
-      drawPixel(context, destination, x - 2, y + 1, 2, 1, color);
-      drawPixel(context, destination, x, y + 2, 2, 1, color);
-      drawPixel(context, destination, x + 2, y + 1, 1, 1, color);
-      return;
-    }
-    if (style === "soft" || style === "narrow") {
-      drawPixel(context, destination, x - 2, y + (style === "narrow" ? 2 : 1), 5, 1, color);
-      if (style === "soft") drawPixel(context, destination, x - 1, y + 2, 3, 1, color);
-      return;
-    }
-    const iris = special && special !== "none" ? "#6d66d9" : color;
-    drawPixel(context, destination, x - 1 + lookOffset, y, 4, 4, "#fffaf4");
-    drawPixel(context, destination, x + lookOffset, y, 3, 4, iris);
-    drawPixel(context, destination, x + 1 + lookOffset, y + 1, 2, 3, "#241f25");
-    drawPixel(context, destination, x + 1 + lookOffset, y, 1, 1, "#ffffff");
-    if (style === "bright" || special !== "none") drawPixel(context, destination, x - 1 + lookOffset, y + 1, 1, 1, "#ffffff");
-  }
-
-  function drawMouth(context, destination, x, y, style, expression) {
-    const color = "#9e4c58";
-    if (["shock", "tears"].includes(expression)) {
-      drawPixel(context, destination, x - 1, y, 3, 3, color);
-      drawPixel(context, destination, x, y, 1, 1, "#f7b6b2");
-    } else if (["sad", "sad2", "shame"].includes(expression)) {
-      drawPixel(context, destination, x - 2, y + 1, 1, 1, color);
-      drawPixel(context, destination, x - 1, y, 3, 1, color);
-      drawPixel(context, destination, x + 2, y + 1, 1, 1, color);
-    } else if (style === "neutral" || ["angry", "angry2"].includes(expression)) {
-      drawPixel(context, destination, x - 2, y, 5, 1, color);
-    } else if (style === "grin" || ["happy", "happy2"].includes(expression)) {
-      drawPixel(context, destination, x - 3, y, 7, 1, color);
-      drawPixel(context, destination, x - 2, y + 1, 5, 2, "#fff7eb");
-      drawPixel(context, destination, x - 1, y + 3, 3, 1, "#e98b92");
-    } else if (style === "pout") {
-      drawPixel(context, destination, x - 1, y, 3, 2, color);
-    } else {
-      drawPixel(context, destination, x - 2, y, 1, 1, color);
-      drawPixel(context, destination, x - 1, y + 1, 3, 1, color);
-      drawPixel(context, destination, x + 2, y, 1, 1, color);
-    }
-  }
-
-  // 피부는 바디 레이어 전체에 적용되고, 얼굴 세부 묘사도 같은 skin 키의 팔레트를
-  // 사용한다. 따라서 얼굴·귀·손의 색이 따로 노는 현상을 만들지 않는다.
-  function drawFaceDetails(context, destination, direction, cosmetics = {}) {
-    if (direction === "up") return;
-    const anchors = faceAnchors[direction] || faceAnchors.down;
-    const expression = cosmetics.lpcExpression || "neutral";
-    const eyeStyle = cosmetics.lpcEyeStyle || "round";
-    const mouthStyle = cosmetics.lpcMouth || "smile";
-    const faceShape = cosmetics.lpcFaceShape || "oval";
-    const palette = skinPalettes[cosmetics.skin] || skinPalettes.peach;
-    const eyeColor = cosmetics.hairColor === "blue" ? "#315f91" : cosmetics.hairColor === "green" ? "#386a4e" : "#34282b";
-    const lookOffset = expression === "look_l" ? -1 : expression === "look_r" ? 1 : 0;
-    const winkIndex = expression === "closing" ? (direction === "right" ? 0 : 1) : -1;
-
-    anchors.cheeks.forEach(([x, y]) => {
-      const shapeOffset = faceShape === "round" ? 0 : faceShape === "angular" ? 1 : 0;
-      drawPixel(context, destination, x, y + shapeOffset, faceShape === "round" ? 3 : 2, 2, palette.shadow);
-    });
-    anchors.brows.forEach(([x, y], index) => {
-      const angry = ["angry", "angry2"].includes(expression);
-      const sad = ["sad", "sad2", "shame", "tears"].includes(expression);
-      const width = cosmetics.lpcEyebrow === "thick" ? 5 : 4;
-      const browY = y + ((angry && index === 0) || (sad && index === 1) ? 1 : 0);
-      drawPixel(context, destination, x - 1, browY, width, cosmetics.lpcEyebrow === "thick" ? 2 : 1, palette.contour);
-    });
-    anchors.eyes.forEach(([x, y], index) => drawEye(context, destination, x, y, {
-      style: eyeStyle,
-      expression,
-      color: eyeColor,
-      special: cosmetics.lpcEyes || "none",
-      closed: index === winkIndex,
-      lookOffset,
-    }));
-    const [noseX, noseY] = anchors.nose;
-    const noseWidth = ["big", "large"].includes(cosmetics.lpcNose) ? 2 : 1;
-    drawPixel(context, destination, noseX, noseY, noseWidth, cosmetics.lpcNose === "straight" ? 2 : 1, palette.shadow);
-    drawMouth(context, destination, anchors.mouth[0], anchors.mouth[1], mouthStyle, expression);
-    // 턱선은 목 시작점보다 한 픽셀 앞에 놓아 머리가 몸 위에 자연스럽게 얹힌다.
-    drawPixel(context, destination, anchors.chin[0], anchors.chin[1], anchors.chin[2], 1, palette.shadow);
-
-    if (["blush", "happy", "happy2", "shame"].includes(expression)) {
-      anchors.cheeks.forEach(([x, y]) => drawPixel(context, destination, x - 1, y, 4, 2, palette.blush));
-    }
-    if (["tears", "sad2"].includes(expression)) {
-      anchors.eyes.forEach(([x, y]) => drawPixel(context, destination, x + 1, y + 4, 1, 3, "#72bdeb"));
-    }
-    if (cosmetics.lpcWrinkles === "wrinkles") {
-      anchors.eyes.forEach(([x, y]) => drawPixel(context, destination, x - 3, y + 4, 2, 1, palette.contour));
-    }
-  }
-
-  function drawScooter(context, destination, direction, moving, frame) {
-    if (direction === "up") return;
-    const scaleX = destination.width / FRAME;
-    const scaleY = destination.height / FRAME;
-    const y = destination.y + 56 * scaleY;
-    const left = destination.x + 8 * scaleX;
-    context.save();
-    context.strokeStyle = "#d96827";
-    context.lineWidth = Math.max(2, 2 * scaleX);
-    context.lineCap = "square";
-    context.beginPath();
-    context.moveTo(left + 6 * scaleX, y);
-    context.lineTo(left + 43 * scaleX, y);
-    context.lineTo(left + 48 * scaleX, y - 25 * scaleY);
-    context.stroke();
-    context.fillStyle = "#253338";
-    context.beginPath(); context.arc(left + 7 * scaleX, y + 1 * scaleY, 5 * scaleX, 0, Math.PI * 2); context.fill();
-    context.beginPath(); context.arc(left + 44 * scaleX, y + 1 * scaleY, 5 * scaleX, 0, Math.PI * 2); context.fill();
-    context.fillStyle = "#f29a35";
-    context.fillRect(left + 5 * scaleX, y - 3 * scaleY, 40 * scaleX, 3 * scaleY);
-    if (moving && frame % 2) {
-      context.fillStyle = "rgba(255,255,255,.78)";
-      context.fillRect(destination.x, y - 10 * scaleY, 8 * scaleX, 1 * scaleY);
-      context.fillRect(destination.x + 3 * scaleX, y - 5 * scaleY, 11 * scaleX, 1 * scaleY);
-    }
-    context.restore();
-  }
 
   function draw(context, avatar, options = {}, destination = {}) {
     if (!manifest) return false;
@@ -360,32 +204,67 @@
       ? (options.direction || avatar.direction) : "down";
     const animation = resolvedAnimation(avatar, options);
     const cycles = animationCycles[animation] || animationCycles.idle;
-    const frameIndex = avatar.sitting && !options.pose
+    const frameIndex = (avatar.sitting || avatar.mounted) && !options.pose
       ? cycles[cycles.length - 1]
       : cycles[Math.abs(Number(options.frame || 0)) % cycles.length];
-    const rowBase = manifest.animationRows[animation] ?? manifest.animationRows.idle;
-    const directionRow = animation === "hurt" || animation === "climb" ? 0 : manifest.directionRows[direction];
-
     context.save();
     context.imageSmoothingEnabled = false;
-    if (avatar.mounted) drawScooter(context, target, direction, Boolean(options.moving), frameIndex);
-    let faceDetailsDrawn = false;
-    selectedLayers(avatar).forEach((layer) => {
-      if (!faceDetailsDrawn && ["hair", "eyewear", "hat"].includes(layer.category)) {
-        drawFaceDetails(context, target, direction, avatar.cosmetics || {});
-        faceDetailsDrawn = true;
-      }
+    selectedLayers(avatar, options).forEach((layer) => {
       const image = images.get(layer.file);
       if (!image) { ensureImage(layer.file); return; }
+      const supported = layer.item?.animations || [];
+      const requestedAnimation = layer.category === "mobility" && avatar.mounted && options.moving
+        ? (options.running ? "run" : "walk")
+        : animation;
+      const fallbackAnimations = {
+        idle: ["walk"],
+        walk: ["idle"],
+        run: ["walk", "idle"],
+        jump: ["walk", "idle"],
+        sit: ["idle", "walk"],
+        emote: ["idle", "walk"],
+        combat_idle: ["idle", "walk"],
+        spellcast: ["idle", "walk"],
+        thrust: ["idle", "walk"],
+        slash: ["idle", "walk"],
+        shoot: ["idle", "walk"],
+        hurt: ["idle", "walk"],
+      };
+      const layerAnimation = supported.includes(requestedAnimation)
+        ? requestedAnimation
+        : (fallbackAnimations[requestedAnimation] || ["idle", "walk"])
+          .find((candidate) => supported.includes(candidate));
+      if (!layerAnimation) return;
+      const layerCycle = animationCycles[layerAnimation] || animationCycles.idle;
+      const requestedFrame = ["idle", "sit", "emote", "combat_idle"].includes(requestedAnimation)
+        ? layerCycle[Math.min(1, layerCycle.length - 1)]
+        : layerCycle[Math.abs(Number(options.frame || 0)) % layerCycle.length];
+      const layerFrame = requestedFrame;
+      const layerRowBase = manifest.animationRows[layerAnimation] ?? manifest.animationRows.idle;
+      const layerDirectionRow = layerAnimation === "hurt" || layerAnimation === "climb"
+        ? 0
+        : manifest.directionRows[direction];
+      const layerFrameSize = Number(layer.frameSize || FRAME);
+      const destinationScale = layerFrameSize / FRAME;
+      const destinationWidth = target.width * destinationScale;
+      const destinationHeight = target.height * destinationScale;
+      const destinationX = target.x - (destinationWidth - target.width) / 2;
+      const destinationY = target.y - (destinationHeight - target.height) / 2;
       context.save();
       context.filter = colorFilters[layer.color] || "none";
       context.drawImage(
-        image, frameIndex * FRAME, (rowBase + directionRow) * FRAME, FRAME, FRAME,
-        target.x, target.y, target.width, target.height,
+        image,
+        layerFrame * layerFrameSize,
+        (layerRowBase + layerDirectionRow) * layerFrameSize,
+        layerFrameSize,
+        layerFrameSize,
+        destinationX,
+        destinationY,
+        destinationWidth,
+        destinationHeight,
       );
       context.restore();
     });
-    if (!faceDetailsDrawn) drawFaceDetails(context, target, direction, avatar.cosmetics || {});
     drawActionProp(context, target, direction, options.pose, frameIndex, avatar.cosmetics || {});
     context.restore();
     return true;

@@ -1,35 +1,24 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v43";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v68";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260831-10",
+  "/static/forest-game.css?v=20260901-15",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
-  "/static/lpc-avatar-engine.js?v=20260831-9",
-  "/static/forest-phaser.js?v=20260831-10",
-  "/static/forest-game.js?v=20260831-17",
+  "/static/lpc-avatar-engine.js?v=20260901-21",
+  "/static/forest-phaser.js?v=20260901-13",
+  "/static/forest-game.js?v=20260901-36",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
-  "/static/assets/carrot-forest-avatar-atlas-v1.png",
-  "/static/assets/carrot-forest-basic-walk-atlas-v1.png",
-  "/static/assets/carrot-forest-basic-scooter-atlas-v1.png",
-  "/static/assets/carrot-forest-preset-red-bow-v1.png",
-  "/static/assets/carrot-forest-preset-cow-hood-v1.png",
-  "/static/assets/carrot-forest-preset-midnight-v1.png",
-  "/static/assets/carrot-forest-preset-blue-cap-v1.png",
-  "/static/assets/carrot-forest-preset-teal-bob-v1.png",
-  "/static/assets/carrot-forest-avatar-red_bow-normalized-v2.png",
-  "/static/assets/carrot-forest-avatar-cow_hood-normalized-v2.png",
-  "/static/assets/carrot-forest-avatar-midnight-normalized-v2.png",
-  "/static/assets/carrot-forest-avatar-blue_cap-normalized-v2.png",
-  "/static/assets/carrot-forest-avatar-teal_bob-normalized-v2.png",
-  "/static/assets/carrot-forest-avatar-manifest-v2.json",
-  "/static/assets/carrot-forest-modular-avatar-atlas-v3.png",
-  "/static/assets/carrot-forest-cosmetics-atlas-v1.png",
+  "/static/assets/when-the-morning-comes.mp3",
+  "/static/assets/avatar-title.mp3",
+  "/static/assets/home-elfwood.mp3",
+  "/static/assets/garden-floral-life.mp3",
+  "/static/assets/reward-chest-success.mp3",
   "/static/assets/carrot-forest-cat-pets-v1.png",
   "/static/assets/carrot-forest-storage-atlas-v1.png",
   "/static/assets/carrot-forest-storage-atlas-v2.png",
@@ -38,10 +27,11 @@ const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-reward-cow-v1.png",
   "/static/assets/carrot-forest-lpc-pets-v1.png",
   "/static/assets/carrot-forest-lpc-rat-v1.png",
-  "/static/assets/carrot-forest-world-v2.png",
+  "/static/assets/carrot-forest-loading-v1.png?v=20260831-1",
+  "/static/assets/carrot-forest-world-v3.png?v=20260831-1",
   "/static/assets/carrot-forest-home-v1.png",
   "/static/assets/carrot-forest-garden-v1.png",
-  "/static/assets/lpc-pack/manifest.json?v=20260831-1",
+  "/static/assets/lpc-pack/manifest.json?v=20260901-10",
 ];
 
 self.addEventListener("install", (event) => {

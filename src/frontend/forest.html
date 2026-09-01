@@ -13,18 +13,21 @@
   <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
   <style>
-    #forest-boot{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:#edf2ee;color:#16342c;font:800 18px/1.6 system-ui,sans-serif;text-align:center}
-    #forest-boot span{display:block;margin:auto auto 14px;font-size:42px;animation:forestBootPulse 1s ease-in-out infinite alternate}
+    #forest-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;padding:clamp(28px,7vw,108px);overflow:hidden;background:#f7efd9 url('/static/assets/carrot-forest-loading-v1.png?v=20260831-1') center/cover no-repeat;color:#173d2b;font:800 18px/1.5 Pretendard,"Noto Sans KR",system-ui,sans-serif}
+    #forest-boot::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,249,231,.98) 0%,rgba(255,249,231,.86) 28%,rgba(255,249,231,.18) 54%,transparent 72%);pointer-events:none}
+    .forest-boot-panel{position:relative;z-index:1;width:min(520px,46vw);padding:clamp(22px,3vw,38px);border:1px solid rgba(110,83,33,.16);border-radius:28px;background:rgba(255,251,238,.76);box-shadow:0 20px 70px rgba(66,56,24,.16);backdrop-filter:blur(9px);text-align:left}
+    .forest-boot-brand{display:flex;align-items:center;gap:12px;margin:0 0 10px;color:#23633d;font-size:clamp(16px,1.5vw,21px);font-weight:950;letter-spacing:.02em}.forest-boot-brand b{color:#ef7627}.forest-boot-title{margin:0;font-size:clamp(40px,6vw,82px);line-height:1;letter-spacing:-.06em;text-shadow:0 4px 0 rgba(255,255,255,.8)}.forest-boot-copy{margin:18px 0 24px;color:#516a58;font-size:clamp(14px,1.4vw,18px);font-weight:750}.forest-boot-progress{height:13px;overflow:hidden;border:1px solid rgba(42,93,55,.2);border-radius:999px;background:rgba(255,255,255,.82)}.forest-boot-progress i{display:block;width:46%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef7627,#f4a43d,#4a9a54);animation:forestBootLoad 1.25s ease-in-out infinite}.forest-boot-status{display:flex;align-items:center;gap:8px;margin-top:10px;color:#315e40;font-size:13px;font-weight:850}.forest-boot-status span{width:10px;height:10px;border-radius:50%;background:#4a9a54;box-shadow:0 0 0 5px rgba(74,154,84,.13);animation:forestBootPulse 1s ease-in-out infinite alternate}
     html:not(.forest-style-ready) body>:not(#forest-boot),html:not(.forest-script-ready) body>:not(#forest-boot){visibility:hidden}
     html.forest-style-ready.forest-script-ready #forest-boot{display:none}
-    @keyframes forestBootPulse{to{transform:translateY(-5px)}}
-    @media(prefers-reduced-motion:reduce){#forest-boot span{animation:none}}
+    @keyframes forestBootPulse{to{opacity:.48;transform:scale(.84)}}@keyframes forestBootLoad{0%{transform:translateX(-100%)}55%,100%{transform:translateX(220%)}}
+    @media(max-width:760px){#forest-boot{align-items:flex-end;padding:18px;background-position:67% center}#forest-boot::after{background:linear-gradient(0deg,rgba(255,249,231,.98) 0%,rgba(255,249,231,.78) 42%,transparent 78%)}.forest-boot-panel{width:100%;padding:22px}.forest-boot-title{font-size:46px}.forest-boot-copy{margin:12px 0 18px}}
+    @media(prefers-reduced-motion:reduce){.forest-boot-progress i,.forest-boot-status span{animation:none}.forest-boot-progress i{width:72%}}
   </style>
   <script>
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v35";
+      const resetKey = "forest-local-pwa-reset-v38";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -39,15 +42,15 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260831-10" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260901-15" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/lpc-avatar-engine.js?v=20260831-9" defer></script>
+  <script src="/static/lpc-avatar-engine.js?v=20260901-21" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-phaser.js?v=20260831-10" defer></script>
-  <script src="/static/forest-game.js?v=20260831-17" defer></script>
+  <script src="/static/forest-phaser.js?v=20260901-13" defer></script>
+  <script src="/static/forest-game.js?v=20260901-36" defer></script>
 </head>
 <body>
-  <div id="forest-boot" role="status"><div><span aria-hidden="true">🥕</span>당근의 숲을 안전하게 불러오고 있어요.<br><small>잠시만 기다려 주세요.</small></div></div>
+  <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
 
   <header class="studio-topbar">
@@ -95,7 +98,6 @@
           <form id="avatar-form" class="avatar-form">
             <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
             <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
-            <label>LPC 기본 스타일<select id="avatar-preset"><option value="lpc_male_default">기본 남자 캐릭터</option><option value="lpc_female_default">기본 여자 캐릭터</option><option value="blue_cap">파란 모자 농부</option><option value="red_bow">리본 정원사</option><option value="cow_hood">음메 목장지기</option><option value="midnight">한밤 숲지기</option><option value="teal_bob">미소 정원사</option></select></label>
             <button class="primary-button" type="submit">기본 정보 저장</button>
             <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
           </form>
@@ -117,9 +119,9 @@
           <div class="canvas-frame">
             <div id="phaser-world" role="application" tabindex="0" aria-label="고해상도 4방향 픽셀 아바타로 이동하는 당근의 숲 월드"></div>
             <canvas id="forest-canvas" width="1536" height="1024" tabindex="0" aria-label="숲, 당근밭, 공동 나무와 집이 있는 고해상도 픽셀 맵. 방향키나 WASD로 아바타를 움직일 수 있습니다." aria-describedby="movement-help"></canvas>
-            <span class="phaser-quality-badge">PHASER · PREMIUM AVATAR</span>
+            <span class="phaser-quality-badge">JUNE JTOY AVATATA</span>
             <div class="map-label home-label"><span aria-hidden="true">🏠</span>우리 집</div>
-            <div class="map-label garden-label"><span aria-hidden="true">🥕</span>공동 당근밭</div>
+            <div class="map-label garden-label"><span aria-hidden="true">🥕</span>당근 밭</div>
             <div id="interaction-prompt" class="interaction-prompt" hidden><kbd>Q</kbd><span>상호작용</span></div>
             <section id="garden-harvest-panel" class="garden-harvest-panel" aria-live="polite" hidden>
               <span class="harvest-carrot" aria-hidden="true">🥕</span>
@@ -223,6 +225,7 @@
       <nav id="avatar-category-nav" class="avatar-category-nav" aria-label="아바타 꾸미기 카테고리"></nav>
       <section class="avatar-item-browser" aria-labelledby="avatar-category-title">
         <div class="avatar-browser-heading"><div><p class="section-kicker">COLLECTION</p><h3 id="avatar-category-title">피부</h3></div><span id="avatar-item-count">0개</span></div>
+        <label class="match-body-color"><input type="checkbox" checked disabled><span><strong>피부색 함께 적용</strong><small>피부색을 바꾸면 몸과 얼굴에 같은 색이 적용됩니다.</small></span></label>
         <div id="avatar-item-grid" class="avatar-item-grid"></div>
       </section>
       <aside class="avatar-preview-panel" aria-label="아바타 미리보기">
@@ -236,15 +239,11 @@
           <canvas id="avatar-preview-canvas" width="560" height="640" aria-label="선택한 아바타 코디 미리보기"></canvas>
           <p id="avatar-preview-name">세준</p>
         </div>
-        <details id="avatar-tuning-controls" class="avatar-tuning-controls" open>
-          <summary>간격·크기 직접 조정</summary>
-          <label><span>머리 높이 <output data-avatar-tuning-output="headOffsetY">-6px</output></span><input type="range" min="-18" max="8" step="1" value="-6" data-avatar-tuning="headOffsetY"></label>
-          <label><span>기본 몸 높이 <output data-avatar-tuning-output="outfitOffsetY">0px</output></span><input type="range" min="-12" max="12" step="1" value="0" data-avatar-tuning="outfitOffsetY"></label>
-          <label><span>안경 높이 <output data-avatar-tuning-output="glassesOffsetY">0px</output></span><input type="range" min="-14" max="16" step="1" value="0" data-avatar-tuning="glassesOffsetY"></label>
-          <label><span>월드 크기 <output data-avatar-tuning-output="worldScale">43%</output></span><input type="range" min="0.32" max="0.58" step="0.01" value="0.43" data-avatar-tuning="worldScale"></label>
-          <button id="avatar-tuning-reset" type="button">기본값으로 되돌리기</button>
-        </details>
-        <div class="avatar-selection-summary"><span>현재 코디</span><strong id="avatar-selection-name">새싹 정원사</strong></div>
+        <div class="avatar-quick-actions" aria-label="코디 빠른 작업">
+          <button id="avatar-strip-basics" type="button">모두 벗기</button>
+          <button id="avatar-restore-outfit" type="button">내 코디로 돌아가기</button>
+        </div>
+        <div class="avatar-selection-summary"><span>현재 선택</span><strong id="avatar-selection-name">아이템을 선택해주세요</strong></div>
         <button id="avatar-studio-save" class="avatar-studio-save" type="button">이 코디로 저장</button>
       </aside>
     </div>
