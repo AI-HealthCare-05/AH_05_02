@@ -32,6 +32,12 @@
     hurt: "깜짝 놀라기", combat_idle: "준비 자세",
   };
   const poseAnimationAliases = { fishing: "shoot", door: "thrust", dance: "emote" };
+  const wingMobilityIds = new Set(["feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"]);
+
+  function usesWingMobility(avatar) {
+    const vehicle = String(avatar.cosmetics?.vehicle || "");
+    return Boolean(avatar.mounted && (wingMobilityIds.has(vehicle) || vehicle.includes("wings")));
+  }
 
   let manifest = null;
   const items = new Map();
@@ -159,7 +165,7 @@
     if (poseAnimationAliases[options.pose]) return poseAnimationAliases[options.pose];
     if (options.pose && animationCycles[options.pose]) return options.pose;
     if (avatar.sitting) return "sit";
-    if (avatar.mounted) return "sit";
+    if (avatar.mounted) return usesWingMobility(avatar) ? "idle" : "sit";
     if (options.moving) return options.running ? "run" : "walk";
     return "idle";
   }
@@ -219,7 +225,7 @@
       ? (options.direction || avatar.direction) : "down";
     const animation = resolvedAnimation(avatar, options);
     const cycles = animationCycles[animation] || animationCycles.idle;
-    const frameIndex = (avatar.sitting || avatar.mounted) && !options.pose
+    const frameIndex = (avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose
       ? cycles[cycles.length - 1]
       : cycles[Math.abs(Number(options.frame || 0)) % cycles.length];
     context.save();

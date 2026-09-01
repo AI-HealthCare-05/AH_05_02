@@ -411,7 +411,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v71" in worker
+    assert "gandang-carrot-forest-pwa-v72" in worker
     assert "when-the-morning-comes.mp3" in worker
     assert "avatar-title.mp3" in worker
     assert "home-elfwood.mp3" in worker
@@ -568,7 +568,7 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
 
     assert 'data-action="sit"' in html
     assert "state.avatar.sitting = !state.avatar.sitting" in game_script
-    assert "(avatar.sitting || avatar.mounted) && !options.pose" in engine_script
+    assert "(avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose" in engine_script
     assert "cycles[cycles.length - 1]" in engine_script
     assert 'lpcOutfit: "outfit"' in game_script
     assert 'lpcBottom: "bottom"' in game_script
@@ -860,6 +860,18 @@ def test_wheelchair_uses_64px_frames_and_stays_visible_while_moving() -> None:
     )
     assert all(layer["frameSize"] == 64 for layers in wheelchair["sources"].values() for layer in layers)
     assert 'layer.category === "mobility" && avatar.mounted && options.moving' in engine
+
+
+def test_wings_jump_once_then_keep_the_avatar_standing() -> None:
+    engine = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    assert 'const wingMobilityIds = new Set(["feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"])' in engine
+    assert 'vehicle.includes("wings")' in engine
+    assert 'if (avatar.mounted) return usesWingMobility(avatar) ? "idle" : "sit"' in engine
+    assert "avatar.mounted && !usesWingMobility(avatar)" in engine
+    assert 'this.actionPose = "jump"' in phaser
+    assert "yoyo: true" in phaser
 
 
 def test_lpc_editor_matches_official_top_level_structure_without_child_or_pregnant_body() -> None:
