@@ -3,6 +3,8 @@
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
+  const BGM_VOLUME_KEY = "gandang-carrot-forest-bgm-volume-v1";
+  const BGM_MUTED_KEY = "gandang-carrot-forest-bgm-muted-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
@@ -734,13 +736,30 @@
         garden: new Audio("/static/assets/carrot-forest-original.wav"),
         avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
       };
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
+      this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
       Object.values(this.tracks).forEach((track) => {
         track.loop = true;
         track.preload = "auto";
-        track.volume = .24;
       });
+      this.applyVolume();
       this.current = "forest";
       this.enabled = false;
+    }
+    applyVolume(multiplier = 1) {
+      const volume = this.muted ? 0 : this.volume * multiplier;
+      Object.values(this.tracks).forEach((track) => { track.volume = volume; });
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(BGM_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+      else this.applyVolume();
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(BGM_MUTED_KEY, String(this.muted));
+      this.applyVolume();
     }
     async switchTo(name, { restart = false } = {}) {
       if (!this.enabled || !this.tracks[name]) return;
@@ -2322,7 +2341,7 @@
     $("#reward-skip").focus();
 
     const activeBackgroundTrack = musicEngine?.enabled ? musicEngine.tracks[musicEngine.current] : null;
-    if (activeBackgroundTrack) activeBackgroundTrack.volume = .08;
+    if (activeBackgroundTrack) musicEngine.applyVolume(.34);
     rewardChestSound.pause();
     rewardChestSound.currentTime = 0;
     rewardChestSound.play().catch(() => setStatus("보물상자 효과음을 재생하지 못했지만 보상은 정상 지급됩니다."));
@@ -2335,7 +2354,7 @@
     rewardSkipResolve = null;
     rewardChestSound.pause();
     rewardChestSound.currentTime = 0;
-    if (activeBackgroundTrack) activeBackgroundTrack.volume = .24;
+    if (activeBackgroundTrack) musicEngine.applyVolume();
     overlay.hidden = true;
     if (!item) return;
 
@@ -2842,7 +2861,9 @@
   const atmosphereButton = $("#atmosphere-toggle");
   const updateAtmosphereButton = (enabled) => {
     atmosphereButton.setAttribute("aria-pressed", String(enabled));
-    atmosphereButton.textContent = `날씨·시간 적용 ${enabled ? "ON" : "OFF"}`;
+    atmosphereButton.setAttribute("aria-label", `날씨·시간 효과 ${enabled ? "켜짐" : "꺼짐"}`);
+    atmosphereButton.title = enabled ? "날씨·시간 효과 켜짐" : "날씨·시간 효과 꺼짐";
+    atmosphereButton.textContent = "날씨·시간";
   };
   updateAtmosphereButton(localStorage.getItem(ATMOSPHERE_KEY) !== "off");
   atmosphereButton.addEventListener("click", () => {
@@ -3031,8 +3052,40 @@
       return;
     }
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
-    event.currentTarget.textContent = enabled ? "Ⅱ 음악 끄기" : "♪ 숲 음악 켜기";
+    event.currentTarget.setAttribute("aria-label", `BGM ${enabled ? "켜짐" : "꺼짐"}`);
+    event.currentTarget.title = enabled ? "BGM 끄기" : "BGM 켜기";
+    event.currentTarget.textContent = "BGM";
     setStatus(enabled ? "숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
+  });
+
+  const volumeToggle = $("#volume-toggle");
+  const volumePanel = $("#volume-panel");
+  const volumeSlider = $("#music-volume");
+  const volumeValue = $("#music-volume-value");
+  const muteButton = $("#music-mute");
+  const syncVolumeControls = () => {
+    musicEngine ||= new CozyForestMusic();
+    const percentage = Math.round(musicEngine.volume * 100);
+    volumeSlider.value = String(percentage);
+    volumeValue.value = `${percentage}%`;
+    muteButton.setAttribute("aria-pressed", String(musicEngine.muted));
+    muteButton.textContent = musicEngine.muted ? "음소거 해제" : "음소거";
+    volumeToggle.setAttribute("aria-label", `BGM 음량 ${musicEngine.muted ? "음소거" : `${percentage}%`}`);
+  };
+  syncVolumeControls();
+  volumeToggle.addEventListener("click", () => {
+    const expanded = volumeToggle.getAttribute("aria-expanded") !== "true";
+    volumeToggle.setAttribute("aria-expanded", String(expanded));
+    volumePanel.hidden = !expanded;
+    if (expanded) volumeSlider.focus();
+  });
+  volumeSlider.addEventListener("input", () => {
+    musicEngine.setVolume(Number(volumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  muteButton.addEventListener("click", () => {
+    musicEngine.setMuted(!musicEngine.muted);
+    syncVolumeControls();
   });
 
   const installButton = $("#install-pwa");

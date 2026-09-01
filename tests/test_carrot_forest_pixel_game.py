@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v97" in worker
+    assert "gandang-carrot-forest-pwa-v99" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -462,8 +462,8 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
     assert "musicEngine?.switchTo(sceneMusicName(scene))" in game_script
     assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
-    assert "activeBackgroundTrack.volume = .08" in game_script
-    assert "activeBackgroundTrack.volume = .24" in game_script
+    assert "musicEngine.applyVolume(.34)" in game_script
+    assert "musicEngine.applyVolume();" in game_script
     assert "storage-reward-cow" in game_script
     assert ".reward-rays,.reward-particles{display:none}" in css
     assert "/static/assets/lpc-pack/manifest.json" in worker
@@ -590,7 +590,8 @@ def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
     assert "this.nightOverlay" in phaser_script
     assert "this.lightFx" in phaser_script
     assert 'id="atmosphere-toggle"' in html
-    assert "날씨·시간 적용 ON" in html
+    assert ">날씨·시간</button>" in html
+    assert 'atmosphereButton.textContent = "날씨·시간"' in game_script
     assert "forest-atmosphere-updated" in game_script
     assert "this.atmosphereEnabled" in phaser_script
     assert ".setDepth(0.5).setAlpha(0).setVisible(false)" in phaser_script
@@ -648,13 +649,20 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
 
     assert "arcade-deck" in html
-    assert "WASD로도 움직일 수 있어요." in html
+    assert "WASD로도 움직일 수 있어요." not in html
     assert "숲 조작 패널" not in html
     assert 'data-action="chat"' not in html
     assert 'data-action="dance"' not in html
     for action in ("jump", "run", "interact", "ride", "attack"):
         assert f'data-action="{action}"' in html
-    assert "<kbd>J</kbd><span>점프</span>" in html
+    assert '<button class="arcade-action action-jump"' in html
+    assert "<span>점프</span>" in html
+    assert "data-footer-tool=" not in html
+    assert 'class="asset-dock footer-assets"' in html
+    assert html.index('class="asset-dock footer-assets"') > html.index('class="stage-footer arcade-deck"')
+    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in (ROOT / "src/frontend/forest-game.css").read_text(
+        encoding="utf-8"
+    )
     assert 'grid-template-areas:"jump up run" "left interact right" "ride down attack"' in (
         ROOT / "src/frontend/forest-game.css"
     ).read_text(encoding="utf-8")
@@ -670,6 +678,19 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert "autoHunting" in phaser_script
     assert 'source: "pet"' in phaser_script
     assert 'this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.87)' in phaser_script
+
+
+def test_bgm_volume_and_mute_controls_are_connected() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+
+    for control_id in ("music-toggle", "volume-toggle", "music-volume", "music-mute"):
+        assert f'id="{control_id}"' in html
+    assert ">BGM</button>" in html
+    assert "BGM_VOLUME_KEY" in game_script
+    assert "BGM_MUTED_KEY" in game_script
+    assert "setVolume(value)" in game_script
+    assert "setMuted(muted)" in game_script
 
 
 def test_lpc_defaults_include_visible_face_and_gender_specific_starters() -> None:
