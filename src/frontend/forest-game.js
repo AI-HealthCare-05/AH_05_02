@@ -288,10 +288,11 @@
     hatColor: "brown", glassesColor: "brown", mobilityColor: "black",
   };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
-  const OUTFIT_DEFAULT_VERSION = 3;
+  const OUTFIT_DEFAULT_VERSION = 4;
   const genderDefaultOutfits = {
     female: {
-      label: "나만의 코디 5",
+      label: "농부 프리셋",
+      sourceLabel: "나만의 코디 10",
       cosmetics: {
         bodyType: "female", lpcHead: "human_female", lpcHair: "long",
         lpcOutfit: "cardigan", lpcBottom: "plain_skirt", lpcShoes: "shoes",
@@ -299,7 +300,8 @@
       },
     },
     male: {
-      label: "나만의 코디 8",
+      label: "사냥꾼 프리셋",
+      sourceLabel: "나만의 코디 8",
       cosmetics: {
         bodyType: "male", lpcHead: "human_male", lpcHair: "messy",
         lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
@@ -366,13 +368,18 @@
     };
   }
 
-  function ensureGenderDefaultOutfits(target) {
+  function ensureGenderDefaultOutfits(target, preferSourceLabels = false) {
     const history = Array.isArray(target.outfitHistory) ? target.outfitHistory : [];
     const defaults = ["female", "male"].map((gender, index) => {
       const preset = genderDefaultOutfits[gender];
-      // 프리셋 번호를 바꿀 때는 새 번호로 저장된 실제 코디를 이전 presetRole보다 우선한다.
-      const existing = history.find((look) => look.label === preset.label)
-        || history.find((look) => look.presetRole === gender);
+      const roleLook = history.find((look) => look.presetRole === gender);
+      const namedLook = history.find((look) => look.label === preset.label);
+      const sourceLook = history.find((look) => look.label === preset.sourceLabel);
+      // 버전 마이그레이션 때만 지정 번호의 실제 코디를 기존 프리셋보다 우선한다.
+      // 이후 같은 번호가 다시 생겨도 고정 프리셋으로 오인하지 않는다.
+      const existing = preferSourceLabels
+        ? sourceLook || namedLook || roleLook
+        : roleLook || namedLook;
       return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
     });
     const defaultIds = new Set(defaults.map((look) => look.id));
@@ -434,8 +441,9 @@
   }
 
   function applyRequestedDefaultOutfit(target, sourceVersion = 0) {
-    ensureGenderDefaultOutfits(target);
-    if (Number(sourceVersion) < OUTFIT_DEFAULT_VERSION) applyGenderDefaultOutfit(target, "female");
+    const shouldMigrate = Number(sourceVersion) < OUTFIT_DEFAULT_VERSION;
+    ensureGenderDefaultOutfits(target, shouldMigrate);
+    if (shouldMigrate) applyGenderDefaultOutfit(target, "female");
     target.outfitDefaultVersion = OUTFIT_DEFAULT_VERSION;
   }
 
@@ -1423,13 +1431,17 @@
     const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
     const safeId = escapeMarkup(look.id);
     const safeLabel = escapeMarkup(look.label);
-    return `<article class="recent-outfit-entry${compact ? " is-compact" : ""}"><button class="recent-outfit-card" type="button" data-outfit-look="${safeId}" aria-label="${safeLabel}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${safeId}" aria-hidden="true"></canvas><small>${timestamp}</small></button><form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form></article>`;
+    const nameControl = look.presetRole
+      ? `<div class="outfit-name-form fixed-preset-name"><strong>${safeLabel}</strong><small>기본 프리셋</small></div>`
+      : `<form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form>`;
+    return `<article class="recent-outfit-entry${compact ? " is-compact" : ""}"><button class="recent-outfit-card" type="button" data-outfit-look="${safeId}" aria-label="${safeLabel}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${safeId}" aria-hidden="true"></canvas><small>${timestamp}</small></button>${nameControl}</article>`;
   }
 
   async function renameOutfit(lookId, nextLabel) {
     const look = state.outfitHistory.find((item) => item.id === lookId);
     const label = String(nextLabel || "").trim().slice(0, 24);
     if (!look || !label) { setStatus("코디 이름을 입력해 주세요."); return; }
+    if (look.presetRole) { setStatus("기본 프리셋 이름은 변경할 수 없습니다."); return; }
     look.label = label;
     renderInventory();
     if ($("#inventory-dialog").open && $("#inventory-dialog").dataset.view === "wardrobe") renderInventoryDialog("wardrobe");
