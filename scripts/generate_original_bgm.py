@@ -92,7 +92,7 @@ def normalize_and_write(track: list[float], path: Path) -> None:
         output.writeframes(pcm.tobytes())
 
 
-def build_forest() -> list[float]:
+def build_garden() -> list[float]:
     bpm = 96
     beat = 60 / bpm
     bars = 16
@@ -151,6 +151,103 @@ def build_forest() -> list[float]:
     return track
 
 
+def build_main_forest() -> list[float]:
+    """Build an 80-second calm forest loop that gains layers over time."""
+    bpm = 72
+    beat = 60 / bpm
+    bars = 24
+    track = [0.0] * int(bars * 4 * beat * SAMPLE_RATE)
+    rng = random.Random(20260903)
+    chords = (
+        (48, 52, 55, 59, 62),
+        (52, 55, 59, 62),
+        (45, 48, 52, 55),
+        (41, 45, 48, 52),
+        (50, 53, 57, 60),
+        (43, 48, 50, 55),
+        (41, 45, 48, 52),
+        (43, 47, 50, 55),
+    )
+    bass = (36, 40, 33, 29, 38, 31, 29, 31)
+    main_motif = (
+        (0.0, 67, 0.5),
+        (1.0, 71, 0.5),
+        (2.0, 69, 0.75),
+        (3.0, 64, 0.5),
+    )
+    high_answer = (
+        (0.5, 76, 0.35),
+        (1.5, 74, 0.35),
+        (2.5, 72, 0.35),
+        (3.25, 71, 0.5),
+    )
+    for bar in range(bars):
+        start = bar * 4 * beat
+        chord = chords[bar % len(chords)]
+        section = bar // 8
+        pad_volume = (0.21, 0.25, 0.28)[section]
+        add_chord(track, start, 4 * beat, chord, pad_volume)
+
+        # The opening stays sparse; bass and arpeggios enter in the middle.
+        if section >= 1:
+            for pulse in range(4):
+                add_note(
+                    track,
+                    start + pulse * beat,
+                    0.75 * beat,
+                    bass[bar % len(bass)],
+                    0.085 if section == 1 else 0.11,
+                    kind="triangle",
+                    attack=0.08,
+                    release=0.2,
+                )
+            for eighth in range(8):
+                note = chord[eighth % len(chord)] + 12
+                add_note(
+                    track,
+                    start + eighth * beat / 2,
+                    0.32 * beat,
+                    note,
+                    0.045 if section == 1 else 0.065,
+                    kind="wood",
+                    release=0.12,
+                    decay=1.1,
+                )
+
+        # A simple original bell phrase appears every other bar.
+        if bar % 2 == 0:
+            for offset, note, length in main_motif:
+                add_note(
+                    track,
+                    start + offset * beat,
+                    length * beat,
+                    note,
+                    0.11 if section == 0 else 0.14,
+                    kind="bell",
+                    attack=0.025,
+                    release=0.28,
+                    decay=1.15,
+                )
+
+        # The last section adds a high response and very soft woodland rhythm.
+        if section == 2:
+            for offset, note, length in high_answer:
+                add_note(
+                    track,
+                    start + offset * beat,
+                    length * beat,
+                    note,
+                    0.075,
+                    kind="bell",
+                    attack=0.02,
+                    release=0.2,
+                    decay=1.5,
+                )
+            for eighth in range(8):
+                add_shaker(track, start + eighth * beat / 2, 0.008 if eighth % 2 else 0.013, rng)
+    return track
+
+
 def build_avatar() -> list[float]:
     bpm = 120
     beat = 60 / bpm
@@ -202,7 +299,8 @@ def build_avatar() -> list[float]:
 
 
 def main() -> None:
-    normalize_and_write(build_forest(), ASSET_DIR / "carrot-forest-original.wav")
+    normalize_and_write(build_garden(), ASSET_DIR / "carrot-forest-original.wav")
+    normalize_and_write(build_main_forest(), ASSET_DIR / "forest-canopy-original.wav")
     normalize_and_write(build_avatar(), ASSET_DIR / "avatar-studio-original.wav")
 
 

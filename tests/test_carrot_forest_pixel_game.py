@@ -407,6 +407,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         "carrot-forest-storage-atlas-v2.png",
         "carrot-forest-reward-cow-v1.png",
         "carrot-forest-lpc-pets-v1.png",
+        "forest-canopy-original.wav",
         "carrot-forest-original.wav",
         "avatar-studio-original.wav",
     ):
@@ -414,11 +415,11 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v77" in worker
+    assert "gandang-carrot-forest-pwa-v78" in worker
+    assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
     assert "avatar-studio-original.wav" in worker
     assert "home-elfwood.mp3" in worker
-    assert "garden-floral-life.mp3" in worker
     assert "reward-chest-success.mp3" in worker
 
 
@@ -446,10 +447,10 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert "time - this.lastPetAttackAt > 2600" in phaser_script
     assert "delta / 260" in phaser_script
     assert "this.motionFx?.clear()" in phaser_script
-    assert 'forest: new Audio("/static/assets/carrot-forest-original.wav")' in game_script
+    assert 'forest: new Audio("/static/assets/forest-canopy-original.wav")' in game_script
     assert 'avatar: new Audio("/static/assets/avatar-studio-original.wav")' in game_script
     assert 'home: new Audio("/static/assets/home-elfwood.mp3")' in game_script
-    assert 'garden: new Audio("/static/assets/garden-floral-life.mp3")' in game_script
+    assert 'garden: new Audio("/static/assets/carrot-forest-original.wav")' in game_script
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
     assert "musicEngine?.switchTo(sceneMusicName(scene))" in game_script
     assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
