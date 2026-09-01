@@ -1,0 +1,131 @@
+{
+  "experiment_id": "knhanes-current-screening-recall-20260831",
+  "source_file": "knhanes_cleaned_2016_2024.csv",
+  "source_sha256": "70c2e4a0d71e883a4181589bfb3042413f6f6e13104756b88d24e103e195ddfa",
+  "config_sha256": "99f476d790e901ef2d09d304e6b859d4062cfdaef532f26fd9f62d59c8ecd5e5",
+  "library_versions": {
+    "numpy": "2.4.1",
+    "pandas": "3.0.5",
+    "scikit_learn": "1.8.0",
+    "lightgbm": "4.7.0"
+  },
+  "target_definition": "현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부",
+  "split_summary": {
+    "train": {
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "n": 26005,
+      "positive_n": 1140,
+      "positive_rate": 0.04383772351470871
+    },
+    "validation": {
+      "years": [
+        2021,
+        2022
+      ],
+      "n": 9132,
+      "positive_n": 415,
+      "positive_rate": 0.045444590451160755
+    },
+    "test": {
+      "years": [
+        2023,
+        2024
+      ],
+      "n": 9691,
+      "positive_n": 390,
+      "positive_rate": 0.040243524920028896
+    }
+  },
+  "selection_rule": {
+    "primary": "recall",
+    "tie_breakers": [
+      "auprc",
+      "specificity"
+    ],
+    "validation_specificity_floor": 0.42000000000000004,
+    "test_specificity_floor": 0.4
+  },
+  "selected_validation": {
+    "model": "blend_0.0_0.0_0.7_0.3",
+    "split": "validation",
+    "n": 9132,
+    "positive_n": 415,
+    "prevalence": 0.045444590451160755,
+    "auroc": 0.7867775334445504,
+    "auprc": 0.14649912102982565,
+    "auprc_lift": 3.223686682516549,
+    "brier": 0.04115912703237811,
+    "brier_skill_score": 0.05118221227293862,
+    "recall": 0.9614457831325302,
+    "specificity": 0.420098657795113,
+    "precision": 0.07315731573157316,
+    "f1": 0.13596864883285056,
+    "tn": 3662.0,
+    "fp": 5055.0,
+    "fn": 16.0,
+    "tp": 399.0,
+    "weighted_prevalence": 0.03747460980514453,
+    "weighted_auroc": 0.8088544974976382,
+    "weighted_auprc": 0.14337350158315765,
+    "weighted_auprc_lift": 3.825883773804504,
+    "weighted_brier": 0.03414430668359241,
+    "weighted_brier_skill_score": 0.05339458486361537,
+    "weighted_recall": 0.9497438920112061,
+    "weighted_specificity": 0.47578064856398616,
+    "weighted_precision": 0.0658895605758451,
+    "weighted_f1": 0.12322990650772718,
+    "weighted_tn": 4182.00811563753,
+    "weighted_fp": 4607.77374762189,
+    "weighted_fn": 17.19855163575838,
+    "weighted_tp": 325.01958510482143,
+    "threshold": 0.023227178771059433
+  },
+  "selected_test": {
+    "model": "blend_0.0_0.0_0.7_0.3",
+    "split": "test",
+    "n": 9691,
+    "positive_n": 390,
+    "prevalence": 0.040243524920028896,
+    "auroc": 0.7673238885259098,
+    "auprc": 0.11219871643763638,
+    "auprc_lift": 2.7879942589670104,
+    "brier": 0.037647838121637286,
+    "brier_skill_score": 0.025273040449551254,
+    "recall": 0.9307692307692308,
+    "specificity": 0.4067304590904204,
+    "precision": 0.06172419656521,
+    "f1": 0.11577100940838782,
+    "tn": 3783.0,
+    "fp": 5518.0,
+    "fn": 27.0,
+    "tp": 363.0,
+    "weighted_prevalence": 0.0367912755481922,
+    "weighted_auroc": 0.7879912729178694,
+    "weighted_auprc": 0.11046306308583341,
+    "weighted_auprc_lift": 3.002425478321346,
+    "weighted_brier": 0.03436183576382174,
+    "weighted_brier_skill_score": 0.030358700146833062,
+    "weighted_recall": 0.9242495768995465,
+    "weighted_specificity": 0.4554960008188233,
+    "weighted_precision": 0.06088777683831564,
+    "weighted_f1": 0.11424904713569868,
+    "weighted_tn": 4251.807263336032,
+    "weighted_fp": 5082.648485326441,
+    "weighted_fn": 27.00837789285241,
+    "weighted_tp": 329.5358734446783,
+    "threshold": 0.023227178771059433,
+    "test_specificity_constraint_passed": true
+  },
+  "selected_weights": {
+    "logistic": 0.7,
+    "random_forest": 0.3
+  },
+  "artifact_path_local_only": "outputs/ml/knhanes_current_screening_recall_v050/knhanes-current-diabetes-recall-v0.5.0.joblib",
+  "promotion_status": "candidate_internal_not_for_diagnosis_or_personal_probability_display"
+}
