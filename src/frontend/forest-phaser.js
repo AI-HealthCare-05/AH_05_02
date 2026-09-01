@@ -97,15 +97,24 @@
       this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1", { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("storage-objects", "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1", { frameWidth: 256, frameHeight: 256 });
       this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1");
+      this.load.image("reward-cow-body", "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1");
+      this.load.image("reward-cow-base", "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1");
+      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v2.png?v=20260901-1");
     }
 
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
+      this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
       this.createAnimatedObjectAnimations();
       this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
       this.placementPreview = null;
       this.placedObjectActors = [];
       this.syncPlacedObjects(storedState().placed || []);
+      this.nightOverlay = this.add.rectangle(WORLD.width / 2, WORLD.height / 2, WORLD.width, WORLD.height, 0x07172d, 1)
+        .setDepth(900).setAlpha(0).setVisible(false);
+      this.lightFx = this.add.graphics().setDepth(901).setBlendMode(Phaser.BlendModes.ADD);
+      this.lastLightingRefresh = 0;
+      this.nightStrength = 0;
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.motionFx = this.add.graphics().setDepth(2);
       this.player.add(this.motionFx);
@@ -200,7 +209,15 @@
             .setOrigin(0.5, 0.84)
             .setDisplaySize(size, size);
         } else if (item.code === "reward_cow") {
-          actor = this.add.image(item.x, item.y, "reward-cow").setOrigin(0.5, 0.9).setDisplaySize(82, 82);
+          const base = this.add.image(0, 3, "reward-cow-base").setOrigin(0.5, 0.86).setDisplaySize(88, 88);
+          const body = this.add.image(0, -7, "reward-cow-body").setOrigin(0.5, 0.86).setDisplaySize(84, 84);
+          actor = this.add.container(item.x, item.y, [base, body]);
+          actor.setData("motionTarget", body);
+        } else if (item.code === "campfire") {
+          const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(82, 82);
+          const onFire = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.campfire).setOrigin(0.5, 0.9).setDisplaySize(82, 82);
+          actor = this.add.container(item.x, item.y, [offFire, onFire]);
+          actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire);
         } else if (Object.hasOwn(storageObjectIndex, item.code)) {
           const largeObjects = new Set(["tent", "light_tent", "picnic_table", "bbq_table", "pond", "fence", "flower_cart", "carrot_crate"]);
           const smallObjects = new Set(["chair_green", "chair_red", "lantern", "mailbox", "watering_can"]);
@@ -214,6 +231,7 @@
           .setAlpha(preview ? .72 : 1)
           .setDepth(preview ? 998 : item.y - 2)
           .setVisible(this.sceneName === "world");
+        actor.setData("item", { ...item });
         this.applyPlacedObjectState(actor, item);
         return actor;
     }
@@ -225,30 +243,77 @@
         else actor.stop().setFrame(animatedObjectRows[item.code] * 4);
       }
       if (!type) return;
-      actor.setData("interactive", true).setData("active", Boolean(item.active));
-      this.tweens.killTweensOf(actor);
-      actor.setPosition(item.x, item.y).setAlpha(item.active ? 1 : .58);
-      if (!item.active) {
-        actor.setTint(0x6f756d);
-        return;
+      actor.setData("interactive", true).setData("active", Boolean(item.active)).setData("item", { ...item });
+      if (type === "fire") {
+        actor.getData("fireOffTarget")?.setVisible(!item.active);
+        actor.getData("fireOnTarget")?.setVisible(Boolean(item.active));
       }
-      actor.clearTint();
+      const motionTarget = actor.getData("motionTarget") || actor;
+      this.tweens.killTweensOf(motionTarget);
+      actor.setPosition(item.x, item.y).setAlpha(1);
+      motionTarget.setPosition?.(0, item.code === "reward_cow" ? -7 : 0);
+      motionTarget.setAngle?.(0);
+      if (!item.active) return;
       if (type === "cow") {
         this.tweens.add({
-          targets: actor, y: item.y - 4, angle: (Number(item.rotation) || 0) + 3,
+          targets: motionTarget, y: -11, angle: 3,
           duration: 330, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
-        });
-      } else {
-        this.tweens.add({
-          targets: actor, alpha: { from: .82, to: 1 }, duration: type === "fire" ? 180 : 620,
-          yoyo: true, repeat: -1, ease: "Sine.easeInOut",
         });
       }
     }
 
     syncPlacedObjects(placed = []) {
-      this.placedObjectActors?.forEach((actor) => { this.tweens.killTweensOf(actor); actor.destroy(); });
+      this.placedObjectActors?.forEach((actor) => {
+        this.tweens.killTweensOf(actor);
+        this.tweens.killTweensOf(actor.getData?.("motionTarget"));
+        actor.destroy();
+      });
       this.placedObjectActors = placed.map((item) => this.createPlacedObjectActor(item)).filter(Boolean);
+    }
+
+    currentLocalHour() {
+      const rawHour = new URLSearchParams(window.location.search).get("hour");
+      const forced = rawHour == null ? Number.NaN : Number(rawHour);
+      return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+    }
+
+    ambientStrengthForHour(hour) {
+      if (hour >= 20 || hour < 5) return .42;
+      if (hour === 19 || hour === 5) return .3;
+      if (hour === 18 || hour === 6) return .16;
+      return 0;
+    }
+
+    updateWorldAtmosphere(time) {
+      if (!this.nightOverlay || !this.lightFx || !this.waterRippleFx) return;
+      const worldVisible = this.sceneName === "world";
+      if (time - this.lastLightingRefresh > 30000 || this.lastLightingRefresh === 0) {
+        this.nightStrength = this.ambientStrengthForHour(this.currentLocalHour());
+        this.lastLightingRefresh = time;
+      }
+      this.nightOverlay.setVisible(worldVisible && this.nightStrength > 0).setAlpha(this.nightStrength);
+      this.waterRippleFx.clear().setVisible(worldVisible);
+      this.lightFx.clear().setVisible(worldVisible);
+      if (!worldVisible) return;
+
+      const ripplePhase = time / 780;
+      [[92, 382, 42], [150, 420, 58], [220, 360, 36], [263, 438, 46]].forEach(([x, y, width], index) => {
+        const wave = (Math.sin(ripplePhase + index * 1.3) + 1) / 2;
+        this.waterRippleFx.lineStyle(1.5, 0xb8f3ff, .16 + wave * .18)
+          .strokeEllipse(x + Math.sin(ripplePhase + index) * 3, y, width + wave * 12, 7 + wave * 3);
+      });
+
+      if (this.nightStrength <= 0) return;
+      this.placedObjectActors.forEach((actor) => {
+        const item = actor.getData?.("item");
+        const type = interactiveObjectTypes[item?.code];
+        if (!item?.active || !["fire", "light"].includes(type)) return;
+        const flicker = type === "fire" ? Math.sin(time / 95) * 5 : Math.sin(time / 420) * 2;
+        const y = item.y - (type === "fire" ? 24 : 30);
+        const radius = (type === "fire" ? 46 : 58) + flicker;
+        this.lightFx.fillStyle(type === "fire" ? 0xffa33a : 0xffefad, .07 + this.nightStrength * .14).fillCircle(item.x, y, radius * 1.75);
+        this.lightFx.fillStyle(type === "fire" ? 0xffc55a : 0xfff5c8, .12 + this.nightStrength * .2).fillCircle(item.x, y, radius);
+      });
     }
 
     syncPlacement(detail = {}) {
@@ -410,6 +475,7 @@
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
       this.ratActor?.setVisible(this.sceneName === "world" && this.ratActive);
       this.placedObjectActors?.forEach((actor) => actor.setVisible(this.sceneName === "world"));
+      this.updateWorldAtmosphere(performance.now());
     }
 
     nudge(direction) {
@@ -434,6 +500,7 @@
 
     update(time, delta) {
       if (this.mountTransitioning) return;
+      this.updateWorldAtmosphere(time);
       this.updateRat(time, delta);
       const inputAllowed = !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);
       let direction = performance.now() < this.forcedUntil ? this.forcedDirection : null;

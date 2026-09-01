@@ -406,6 +406,9 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     for asset in (
         "carrot-forest-storage-atlas-v2.png",
         "carrot-forest-reward-cow-v1.png",
+        "carrot-forest-reward-cow-body-v2.png",
+        "carrot-forest-reward-cow-base-v2.png",
+        "carrot-forest-campfire-off-v2.png",
         "carrot-forest-lpc-pets-v1.png",
         "town-pro-sensory-cc0.mp3",
         "carrot-forest-main-theme.mp3",
@@ -417,7 +420,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v89" in worker
+    assert "gandang-carrot-forest-pwa-v90" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -557,6 +560,28 @@ def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
     assert 'actor.setData("interactive", true)' in phaser_script
     assert "if (!type || item.active)" in phaser_script
     assert "this.tweens.killTweensOf(actor)" in phaser_script
+    assert 'actor.getData("fireOffTarget")?.setVisible(!item.active)' in phaser_script
+    assert 'actor.getData("fireOnTarget")?.setVisible(Boolean(item.active))' in phaser_script
+    assert "actor.setPosition(item.x, item.y).setAlpha(1)" in phaser_script
+    assert 'actor.setData("motionTarget", body)' in phaser_script
+
+
+def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert "ambientStrengthForHour" in phaser_script
+    assert "currentLocalHour" in phaser_script
+    assert "updateWorldAtmosphere(time)" in phaser_script
+    assert "this.nightOverlay" in phaser_script
+    assert "this.lightFx" in phaser_script
+    assert "this.waterRippleFx" in phaser_script
+    assert "strokeEllipse" in phaser_script
+    assert 'new Set(["duck_float", "animated_fountain"])' in game_script
+    assert "if (waterObjectCodes.has(placementCode))" in game_script
+    assert "const inPond = x >= 64 && x <= 288" in game_script
+    assert "white-space:nowrap;writing-mode:horizontal-tb" in css
 
 
 def test_wild_rat_is_a_separate_attack_reward_event() -> None:

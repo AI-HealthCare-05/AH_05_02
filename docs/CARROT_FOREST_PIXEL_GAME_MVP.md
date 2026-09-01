@@ -26,7 +26,9 @@
 - 게임 제작 도구를 닮은 월드 스튜디오 UI: 좌측 작업 도구, 중앙 Canvas, 우측 퀘스트 인스펙터, 하단 에셋 라이브러리
 - 작업 영역 바로가기, 월드 확대·화면 맞춤, 위치 초기화, 실시간 좌표 HUD
 - 저작권 음원을 복제하지 않은 Web Audio 기반 오리지널 숲 배경음악과 재생·정지
-- 숲 월드·집 내부 홈피·공동 당근밭을 서로 분리한 장면 전환
+- 숲 월드·집 내부 홈피·당근밭을 서로 분리한 장면 전환
+- 사용자 현지 시각에 따른 낮·황혼·밤 조명과 야간 등불·모닥불 주변광
+- 반복되는 연못 물결과 연못 전용 격자에 배치하는 오리·분수 오브젝트
 - 집·당근밭·연못 클릭 및 근접 `Q` 상호작용, 소파 휴식·옷장·물주기·낚시 연결
 - `R` 달리기, `C` 채팅, `X` 앉기, `E` 숲 스쿠터 승하차
 - 옷장(아바타 액세서리)과 창고(숲 오브젝트)를 분리한 에셋 관리
@@ -117,7 +119,9 @@ python scripts/build_modular_avatar_atlas.py
 - `scripts/build_storage_object_atlas.py`: 비균등 원본 시트의 연결 알파 영역을 찾아 이웃 픽셀 없이 v3 아틀라스를 재현하는 스크립트
 - `src/frontend/assets/carrot-forest-animated-objects-v1.png`: 프로젝트에서 생성한 4종 × 4프레임 투명 움직이는 오브젝트 아틀라스
 - `scripts/build_animated_object_atlas.py`: 생성 원화를 128×128 정수 셀 4×4 실행 아틀라스로 정규화하는 재현 스크립트
-- `src/frontend/assets/carrot-forest-reward-cow-v1.png`: 공동 목표 보상으로 창고에 지급되는 희귀 꾸미기 오브젝트 `행운의 젖소`
+- `src/frontend/assets/carrot-forest-reward-cow-v1.png`: 공동 목표 보상 썸네일용 희귀 꾸미기 오브젝트 `행운의 젖소`
+- `src/frontend/assets/carrot-forest-reward-cow-body-v2.png`, `carrot-forest-reward-cow-base-v2.png`: `Q`/클릭으로 소 본체만 움직이고 잔디 받침은 고정되도록 분리한 실행용 레이어
+- `src/frontend/assets/carrot-forest-campfire-off-v2.png`: 모닥불을 끌 때 돌·장작은 남기고 불꽃만 사라지게 하는 정지 자산
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭

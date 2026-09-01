@@ -86,6 +86,7 @@
   ];
   const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const waterObjectCodes = new Set(["duck_float", "animated_fountain"]);
   const interactiveObjectTypes = {
     reward_cow: "cow",
     campfire: "fire",
@@ -1499,7 +1500,11 @@
   }
 
   function placementCellValid(x, y) {
-    if (currentScene !== "world" || blocked(x, y)) return false;
+    if (currentScene !== "world") return false;
+    const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
+    if (waterObjectCodes.has(placementCode)) {
+      if (!inPond) return false;
+    } else if (blocked(x, y) || inPond) return false;
     return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 44);
   }
 

@@ -93,3 +93,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
   .avatar-item-grid{overflow-y:visible}
   .avatar-preview-panel{position:sticky;top:0;align-self:start;box-sizing:border-box;width:100%;height:calc(min(760px,100dvh - 28px) - 72px);max-height:none}
 }
+
+/* 배치 목록의 회수 버튼은 좁은 패널에서도 가로 문장을 유지한다. */
+.placed-object-row{grid-template-columns:24px minmax(0,1fr) max-content}
+.placed-object-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.placed-object-row small,.placed-object-row .remove-object{white-space:nowrap;writing-mode:horizontal-tb}
