@@ -48,7 +48,7 @@ def test_hidden_custom_challenge_fields_do_not_block_standard_challenge_submit()
 
     assert 'id="custom-challenge-title"' in html
     assert 'id="custom-challenge-goal"' in html
-    assert 'required disabled' in html
+    assert "required disabled" in html
     assert '["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"]' in frontend
     assert "$(selector).disabled = false" in frontend
     assert "$(selector).disabled = true" in frontend
