@@ -119,8 +119,8 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
-- `src/frontend/assets/when-the-morning-comes.mp3`: 사용자가 제공한 로컬 시연용 배경음악. 외부 배포 전 저작권·배포 권한을 확인하고, 권한이 불명확하면 라이선스가 확인된 대체 음원으로 교체한다.
-- `src/frontend/assets/avatar-title.mp3`: 사용자가 제공한 아바타 꾸미기 화면 전용 음악. 꾸미기 창을 닫으면 숲 배경음악으로 복귀하며, 외부 배포 전 사용 권한을 별도로 확인한다.
+- `src/frontend/assets/carrot-forest-original.wav`: 당근의 숲 메인 화면용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
+- `src/frontend/assets/avatar-studio-original.wav`: 아바타 꾸미기 화면용 오리지널 루프 BGM. 꾸미기 창을 닫으면 숲 배경음악으로 복귀한다.
 - `src/frontend/assets/home-elfwood.mp3`: 사용자가 제공한 집 내부 전용 배경음악. 집 입장 시 전환되고 집 밖으로 나오면 숲 배경음악으로 복귀한다.
 - `src/frontend/assets/garden-floral-life.mp3`: 사용자가 제공한 당근밭 전용 배경음악. 당근밭 입장 시 전환되고 밖으로 나오면 숲 배경음악으로 복귀한다.
 - `src/frontend/assets/reward-chest-success.mp3`: 사용자가 제공한 오늘의 보물상자 개봉 전용 효과음. 개봉 중 배경음악 볼륨을 낮추고 연출 종료·건너뛰기 시 원래 볼륨으로 복구한다.

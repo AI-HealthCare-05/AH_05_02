@@ -697,10 +697,10 @@
   class CozyForestMusic {
     constructor() {
       this.tracks = {
-        forest: new Audio("/static/assets/when-the-morning-comes.mp3"),
+        forest: new Audio("/static/assets/carrot-forest-original.wav"),
         home: new Audio("/static/assets/home-elfwood.mp3"),
         garden: new Audio("/static/assets/garden-floral-life.mp3"),
-        avatar: new Audio("/static/assets/avatar-title.mp3"),
+        avatar: new Audio("/static/assets/avatar-studio-original.wav"),
       };
       Object.values(this.tracks).forEach((track) => {
         track.loop = true;
