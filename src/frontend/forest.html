@@ -42,12 +42,12 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260901-24" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260901-25" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260901-24" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260901-21" defer></script>
-  <script src="/static/forest-game.js?v=20260901-61" defer></script>
+  <script src="/static/forest-game.js?v=20260901-62" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
@@ -64,9 +64,16 @@
       <div class="volume-control">
         <button id="volume-toggle" class="icon-button" type="button" aria-expanded="false" aria-controls="volume-panel">음량</button>
         <div id="volume-panel" class="volume-panel" hidden>
-          <label for="music-volume"><span>배경음악 음량</span><output id="music-volume-value">24%</output></label>
-          <input id="music-volume" type="range" min="0" max="100" step="1" value="24">
-          <button id="music-mute" class="plain-button" type="button" aria-pressed="false">음소거</button>
+          <section class="volume-channel" aria-labelledby="bgm-volume-title">
+            <label for="music-volume"><span id="bgm-volume-title">배경음악 음량</span><output id="music-volume-value">24%</output></label>
+            <input id="music-volume" type="range" min="0" max="100" step="1" value="24">
+            <button id="music-mute" class="plain-button" type="button" aria-pressed="false">배경음악 음소거</button>
+          </section>
+          <section class="volume-channel" aria-labelledby="sfx-volume-title">
+            <label for="sfx-volume"><span id="sfx-volume-title">효과음 음량</span><output id="sfx-volume-value">100%</output></label>
+            <input id="sfx-volume" type="range" min="0" max="100" step="1" value="100">
+            <button id="sfx-mute" class="plain-button" type="button" aria-pressed="false">효과음 음소거</button>
+          </section>
         </div>
       </div>
       <button id="atmosphere-toggle" class="icon-button" type="button" aria-pressed="true" aria-label="날씨·시간 효과 켜짐">날씨·시간</button>

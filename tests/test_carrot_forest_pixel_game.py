@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v101" in worker
+    assert "gandang-carrot-forest-pwa-v102" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -681,15 +681,27 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert 'this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.87)' in phaser_script
 
 
-def test_bgm_volume_and_mute_controls_are_connected() -> None:
+def test_bgm_and_sfx_volume_and_mute_controls_are_separated() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    for control_id in ("music-toggle", "volume-toggle", "music-volume", "music-mute"):
+    for control_id in (
+        "music-toggle",
+        "volume-toggle",
+        "music-volume",
+        "music-mute",
+        "sfx-volume",
+        "sfx-mute",
+    ):
         assert f'id="{control_id}"' in html
     assert ">BGM</button>" in html
+    assert "배경음악 음량" in html
+    assert "효과음 음량" in html
     assert "BGM_VOLUME_KEY" in game_script
     assert "BGM_MUTED_KEY" in game_script
+    assert "SFX_VOLUME_KEY" in game_script
+    assert "SFX_MUTED_KEY" in game_script
+    assert "sfxEngine.effectiveVolume(.42)" in game_script
     assert "setVolume(value)" in game_script
     assert "setMuted(muted)" in game_script
 

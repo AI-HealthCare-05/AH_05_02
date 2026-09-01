@@ -5,6 +5,8 @@
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const BGM_VOLUME_KEY = "gandang-carrot-forest-bgm-volume-v1";
   const BGM_MUTED_KEY = "gandang-carrot-forest-bgm-muted-v1";
+  const SFX_VOLUME_KEY = "gandang-carrot-forest-sfx-volume-v1";
+  const SFX_MUTED_KEY = "gandang-carrot-forest-sfx-muted-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
@@ -791,7 +793,21 @@
         "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off", "cow-toggle",
       ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
       Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(SFX_VOLUME_KEY) ?? 1)));
+      this.muted = localStorage.getItem(SFX_MUTED_KEY) === "true";
       this.lastPlayed = new Map();
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(SFX_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(SFX_MUTED_KEY, String(this.muted));
+    }
+    effectiveVolume(volume) {
+      return this.muted ? 0 : Math.max(0, Math.min(1, volume * this.volume));
     }
     play(name, { volume = 0.32, rate = 1, minInterval = 0 } = {}) {
       const source = this.tracks[name];
@@ -800,7 +816,7 @@
       if (now - (this.lastPlayed.get(name) || 0) < minInterval) return;
       this.lastPlayed.set(name, now);
       const player = source.cloneNode();
-      player.volume = Math.max(0, Math.min(1, volume));
+      player.volume = this.effectiveVolume(volume);
       player.playbackRate = Math.max(0.5, Math.min(2, rate));
       player.play().catch(() => {});
     }
@@ -3072,14 +3088,24 @@
   const volumeSlider = $("#music-volume");
   const volumeValue = $("#music-volume-value");
   const muteButton = $("#music-mute");
+  const sfxVolumeSlider = $("#sfx-volume");
+  const sfxVolumeValue = $("#sfx-volume-value");
+  const sfxMuteButton = $("#sfx-mute");
   const syncVolumeControls = () => {
     musicEngine ||= new CozyForestMusic();
+    sfxEngine ||= new ForestSfx();
     const percentage = Math.round(musicEngine.volume * 100);
+    const sfxPercentage = Math.round(sfxEngine.volume * 100);
     volumeSlider.value = String(percentage);
     volumeValue.value = `${percentage}%`;
     muteButton.setAttribute("aria-pressed", String(musicEngine.muted));
-    muteButton.textContent = musicEngine.muted ? "음소거 해제" : "음소거";
-    volumeToggle.setAttribute("aria-label", `BGM 음량 ${musicEngine.muted ? "음소거" : `${percentage}%`}`);
+    muteButton.textContent = musicEngine.muted ? "배경음악 음소거 해제" : "배경음악 음소거";
+    sfxVolumeSlider.value = String(sfxPercentage);
+    sfxVolumeValue.value = `${sfxPercentage}%`;
+    sfxMuteButton.setAttribute("aria-pressed", String(sfxEngine.muted));
+    sfxMuteButton.textContent = sfxEngine.muted ? "효과음 음소거 해제" : "효과음 음소거";
+    rewardChestSound.volume = sfxEngine.effectiveVolume(.42);
+    volumeToggle.setAttribute("aria-label", `음량 설정, 배경음악 ${musicEngine.muted ? "음소거" : `${percentage}%`}, 효과음 ${sfxEngine.muted ? "음소거" : `${sfxPercentage}%`}`);
   };
   syncVolumeControls();
   volumeToggle.addEventListener("click", () => {
@@ -3094,6 +3120,14 @@
   });
   muteButton.addEventListener("click", () => {
     musicEngine.setMuted(!musicEngine.muted);
+    syncVolumeControls();
+  });
+  sfxVolumeSlider.addEventListener("input", () => {
+    sfxEngine.setVolume(Number(sfxVolumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  sfxMuteButton.addEventListener("click", () => {
+    sfxEngine.setMuted(!sfxEngine.muted);
     syncVolumeControls();
   });
 
