@@ -20,7 +20,7 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    for label in ("오늘의 퀘스트", "5명 공동 목표", "옷장 · 창고", "배치한 오브젝트"):
+    for label in ("오늘의 퀘스트", "5명 공동 목표", "옷장", "창고", "배치한 오브젝트"):
         assert label in html
     for landmark in ("drawMap", "drawTree", "당근밭", "공동 나무"):
         assert landmark in html + script
@@ -66,7 +66,7 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    for label in ("당근의 숲 작업실", "작업 도구", "ASSET LIBRARY", "SCENE OBJECTS"):
+    for label in ("당근의 숲 작업실", "작업 도구", "SCENE OBJECTS"):
         assert label in html
     for control_id in ("reset-position", "zoom-toggle", "avatar-coordinate", "object-count"):
         assert f'id="{control_id}"' in html
@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v99" in worker
+    assert "gandang-carrot-forest-pwa-v101" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -656,7 +656,8 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     for action in ("jump", "run", "interact", "ride", "attack"):
         assert f'data-action="{action}"' in html
     assert '<button class="arcade-action action-jump"' in html
-    assert "<span>점프</span>" in html
+    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)", "공격 (Z)"):
+        assert f"<span>{label}</span>" in html
     assert "data-footer-tool=" not in html
     assert 'class="asset-dock footer-assets"' in html
     assert html.index('class="asset-dock footer-assets"') > html.index('class="stage-footer arcade-deck"')
@@ -784,7 +785,8 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     assert "나만의 코디 1" in game_script
     assert "nextOutfitNumber" in game_script
     assert "data-outfit-name-form" in game_script
-    assert "<strong>${safeLabel}</strong>" in game_script
+    assert 'look.presetRole === "female" ? "프리셋1" : "프리셋2"' in game_script
+    assert '<div class="outfit-name-form fixed-preset-name"><small>${presetLabel}</small></div>' in game_script
     assert 'value="${safeLabel}"' in game_script
     assert "renameOutfit" in game_script
     assert "applyRequestedDefaultOutfit" in game_script
@@ -819,6 +821,21 @@ def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     assert '$("#avatar-gender").addEventListener("change"' in game_script
     assert "기본 프리셋 이름은 변경할 수 없습니다." in game_script
     assert "fixed-preset-name" in game_script
+
+
+def test_footer_wardrobe_and_storage_use_single_row_wheel_carousels() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert 'id="inventory-title" class="sr-only"' in html
+    assert 'id="placement-mode" class="sr-only"' in html
+    assert 'id="cancel-placement"' in html
+    assert '[$("#wardrobe-list"), $("#storage-list")]' in game_script
+    assert 'carousel.addEventListener("wheel"' in game_script
+    assert "carousel.scrollLeft += event.deltaY" in game_script
+    assert ".stage-footer #storage-list{display:flex;flex-wrap:nowrap" in css
+    assert "scroll-snap-type:x proximity" in css
 
 
 def test_storage_placement_uses_grid_rotation_and_explicit_confirmation() -> None:

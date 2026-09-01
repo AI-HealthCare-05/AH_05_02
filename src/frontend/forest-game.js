@@ -724,6 +724,7 @@
   });
   window.addEventListener("lpc-avatar-assets-updated", () => {
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
@@ -1693,8 +1694,9 @@
     const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
     const safeId = escapeMarkup(look.id);
     const safeLabel = escapeMarkup(look.label);
+    const presetLabel = look.presetRole === "female" ? "프리셋1" : "프리셋2";
     const nameControl = look.presetRole
-      ? `<div class="outfit-name-form fixed-preset-name"><strong>${safeLabel}</strong><small>기본 프리셋</small></div>`
+      ? `<div class="outfit-name-form fixed-preset-name"><small>${presetLabel}</small></div>`
       : `<form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form>`;
     return `<article class="recent-outfit-entry${compact ? " is-compact" : ""}"><button class="recent-outfit-card" type="button" data-outfit-look="${safeId}" aria-label="${safeLabel}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${safeId}" aria-hidden="true"></canvas><small>${timestamp}</small></button>${nameControl}</article>`;
   }
@@ -2611,6 +2613,13 @@
     if (!form) return;
     event.preventDefault();
     await renameOutfit(form.dataset.outfitNameForm, new FormData(form).get("outfit-name"));
+  });
+  [$("#wardrobe-list"), $("#storage-list")].forEach((carousel) => {
+    carousel.addEventListener("wheel", (event) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      event.preventDefault();
+      carousel.scrollLeft += event.deltaY;
+    }, { passive: false });
   });
 
   $("#cancel-placement").addEventListener("click", () => cancelPlacement());

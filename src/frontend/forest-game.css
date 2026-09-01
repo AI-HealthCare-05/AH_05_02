@@ -155,3 +155,15 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 @media(max-width:1100px){.stage-footer.arcade-deck{grid-template-columns:1fr;grid-template-areas:"controls" "assets"}.arcade-deck .control-cluster{width:min(100%,340px)}.stage-footer .asset-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:820px){.workspace{grid-template-areas:"rail" "stage" "inspector" "objects"}}
 @media(max-width:620px){.stage-footer .asset-library-grid{grid-template-columns:1fr;height:auto}.stage-footer .asset-group{min-height:170px}.volume-panel{position:fixed;top:76px;right:10px;left:10px;width:auto}}
+
+/* Compact horizontal wardrobe and storage carousels. */
+.stage-footer .asset-library-grid{height:100%}
+.stage-footer .asset-group{grid-template-rows:42px minmax(0,1fr);min-height:198px;max-height:198px;overflow:hidden}
+.stage-footer .asset-group-title{min-width:0}.stage-footer .asset-group-title>div{min-width:0}.stage-footer .asset-group-title p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage-footer .asset-group-title #cancel-placement{margin-left:auto;min-height:32px;padding:4px 8px;font-size:10px}
+.stage-footer .asset-group .inventory-list,.stage-footer #storage-list{display:flex;flex-wrap:nowrap;align-items:stretch;gap:8px;width:100%;height:136px;max-height:136px;margin:0;padding:3px 3px 8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-inline:contain;scrollbar-width:thin}
+.stage-footer .recent-outfit-entry{flex:0 0 112px;grid-template-rows:100px 28px;gap:3px;height:131px;scroll-snap-align:start}
+.stage-footer .recent-outfit-card{min-height:100px;height:100px;padding:3px}.stage-footer .recent-outfit-card canvas{width:72px;height:72px}.stage-footer .recent-outfit-card small{font-size:8px}
+.stage-footer .outfit-name-form{height:28px}.stage-footer .outfit-name-form input,.stage-footer .outfit-name-form button{min-height:28px;height:28px;padding:2px 5px}.stage-footer .fixed-preset-name{display:grid;place-items:center;text-align:center}.stage-footer .fixed-preset-name small{color:var(--ink);font-size:11px;font-weight:900}
+.stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .storage-reward-cow{width:86px!important;height:86px!important}
+@media(max-width:620px){.stage-footer .asset-group{min-height:198px;max-height:198px}.stage-footer .asset-library-grid{height:auto}}
