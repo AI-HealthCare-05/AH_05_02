@@ -267,8 +267,8 @@ def build_home_canopy() -> list[float]:  # noqa: C901
 
 
 def build_fresh_main() -> list[float]:
-    """Build a cozy 94-second woodland-cafe waltz with a gentle crescendo."""
-    bpm = 92
+    """Build a warm, wistful 111-second woodland-restaurant waltz."""
+    bpm = 78
     beat = 60 / bpm
     bars = 48
     beats_per_bar = 3
@@ -277,37 +277,42 @@ def build_fresh_main() -> list[float]:
     chords = (
         (48, 52, 55, 59),
         (45, 48, 52, 55),
-        (53, 57, 60, 64),
-        (55, 59, 62, 65),
+        (50, 53, 57, 60),
+        (43, 47, 50, 53),
         (52, 55, 59, 64),
-        (57, 60, 64, 67),
+        (45, 48, 52, 57),
         (53, 57, 60, 64),
-        (55, 59, 62, 67),
+        (43, 47, 50, 53),
     )
-    bass = (36, 33, 41, 43, 40, 45, 41, 43)
-    melody = (
-        (0.0, 67, 0.38),
-        (0.5, 71, 0.28),
-        (1.0, 72, 0.55),
-        (1.75, 76, 0.28),
-        (2.0, 74, 0.55),
-        (2.65, 71, 0.25),
+    bass = (36, 33, 38, 31, 40, 33, 41, 31)
+    motif_a = (
+        (0.0, 64, 0.60),
+        (1.0, 67, 0.48),
+        (2.0, 69, 0.62),
+    )
+    motif_b = (
+        (0.0, 67, 0.50),
+        (0.75, 65, 0.30),
+        (1.25, 64, 0.55),
+        (2.25, 62, 0.48),
     )
     for bar in range(bars):
         start = bar * beats_per_bar * beat
         section = bar // 12
         chord = chords[bar % len(chords)]
-        add_chord(track, start, beats_per_bar * beat, chord, (0.13, 0.16, 0.19, 0.21)[section])
-        for offset, note, length in melody:
+        add_chord(track, start, beats_per_bar * beat, chord, (0.12, 0.145, 0.17, 0.19)[section])
+        phrase = motif_a if bar % 4 in (0, 1) else motif_b
+        for offset, note, length in phrase:
             add_note(
                 track,
                 start + offset * beat,
                 length * beat,
-                note + (12 if section == 3 and bar % 4 == 3 else 0),
-                0.11 + 0.010 * section,
-                kind="bell",
-                release=0.18,
-                decay=1.55,
+                note,
+                0.080 + 0.009 * section,
+                kind="wood",
+                attack=0.045,
+                release=0.30,
+                decay=0.75,
             )
 
         # Waltz pulse: a warm bass note followed by two light wooden chords.
@@ -316,7 +321,7 @@ def build_fresh_main() -> list[float]:
             start,
             0.62 * beat,
             bass[bar % len(bass)],
-            0.075 + 0.010 * section,
+            0.065 + 0.008 * section,
             kind="triangle",
             release=0.16,
         )
@@ -328,24 +333,26 @@ def build_fresh_main() -> list[float]:
                         start + pulse * beat,
                         0.38 * beat,
                         chord_note + 12,
-                        0.018 + 0.005 * section,
+                        0.014 + 0.004 * section,
                         kind="wood",
                         release=0.10,
                         decay=1.8,
                     )
-        if section >= 2:
-            for eighth in range(6):
+        if section >= 2 and bar % 2 == 1:
+            for eighth in (1, 3, 5):
                 add_note(
                     track,
                     start + eighth * beat / 2,
                     0.18 * beat,
                     chord[(eighth + bar) % len(chord)] + 24,
-                    0.028 + 0.006 * section,
+                    0.018 + 0.005 * section,
                     kind="bell",
                     release=0.09,
                     decay=2.2,
                 )
-                add_shaker(track, start + eighth * beat / 2, 0.005 if eighth % 2 else 0.009, rng)
+        if section == 3:
+            for pulse in range(6):
+                add_shaker(track, start + pulse * beat / 2, 0.0035 if pulse % 2 else 0.006, rng)
     return track
 
 

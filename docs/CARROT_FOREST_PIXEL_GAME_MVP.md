@@ -119,7 +119,7 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
-- `src/frontend/assets/forest-main-breeze-original.wav`: 당근의 숲 메인 화면용 94초 오리지널 루프 BGM. 포근한 숲속 카페 왈츠처럼 베이스·나무 악기·벨이 단계적으로 추가된다.
+- `src/frontend/assets/forest-main-breeze-original.wav`: 당근의 숲 메인 화면용 111초 오리지널 루프 BGM. 느린 3박자 위에 따뜻한 베이스·나무 악기·드문 벨이 쌓이는 포근하고 아련한 숲속 레스토랑 분위기다.
 - `src/frontend/assets/forest-canopy-original.wav`: 집 내부용 96초 오리지널 루프 BGM. 잔잔하게 시작해 밝은 벨과 높은 음역이 단계적으로 추가된다.
 - `src/frontend/assets/carrot-forest-original.wav`: 당근밭 전용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
 - `src/frontend/assets/avatar-studio-original.wav`: 아바타 꾸미기 화면용 오리지널 루프 BGM. 꾸미기 창을 닫으면 숲 배경음악으로 복귀한다.
