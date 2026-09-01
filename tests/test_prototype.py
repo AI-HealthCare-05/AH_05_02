@@ -217,10 +217,11 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'name: $("#display-name").value' not in script
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
-    assert "email, password, gender, birth_date: birthDate" in script
-    assert 'terms_agreed: $("#personal-consent").checked' not in script
-    assert 'api("/users/me", { method: "PATCH"' in script
-    assert 'api("/users/me/profile", { method: "PATCH"' not in script
+    assert 'email, password, terms_agreed: $("#personal-consent").checked' in script
+    assert "email, password, gender, birth_date: birthDate" not in script
+    assert 'api("/users/me/profile", { method: "PATCH"' in script
+    assert 'api("/users/me", { method: "PATCH"' not in script
+    assert "birthday: birthDate" in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
