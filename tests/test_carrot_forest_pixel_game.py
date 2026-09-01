@@ -186,6 +186,8 @@ def test_forest_onboarding_rag_collaboration_and_tool_routes_are_connected() -> 
     assert "오늘까지의 챌린지 결과를 토대로 챌린지 생성 중" in html
     assert "내 생활습관 지도" in html
     assert "내 생활습관 지도(RAG)" not in html
+    assert '<button type="submit">검색</button>' in html
+    assert "근거 찾기" not in html
     assert "사진 인증 없이" not in html
     assert "당뇨 예방 챌린지" in html
     assert "who.int/publications" in script
@@ -420,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v91" in worker
+    assert "gandang-carrot-forest-pwa-v94" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -567,6 +569,7 @@ def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
 
 
 def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
@@ -576,6 +579,10 @@ def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
     assert "updateWorldAtmosphere(time)" in phaser_script
     assert "this.nightOverlay" in phaser_script
     assert "this.lightFx" in phaser_script
+    assert 'id="atmosphere-toggle"' in html
+    assert "날씨·시간 적용 ON" in html
+    assert "forest-atmosphere-updated" in game_script
+    assert "this.atmosphereEnabled" in phaser_script
     assert ".setDepth(0.5).setAlpha(0).setVisible(false)" in phaser_script
     assert "this.add.graphics().setDepth(1.5)" in phaser_script
     assert "[218, 430, 30]" in phaser_script
@@ -631,6 +638,8 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
 
     assert "arcade-deck" in html
+    assert "WASD로도 움직일 수 있어요." in html
+    assert "숲 조작 패널" not in html
     assert 'data-action="feed"' in html
     assert "async function feedPet" in game_script
     assert 'new CustomEvent("forest-pet-fed"' in game_script

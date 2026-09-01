@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
+  const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
@@ -2805,6 +2806,20 @@
     const enabled = document.body.classList.toggle("large-text");
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
     event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
+  });
+
+  const atmosphereButton = $("#atmosphere-toggle");
+  const updateAtmosphereButton = (enabled) => {
+    atmosphereButton.setAttribute("aria-pressed", String(enabled));
+    atmosphereButton.textContent = `날씨·시간 적용 ${enabled ? "ON" : "OFF"}`;
+  };
+  updateAtmosphereButton(localStorage.getItem(ATMOSPHERE_KEY) !== "off");
+  atmosphereButton.addEventListener("click", () => {
+    const enabled = atmosphereButton.getAttribute("aria-pressed") !== "true";
+    localStorage.setItem(ATMOSPHERE_KEY, enabled ? "on" : "off");
+    updateAtmosphereButton(enabled);
+    window.dispatchEvent(new CustomEvent("forest-atmosphere-updated", { detail: { enabled } }));
+    setStatus(enabled ? "현재 시간에 맞춰 숲의 밝기를 적용합니다." : "날씨·시간 효과를 끄고 주간 밝기로 표시합니다.");
   });
 
   document.querySelectorAll("[data-workspace-target]").forEach((button) => {

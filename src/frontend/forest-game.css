@@ -98,3 +98,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .placed-object-row{grid-template-columns:24px minmax(0,1fr) max-content}
 .placed-object-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .placed-object-row small,.placed-object-row .remove-object{white-space:nowrap;writing-mode:horizontal-tb}
+
+/* Keep the controls compact: only the alternative WASD hint remains. */
+.stage-footer.arcade-deck{grid-template-areas:"marquee controls"}
+.arcade-marquee strong{font-size:14px}
+@media(max-width:900px){.stage-footer.arcade-deck{grid-template-areas:"marquee" "controls"}}

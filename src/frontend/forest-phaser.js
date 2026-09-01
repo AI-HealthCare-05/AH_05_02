@@ -4,6 +4,7 @@
   if (!window.Phaser || !document.getElementById("phaser-world")) return;
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
+  const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const WORLD = { width: 768, height: 512 };
   const AVATAR_RENDER_SCALE = 0.43;
   const NAMEPLATE_Y = -126;
@@ -66,6 +67,7 @@
       super("forest-world");
       this.avatar = normalizedAvatar(storedState().avatar);
       this.sceneName = "world";
+      this.atmosphereEnabled = localStorage.getItem(ATMOSPHERE_KEY) !== "off";
       this.lastPersist = 0;
       this.forcedDirection = null;
       this.forcedUntil = 0;
@@ -291,7 +293,7 @@
       if (!this.nightOverlay || !this.lightFx || !this.waterRippleFx) return;
       const worldVisible = this.sceneName === "world";
       if (time - this.lastLightingRefresh > 30000 || this.lastLightingRefresh === 0) {
-        this.nightStrength = this.ambientStrengthForHour(this.currentLocalHour());
+        this.nightStrength = this.atmosphereEnabled ? this.ambientStrengthForHour(this.currentLocalHour()) : 0;
         this.lastLightingRefresh = time;
       }
       this.nightOverlay.setVisible(worldVisible && this.nightStrength > 0).setAlpha(this.nightStrength);
@@ -375,6 +377,12 @@
       window.addEventListener("forest-pet-fed", this.onPetFed);
       this.onPlacement = (event) => this.syncPlacement(event.detail || {});
       window.addEventListener("forest-placement-updated", this.onPlacement);
+      this.onAtmosphere = (event) => {
+        this.atmosphereEnabled = event.detail?.enabled !== false;
+        this.lastLightingRefresh = 0;
+        this.updateWorldAtmosphere(performance.now());
+      };
+      window.addEventListener("forest-atmosphere-updated", this.onAtmosphere);
     }
 
     detachWindowEvents() {
@@ -383,6 +391,7 @@
       window.removeEventListener("forest-avatar-action", this.onAction);
       window.removeEventListener("forest-pet-fed", this.onPetFed);
       window.removeEventListener("forest-placement-updated", this.onPlacement);
+      window.removeEventListener("forest-atmosphere-updated", this.onAtmosphere);
     }
 
     showPetHeart() {
