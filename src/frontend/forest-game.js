@@ -637,6 +637,7 @@
   let placementDraft = null;
   let running = false;
   let musicEngine = null;
+  let sfxEngine = null;
   const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
   rewardChestSound.preload = "auto";
   rewardChestSound.volume = .42;
@@ -737,6 +738,46 @@
       Object.values(this.tracks).forEach((track) => track.pause());
     }
   }
+
+  class ForestSfx {
+    constructor() {
+      const root = "/static/assets/sfx";
+      this.tracks = Object.fromEntries([
+        "step-grass", "run-grass", "door-open", "sit-cloth", "mount", "harvest", "water",
+        "fishing-cast", "fishing-catch", "attack-sword", "attack-bow", "attack-magic",
+        "rat-caught", "pet-feed", "dance", "place-object",
+      ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
+      Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
+      this.lastPlayed = new Map();
+    }
+    play(name, { volume = 0.32, rate = 1, minInterval = 0 } = {}) {
+      const source = this.tracks[name];
+      if (!source) return;
+      const now = performance.now();
+      if (now - (this.lastPlayed.get(name) || 0) < minInterval) return;
+      this.lastPlayed.set(name, now);
+      const player = source.cloneNode();
+      player.volume = Math.max(0, Math.min(1, volume));
+      player.playbackRate = Math.max(0.5, Math.min(2, rate));
+      player.play().catch(() => {});
+    }
+  }
+
+  function playSfx(name, options) {
+    sfxEngine ||= new ForestSfx();
+    sfxEngine.play(name, options);
+  }
+
+  function weaponSfxName(weapon = state.avatar.cosmetics?.lpcWeapon) {
+    if (weapon === "bow") return "attack-bow";
+    if (["wand", "cane"].includes(weapon)) return "attack-magic";
+    return "attack-sword";
+  }
+
+  window.addEventListener("forest-sfx", (event) => {
+    const detail = typeof event.detail === "string" ? { name: event.detail } : (event.detail || {});
+    if (detail.name) playSfx(detail.name, detail);
+  });
 
   function setStatus(message) { $("#game-status").textContent = message; }
   function sceneMusicName(scene = currentScene) {
@@ -1455,6 +1496,7 @@
     renderInventory();
     renderPlaced();
     emitPlacementUpdate();
+    playSfx("place-object", { volume: 0.3 });
     await persist(`${name} 배치를 확정했습니다.`);
   }
 
@@ -1472,7 +1514,11 @@
     walkingUntil = performance.now() + (state.avatar.mounted ? 260 : 220);
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
-    if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
+    if (!blocked(nextX, nextY)) {
+      state.avatar.x = nextX; state.avatar.y = nextY;
+      playSfx(running ? "run-grass" : "step-grass", { volume: 0.18, minInterval: running ? 170 : 260 });
+      renderCanvas(); await persist();
+    }
     else { renderCanvas(); setStatus("그쪽에는 집·나무·당근밭이 있어요. 다른 방향으로 움직여 주세요."); }
   }
 
@@ -1522,6 +1568,7 @@
     state.carrots += pending;
     const panel = $("#garden-harvest-panel");
     panel?.classList.add("is-harvesting");
+    playSfx("harvest", { volume: 0.38 });
     window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1500 } }));
     window.setTimeout(() => panel?.classList.remove("is-harvesting"), 1500);
     renderAll();
@@ -2543,6 +2590,7 @@
       }
     }
     state.avatar.sitting = !state.avatar.sitting;
+    playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
     await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
   }
@@ -2553,6 +2601,7 @@
     if (state.carrots < 1) { setStatus("펫에게 줄 당근이 없어요. 챌린지를 완료하고 당근밭에서 수확해 보세요."); return; }
     state.carrots -= 1;
     state.petFedCount = (state.petFedCount || 0) + 1;
+    playSfx("pet-feed", { volume: 0.34 });
     window.dispatchEvent(new CustomEvent("forest-pet-fed", { detail: { pet, amount: 1 } }));
     renderAll();
     await persist("펫에게 당근 1개를 주었어요. 펫이 아주 좋아합니다! 💚");
@@ -2566,6 +2615,7 @@
       return;
     }
     state.avatar.mounted = !state.avatar.mounted;
+    playSfx("mount", { volume: 0.3 });
     state.avatar.sitting = false;
     walkingUntil = 0;
     walkAnimationFrame = 0;
@@ -2585,6 +2635,7 @@
   }
 
   function attackWithEquippedWeapon() {
+    if (!window.carrotForestPhaserActive) playSfx(weaponSfxName(), { volume: 0.34, minInterval: 280 });
     window.dispatchEvent(new CustomEvent("forest-avatar-action", {
       detail: { pose: "attack", duration: equippedWeaponDuration() },
     }));
@@ -2617,6 +2668,7 @@
   window.addEventListener("forest-rat-caught", async (event) => {
     const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
     state.carrots += amount;
+    playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
     $("#profile-carrots").textContent = String(state.carrots);
@@ -2733,12 +2785,14 @@
     const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
     if (!action) return;
     if (action === "enter_home") {
+      playSfx("door-open", { volume: 0.36 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("home");
       await persist("우리 집 안으로 들어왔습니다. 소파와 옷장을 이용해 보세요.");
     }
     if (action === "enter_garden") {
+      playSfx("door-open", { volume: 0.32, rate: 1.08 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("garden");
@@ -2747,6 +2801,7 @@
         : "당근 밭에 들어왔습니다. 챌린지를 완료하면 이곳에 당근이 자라요.");
     }
     if (action === "exit_scene") {
+      playSfx("door-open", { volume: 0.3, rate: 0.94 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("world");
@@ -2768,6 +2823,7 @@
       openAvatarStudio();
     }
     if (action === "water" && !state.gardenWatered) {
+      playSfx("water", { volume: 0.3 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1400 } }));
       state.gardenWatered = true;
       state.carrots += 10;
@@ -2789,6 +2845,8 @@
       await toggleRide(false);
     }
     if (action === "fish") {
+      playSfx("fishing-cast", { volume: 0.32 });
+      window.setTimeout(() => playSfx("fishing-catch", { volume: 0.38 }), 900);
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "fishing", duration: 2200 } }));
       const firstCatch = !state.fishCaught;
       currentScene = "world";
@@ -2808,6 +2866,7 @@
 
   $("#scene-exit").addEventListener("click", async () => {
     if (currentScene === "world") return;
+    playSfx("door-open", { volume: 0.3, rate: 0.94 });
     switchScene("world");
     await persist("우리의 작은 숲으로 돌아왔습니다.");
   });

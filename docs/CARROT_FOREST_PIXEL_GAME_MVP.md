@@ -128,6 +128,9 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-original.wav`: 당근밭 전용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
 - `src/frontend/assets/avatar-studio-original.wav`: 이전 아바타 꾸미기 화면용 오리지널 루프 BGM. 대체 후보로 보존한다.
 - `src/frontend/assets/reward-chest-success.mp3`: 사용자가 제공한 오늘의 보물상자 개봉 전용 효과음. 개봉 중 배경음악 볼륨을 낮추고 연출 종료·건너뛰기 시 원래 볼륨으로 복구한다.
+- `src/frontend/assets/sfx/*.wav`: 걷기·달리기·문 열기·앉기·탑승·수확·물주기·낚시·무기별 공격·쥐 처치·펫 먹이·댄스·오브젝트 배치에 사용하는 오리지널 효과음 16종이다. 외부 음원을 복제하지 않고 `scripts/generate_forest_sfx.py`의 발진기·노이즈 합성으로 생성하며, 배경음악과 분리된 `ForestSfx` 재생기로 짧게 겹쳐 재생한다.
+
+효과음은 행동 결과와 일치하는 시점에만 재생한다. 이동음은 일정 간격으로 제한하고 탈것 이동 중에는 반복하지 않는다. 검·단검은 베기, 활은 시위, 완드·지팡이는 마법 효과음을 자동 선택한다. 집·당근밭 출입, 낚시 성공, 야생 쥐 처치처럼 상태가 바뀌는 상호작용은 별도 완료음을 사용한다.
 - 첨부 화면은 픽셀 밀도·치비 비율·카드 가독성의 참고 자료로만 사용했으며 기존 캐릭터·아이템·로고·UI 이미지는 복제하지 않았다.
 - 원본 모음판을 갱신한 경우 `pip install -r requirements-assets.txt` 후 `python scripts/build_carrot_avatar_atlases.py`로 실행용 아틀라스를 재생성한다.
 

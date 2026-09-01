@@ -82,6 +82,7 @@
       this.ratEventId = 0;
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
+      this.lastStepSfxAt = 0;
     }
 
     preload() {
@@ -298,6 +299,12 @@
       this.actionPose = pose;
       this.actionUntil = performance.now() + duration;
       if (pose === "attack") this.tryAttackRat(performance.now());
+      if (pose === "attack") {
+        const weapon = this.avatar.cosmetics?.lpcWeapon;
+        const name = weapon === "bow" ? "attack-bow" : ["wand", "cane"].includes(weapon) ? "attack-magic" : "attack-sword";
+        window.dispatchEvent(new CustomEvent("forest-sfx", { detail: { name, volume: 0.34, minInterval: 280 } }));
+      }
+      if (pose === "dance") window.dispatchEvent(new CustomEvent("forest-sfx", { detail: { name: "dance", volume: 0.28, minInterval: 900 } }));
       if (pose === "dance") {
         this.petAction = "dance";
         this.petActionUntil = this.actionUntil;
@@ -420,6 +427,13 @@
       if (!this.isBlocked(nextX, nextY)) {
         this.avatar.x = nextX; this.avatar.y = nextY;
         this.player.setPosition(nextX, nextY).setDepth(nextY);
+        const stepInterval = running ? 190 : 310;
+        if (!this.avatar.mounted && time - this.lastStepSfxAt >= stepInterval) {
+          this.lastStepSfxAt = time;
+          window.dispatchEvent(new CustomEvent("forest-sfx", {
+            detail: { name: running ? "run-grass" : "step-grass", volume: running ? 0.19 : 0.15, minInterval: stepInterval - 20 },
+          }));
+        }
       }
       this.setPremiumFrame(direction, true, time, running);
       this.updatePet(time, delta, true);

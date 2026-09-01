@@ -416,7 +416,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v86" in worker
+    assert "gandang-carrot-forest-pwa-v87" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
@@ -493,6 +493,44 @@ def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
     assert "this.petFacing" in phaser_script
     assert 'this.petAction = nextAvatar.sitting ? "sit" : "idle"' in phaser_script
     assert 'event.key === "0"' in game_script
+
+
+def test_original_forest_sound_effects_are_generated_cached_and_event_driven() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    generator = (ROOT / "scripts/generate_forest_sfx.py").read_text(encoding="utf-8")
+
+    expected = {
+        "step-grass",
+        "run-grass",
+        "door-open",
+        "sit-cloth",
+        "mount",
+        "harvest",
+        "water",
+        "fishing-cast",
+        "fishing-catch",
+        "attack-sword",
+        "attack-bow",
+        "attack-magic",
+        "rat-caught",
+        "pet-feed",
+        "dance",
+        "place-object",
+    }
+    for name in expected:
+        asset = ROOT / "src/frontend/assets/sfx" / f"{name}.wav"
+        assert asset.is_file() and asset.stat().st_size > 4_000
+        assert f"/static/assets/sfx/{name}.wav" in worker
+        assert name in generator
+    assert "class ForestSfx" in game_script
+    assert 'window.addEventListener("forest-sfx"' in game_script
+    assert 'new CustomEvent("forest-sfx"' in phaser_script
+    assert "if (!this.avatar.mounted && time - this.lastStepSfxAt >= stepInterval)" in phaser_script
+    assert 'playSfx("rat-caught"' in game_script
+    assert 'playSfx("door-open"' in game_script
+    assert "weaponSfxName" in game_script
 
 
 def test_wild_rat_is_a_separate_attack_reward_event() -> None:

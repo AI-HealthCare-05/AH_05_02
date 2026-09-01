@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v86";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v87";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -8,8 +8,8 @@ const CORE_SHELL = [
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260901-24",
-  "/static/forest-phaser.js?v=20260901-14",
-  "/static/forest-game.js?v=20260901-49",
+  "/static/forest-phaser.js?v=20260901-15",
+  "/static/forest-game.js?v=20260901-50",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
@@ -19,6 +19,22 @@ const MEDIA_ASSETS = [
   "/static/assets/peaceful-forest-samza-cc0.wav",
   "/static/assets/carrot-forest-original.wav",
   "/static/assets/reward-chest-success.mp3",
+  "/static/assets/sfx/step-grass.wav",
+  "/static/assets/sfx/run-grass.wav",
+  "/static/assets/sfx/door-open.wav",
+  "/static/assets/sfx/sit-cloth.wav",
+  "/static/assets/sfx/mount.wav",
+  "/static/assets/sfx/harvest.wav",
+  "/static/assets/sfx/water.wav",
+  "/static/assets/sfx/fishing-cast.wav",
+  "/static/assets/sfx/fishing-catch.wav",
+  "/static/assets/sfx/attack-sword.wav",
+  "/static/assets/sfx/attack-bow.wav",
+  "/static/assets/sfx/attack-magic.wav",
+  "/static/assets/sfx/rat-caught.wav",
+  "/static/assets/sfx/pet-feed.wav",
+  "/static/assets/sfx/dance.wav",
+  "/static/assets/sfx/place-object.wav",
   "/static/assets/carrot-forest-cat-pets-v1.png",
   "/static/assets/carrot-forest-storage-atlas-v1.png",
   "/static/assets/carrot-forest-storage-atlas-v2.png",
