@@ -137,7 +137,7 @@
       const weapon = avatar.cosmetics?.lpcWeapon || "arming_sword";
       const supported = item("weapon", weapon, "arming_sword")?.animations || [];
       const preferences = {
-        wand: ["slash", "spellcast", "thrust"],
+        wand: ["spellcast", "slash", "thrust"],
         bow: ["shoot", "slash"],
         cane: ["thrust", "slash"],
         dagger: ["slash", "thrust", "halfslash"],
