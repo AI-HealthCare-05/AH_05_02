@@ -57,8 +57,28 @@ class HealthCheckup(Model):
     self_rated_health = fields.CharField(max_length=20)
     meal_count_yesterday = fields.IntField()
     regular_exercise = fields.BooleanField()
-    current_smoker = fields.BooleanField()
+    current_smoker = fields.BooleanField(null=True)
+    smoking_status = fields.CharField(max_length=10, null=True)
     current_drinker = fields.BooleanField()
+    exercise_days_per_week = fields.FloatField(null=True)
+    exercise_minutes = fields.FloatField(null=True)
+    annual_household_income_10k_krw = fields.FloatField(null=True)
+    health_satisfaction_score = fields.FloatField(null=True)
+    economic_satisfaction_score = fields.FloatField(null=True)
+    overall_quality_of_life_score = fields.FloatField(null=True)
+    hypertension_diagnosis = fields.BooleanField(null=True)
+    cancer_diagnosis = fields.BooleanField(null=True)
+    chronic_lung_disease_diagnosis = fields.BooleanField(null=True)
+    liver_disease_diagnosis = fields.BooleanField(null=True)
+    heart_disease_diagnosis = fields.BooleanField(null=True)
+    cerebrovascular_disease_diagnosis = fields.BooleanField(null=True)
+    psychiatric_disease_diagnosis = fields.BooleanField(null=True)
+    arthritis_rheumatism_diagnosis = fields.BooleanField(null=True)
+    education_level = fields.CharField(max_length=50, null=True)
+    marital_status = fields.CharField(max_length=50, null=True)
+    household_structure = fields.CharField(max_length=50, null=True)
+    depressed_feeling_last_week = fields.CharField(max_length=20, null=True)
+    sleep_difficulty_last_week = fields.CharField(max_length=20, null=True)
     feature_schema_version = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
@@ -72,6 +92,7 @@ class Prediction(Model):
     job_id = fields.CharField(max_length=36, unique=True)
     user_id = fields.BigIntField(db_index=True)
     health_checkup_id = fields.BigIntField(db_index=True)
+    input_as_of_date = fields.DateField()
     model_key = fields.CharField(max_length=100)
     outcome_definition = fields.CharField(max_length=120)
     result_status = fields.CharField(max_length=40)
@@ -79,14 +100,76 @@ class Prediction(Model):
     internal_score = fields.FloatField(null=True)
     model_version = fields.CharField(max_length=100)
     feature_schema_version = fields.CharField(max_length=100)
+    input_schema_version = fields.CharField(max_length=100)
+    preprocessing_version = fields.CharField(max_length=100)
+    target_definition_version = fields.CharField(max_length=100)
+    calibration_version = fields.CharField(max_length=100)
+    model_artifact_digest = fields.CharField(max_length=128, null=True)
     threshold_version = fields.CharField(max_length=100)
+    decision_threshold = fields.FloatField(null=True)
+    class_probabilities = fields.JSONField(null=True)
+    output_status = fields.CharField(max_length=80, default="uncalibrated_research_probability_only")
     model_population = fields.CharField(max_length=120)
     explanation_status = fields.CharField(max_length=40, default="not_available")
     disclaimer = fields.TextField()
     predicted_at = fields.DatetimeField(auto_now_add=True)
+    # v3.0 연령별 당뇨 위험 전망(생존곡선). 점추정(diabetes_incidence)에는 해당 없음.
+    risk_curve_status = fields.CharField(max_length=20, default="not_applicable")
+    output_definition_version = fields.CharField(max_length=100, null=True)
 
     class Meta:
         table = "predictions"
+
+
+class PredictionRiskCurvePoint(Model):
+    """One (age, cumulative_risk) point of a survival-curve prediction (API-LIFE-004)."""
+
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    age = fields.IntField()
+    cumulative_risk = fields.FloatField()
+    lower = fields.FloatField()
+    upper = fields.FloatField()
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "prediction_risk_curve_points"
+        unique_together = (("prediction_id", "age"),)
+
+
+class PredictionScenario(Model):
+    """baseline / lifestyle_improved comparison line for a risk curve (REQ-PRED-012).
+
+    `is_active` stays False until a scenario method is separately validated —
+    the API must not surface an unvalidated scenario as if it were causal.
+    """
+
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    scenario = fields.CharField(max_length=30)
+    scenario_definition_version = fields.CharField(max_length=100)
+    is_active = fields.BooleanField(default=False)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "prediction_scenarios"
+
+
+class RiskFactor(Model):
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    factor_name = fields.CharField(max_length=100)
+    display_name = fields.CharField(max_length=100)
+    impact_direction = fields.CharField(max_length=20)
+    importance_score = fields.FloatField()
+    display_order = fields.IntField()
+    is_modifiable = fields.BooleanField(default=False)
+    message = fields.TextField()
+    explanation_version = fields.CharField(max_length=100)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "risk_factors"
 
 
 class Challenge(Model):
@@ -148,6 +231,49 @@ class ChallengeLog(Model):
     class Meta:
         table = "challenge_logs"
         unique_together = (("user_challenge_id", "log_date"),)
+
+
+class ChallengeVerification(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    user_challenge_id = fields.BigIntField(db_index=True)
+    verification_date = fields.DateField(db_index=True)
+    verification_type = fields.CharField(max_length=20)
+    evidence_ref = fields.CharField(max_length=500, null=True)
+    evidence_digest = fields.CharField(max_length=64, null=True)
+    location_accuracy_m = fields.FloatField(null=True)
+    review_status = fields.CharField(max_length=20, default="accepted", db_index=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "challenge_verifications"
+        unique_together = (("user_challenge_id", "verification_date"),)
+
+
+class ChallengeVerificationEvent(Model):
+    id = fields.BigIntField(primary_key=True)
+    verification_id = fields.BigIntField(db_index=True)
+    user_id = fields.BigIntField(db_index=True)
+    event_type = fields.CharField(max_length=30)
+    review_status = fields.CharField(max_length=20)
+    evidence_digest = fields.CharField(max_length=64, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "challenge_verification_events"
+
+
+class DailyChallengeReward(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    reward_date = fields.DateField(db_index=True)
+    carrot_amount = fields.IntField(default=55)
+    claimed_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "daily_challenge_rewards"
+        unique_together = (("user_id", "reward_date"),)
 
 
 class FollowUpAction(Model):

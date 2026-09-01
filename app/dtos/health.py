@@ -25,27 +25,59 @@ class HealthCheckupCreateRequest(BaseModel):
     checkup_type: Literal["initial", "reassessment"] = "initial"
     checkup_date: date
     height_cm: float = Field(ge=120, le=220)
-    weight_kg: float = Field(ge=30, le=250)
+    weight_kg: float = Field(ge=25, le=250)
     waist_cm: float | None = Field(default=None, ge=45, le=180)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
     self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
     meal_count_yesterday: int = Field(ge=0, le=10)
+    smoking_status: Literal["never", "former", "current"]
     regular_exercise: bool
-    current_smoker: bool
     current_drinker: bool
+    exercise_days_per_week: float = Field(ge=0, le=7)
+    exercise_minutes: float = Field(ge=0, le=720)
+    annual_household_income_10k_krw: float | None = Field(default=None, ge=0)
+    health_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=100)
+    hypertension_diagnosis: bool | None = None
+    cancer_diagnosis: bool | None = None
+    chronic_lung_disease_diagnosis: bool | None = None
+    liver_disease_diagnosis: bool | None = None
+    heart_disease_diagnosis: bool | None = None
+    cerebrovascular_disease_diagnosis: bool | None = None
+    psychiatric_disease_diagnosis: bool | None = None
+    arthritis_rheumatism_diagnosis: bool | None = None
+    education_level: Literal["code_1", "code_2", "code_3", "code_4", "code_97"] | None = None
+    marital_status: Literal["code_1", "code_2", "code_3", "code_4", "code_5"] | None = None
+    household_structure: Literal["single_person", "multi_person"] | None = None
+    depressed_feeling_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
+    sleep_difficulty_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
     feature_schema_version: str = Field(default=ACTIVE_MODEL.feature_schema_version, max_length=100)
 
     @model_validator(mode="after")
     def validate_blood_pressure(self) -> HealthCheckupCreateRequest:
         if self.systolic_bp is not None and self.diastolic_bp is not None and self.systolic_bp <= self.diastolic_bp:
             raise ValueError("수축기 혈압은 이완기 혈압보다 커야 합니다.")
+        if not self.regular_exercise:
+            self.exercise_days_per_week = 0
+            self.exercise_minutes = 0
         return self
 
 
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
-    model_key: Literal["diabetes_incidence"] = "diabetes_incidence"
+    model_key: Literal["diabetes_incidence", "diabetes_lifetime_risk"] = "diabetes_incidence"
+    # diabetes_lifetime_risk에서만 쓰인다 (API-LIFE-002). 다른 값은 계약 위반으로 거부한다.
+    prediction_type: Literal["survival_curve"] | None = None
+
+    @model_validator(mode="after")
+    def validate_prediction_type(self) -> PredictionJobCreateRequest:
+        if self.model_key == "diabetes_lifetime_risk" and self.prediction_type != "survival_curve":
+            raise ValueError("diabetes_lifetime_risk requires prediction_type=survival_curve")
+        if self.model_key == "diabetes_incidence" and self.prediction_type is not None:
+            raise ValueError("diabetes_incidence does not accept prediction_type")
+        return self
 
 
 class ChallengeCycleCreateRequest(BaseModel):
@@ -65,6 +97,22 @@ class ChallengeLogUpsertRequest(BaseModel):
     value: float | None = Field(default=None, ge=0)
     source: Literal["self_report"] = "self_report"
     note: str | None = Field(default=None, max_length=200)
+
+
+class ChallengeVerificationCreateRequest(BaseModel):
+    verification_date: date
+    verification_type: Literal["photo", "location"]
+    evidence_ref: str | None = Field(default=None, max_length=500)
+    evidence_digest: str | None = Field(default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+    location_accuracy_m: float | None = Field(default=None, ge=0, le=100000)
+
+    @model_validator(mode="after")
+    def validate_evidence(self) -> ChallengeVerificationCreateRequest:
+        if self.verification_type == "photo" and not (self.evidence_ref or self.evidence_digest):
+            raise ValueError("사진 인증에는 증빙 참조 또는 SHA-256 해시가 필요합니다.")
+        if self.verification_type == "location" and self.location_accuracy_m is None:
+            raise ValueError("위치 인증에는 위치 정확도가 필요합니다.")
+        return self
 
 
 class ChallengeCycleStatusRequest(BaseModel):

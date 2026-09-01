@@ -28,14 +28,22 @@ class Config(BaseSettings):
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
-    PREDICTION_MODEL_VERSION: str = "dev-diabetes-incidence-v0"
-    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa-diabetes-incident-v1"
-    PREDICTION_THRESHOLD_VERSION: str = "unapproved"
+    PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
+    PREDICTION_THRESHOLD_VERSION: str = "validation-spec043-caution-recall090-v1"
     PREDICTION_MODEL_MIN_AGE: int = 45
-    PREDICTION_MODEL_MAX_AGE: int | None = None
-    PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
+    PREDICTION_MODEL_MAX_AGE: int | None = 105
+    PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
+    PREDICTION_PROMOTION_STATUS: str = "candidate_only"
+    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-25features-v1"
+    PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-v1"
+    PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
+    PREDICTION_CALIBRATION_VERSION: str = "unapproved"
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8"
+    PREDICTION_DECISION_THRESHOLD: float | None = 0.021153602801262862
 
-    MODEL_URI: str = ""
+    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
+    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
     MODEL_CACHE_DIR: str = "/app/storage/models"
     AWS_REGION: str = "ap-northeast-2"
     AWS_S3_ENDPOINT_URL: str | None = None

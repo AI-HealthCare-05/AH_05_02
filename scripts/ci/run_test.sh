@@ -14,7 +14,7 @@ echo "${COLOR_BLUE}Find Tests${COLOR_NC}"
 HAS_TESTS=false
 MYSQL_CONTAINER_NAME=mysql
 
-if [ -d "./app/tests" ] && find ./app/tests -name 'test_*.py' -print -quit | read ; then
+if [ -d "./tests/backend/api" ] && find ./tests/backend/api -name 'test_*.py' -print -quit | read ; then
   HAS_TESTS=true
 fi
 
@@ -32,7 +32,7 @@ EOF
 
     echo "${COLOR_BLUE}Run Pytest with Coverage${COLOR_NC}"
 
-    if ! uv run coverage run -m pytest app; then
+    if ! uv run coverage run -m pytest tests/backend/api; then
       echo ""
       echo "${COLOR_RED}✖ Pytest failed.${COLOR_NC}"
       echo "${COLOR_RED}→ Fix the test failures above and re-run.${COLOR_NC}"

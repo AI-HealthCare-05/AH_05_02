@@ -31,6 +31,11 @@ class PredictionJobResponse(BaseModel):
     model_key: str
     model_version: str | None = None
     feature_schema_version: str | None = None
+    input_schema_version: str | None = None
+    preprocessing_version: str | None = None
+    target_definition_version: str | None = None
+    calibration_version: str | None = None
+    model_artifact_digest: str | None = None
     threshold_version: str | None = None
     prediction_id: int | None = None
     error_code: str | None = None
@@ -48,6 +53,11 @@ def prediction_job_response(job: object) -> PredictionJobResponse:
         model_key=job.model_key,
         model_version=job.model_version,
         feature_schema_version=job.feature_schema_version,
+        input_schema_version=job.input_schema_version,
+        preprocessing_version=job.preprocessing_version,
+        target_definition_version=job.target_definition_version,
+        calibration_version=job.calibration_version,
+        model_artifact_digest=job.model_artifact_digest,
         threshold_version=job.threshold_version,
         prediction_id=job.prediction_id,
         error_code=job.error_code,

@@ -20,17 +20,25 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
     await Tortoise.generate_schemas()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            birth_date = "1965-04-12"
             signup = {
+                "name": "MVP 사용자",
                 "email": "mvp-flow@example.com",
                 "password": "Password123!",
-                "gender": "FEMALE",
-                "birth_date": "1965-04-12",
+                "terms_agreed": True,
             }
             assert (await client.post("/api/v1/auth/signup", json=signup)).status_code == status.HTTP_201_CREATED
             login = await client.post(
                 "/api/v1/auth/login", json={"email": signup["email"], "password": signup["password"]}
             )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+            profile = await client.patch(
+                "/api/v1/users/me/profile",
+                headers=headers,
+                json={"birthday": birth_date, "gender": "FEMALE"},
+            )
+            assert profile.status_code == status.HTTP_200_OK
 
             consent = await client.post(
                 "/api/v1/consents",
@@ -43,7 +51,7 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                 "/api/v1/eligibility-checks",
                 headers=headers,
                 json={
-                    "birth_date": signup["birth_date"],
+                    "birth_date": birth_date,
                     "has_diabetes_diagnosis": False,
                     "has_urgent_warning_sign": False,
                     "population_in_scope": True,
@@ -65,9 +73,11 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                     "self_rated_health": "fair",
                     "meal_count_yesterday": 3,
                     "regular_exercise": False,
-                    "current_smoker": False,
+                    "smoking_status": "never",
                     "current_drinker": False,
-                    "feature_schema_version": "klosa-diabetes-incident-v1",
+                    "exercise_days_per_week": 0,
+                    "exercise_minutes": 0,
+                    "feature_schema_version": "klosa_stage3_25features_v1",
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED

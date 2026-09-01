@@ -114,8 +114,10 @@ def checkup_payload(item: object) -> dict[str, object]:
         "self_rated_health": item.self_rated_health,
         "meal_count_yesterday": item.meal_count_yesterday,
         "regular_exercise": item.regular_exercise,
-        "current_smoker": item.current_smoker,
+        "smoking_status": item.smoking_status,
         "current_drinker": item.current_drinker,
+        "exercise_days_per_week": item.exercise_days_per_week,
+        "exercise_minutes": item.exercise_minutes,
         "feature_schema_version": item.feature_schema_version,
         "created_at": item.created_at,
     }

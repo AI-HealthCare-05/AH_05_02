@@ -7,12 +7,16 @@ from app.models.health import (
     Challenge,
     ChallengeCycle,
     ChallengeLog,
+    ChallengeVerification,
+    ChallengeVerificationEvent,
     Consent,
+    DailyChallengeReward,
     EligibilityCheck,
     Feedback,
     FollowUpAction,
     HealthCheckup,
     Prediction,
+    PredictionRiskCurvePoint,
     UserChallenge,
 )
 
@@ -60,11 +64,25 @@ class HealthRepository:
     async def list_predictions(self, user_id: int) -> list[Prediction]:
         return await Prediction.filter(user_id=user_id).order_by("-predicted_at", "-id")
 
+    async def risk_curve_points(self, prediction_id: int) -> list[PredictionRiskCurvePoint]:
+        """API-LIFE-004: ordered (age, cumulative_risk) points for a lifetime-risk prediction."""
+        return await PredictionRiskCurvePoint.filter(prediction_id=prediction_id).order_by("age")
+
+    async def latest_prediction_for_model_key(self, user_id: int, model_key: str) -> Prediction | None:
+        return await Prediction.filter(user_id=user_id, model_key=model_key).order_by("-predicted_at", "-id").first()
+
     async def active_cycle(self, user_id: int) -> ChallengeCycle | None:
         return await ChallengeCycle.filter(user_id=user_id, status__in=["scheduled", "active"]).order_by("-id").first()
 
     async def get_cycle(self, cycle_id: int, user_id: int) -> ChallengeCycle | None:
         return await ChallengeCycle.get_or_none(id=cycle_id, user_id=user_id)
+
+    async def cycle_for_date(self, user_id: int, target_date: date) -> ChallengeCycle | None:
+        return (
+            await ChallengeCycle.filter(user_id=user_id, start_date__lte=target_date, end_date__gte=target_date)
+            .order_by("-id")
+            .first()
+        )
 
     async def list_user_challenges(self, cycle_id: int, user_id: int) -> list[UserChallenge]:
         return await UserChallenge.filter(cycle_id=cycle_id, user_id=user_id).order_by("id")
@@ -98,6 +116,50 @@ class HealthRepository:
             log_date=log_date,
         )
         return item
+
+    async def record_verification_event(self, verification: ChallengeVerification) -> ChallengeVerificationEvent:
+        return await ChallengeVerificationEvent.create(
+            verification_id=verification.id,
+            user_id=verification.user_id,
+            event_type="submitted",
+            review_status=verification.review_status,
+            evidence_digest=verification.evidence_digest,
+        )
+
+    async def upsert_verification(
+        self, *, user_challenge_id: int, user_id: int, verification_date: date, values: dict[str, Any]
+    ) -> ChallengeVerification:
+        item, _ = await ChallengeVerification.update_or_create(
+            defaults={"user_id": user_id, **values},
+            user_challenge_id=user_challenge_id,
+            verification_date=verification_date,
+        )
+        return item
+
+    async def completed_challenge_ids_for_date(self, cycle_id: int, user_id: int, log_date: date) -> set[int]:
+        selected = await self.list_user_challenges(cycle_id, user_id)
+        selected_ids = [item.id for item in selected]
+        if not selected_ids:
+            return set()
+        logs = await ChallengeLog.filter(
+            user_id=user_id,
+            user_challenge_id__in=selected_ids,
+            log_date=log_date,
+            is_completed=True,
+        )
+        return {item.user_challenge_id for item in logs}
+
+    async def get_daily_reward(self, user_id: int, reward_date: date) -> DailyChallengeReward | None:
+        return await DailyChallengeReward.get_or_none(user_id=user_id, reward_date=reward_date)
+
+    async def claim_daily_reward(
+        self, user_id: int, reward_date: date, carrot_amount: int
+    ) -> tuple[DailyChallengeReward, bool]:
+        return await DailyChallengeReward.get_or_create(
+            user_id=user_id,
+            reward_date=reward_date,
+            defaults={"carrot_amount": carrot_amount},
+        )
 
     async def open_follow_up(self, user_id: int) -> FollowUpAction | None:
         return await FollowUpAction.filter(user_id=user_id, acknowledged_at=None).order_by("-created_at", "-id").first()
