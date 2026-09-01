@@ -726,8 +726,8 @@
   class CozyForestMusic {
     constructor() {
       this.tracks = {
-        forest: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
-        home: new Audio("/static/assets/forest-canopy-original.wav"),
+        forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
+        home: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         garden: new Audio("/static/assets/carrot-forest-original.wav"),
         avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
       };

@@ -121,10 +121,11 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
-- `src/frontend/assets/town-pro-sensory-cc0.mp3`: 당근의 숲 메인 화면용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
+- `src/frontend/assets/carrot-forest-main-theme.mp3`: 당근의 숲 메인 화면용 BGM. 사용자가 제공한 `Untitled.mp3`를 서비스용 파일명으로 변경해 반입했다.
+- `src/frontend/assets/town-pro-sensory-cc0.mp3`: 집 내부용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
 - `src/frontend/assets/peaceful-forest-samza-cc0.wav`: 아바타 꾸미기 전용 무료 BGM `Peaceful Forest`. 느린 현악·저음 중심의 차분한 곡이며 Samza가 CC0로 공개했다. 출처: https://opengameart.org/content/peaceful-forest
 - `src/frontend/assets/forest-main-breeze-original.wav`: 이전 메인 화면용 오리지널 BGM. 무료 외부 음원의 대체·장애 대응 후보로 보존한다.
-- `src/frontend/assets/forest-canopy-original.wav`: 집 내부용 96초 오리지널 루프 BGM. 잔잔하게 시작해 밝은 벨과 높은 음역이 단계적으로 추가된다.
+- `src/frontend/assets/forest-canopy-original.wav`: 이전 집 내부용 96초 오리지널 루프 BGM. 대체·복구용 자산으로 유지한다.
 - `src/frontend/assets/carrot-forest-original.wav`: 당근밭 전용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
 - `src/frontend/assets/avatar-studio-original.wav`: 이전 아바타 꾸미기 화면용 오리지널 루프 BGM. 대체 후보로 보존한다.
 - `src/frontend/assets/reward-chest-success.mp3`: 사용자가 제공한 오늘의 보물상자 개봉 전용 효과음. 개봉 중 배경음악 볼륨을 낮추고 연출 종료·건너뛰기 시 원래 볼륨으로 복구한다.
