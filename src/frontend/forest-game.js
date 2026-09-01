@@ -288,6 +288,25 @@
     hatColor: "brown", glassesColor: "brown", mobilityColor: "black",
   };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
+  const OUTFIT_DEFAULT_VERSION = 2;
+  const genderDefaultOutfits = {
+    female: {
+      label: "나만의 코디 5",
+      cosmetics: {
+        bodyType: "female", lpcHead: "human_female", lpcHair: "long",
+        lpcOutfit: "cardigan", lpcBottom: "plain_skirt", lpcShoes: "shoes",
+        hairColor: "brown", outfitColor: "green", bottomColor: "navy", shoeColor: "brown",
+      },
+    },
+    male: {
+      label: "나만의 코디 2",
+      cosmetics: {
+        bodyType: "male", lpcHead: "human_male", lpcHair: "messy",
+        lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
+        hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
+      },
+    },
+  };
 
   function outfitSignature(avatar) {
     return JSON.stringify({ gender: avatar.gender, cosmetics: avatar.cosmetics, tuning: avatar.tuning });
@@ -309,6 +328,71 @@
       tuning: { ...defaultAvatarTuning, ...(avatar.tuning || {}) },
       signature: outfitSignature(avatar),
     };
+  }
+
+  function createGenderDefaultAvatar(gender) {
+    const preset = genderDefaultOutfits[gender] || genderDefaultOutfits.female;
+    return {
+      gender,
+      cosmetics: { ...defaultCosmetics, ...preset.cosmetics },
+      tuning: { ...defaultAvatarTuning },
+    };
+  }
+
+  function normalizeGenderDefaultOutfit(look, gender, savedAt = Date.now()) {
+    const preset = genderDefaultOutfits[gender];
+    const avatar = createGenderDefaultAvatar(gender);
+    const cosmetics = {
+      ...avatar.cosmetics,
+      ...(look?.cosmetics || {}),
+      bodyType: gender,
+      lpcHead: gender === "female" ? "human_female" : "human_male",
+    };
+    const normalizedAvatar = {
+      gender,
+      cosmetics,
+      tuning: { ...defaultAvatarTuning, ...(look?.tuning || {}) },
+    };
+    return {
+      ...(look || createOutfitSnapshot(normalizedAvatar, savedAt, preset.label)),
+      id: look?.id || `look-gender-default-${gender}`,
+      savedAt: Number(look?.savedAt || savedAt),
+      label: preset.label,
+      presetRole: gender,
+      gender,
+      cosmetics,
+      tuning: normalizedAvatar.tuning,
+      signature: outfitSignature(normalizedAvatar),
+    };
+  }
+
+  function ensureGenderDefaultOutfits(target) {
+    const history = Array.isArray(target.outfitHistory) ? target.outfitHistory : [];
+    const defaults = ["female", "male"].map((gender, index) => {
+      const preset = genderDefaultOutfits[gender];
+      const existing = history.find((look) => look.presetRole === gender || look.label === preset.label);
+      return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
+    });
+    const defaultIds = new Set(defaults.map((look) => look.id));
+    const remainder = history.filter((look) => !defaultIds.has(look.id) && !look.presetRole
+      && !Object.values(genderDefaultOutfits).some((preset) => look.label === preset.label));
+    target.outfitHistory = [
+      ...defaults,
+      ...remainder.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)),
+    ].slice(0, 8);
+  }
+
+  function applyGenderDefaultOutfit(target, gender) {
+    ensureGenderDefaultOutfits(target);
+    const selectedGender = gender === "male" ? "male" : "female";
+    const look = target.outfitHistory.find((item) => item.presetRole === selectedGender);
+    if (!look) return null;
+    target.avatar.gender = selectedGender;
+    target.avatar.engine = "lpc";
+    target.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
+    target.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
+    target.avatar.equipped = null;
+    return look;
   }
 
   function normalizeOutfitHistory(history, avatar) {
@@ -343,34 +427,25 @@
   function rememberCurrentOutfit() {
     const previous = Array.isArray(state.outfitHistory) ? state.outfitHistory : [];
     const snapshot = createOutfitSnapshot(state.avatar, Date.now(), `나만의 코디 ${nextOutfitNumber(previous)}`);
-    state.outfitHistory = [snapshot, ...previous.filter((look) => look.signature !== snapshot.signature)].slice(0, 8);
+    state.outfitHistory = [snapshot, ...previous.filter((look) => look.presetRole || look.signature !== snapshot.signature)].slice(0, 8);
+    ensureGenderDefaultOutfits(state);
   }
 
   function applyRequestedDefaultOutfit(target, sourceVersion = 0) {
-    if (Number(sourceVersion) >= 1) return;
-    const preferred = target.outfitHistory.find((look) => {
-      const saved = new Date(Number(look.savedAt || 0));
-      return saved.getFullYear() === 2026 && saved.getMonth() === 7 && saved.getDate() === 31
-        && saved.getHours() === 22 && saved.getMinutes() === 30;
-    });
-    if (preferred) {
-      target.avatar.gender = preferred.gender || target.avatar.gender;
-      target.avatar.engine = "lpc";
-      target.avatar.cosmetics = { ...defaultCosmetics, ...preferred.cosmetics };
-      target.avatar.tuning = { ...defaultAvatarTuning, ...preferred.tuning };
-      target.avatar.equipped = null;
-    }
-    target.outfitDefaultVersion = 1;
+    ensureGenderDefaultOutfits(target);
+    if (Number(sourceVersion) < OUTFIT_DEFAULT_VERSION) applyGenderDefaultOutfit(target, "female");
+    target.outfitDefaultVersion = OUTFIT_DEFAULT_VERSION;
   }
 
   function defaultState() {
     const generatedNickname = generateNickname();
-    const avatar = { name: generatedNickname, gender: "male", engine: "lpc", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false };
+    const femaleDefault = createGenderDefaultAvatar("female");
+    const avatar = { name: generatedNickname, gender: "female", engine: "lpc", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...femaleDefault.cosmetics }, tuning: { ...femaleDefault.tuning }, sitting: false, mounted: false };
     return {
       dateKey: TODAY,
       profileVersion: 1,
       cosmeticSchemaVersion: 8,
-      outfitDefaultVersion: 1,
+      outfitDefaultVersion: OUTFIT_DEFAULT_VERSION,
       avatar,
       quests: { walk: false, meal: false, check: false },
       challengeCarrotClaims: {},
@@ -385,7 +460,10 @@
       ],
       carrots: 100,
       inventory: [...storageObjectCodes],
-      outfitHistory: [createOutfitSnapshot(avatar)],
+      outfitHistory: [
+        normalizeGenderDefaultOutfit(null, "female", Date.now()),
+        normalizeGenderDefaultOutfit(null, "male", Date.now() - 1),
+      ],
       placed: [],
       rewardClaimed: false,
       gardenWatered: false,
@@ -2079,11 +2157,12 @@
 
   $("#avatar-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.avatar.name = $("#avatar-name").value.trim();
-    state.avatar.gender = $("#avatar-gender").value;
-    rememberCurrentOutfit();
+    const nextName = $("#avatar-name").value.trim();
+    const selectedGender = $("#avatar-gender").value;
+    const applied = applyGenderDefaultOutfit(state, selectedGender);
+    state.avatar.name = nextName;
     renderInventory();
-    renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
+    renderCanvas(); await persist(`${state.avatar.name} 아바타에 ${applied?.label || "기본 코디"}를 적용했습니다.`);
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
