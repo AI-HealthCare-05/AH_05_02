@@ -95,6 +95,7 @@
     firefly_lantern: "light",
     light_tent: "light",
   };
+  const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"]);
   const rewardPool = ["reward_cow"];
   const avatarCategories = [
     { id: "bodyType", label: "체형", icon: "▸" },
@@ -1384,11 +1385,12 @@
     if (currentScene !== "world") return null;
     return state.placed
       .map((item, index) => ({ item, index, distance: Math.hypot(x - item.x, y - item.y) }))
-      .filter(({ item, distance }) => interactiveObjectTypes[item.code] && distance <= maxDistance)
+      .filter(({ item, distance }) => (interactiveObjectTypes[item.code] || seatObjectCodes.has(item.code)) && distance <= maxDistance)
       .sort((left, right) => left.distance - right.distance)[0] || null;
   }
 
   function objectInteractionLabel(item) {
+    if (seatObjectCodes.has(item.code)) return `${itemCatalog[item.code].name}에 앉기`;
     const type = interactiveObjectTypes[item.code];
     if (type === "cow") return item.active ? "젖소 쉬게 하기" : "젖소 움직이기";
     if (type === "fire") return item.active ? "모닥불 끄기" : "모닥불 피우기";
@@ -1466,7 +1468,9 @@
   async function interact(target = nearbyInteraction()) {
     if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
     if (target.startsWith("object:")) {
-      await togglePlacedObject(Number(target.split(":")[1]));
+      const index = Number(target.split(":")[1]);
+      if (seatObjectCodes.has(state.placed[index]?.code)) await sitAtPlacedObject(index);
+      else await togglePlacedObject(index);
       return;
     }
     const pose = {
@@ -2679,20 +2683,32 @@
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
     if (!state.avatar.sitting && currentScene === "world") {
       const chair = state.placed
-        .filter((placed) => ["chair_green", "chair_red", "bench"].includes(placed.code))
-        .map((placed) => ({ ...placed, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .map((placed, index) => ({ ...placed, index, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .filter((placed) => seatObjectCodes.has(placed.code))
         .filter((placed) => placed.distance < 64)
         .sort((left, right) => left.distance - right.distance)[0];
       if (chair) {
-        state.avatar.x = chair.x;
-        state.avatar.y = chair.y + 4;
-        state.avatar.direction = "down";
+        await sitAtPlacedObject(chair.index);
+        return;
       }
     }
     state.avatar.sitting = !state.avatar.sitting;
     playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
     await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
+  }
+
+  async function sitAtPlacedObject(index) {
+    const seat = state.placed[index];
+    if (!seat || !seatObjectCodes.has(seat.code)) return;
+    if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 자리에 앉을 수 있어요."); return; }
+    state.avatar.x = seat.x;
+    state.avatar.y = seat.y + 4;
+    state.avatar.direction = "down";
+    state.avatar.sitting = true;
+    playSfx("sit-cloth", { volume: 0.24 });
+    renderCanvas();
+    await persist(`${itemCatalog[seat.code].name}에 앉았습니다. X를 누르면 일어납니다.`);
   }
 
   async function feedPet() {
@@ -2754,6 +2770,7 @@
     phaserPersistTimer = window.setTimeout(() => adapter.save(state), 240);
   });
   window.addEventListener("forest-phaser-interact", () => interact());
+  window.addEventListener("forest-pet-clicked", async () => feedPet());
   window.addEventListener("forest-phaser-action", async (event) => {
     if (event.detail === "chat") toggleChat();
     if (event.detail === "sit") await toggleSit();

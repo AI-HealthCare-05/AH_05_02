@@ -83,7 +83,7 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
         assert f'id="{control_id}"' in html
     assert 'id="wardrobe-list"' in html
     assert 'id="storage-list"' in html
-    assert html.count("data-action=") == 8
+    assert html.count("data-action=") == 6
     for key in (
         'event.key === "q"',
         'event.key === "r"',
@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v95" in worker
+    assert "gandang-carrot-forest-pwa-v96" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -650,8 +650,11 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert "arcade-deck" in html
     assert "WASD로도 움직일 수 있어요." in html
     assert "숲 조작 패널" not in html
-    assert 'data-action="feed"' in html
+    assert 'data-action="feed"' not in html
     assert "async function feedPet" in game_script
+    assert 'new CustomEvent("forest-pet-clicked"' in phaser_script
+    assert 'window.addEventListener("forest-pet-clicked"' in game_script
+    assert ".setInteractive({ useHandCursor: true })" in phaser_script
     assert 'new CustomEvent("forest-pet-fed"' in game_script
     assert "showPetHeart" in phaser_script
     assert "autoHunting" in phaser_script
@@ -682,7 +685,9 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
-    assert 'data-action="sit"' in html
+    assert 'data-action="sit"' not in html
+    assert 'const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"])' in game_script
+    assert "async function sitAtPlacedObject" in game_script
     assert "state.avatar.sitting = !state.avatar.sitting" in game_script
     assert "(avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose" in engine_script
     assert "cycles[cycles.length - 1]" in engine_script

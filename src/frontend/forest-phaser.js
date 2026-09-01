@@ -133,6 +133,14 @@
       this.player.add(this.premiumAvatar);
       this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "lpc-pets", 0).setOrigin(0.5, 1).setScale(1.2).setDepth(this.avatar.y - 1);
       this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
+      this.lastPetPointerAt = 0;
+      const feedPetFromPointer = (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.lastPetPointerAt = performance.now();
+        window.dispatchEvent(new CustomEvent("forest-pet-clicked"));
+      };
+      this.pet.setInteractive({ useHandCursor: true }).on("pointerdown", feedPetFromPointer);
+      this.petEmoji.setInteractive({ useHandCursor: true }).on("pointerdown", feedPetFromPointer);
       this.petHeart = this.add.text(this.avatar.x + 31, this.avatar.y - 28, "💚", { fontSize: "23px" }).setOrigin(0.5).setDepth(999).setVisible(false);
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
@@ -188,6 +196,7 @@
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
       this.input.once("pointerdown", () => document.getElementById("phaser-world")?.focus());
       this.input.on("pointerdown", (pointer) => {
+        if (performance.now() - this.lastPetPointerAt < 120) return;
         window.dispatchEvent(new CustomEvent("forest-world-pointer", { detail: { x: pointer.worldX, y: pointer.worldY } }));
       });
       this.emitPosition(true);
