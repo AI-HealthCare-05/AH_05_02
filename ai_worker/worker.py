@@ -14,6 +14,10 @@ from ai_worker.core import config, logger
 from ai_worker.db import ensure_schema, persist_prediction, update_job
 from ai_worker.handlers import run_task_with_timeout
 from app.prediction.errors import classify_ml_input_error
+from src.ml.inference.diabetes_current_screening import (
+    CurrentScreeningArtifactUnavailableError,
+    CurrentScreeningContractError,
+)
 from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
 
 
@@ -87,7 +91,11 @@ class StreamWorker:
         try:
             payload = json.loads(fields.get("payload", "{}"))
             result = await run_task_with_timeout(task_type, payload, config.PREDICTION_TIMEOUT_SECONDS)
-            prediction_id = await persist_prediction(job_id, result) if task_type == "diabetes_incidence" else None
+            prediction_id = (
+                await persist_prediction(job_id, result)
+                if task_type in {"diabetes_incidence", "diabetes_current_screening"}
+                else None
+            )
             completed_at = datetime.now(config.TIMEZONE)
             completed_event = {
                 "job_id": job_id,
@@ -121,6 +129,14 @@ class StreamWorker:
                 message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_UNAVAILABLE"
             )
         except ModelContractError as exc:
+            await self.handle_failure(
+                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_CONTRACT_ERROR"
+            )
+        except CurrentScreeningArtifactUnavailableError as exc:
+            await self.handle_failure(
+                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_UNAVAILABLE"
+            )
+        except CurrentScreeningContractError as exc:
             await self.handle_failure(
                 message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_CONTRACT_ERROR"
             )

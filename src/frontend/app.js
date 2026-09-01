@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -456,7 +456,7 @@ function eligibilityCapabilities(eligibility) {
   const safetyBlocked = reasonCodes.some((code) => code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES");
   return {
     challenge: eligibility?.challenge_eligible ?? (Number.isFinite(age) && age >= 14 && !safetyBlocked),
-    currentHealth: eligibility?.current_health_check_eligible ?? (Number.isFinite(age) && age >= 19 && !safetyBlocked),
+    currentHealth: eligibility?.current_screening_eligible ?? eligibility?.current_health_check_eligible ?? (Number.isFinite(age) && age >= 19 && !safetyBlocked),
     futurePrediction: eligibility?.future_prediction_eligible ?? eligibility?.model_eligible ?? false,
   };
 }
@@ -790,6 +790,19 @@ function normalizeRiskKey(prediction = state.prediction) {
 }
 
 function getCurrentHealthSignal(checkup = state.healthCheckupResult) {
+  const prediction = state.currentScreeningPrediction;
+  if (prediction) {
+    const approved = prediction.result_status === "approved" && prediction.screening_result_label;
+    return approved
+      ? {
+        category_label: prediction.screening_result_label,
+        message: prediction.disclaimer,
+      }
+      : {
+        category_label: "오늘이 연결을 완료했습니다",
+        message: "현재 위험 신호 모델은 연결되었지만 운영 승인 전이라 개인 판정 결과는 표시하지 않습니다.",
+      };
+  }
   return checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal || null;
 }
 
@@ -799,7 +812,9 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
   if (!panel || !futureResult) return;
   panel.hidden = false;
   futureResult.hidden = standalone;
-  $("#current-health-result-scope").textContent = standalone ? "만 19~44세 이용 범위" : "만 45세 이상 현재 건강 신호";
+  $("#current-health-result-scope").textContent = standalone
+    ? "오늘이 · 현재 당뇨 위험 신호 선별"
+    : "오늘이 · 현재 위험 신호와 내일이 결과를 별도로 확인";
   if (standalone) {
     $("#result-confirmation-eyebrow").textContent = "현재 건강 신호";
     $("#factors-title").textContent = "현재 건강정보를 확인해 주세요";
@@ -835,7 +850,7 @@ function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "예측 결과";
   $("#factors-title").textContent = "결과를 확인해 주세요";
-  $("#result-confirmation-lead").textContent = "입력한 건강정보를 기준으로 당뇨병 위험 신호를 범주로 표시했습니다.";
+  $("#result-confirmation-lead").textContent = "오늘이의 현재 위험 신호와 내일이의 미래 발병 위험은 서로 다른 결과로 표시합니다.";
   if (getCurrentHealthSignal()) renderCurrentHealthResult(state.healthCheckupResult, { standalone: false });
   else $("#current-health-result").hidden = true;
 }
@@ -850,7 +865,7 @@ function updateResultConfirmation() {
       icon: "✓",
       label: "낮음",
       short: "현재 위험이 낮은 범주",
-      title: "현재 모델 기준 위험 범주는 ‘낮음’입니다",
+      title: "내일이 기준 미래 발병 위험 범주는 ‘낮음’입니다",
       message: "이 결과만으로 당뇨병을 진단할 수 없습니다.",
       action: "위험이 낮아도 정기검사와 생활습관 점검을 이어가세요.",
       next: "챌린지 보기",
@@ -861,7 +876,7 @@ function updateResultConfirmation() {
       icon: "!",
       label: "주의",
       short: "확인할 요인이 있는 범주",
-      title: "현재 모델 기준 위험 범주는 ‘주의’입니다",
+      title: "내일이 기준 미래 발병 위험 범주는 ‘주의’입니다",
       message: "이 결과만으로 당뇨병을 진단할 수 없습니다.",
       action: "확인이 필요한 위험 요인이 있을 수 있으니 입력 정보와 생활습관을 살펴보세요.",
       next: "챌린지 보기",
@@ -872,7 +887,7 @@ function updateResultConfirmation() {
       icon: "+",
       label: "높음",
       short: "의료기관 확인이 우선",
-      title: "현재 모델 기준 위험 범주는 ‘높음’입니다",
+      title: "내일이 기준 미래 발병 위험 범주는 ‘높음’입니다",
       message: "높은 위험 범주는 진단 결과가 아닙니다.",
       action: "지금은 생활습관 챌린지보다 의료기관의 검사와 상담 안내를 먼저 확인해 주세요.",
       next: "검사·상담 안내 보기",
@@ -1167,6 +1182,18 @@ function renderPrediction(prediction, factors) {
   $("#result-next").hidden = !isApprovedRisk;
   $("#result-next").disabled = !isApprovedRisk;
 }
+
+async function requestPredictionModel(modelKey) {
+  const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
+    checkup_id: state.checkupId,
+    model_key: modelKey,
+  }) });
+  renderPredictionStatus(job.status === "running" ? "running" : "queued");
+  const predictionId = await pollPrediction(job.job_id);
+  const prediction = await api(`/predictions/${predictionId}`);
+  return { predictionId, prediction };
+}
+
 async function runPrediction() {
   if (isLocalPreview()) {
     renderPredictionStatus("queued");
@@ -1193,13 +1220,30 @@ async function runPrediction() {
   }
   renderPredictionStatus("queued");
   try {
-    const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
-      checkup_id: state.checkupId, model_key: "diabetes_incidence",
-    }) });
-    renderPredictionStatus(job.status === "running" ? "running" : "queued");
-    state.predictionId = await pollPrediction(job.job_id);
+    if (state.capabilities.currentHealth) {
+      try {
+        const current = await requestPredictionModel("diabetes_current_screening");
+        state.currentScreeningPredictionId = current.predictionId;
+        state.currentScreeningPrediction = current.prediction;
+      } catch (error) {
+        state.currentScreeningPrediction = null;
+        if (state.currentHealthOnly) throw error;
+      }
+    }
+    if (state.currentHealthOnly) {
+      state.predictionId = state.currentScreeningPredictionId;
+      state.prediction = state.currentScreeningPrediction;
+      renderCurrentHealthResult(state.healthCheckupResult, { standalone: true });
+      renderPredictionStatus("succeeded", { resultAvailable: true });
+      $("#result-next").hidden = false;
+      $("#result-next").disabled = false;
+      return;
+    }
+    const future = await requestPredictionModel("diabetes_incidence");
+    state.predictionId = future.predictionId;
+    state.prediction = future.prediction;
     const [prediction, factors] = await Promise.all([
-      api(`/predictions/${state.predictionId}`),
+      Promise.resolve(future.prediction),
       api(`/predictions/${state.predictionId}/risk-factors`),
     ]);
     state.prediction = prediction;
@@ -1981,12 +2025,6 @@ $("#health-form").addEventListener("submit", async (event) => {
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
     }
-    if (state.currentHealthOnly) {
-      renderCurrentHealthResult(state.healthCheckupResult);
-      showStep(6);
-      showMessage("건강정보를 저장했습니다. 현재 건강 신호 결과 영역을 확인해 주세요.", "success");
-      return;
-    }
     if (state.returningUser) {
       if (state.cycle?.user_challenges?.length) {
         if (isLocalPreview()) renderLocalDemoDashboard();
@@ -2542,8 +2580,9 @@ $("#restart")?.addEventListener("click", () => window.location.reload());
 $("#dashboard-back")?.addEventListener("click", goBack);
 
 function resumeFromForest() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("resume") !== "together") return;
+  const requestedView = new URLSearchParams(window.location.search);
+  const requestedWorkspace = requestedView.get("workspace");
+  if (requestedView.get("resume") !== "together" && requestedWorkspace !== "together") return;
   if (!isDemoEnvironment()) return;
 
   state.token = "local-demo-token";
@@ -2555,7 +2594,7 @@ function resumeFromForest() {
   renderCycle(state.cycle);
   renderLocalDemoDashboard();
   showStep(8, { recordHistory: false });
-  showWorkspace("together", { moveFocus: false });
+  showWorkspace(requestedWorkspace || "together", { moveFocus: false });
 }
 
 configureEnvironmentControls();

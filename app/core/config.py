@@ -58,6 +58,22 @@ class Config(BaseSettings):
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+    CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.5.0"
+    CURRENT_SCREENING_FEATURE_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-v2"
+    CURRENT_SCREENING_INPUT_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-api-v1"
+    CURRENT_SCREENING_PREPROCESSING_VERSION: str = "knhanes-2016-2024-recall-v050"
+    CURRENT_SCREENING_TARGET_DEFINITION_VERSION: str = "current-diabetes-signal-v1"
+    CURRENT_SCREENING_THRESHOLD_VERSION: str = "validation-2021-2022-spec042-v1"
+    CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.023227178771059433
+    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = (
+        "c257ebc7785d4a1b36a7cda6d9aeeb107dbfa1b6afbf4c64c806849b8969370e"
+    )
+    CURRENT_SCREENING_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+    )
+    CURRENT_SCREENING_MANIFEST_URI: str = (
+        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
+    )
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.

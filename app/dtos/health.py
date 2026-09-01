@@ -67,7 +67,9 @@ class HealthCheckupCreateRequest(BaseModel):
 
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
-    model_key: Literal["diabetes_incidence", "diabetes_lifetime_risk"] = "diabetes_incidence"
+    model_key: Literal["diabetes_current_screening", "diabetes_incidence", "diabetes_lifetime_risk"] = (
+        "diabetes_incidence"
+    )
     # diabetes_lifetime_risk에서만 쓰인다 (API-LIFE-002). 다른 값은 계약 위반으로 거부한다.
     prediction_type: Literal["survival_curve"] | None = None
 
@@ -77,6 +79,8 @@ class PredictionJobCreateRequest(BaseModel):
             raise ValueError("diabetes_lifetime_risk requires prediction_type=survival_curve")
         if self.model_key == "diabetes_incidence" and self.prediction_type is not None:
             raise ValueError("diabetes_incidence does not accept prediction_type")
+        if self.model_key == "diabetes_current_screening" and self.prediction_type is not None:
+            raise ValueError("diabetes_current_screening does not accept prediction_type")
         return self
 
 

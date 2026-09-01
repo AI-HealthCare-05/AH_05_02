@@ -198,6 +198,13 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                 raise RuntimeError("예측 작업의 사용자 또는 건강정보 연결값이 없습니다.")
             result_status = "approved" if result.get("promotion_status") == "approved" else "development_only"
             risk_category = result.get("risk_category") if result_status == "approved" else None
+            output_status = result.get("output_status") or (
+                "approved" if result_status == "approved" else "uncalibrated_research_probability_only"
+            )
+            model_population = result.get("model_population", config.PREDICTION_MODEL_POPULATION)
+            disclaimer = result.get("medical_notice") or (
+                "이 결과는 당뇨병 진단이 아닌 위험 선별 및 건강교육 정보입니다."
+            )
             await cursor.execute(
                 """
                 INSERT INTO predictions (
@@ -229,10 +236,10 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result["threshold_version"],
                     result.get("decision_threshold"),
                     None,
-                    "approved" if result_status == "approved" else "uncalibrated_research_probability_only",
-                    config.PREDICTION_MODEL_POPULATION,
+                    output_status,
+                    model_population,
                     result.get("explanation_status", "not_available"),
-                    "이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
+                    disclaimer,
                 ),
             )
             prediction_id = int(cursor.lastrowid)

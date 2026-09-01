@@ -66,6 +66,7 @@ class ActiveModel(BaseModel):
 # ActiveModel 상수를 만들지 않는 이유는, 아직 없는 모델을 있는 것처럼 하드코딩
 # 하지 않기 위함이다.
 LIFETIME_RISK_MODEL_KEY = "diabetes_lifetime_risk"
+CURRENT_SCREENING_MODEL_KEY = "diabetes_current_screening"
 
 ACTIVE_MODEL = ActiveModel(
     model_key=config.PREDICTION_MODEL_KEY,
@@ -82,6 +83,25 @@ ACTIVE_MODEL = ActiveModel(
     max_age=config.PREDICTION_MODEL_MAX_AGE,
     model_population=config.PREDICTION_MODEL_POPULATION,
     promotion_status=config.PREDICTION_PROMOTION_STATUS,
+)
+
+CURRENT_SCREENING_MODEL = ActiveModel(
+    model_key=CURRENT_SCREENING_MODEL_KEY,
+    version=config.CURRENT_SCREENING_MODEL_VERSION,
+    feature_schema_version=config.CURRENT_SCREENING_FEATURE_SCHEMA_VERSION,
+    input_schema_version=config.CURRENT_SCREENING_INPUT_SCHEMA_VERSION,
+    preprocessing_version=config.CURRENT_SCREENING_PREPROCESSING_VERSION,
+    target_definition_version=config.CURRENT_SCREENING_TARGET_DEFINITION_VERSION,
+    calibration_version="not_applicable",
+    model_artifact_digest=config.CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST,
+    threshold_version=config.CURRENT_SCREENING_THRESHOLD_VERSION,
+    decision_threshold=config.CURRENT_SCREENING_DECISION_THRESHOLD,
+    min_age=19,
+    max_age=None,
+    model_population="undiagnosed_knhanes_adults_age_19_plus",
+    outcome_definition="current_diabetes_related_signal_screening",
+    observation_horizon="current_cross_sectional_screening",
+    promotion_status="development_only",
 )
 
 

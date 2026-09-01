@@ -18,8 +18,7 @@ async def signup_and_login(client: AsyncClient, email: str) -> tuple[User, dict[
     signup = {
         "email": email,
         "password": "Password123!",
-        "gender": "FEMALE",
-        "birth_date": "1982-04-12",
+        "terms_agreed": True,
     }
     response = await client.post("/api/v1/auth/signup", json=signup)
     assert response.status_code == status.HTTP_201_CREATED
