@@ -105,8 +105,8 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert "효과를 보장하거나 치료 결과를 예측하는 값이 아닙니다." in html
     assert "불확실성 범위" in html
     assert 'forecast?.status === "approved"' in script
-    assert '`/static/assets/hyeoldangi-face-${point.level}.png`' in script
-    assert '.age-risk-signal-track img{' in styles
+    assert "`/static/assets/hyeoldangi-face-${point.level}.png`" in script
+    assert ".age-risk-signal-track img{" in styles
     assert "forecast?.public_display_approved === true" in script
     assert "normalizeForecastSignal" in script
     assert "point.signal_level" in script
