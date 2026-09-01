@@ -88,7 +88,7 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert "효과를 보장하거나 치료 결과를 예측하는 값이 아닙니다." in html
     assert "불확실성 범위" in html
     assert 'forecast?.status === "approved"' in script
-    assert 'forecast?.public_display_approved === true' in script
+    assert "forecast?.public_display_approved === true" in script
     assert "approvedDisplayPercent" in script
     assert "임의 수치나 그래프를 만들지 않습니다." in script
     assert "renderAgeRiskForecast(prediction, isApprovedRisk)" in script
@@ -141,10 +141,14 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert html.index('id="current-drinker-title"') < html.index('id="smoking-status-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
     assert "필수" not in lifestyle
-    assert lifestyle.index('id="regular-exercise-title"') < lifestyle.index('for="self-health"') < lifestyle.index('for="meal-count"')
-    assert 'card.hidden = !isRegularExercise' in script
+    assert (
+        lifestyle.index('id="regular-exercise-title"')
+        < lifestyle.index('for="self-health"')
+        < lifestyle.index('for="meal-count"')
+    )
+    assert "card.hidden = !isRegularExercise" in script
     assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
-    assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split('</div>', 2)[0]
+    assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split("</div>", 2)[0]
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
