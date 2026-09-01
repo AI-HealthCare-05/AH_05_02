@@ -626,6 +626,7 @@
   const adapter = new DemoForestAdapter();
   let state = defaultState();
   let placementCode = null;
+  let placementDraft = null;
   let running = false;
   let musicEngine = null;
   const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
@@ -913,22 +914,26 @@
     drawPlacedObjects();
   }
 
-  function drawPlacedObjects() {
-    state.placed.forEach((item) => {
-      const x = item.x;
-      const y = item.y;
+  function drawPlacedObject(item, preview = false) {
+      const x = 0;
+      const y = 0;
+      context.save();
+      context.translate(item.x, item.y);
+      context.rotate((Number(item.rotation) || 0) * Math.PI / 180);
+      context.globalAlpha = preview ? .72 : 1;
       const animatedRow = animatedObjectRows[item.code];
       if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
         const frame = Math.floor(performance.now() / 220) % 4;
         const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
         context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
+        context.restore();
         return;
       }
       if (item.code === "reward_cow" && rewardCowImage.complete) {
-        context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); return;
+        context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); context.restore(); return;
       }
       const storageIndex = storageObjectIndex[item.code];
-      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 5, 4, x - 32, y - 48, 64, 64)) return;
+      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 5, 4, x - 32, y - 48, 64, 64)) { context.restore(); return; }
       if (item.code === "flower_patch") {
         fillPixelRect(x - 15, y - 7, 30, 14, "#4b8e3f");
         [[-10, -8, "#ffcf43"], [0, -12, "#f16d77"], [10, -7, "#fff2a8"]].forEach(([dx, dy, color]) => fillPixelRect(x + dx, y + dy, 7, 7, color));
@@ -944,7 +949,23 @@
         fillPixelRect(x - 7, y - 12, 4, 4, "#fff2d1");
         fillPixelRect(x + 4, y - 9, 4, 4, "#fff2d1");
       }
+      context.restore();
+  }
+
+  function drawPlacementGrid() {
+    if (!placementCode || currentScene !== "world") return;
+    placementGridCells().forEach((cell) => {
+      context.fillStyle = cell.valid ? "rgba(69,201,113,.16)" : "rgba(197,75,65,.06)";
+      context.fillRect(cell.x - 15, cell.y - 15, 30, 30);
+      context.strokeStyle = cell.valid ? "rgba(28,128,68,.72)" : "rgba(154,65,58,.20)";
+      context.lineWidth = 1;
+      context.strokeRect(cell.x - 15.5, cell.y - 15.5, 31, 31);
     });
+    if (placementDraft) drawPlacedObject(placementDraft, true);
+  }
+
+  function drawPlacedObjects() {
+    state.placed.forEach((item) => drawPlacedObject(item));
   }
 
   function avatarSpriteIndex(cosmetics) {
@@ -1227,6 +1248,7 @@
     context.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
     context.imageSmoothingEnabled = false;
     drawMap();
+    drawPlacementGrid();
     drawAvatar();
     drawSceneEffects();
     renderSceneChrome();
@@ -1333,8 +1355,9 @@
     const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
     [state.avatar.x, state.avatar.y] = positions[scene];
     placementCode = null;
+    placementDraft = null;
     renderInventory();
-    renderCanvas();
+    emitPlacementUpdate();
     renderGardenHarvest();
     musicEngine?.switchTo(sceneMusicName(scene)).catch(() => setStatus("장면 음악을 전환하지 못했지만 계속 이용할 수 있어요."));
     canvas.focus();
@@ -1354,6 +1377,77 @@
     if (x > 465 && x < 735 && y > 45 && y < 255) return true;
     if (x > 35 && x < 270 && y > 300 && y < 475) return true;
     return false;
+  }
+
+  function placementCellValid(x, y) {
+    if (currentScene !== "world" || blocked(x, y)) return false;
+    return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 44);
+  }
+
+  function placementGridCells() {
+    const cells = [];
+    for (let y = 64; y <= WORLD_HEIGHT - 32; y += 32) {
+      for (let x = 32; x <= WORLD_WIDTH - 32; x += 32) cells.push({ x, y, valid: placementCellValid(x, y) });
+    }
+    return cells;
+  }
+
+  function placementEventDetail() {
+    return {
+      active: Boolean(placementCode) && currentScene === "world",
+      code: placementCode,
+      draft: placementDraft ? { ...placementDraft } : null,
+      cells: placementCode && currentScene === "world" ? placementGridCells() : [],
+    };
+  }
+
+  function emitPlacementUpdate() {
+    window.dispatchEvent(new CustomEvent("forest-placement-updated", { detail: placementEventDetail() }));
+    renderCanvas();
+  }
+
+  function renderPlacementUI() {
+    const active = Boolean(placementCode);
+    const positioned = Boolean(placementDraft);
+    $("#placement-controls").hidden = !active;
+    $("#rotate-placement").disabled = !positioned;
+    $("#confirm-placement").disabled = !positioned;
+    $("#cancel-placement").hidden = !active;
+    if (!active) $("#placement-mode").textContent = "배치할 아이템 없음";
+    else if (!positioned) $("#placement-mode").textContent = `${itemCatalog[placementCode].name} · 초록 격자에서 위치를 선택하세요`;
+    else $("#placement-mode").textContent = `${itemCatalog[placementCode].name} · 회전 후 V로 확정하세요`;
+  }
+
+  function cancelPlacement(message = "오브젝트 배치를 취소했습니다.") {
+    placementCode = null;
+    placementDraft = null;
+    renderInventory();
+    emitPlacementUpdate();
+    setStatus(message);
+  }
+
+  function rotatePlacement() {
+    if (!placementDraft) return;
+    placementDraft.rotation = ((Number(placementDraft.rotation) || 0) + 90) % 360;
+    renderPlacementUI();
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[placementDraft.code].name}을 ${placementDraft.rotation}도로 회전했습니다.`);
+  }
+
+  async function confirmPlacement() {
+    if (!placementCode || !placementDraft) { setStatus("먼저 초록 격자에서 배치 위치를 선택해 주세요."); return; }
+    if (!placementCellValid(placementDraft.x, placementDraft.y)) { setStatus("현재 위치에는 오브젝트를 놓을 수 없습니다."); return; }
+    const existing = state.placed.findIndex((item) => item.code === placementCode);
+    if (existing >= 0) state.placed.splice(existing, 1);
+    const placed = { ...placementDraft, rotation: Number(placementDraft.rotation) || 0 };
+    const name = itemCatalog[placementCode].name;
+    state.placed.push(placed);
+    placementCode = null;
+    placementDraft = null;
+    renderInventory();
+    renderPlaced();
+    emitPlacementUpdate();
+    await persist(`${name} 배치를 확정했습니다.`);
   }
 
   async function moveAvatar(direction) {
@@ -1543,8 +1637,7 @@
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
     drawWardrobeLookThumbnails();
     drawAnimatedObjectThumbnails($("#storage-list"));
-    $("#cancel-placement").hidden = !placementCode;
-    $("#placement-mode").textContent = placementCode ? `${itemCatalog[placementCode].name} 배치 위치를 맵에서 선택하세요` : "배치할 아이템 없음";
+    renderPlacementUI();
   }
 
   function renderPlaced() {
@@ -2324,12 +2417,16 @@
       state.avatar.equipped = state.avatar.equipped === code ? null : code;
       state.avatar.cosmetics.accessory = state.avatar.equipped || "none";
       placementCode = null;
-      renderInventory(); renderCanvas(); await persist(`${itemCatalog[code].name} ${state.avatar.equipped === code ? "장착" : "해제"} 완료.`);
+      placementDraft = null;
+      renderInventory(); emitPlacementUpdate(); await persist(`${itemCatalog[code].name} ${state.avatar.equipped === code ? "장착" : "해제"} 완료.`);
       return;
     }
-    placementCode = placementCode === code ? null : code;
+    if (placementCode === code) { cancelPlacement(); return; }
+    placementCode = code;
+    placementDraft = null;
     renderInventory();
-    setStatus(placementCode ? `${itemCatalog[code].name}을 놓을 위치를 맵에서 눌러 주세요.` : "오브젝트 배치를 취소했습니다.");
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[code].name}을 놓을 초록 격자를 선택해 주세요.`);
   });
   $("#wardrobe-list").addEventListener("submit", async (event) => {
     const form = event.target.closest("[data-outfit-name-form]");
@@ -2338,7 +2435,9 @@
     await renameOutfit(form.dataset.outfitNameForm, new FormData(form).get("outfit-name"));
   });
 
-  $("#cancel-placement").addEventListener("click", () => { placementCode = null; renderInventory(); setStatus("오브젝트 배치를 취소했습니다."); });
+  $("#cancel-placement").addEventListener("click", () => cancelPlacement());
+  $("#rotate-placement").addEventListener("click", rotatePlacement);
+  $("#confirm-placement").addEventListener("click", confirmPlacement);
 
   $("#placed-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-remove]");
@@ -2348,8 +2447,8 @@
   });
 
   async function handleWorldPointer(pointerX, pointerY) {
-    const x = Math.round(pointerX / 4) * 4;
-    const y = Math.round(pointerY / 4) * 4;
+    const x = placementCode ? Math.round(pointerX / 32) * 32 : Math.round(pointerX / 4) * 4;
+    const y = placementCode ? Math.round(pointerY / 32) * 32 : Math.round(pointerY / 4) * 4;
     if (!placementCode) {
       canvas.focus();
       if (currentScene === "home") {
@@ -2368,13 +2467,11 @@
       return;
     }
     if (currentScene !== "world") { setStatus("숲 오브젝트는 월드 장면에서만 배치할 수 있어요."); return; }
-    if (blocked(x, y)) { setStatus("그 위치에는 오브젝트를 놓을 수 없습니다."); return; }
-    const existing = state.placed.findIndex((item) => item.code === placementCode);
-    if (existing >= 0) state.placed.splice(existing, 1);
-    state.placed.push({ code: placementCode, x, y });
-    const name = itemCatalog[placementCode].name;
-    placementCode = null;
-    renderInventory(); renderPlaced(); renderCanvas(); await persist(`${name}을 숲에 배치했습니다.`);
+    if (!placementCellValid(x, y)) { setStatus("빨간 격자나 다른 오브젝트와 겹치는 위치에는 놓을 수 없습니다."); return; }
+    placementDraft = { code: placementCode, x, y, rotation: Number(placementDraft?.rotation) || 0 };
+    renderPlacementUI();
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[placementCode].name} 위치를 선택했습니다. 회전하거나 V 버튼으로 확정하세요.`);
   }
 
   canvas.addEventListener("click", async (event) => {
@@ -2512,11 +2609,13 @@
       ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
       : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
   });
+  window.addEventListener("forest-placement-confirm", confirmPlacement);
 
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "0"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "v", "V", "0"].includes(event.key)) event.preventDefault();
+    if (event.key === "v" || event.key === "V") { confirmPlacement(); return; }
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
     if (event.key === "c" || event.key === "C") { toggleChat(); return; }

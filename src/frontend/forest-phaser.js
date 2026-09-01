@@ -98,6 +98,8 @@
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
       this.createAnimatedObjectAnimations();
+      this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
+      this.placementPreview = null;
       this.placedObjectActors = [];
       this.syncPlacedObjects(storedState().placed || []);
       this.player = this.add.container(this.avatar.x, this.avatar.y);
@@ -150,6 +152,11 @@
         if (event.repeat || formFocused()) return;
         this.playAction("attack", this.equippedWeaponDuration());
       });
+      this.input.keyboard.on("keydown-V", (event) => {
+        if (event.repeat || formFocused()) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("forest-placement-confirm"));
+      });
       this.input.keyboard.on("keydown", (event) => {
         if (event.key !== "0" || event.repeat || formFocused()) return;
         event.preventDefault();
@@ -181,10 +188,7 @@
       });
     }
 
-    syncPlacedObjects(placed = []) {
-      this.placedObjectActors?.forEach((actor) => actor.destroy());
-      this.placedObjectActors = [];
-      placed.forEach((item) => {
+    createPlacedObjectActor(item, preview = false) {
         let actor;
         if (Object.hasOwn(animatedObjectRows, item.code)) {
           const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
@@ -202,10 +206,34 @@
             .setOrigin(0.5, 0.9)
             .setDisplaySize(size, size);
         }
-        if (!actor) return;
-        actor.setDepth(item.y - 2).setVisible(this.sceneName === "world");
-        this.placedObjectActors.push(actor);
+        if (!actor) return null;
+        actor.setAngle(Number(item.rotation) || 0)
+          .setAlpha(preview ? .72 : 1)
+          .setDepth(preview ? 998 : item.y - 2)
+          .setVisible(this.sceneName === "world");
+        return actor;
+    }
+
+    syncPlacedObjects(placed = []) {
+      this.placedObjectActors?.forEach((actor) => actor.destroy());
+      this.placedObjectActors = placed.map((item) => this.createPlacedObjectActor(item)).filter(Boolean);
+    }
+
+    syncPlacement(detail = {}) {
+      this.placementGrid.clear().setVisible(Boolean(detail.active) && this.sceneName === "world");
+      this.placementPreview?.destroy();
+      this.placementPreview = null;
+      if (!detail.active || this.sceneName !== "world") return;
+      (detail.cells || []).forEach((cell) => {
+        const fill = cell.valid ? 0x48c978 : 0xc95d50;
+        const alpha = cell.valid ? .18 : .055;
+        this.placementGrid.fillStyle(fill, alpha).fillRect(cell.x - 15, cell.y - 15, 30, 30);
+        this.placementGrid.lineStyle(1, fill, cell.valid ? .78 : .2).strokeRect(cell.x - 15, cell.y - 15, 30, 30);
       });
+      if (detail.draft) {
+        this.placementGrid.lineStyle(3, 0xffc34d, .95).strokeRect(detail.draft.x - 16, detail.draft.y - 16, 32, 32);
+        this.placementPreview = this.createPlacedObjectActor(detail.draft, true);
+      }
     }
 
     rebuildAvatar() {
@@ -243,6 +271,8 @@
       window.addEventListener("forest-avatar-action", this.onAction);
       this.onPetFed = () => this.showPetHeart();
       window.addEventListener("forest-pet-fed", this.onPetFed);
+      this.onPlacement = (event) => this.syncPlacement(event.detail || {});
+      window.addEventListener("forest-placement-updated", this.onPlacement);
     }
 
     detachWindowEvents() {
@@ -250,6 +280,7 @@
       window.removeEventListener("forest-state-updated", this.onState);
       window.removeEventListener("forest-avatar-action", this.onAction);
       window.removeEventListener("forest-pet-fed", this.onPetFed);
+      window.removeEventListener("forest-placement-updated", this.onPlacement);
     }
 
     showPetHeart() {

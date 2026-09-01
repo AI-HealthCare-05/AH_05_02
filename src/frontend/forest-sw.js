@@ -1,15 +1,15 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v74";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v75";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260901-15",
+  "/static/forest-game.css?v=20260901-16",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260901-24",
-  "/static/forest-phaser.js?v=20260901-13",
-  "/static/forest-game.js?v=20260901-39",
+  "/static/forest-phaser.js?v=20260901-14",
+  "/static/forest-game.js?v=20260901-40",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];

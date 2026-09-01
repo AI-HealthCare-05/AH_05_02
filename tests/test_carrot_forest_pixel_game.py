@@ -324,7 +324,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v38" in html
+    assert "forest-local-pwa-reset-v39" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -411,7 +411,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v74" in worker
+    assert "gandang-carrot-forest-pwa-v75" in worker
     assert "when-the-morning-comes.mp3" in worker
     assert "avatar-title.mp3" in worker
     assert "home-elfwood.mp3" in worker
@@ -660,6 +660,29 @@ def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     assert "history.find((look) => look.presetRole === gender)" in game_script
     assert "기본 프리셋 이름은 변경할 수 없습니다." in game_script
     assert "fixed-preset-name" in game_script
+
+
+def test_storage_placement_uses_grid_rotation_and_explicit_confirmation() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+
+    assert 'id="placement-controls"' in html
+    assert 'id="rotate-placement"' in html
+    assert 'id="confirm-placement"' in html
+    assert "placementGridCells" in game_script
+    assert "placementCellValid" in game_script
+    assert "placementDraft" in game_script
+    assert "rotatePlacement" in game_script
+    assert "confirmPlacement" in game_script
+    assert 'event.key === "v" || event.key === "V"' in game_script
+    assert "forest-placement-updated" in game_script
+    assert "syncPlacement" in phaser_script
+    assert "createPlacedObjectActor" in phaser_script
+    assert ".setAngle(Number(item.rotation) || 0)" in phaser_script
+    assert 'this.input.keyboard.on("keydown-V"' in phaser_script
+    assert ".placement-controls" in css
 
 
 def test_each_preset_uses_directional_walk_and_vehicle_motion_in_world() -> None:
