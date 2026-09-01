@@ -158,7 +158,7 @@
       }).setOrigin(0.5).setStroke("#ffffff", 2);
       this.player.add(this.nameplate);
       this.rebuildAvatar();
-      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E,F");
+      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E,F,J");
       this.cursors = this.input.keyboard.createCursorKeys();
       // Phaser가 Space를 가로채면 슬로건 textarea에서 띄어쓰기가 되지 않는다.
       this.input.keyboard.removeCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);
@@ -174,6 +174,10 @@
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "feed" }));
       });
       this.input.keyboard.on("keydown-E", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })); });
+      this.input.keyboard.on("keydown-J", (event) => {
+        if (event.repeat || formFocused()) return;
+        this.playAction("jump", 620);
+      });
       this.input.keyboard.on("keydown-Z", (event) => {
         if (event.repeat || formFocused()) return;
         this.playAction("attack", this.equippedWeaponDuration());
@@ -454,6 +458,15 @@
     playAction(pose, duration = 1100) {
       this.actionPose = pose;
       this.actionUntil = performance.now() + duration;
+      if (pose === "jump" && !this.mountTransitioning) {
+        this.tweens.killTweensOf(this.premiumAvatar);
+        this.premiumAvatar.setY(0);
+        this.tweens.add({
+          targets: this.premiumAvatar, y: -16, duration: 210, yoyo: true, ease: "Sine.easeOut",
+          onComplete: () => this.premiumAvatar.setY(0),
+        });
+        window.dispatchEvent(new CustomEvent("forest-sfx", { detail: { name: "run-grass", volume: 0.2, rate: 1.22, minInterval: 380 } }));
+      }
       if (pose === "attack") this.tryAttackRat(performance.now());
       if (pose === "attack") {
         const weapon = this.avatar.cosmetics?.lpcWeapon;

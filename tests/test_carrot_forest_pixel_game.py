@@ -83,7 +83,7 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
         assert f'id="{control_id}"' in html
     assert 'id="wardrobe-list"' in html
     assert 'id="storage-list"' in html
-    assert html.count("data-action=") == 6
+    assert html.count("data-action=") == 5
     for key in (
         'event.key === "q"',
         'event.key === "r"',
@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v96" in worker
+    assert "gandang-carrot-forest-pwa-v97" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -492,8 +492,8 @@ def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
     assert len(manifest["items"]) >= 24
     for action in ("harvest", "fishing", "door", "attack", "dance"):
         assert action in engine_script
-    for key_label in ("공격", "댄스"):
-        assert key_label in html
+    assert "공격" in html
+    assert "댄스" in game_script
     assert "playTogether" in phaser_script
     assert "this.petTrail" in phaser_script
     assert "time - 330" in phaser_script
@@ -650,6 +650,16 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert "arcade-deck" in html
     assert "WASD로도 움직일 수 있어요." in html
     assert "숲 조작 패널" not in html
+    assert 'data-action="chat"' not in html
+    assert 'data-action="dance"' not in html
+    for action in ("jump", "run", "interact", "ride", "attack"):
+        assert f'data-action="{action}"' in html
+    assert "<kbd>J</kbd><span>점프</span>" in html
+    assert 'grid-template-areas:"jump up run" "left interact right" "ride down attack"' in (
+        ROOT / "src/frontend/forest-game.css"
+    ).read_text(encoding="utf-8")
+    assert 'this.input.keyboard.on("keydown-J"' in phaser_script
+    assert 'this.playAction("jump", 620)' in phaser_script
     assert 'data-action="feed"' not in html
     assert "async function feedPet" in game_script
     assert 'new CustomEvent("forest-pet-clicked"' in phaser_script
