@@ -96,6 +96,20 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert "repeating-linear-gradient" in styles
 
 
+def test_rule_forecast_preview_is_local_opt_in_and_non_predictive() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="rule-forecast-preview"' in html
+    assert "?ruleForecastDemo=1" in html
+    assert "개인 예측 아님" in html
+    assert "학습된 생존곡선·생활습관 개선 효과·확정 발병확률이 아닙니다." in html
+    assert 'get("ruleForecastDemo") === "1"' in script
+    assert "isDemoEnvironment()" in script
+    assert "survival *= 1 - hazard" in script
+    assert "initializeRuleForecastPreview" in script
+
+
 def test_together_shares_only_challenge_completion_status() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")

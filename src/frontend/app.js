@@ -1073,6 +1073,55 @@ function approvedDisplayPercent(value) {
   return Number.isFinite(number) && number >= 0 && number <= 100 ? number : null;
 }
 
+function ruleForecastDemoEnabled() {
+  return isDemoEnvironment()
+    && new URLSearchParams(window.location.search).get("ruleForecastDemo") === "1";
+}
+
+function cumulativeRulePreview(intervalHazardPercent, intervals = 4) {
+  const hazard = Number(intervalHazardPercent) / 100;
+  if (!Number.isFinite(hazard) || hazard <= 0 || hazard > 0.30) return [];
+  let survival = 1;
+  return Array.from({ length: intervals }, (_, index) => {
+    survival *= 1 - hazard;
+    return {
+      horizonYears: (index + 1) * 2,
+      cumulativePercent: (1 - survival) * 100,
+    };
+  });
+}
+
+function renderRuleForecastPreview(intervalHazardPercent) {
+  const bars = $("#rule-preview-bars");
+  if (!bars) return;
+  const points = cumulativeRulePreview(intervalHazardPercent);
+  if (!points.length) {
+    bars.innerHTML = "<li>0.01%부터 30% 사이의 값을 입력해 주세요.</li>";
+    return;
+  }
+  const scaleMaximum = Math.max(10, Math.ceil(points.at(-1).cumulativePercent / 5) * 5);
+  bars.innerHTML = points.map((point) => {
+    const height = Math.max(4, (point.cumulativePercent / scaleMaximum) * 100);
+    return `<li><strong>${point.cumulativePercent.toFixed(1)}%</strong><span><i style="height:${height.toFixed(1)}%"></i></span><small>약 ${point.horizonYears}년</small></li>`;
+  }).join("");
+  $("#rule-preview-chart").setAttribute(
+    "aria-label",
+    `약 2년 단위 누적 위험 신호 개발용 예시. ${points.map((point) => `${point.horizonYears}년 ${point.cumulativePercent.toFixed(1)}%`).join(", ")}`,
+  );
+}
+
+function initializeRuleForecastPreview() {
+  if (!ruleForecastDemoEnabled()) return;
+  const preview = $("#rule-forecast-preview");
+  if (!preview) return;
+  preview.hidden = false;
+  $("#risk-confirm-card").hidden = true;
+  $("#result-unavailable").hidden = false;
+  $("#forecast-state").hidden = true;
+  renderRuleForecastPreview(2.12);
+  showStep(6, { recordHistory: false });
+}
+
 function forecastPayload(prediction = {}) {
   return prediction.age_risk_forecast || prediction.future_risk_forecast || prediction.risk_forecast || null;
 }
@@ -2599,6 +2648,10 @@ $("#download-report").addEventListener("click", async (event) => {
 });
 $("#restart")?.addEventListener("click", () => window.location.reload());
 $("#dashboard-back")?.addEventListener("click", goBack);
+$("#rule-preview-form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  renderRuleForecastPreview(Number($("#rule-preview-hazard").value));
+});
 
 function resumeFromForest() {
   const requestedView = new URLSearchParams(window.location.search);
@@ -2622,3 +2675,4 @@ configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 syncExerciseDetails();
 resumeFromForest();
+initializeRuleForecastPreview();

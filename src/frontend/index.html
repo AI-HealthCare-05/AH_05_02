@@ -365,6 +365,22 @@
             <strong id="forecast-state-title">연령별 위험 전망 결과를 불러오고 있어요</strong>
             <p id="forecast-state-message">승인된 전망 데이터가 도착하면 이 영역에 표시합니다.</p>
           </div>
+          <section class="rule-forecast-preview" id="rule-forecast-preview" aria-labelledby="rule-forecast-preview-title" hidden>
+            <div class="rule-preview-heading">
+              <div><p class="eyebrow">개발용 미리보기</p><h4 id="rule-forecast-preview-title">약 2년 단위 누적 위험 신호 계산 예시</h4></div>
+              <span>개인 예측 아님</span>
+            </div>
+            <p>PR #26의 high 경계값 2.12%를 구간 위험 예시로 사용합니다. 주소에 <code>?ruleForecastDemo=1</code>을 붙인 로컬 개발 화면에서만 표시합니다.</p>
+            <form class="rule-preview-controls" id="rule-preview-form">
+              <label for="rule-preview-hazard">약 2년 구간 위험 신호 예시(%)</label>
+              <input id="rule-preview-hazard" type="number" min="0.01" max="30" step="0.01" value="2.12" inputmode="decimal">
+              <button class="secondary" type="submit">그래프 다시 계산</button>
+            </form>
+            <div class="rule-preview-chart" id="rule-preview-chart" role="img" aria-label="약 2년 단위 누적 위험 신호 개발용 계산 예시">
+              <ol id="rule-preview-bars"></ol>
+            </div>
+            <p class="scenario-safety">각 구간의 위험이 같다고 가정한 수학적 외삽입니다. 학습된 생존곡선·생활습관 개선 효과·확정 발병확률이 아닙니다.</p>
+          </section>
           <div class="age-risk-chart" id="age-risk-chart" role="img" aria-label="연령별 당뇨병 위험 전망 그래프" hidden>
             <div class="age-risk-chart-scale" aria-hidden="true"><span>높음</span><span>주의</span><span>낮음</span></div>
             <div class="age-risk-chart-points" id="age-risk-chart-points"></div>
