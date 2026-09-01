@@ -135,6 +135,9 @@
   function resolvedAnimation(avatar, options) {
     if (options.pose === "attack") {
       const weapon = avatar.cosmetics?.lpcWeapon || "arming_sword";
+      // 공식 LPC 완드 시트에는 slash 레이어만 있지만, 캐릭터 본체는 spellcast 행을
+      // 완전하게 지원한다. 완드는 아래 drawActionProp에서 주문 자세에 맞춰 그린다.
+      if (weapon === "wand") return "spellcast";
       const supported = item("weapon", weapon, "arming_sword")?.animations || [];
       const preferences = {
         wand: ["spellcast", "slash", "thrust"],
@@ -180,6 +183,18 @@
       context.beginPath(); context.moveTo(endX, endY); context.quadraticCurveTo(endX + 8 * scaleX, endY + 12 * scaleY, endX + 3 * scaleX, destination.y + 61 * scaleY); context.stroke();
       context.fillStyle = "#e85d48";
       context.fillRect(endX + 2 * scaleX, destination.y + 59 * scaleY, 2 * scaleX, 2 * scaleY);
+    } else if (pose === "attack" && cosmetics.lpcWeapon === "wand") {
+      const facingLeft = direction === "left";
+      const wandX = direction === "up" ? 22 : facingLeft ? 18 : 44;
+      const wandTop = 22 - Math.min(3, frame % 4);
+      drawPixel(context, destination, wandX, wandTop + 5, 2, 15, "#6f4528");
+      drawPixel(context, destination, wandX - 1, wandTop + 3, 4, 4, "#e6c27a");
+      drawPixel(context, destination, wandX, wandTop + 2, 2, 2, "#fff4bc");
+      const sparkleShift = frame % 3;
+      drawPixel(context, destination, wandX - 5 - sparkleShift, wandTop, 2, 2, "#b991ff");
+      drawPixel(context, destination, wandX + 6 + sparkleShift, wandTop + 4, 2, 2, "#75d9ff");
+      drawPixel(context, destination, wandX + (facingLeft ? -7 : 8), wandTop - 4, 1, 3, "#fff4bc");
+      drawPixel(context, destination, wandX + (facingLeft ? -8 : 7), wandTop - 3, 3, 1, "#fff4bc");
     } else if (pose === "door") {
       drawPixel(context, destination, direction === "left" ? 15 : 47, 34, 2, 2, "#ffe69a");
     }

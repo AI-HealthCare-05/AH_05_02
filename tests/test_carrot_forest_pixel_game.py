@@ -411,7 +411,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v70" in worker
+    assert "gandang-carrot-forest-pwa-v71" in worker
     assert "when-the-morning-comes.mp3" in worker
     assert "avatar-title.mp3" in worker
     assert "home-elfwood.mp3" in worker
@@ -578,6 +578,9 @@ def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
     assert 'wand: ["spellcast", "slash", "thrust"]' in engine_script
+    assert 'if (weapon === "wand") return "spellcast"' in engine_script
+    assert 'pose === "attack" && cosmetics.lpcWeapon === "wand"' in engine_script
+    assert 'drawPixel(context, destination, wandX, wandTop + 5, 2, 15, "#6f4528")' in engine_script
     assert 'bow: ["shoot", "slash"]' in engine_script
     assert 'cane: ["thrust", "slash"]' in engine_script
     assert 'dagger: ["slash", "thrust", "halfslash"]' in engine_script
