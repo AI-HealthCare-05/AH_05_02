@@ -15,6 +15,12 @@ Windows PowerShell에서도 같은 명령을 사용할 수 있다. 스크립트�
 
 그다음 `.env.example`을 `.env`로 복사하고 로컬 비밀값과 DB 값을 입력한 뒤 실행한다.
 
+macOS 최초 설정은 Homebrew가 설치된 상태에서 다음 명령으로 실행한다. 스크립트가 `libomp`를 확인하고 없으면 설치한 뒤 LightGBM·XGBoost import까지 검증한다.
+
+```bash
+./scripts/setup-macos.sh
+```
+
 ```bash
 ./scripts/start-local.sh
 ```
