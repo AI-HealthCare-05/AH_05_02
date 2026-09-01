@@ -50,7 +50,7 @@ def main() -> None:
     if args.tomorrow:
         provision(
             args.tomorrow.resolve(),
-            ROOT / "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json",
+            ROOT / "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json",
         )
 
 

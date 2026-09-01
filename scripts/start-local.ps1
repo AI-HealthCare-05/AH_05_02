@@ -4,7 +4,7 @@ Set-Location -LiteralPath $projectRoot
 
 $requiredModels = @(
     "models\artifacts\candidates\diabetes_current_screening\v050\model.joblib",
-    "models\artifacts\candidates\diabetes_incidence\rf25-tuned-spec40-v1\model.joblib"
+    "models\artifacts\candidates\diabetes_incidence\rf25-tuned-spec40-v1.1-sav\model.joblib"
 )
 foreach ($model in $requiredModels) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $model))) {

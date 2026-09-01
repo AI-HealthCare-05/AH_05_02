@@ -6,7 +6,7 @@ cd "$project_root"
 
 required_models=(
   "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
-  "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
+  "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
 )
 for model in "${required_models[@]}"; do
   if [[ ! -f "$model" ]]; then

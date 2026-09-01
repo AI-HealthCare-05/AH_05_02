@@ -29,6 +29,10 @@ def test_template_manifest_contract(tmp_path: Path) -> None:
     assert manifest.experiment_id == "unit_test_v001"
     assert manifest.primary_metric == "recall"
     assert manifest.minimum_specificity == pytest.approx(0.4)
+    assert manifest.dataset_version == "replace_with_dataset_version"
+    assert manifest.split_version == "replace_with_split_version"
+    assert manifest.model_version == "replace_with_model_version"
+    assert manifest.threshold_version == "replace_with_threshold_version"
 
 
 def test_experiment_categories_exist() -> None:

@@ -8,6 +8,8 @@
   "dataset_path": "data/processed/official_v1/",
   "dataset_version": "official_v1",
   "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "model_version": "rf25-tuned-spec40-v1.1-sav",
+  "threshold_version": "validation-spec043-caution-recall090-sav-repro-v1",
   "entrypoint": "pipeline.py:run_experiment",
   "primary_metric": "recall",
   "minimum_specificity": 0.4,

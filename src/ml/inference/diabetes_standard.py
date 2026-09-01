@@ -30,7 +30,7 @@ from src.ml.preprocessing.diabetes_api_features import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CANDIDATE_MANIFEST = REPOSITORY_ROOT / (
-    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
 )
 
 
@@ -100,6 +100,10 @@ def _validate_bundle(bundle: Any, manifest: dict[str, Any]) -> Any:
         raise ModelContractError("model feature order does not match the API feature contract")
     if bundle.get("feature_schema_version") != manifest.get("feature_schema_version"):
         raise ModelContractError("model feature schema version does not match manifest")
+    if bundle.get("model_version") != manifest.get("model_version"):
+        raise ModelContractError("model version does not match manifest")
+    if bundle.get("threshold_version") != manifest.get("threshold_version"):
+        raise ModelContractError("model threshold version does not match manifest")
     if abs(float(bundle.get("threshold", -1)) - manifest["thresholds"]["high"]) > 1e-12:
         raise ModelContractError("model decision threshold does not match manifest")
     return bundle["pipeline"]

@@ -130,6 +130,8 @@ def run_experiment(context: dict[str, Any]) -> dict[str, Any]:
             "dataset_version": manifest["dataset_version"],
             "split_version": manifest["split_version"],
             "feature_schema_version": manifest["feature_schema_version"],
+            "model_version": manifest["model_version"],
+            "threshold_version": manifest["threshold_version"],
             "purpose": "risk_screening_and_health_education_research_only",
         },
         run_dir / artifact_name,

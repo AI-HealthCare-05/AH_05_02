@@ -3,10 +3,49 @@ import pytest
 
 from src.ml.preprocessing.build_klosa_diabetes_cohort import (
     TARGET,
+    _read_wave,
     assert_model_matrix_is_safe,
     build_transition,
     summarize,
 )
+
+
+def test_read_wave_falls_back_to_sav(tmp_path, monkeypatch) -> None:
+    sav_path = tmp_path / "str01_20260413.sav"
+    sav_path.touch()
+    expected = pd.DataFrame({"pid": [1]})
+
+    def fake_read_sav(path, *, usecols, apply_value_formats):
+        assert path == str(sav_path)
+        assert usecols == ["pid"]
+        assert apply_value_formats is False
+        return expected, object()
+
+    monkeypatch.setattr(
+        "src.ml.preprocessing.build_klosa_diabetes_cohort.pyreadstat.read_sav",
+        fake_read_sav,
+    )
+
+    assert _read_wave(tmp_path, 1, ["pid"]).equals(expected)
+
+
+def test_read_wave_prefers_dta_when_both_formats_exist(tmp_path, monkeypatch) -> None:
+    (tmp_path / "str01_20260413.dta").touch()
+    (tmp_path / "str01_20260413.sav").touch()
+    expected = pd.DataFrame({"pid": [1]})
+
+    def fake_read_stata(path, *, columns, convert_categoricals):
+        assert path == tmp_path / "str01_20260413.dta"
+        assert columns == ["pid"]
+        assert convert_categoricals is False
+        return expected
+
+    monkeypatch.setattr(
+        "src.ml.preprocessing.build_klosa_diabetes_cohort.pd.read_stata",
+        fake_read_stata,
+    )
+
+    assert _read_wave(tmp_path, 1, ["pid"]).equals(expected)
 
 
 def test_build_transition_separates_t0_features_and_t1_target() -> None:

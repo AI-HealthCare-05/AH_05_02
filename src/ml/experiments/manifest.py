@@ -19,6 +19,10 @@ class ExperimentManifest:
     kind: str
     problem: str
     dataset_path: str
+    dataset_version: str
+    split_version: str
+    model_version: str
+    threshold_version: str
     entrypoint: str
     primary_metric: str
     minimum_specificity: float | None
@@ -38,6 +42,10 @@ class ExperimentManifest:
             "kind": self.kind,
             "problem": self.problem,
             "dataset_path": self.dataset_path,
+            "dataset_version": self.dataset_version,
+            "split_version": self.split_version,
+            "model_version": self.model_version,
+            "threshold_version": self.threshold_version,
             "entrypoint": self.entrypoint,
             "primary_metric": self.primary_metric,
             "minimum_specificity": self.minimum_specificity,
@@ -93,6 +101,10 @@ def load_manifest(path: Path) -> ExperimentManifest:
         kind=kind,
         problem=_required_text(payload, "problem"),
         dataset_path=_required_text(payload, "dataset_path"),
+        dataset_version=_required_text(payload, "dataset_version"),
+        split_version=_required_text(payload, "split_version"),
+        model_version=_required_text(payload, "model_version"),
+        threshold_version=_required_text(payload, "threshold_version"),
         entrypoint=entrypoint,
         primary_metric=primary_metric,
         minimum_specificity=minimum_specificity,
