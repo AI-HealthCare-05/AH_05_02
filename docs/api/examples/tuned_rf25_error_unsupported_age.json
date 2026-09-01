@@ -1,0 +1,12 @@
+{
+  "birth_date": "1995-01-01",
+  "sex": "female",
+  "height_cm": 162.0,
+  "weight_kg": 68.0,
+  "smoking_status": "never",
+  "current_drinker": false,
+  "regular_exercise": true,
+  "exercise_days_per_week": 3,
+  "exercise_minutes": 40,
+  "previously_diagnosed_diabetes": false
+}
