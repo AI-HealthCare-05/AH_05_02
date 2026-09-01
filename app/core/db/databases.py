@@ -8,6 +8,7 @@ TORTOISE_APP_MODELS = [
     "aerich.models",
     "app.models.users",
     "app.models.prediction_jobs",
+    "app.models.model_registry",
     "app.models.health",
     "app.models.engagement",
     "app.models.wellness",

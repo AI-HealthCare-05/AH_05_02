@@ -8,9 +8,11 @@ from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
 from app.dtos.ai_jobs import prediction_job_response
 from app.dtos.health import PredictionJobCreateRequest
-from app.models.health import Prediction
+from app.models.health import Prediction, PredictionRiskCurvePoint
+from app.models.model_registry import ModelRegistry
 from app.models.users import User
-from app.prediction.contracts import ACTIVE_MODEL
+from app.prediction.contracts import ACTIVE_MODEL, LIFETIME_RISK_MODEL_KEY
+from app.prediction.errors import ModelNotReadyError, classify_ml_input_error
 from app.repositories.health_repository import HealthRepository
 from app.services.ai_jobs import create_prediction_job, get_prediction_job
 
@@ -24,15 +26,45 @@ DEVELOPMENT_DISCLAIMER = (
 
 
 @prediction_router.get("/models/active")
-async def active_models() -> dict[str, object]:
+async def active_models(model_key: str | None = None) -> dict[str, object]:
+    if model_key is None or model_key == ACTIVE_MODEL.model_key:
+        return envelope(
+            {
+                "items": [
+                    {
+                        **ACTIVE_MODEL.model_dump(),
+                        "threshold_approved": ACTIVE_MODEL.threshold_is_approved,
+                        "public_result_available": ACTIVE_MODEL.threshold_is_approved,
+                        "artifact_status": "verified" if ACTIVE_MODEL.model_artifact_digest else "not_configured",
+                    }
+                ]
+            }
+        )
+    # diabetes_lifetime_risk 등 ACTIVE_MODEL(정적 상수) 밖의 model_key는 DB 기반
+    # ModelRegistry에서만 조회한다 — 아직 승인된 모델이 없으면 빈 목록을 반환한다
+    # (미등록 모델을 있는 것처럼 응답하지 않기 위함).
+    registry_entry = await ModelRegistry.active_for(model_key)
+    if registry_entry is None:
+        return envelope({"items": []})
     return envelope(
         {
             "items": [
                 {
-                    **ACTIVE_MODEL.model_dump(),
-                    "threshold_approved": ACTIVE_MODEL.threshold_is_approved,
-                    "public_result_available": ACTIVE_MODEL.threshold_is_approved,
-                    "artifact_status": "verified" if ACTIVE_MODEL.model_artifact_digest else "not_configured",
+                    "model_key": registry_entry.model_key,
+                    "version": registry_entry.model_version,
+                    "model_type": registry_entry.model_type,
+                    "promotion_status": registry_entry.promotion_status,
+                    "feature_schema_version": registry_entry.feature_schema_version,
+                    "target_definition_version": registry_entry.target_definition_version,
+                    "calibration_version": registry_entry.calibration_version,
+                    "threshold_version": registry_entry.threshold_version,
+                    "min_age": registry_entry.min_age,
+                    "max_age": registry_entry.max_age,
+                    "model_population": registry_entry.model_population,
+                    "outcome_definition": registry_entry.outcome_definition,
+                    "threshold_approved": registry_entry.promotion_status == "approved",
+                    "public_result_available": registry_entry.promotion_status == "approved",
+                    "artifact_status": "verified" if registry_entry.artifact_sha256 else "not_configured",
                 }
             ]
         }
@@ -56,7 +88,18 @@ async def enqueue_prediction_job(
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={"error_code": str(exc), "message": "모델 입력 계약을 확인해 주세요."},
+            detail={
+                "error_code": classify_ml_input_error(exc),
+                "message": "모델 입력 계약을 확인해 주세요.",
+                "retryable": False,
+            },
+        ) from exc
+    except ModelNotReadyError as exc:
+        # ModelNotReadyError는 RuntimeError의 서브클래스이므로 반드시 아래 일반
+        # RuntimeError 처리보다 먼저 잡아야 한다.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error_code": "MODEL_NOT_READY", "message": str(exc), "retryable": False},
         ) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
@@ -87,6 +130,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
     return {
         "prediction_id": item.id,
         "checkup_id": item.health_checkup_id,
+        "input_as_of_date": item.input_as_of_date,
         "model_key": item.model_key,
         "outcome_definition": item.outcome_definition,
         "result_status": item.result_status,
@@ -160,6 +204,73 @@ async def read_prediction(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
     return envelope(prediction_payload(item))
+
+
+def _risk_curve_summary(points: list[PredictionRiskCurvePoint]) -> dict[str, float | None] | None:
+    """Provisional +2/+5/+10-year lookup relative to the curve's first (current-age) point.
+
+    TODO: confirm against the final API-LIFE-004 spec once 양준혁 delivers the
+    survival-model output contract — this nearest-age approximation may need
+    to change to an exact-age lookup or interpolation.
+    """
+    if not points:
+        return None
+    base_age = points[0].age
+    by_age = {p.age: p.cumulative_risk for p in points}
+
+    def nearest(target_age: int) -> float | None:
+        if not by_age:
+            return None
+        closest = min(by_age, key=lambda age: abs(age - target_age))
+        return by_age[closest]
+
+    return {
+        "risk_2y": nearest(base_age + 2),
+        "risk_5y": nearest(base_age + 5),
+        "risk_10y": nearest(base_age + 10),
+    }
+
+
+@prediction_router.get("/predictions/{prediction_id}/risk-curve")
+async def read_risk_curve(
+    prediction_id: int,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    """API-LIFE-004: 연령별 당뇨 위험 전망(생존곡선) 조회.
+
+    risk_curve_status가 "available"이 아니면(현재는 생존모델이 없어 항상
+    "not_applicable") 빈 결과와 상태만 반환한다 — 검증되지 않은 곡선을 있는
+    것처럼 노출하지 않기 위함이다.
+    """
+    repo = HealthRepository()
+    item = await repo.get_prediction(prediction_id, user.id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
+    if item.risk_curve_status != "available":
+        return envelope(
+            {
+                "prediction_id": item.id,
+                "status": item.risk_curve_status,
+                "points": [],
+                "summary": None,
+                "message": "연령별 위험 전망은 승인된 생존모델 결과가 준비된 이후에만 제공됩니다.",
+            }
+        )
+    points = await repo.risk_curve_points(item.id)
+    return envelope(
+        {
+            "prediction_id": item.id,
+            "status": item.risk_curve_status,
+            "model_key": item.model_key,
+            "output_definition_version": item.output_definition_version,
+            "points": [
+                {"age": p.age, "cumulative_risk": p.cumulative_risk, "lower": p.lower, "upper": p.upper}
+                for p in points
+            ],
+            "summary": _risk_curve_summary(points),
+            "disclaimer": "이 전망은 통계적 위험 추정치이며 개인의 확정된 미래를 의미하지 않습니다.",
+        }
+    )
 
 
 @prediction_router.get("/predictions/{prediction_id}/risk-factors")

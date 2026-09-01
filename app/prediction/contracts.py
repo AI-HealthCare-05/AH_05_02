@@ -61,6 +61,12 @@ class ActiveModel(BaseModel):
         return self.threshold_version not in {"", "unapproved"} and self.promotion_status == "approved"
 
 
+# v3.0 연령별 당뇨 위험 전망(생존곡선). diabetes_incidence와 달리 아직 승인된
+# 모델이 없어 ModelRegistry 테이블(is_active=True row)로만 활성화된다 — 정적
+# ActiveModel 상수를 만들지 않는 이유는, 아직 없는 모델을 있는 것처럼 하드코딩
+# 하지 않기 위함이다.
+LIFETIME_RISK_MODEL_KEY = "diabetes_lifetime_risk"
+
 ACTIVE_MODEL = ActiveModel(
     model_key=config.PREDICTION_MODEL_KEY,
     version=config.PREDICTION_MODEL_VERSION,
@@ -104,11 +110,11 @@ class PredictionFeatures(BaseModel):
     education_level: str | None = Field(default=None, max_length=50)
     marital_status: str | None = Field(default=None, max_length=50)
     household_structure: str | None = Field(default=None, max_length=50)
-    health_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
-    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
-    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=10)
-    depressed_feeling_last_week: bool | None = None
-    sleep_difficulty_last_week: bool | None = None
+    health_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=100)
+    depressed_feeling_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
+    sleep_difficulty_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
 
     def as_model_record(self) -> dict[str, Any]:
         return {name: getattr(self, name) for name in STANDARD_MODEL_FEATURES}

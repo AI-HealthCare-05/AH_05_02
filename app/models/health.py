@@ -77,8 +77,8 @@ class HealthCheckup(Model):
     education_level = fields.CharField(max_length=50, null=True)
     marital_status = fields.CharField(max_length=50, null=True)
     household_structure = fields.CharField(max_length=50, null=True)
-    depressed_feeling_last_week = fields.BooleanField(null=True)
-    sleep_difficulty_last_week = fields.BooleanField(null=True)
+    depressed_feeling_last_week = fields.CharField(max_length=20, null=True)
+    sleep_difficulty_last_week = fields.CharField(max_length=20, null=True)
     feature_schema_version = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
@@ -92,6 +92,7 @@ class Prediction(Model):
     job_id = fields.CharField(max_length=36, unique=True)
     user_id = fields.BigIntField(db_index=True)
     health_checkup_id = fields.BigIntField(db_index=True)
+    input_as_of_date = fields.DateField()
     model_key = fields.CharField(max_length=100)
     outcome_definition = fields.CharField(max_length=120)
     result_status = fields.CharField(max_length=40)
@@ -112,9 +113,46 @@ class Prediction(Model):
     explanation_status = fields.CharField(max_length=40, default="not_available")
     disclaimer = fields.TextField()
     predicted_at = fields.DatetimeField(auto_now_add=True)
+    # v3.0 연령별 당뇨 위험 전망(생존곡선). 점추정(diabetes_incidence)에는 해당 없음.
+    risk_curve_status = fields.CharField(max_length=20, default="not_applicable")
+    output_definition_version = fields.CharField(max_length=100, null=True)
 
     class Meta:
         table = "predictions"
+
+
+class PredictionRiskCurvePoint(Model):
+    """One (age, cumulative_risk) point of a survival-curve prediction (API-LIFE-004)."""
+
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    age = fields.IntField()
+    cumulative_risk = fields.FloatField()
+    lower = fields.FloatField()
+    upper = fields.FloatField()
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "prediction_risk_curve_points"
+        unique_together = (("prediction_id", "age"),)
+
+
+class PredictionScenario(Model):
+    """baseline / lifestyle_improved comparison line for a risk curve (REQ-PRED-012).
+
+    `is_active` stays False until a scenario method is separately validated —
+    the API must not surface an unvalidated scenario as if it were causal.
+    """
+
+    id = fields.BigIntField(primary_key=True)
+    prediction_id = fields.BigIntField(db_index=True)
+    scenario = fields.CharField(max_length=30)
+    scenario_definition_version = fields.CharField(max_length=100)
+    is_active = fields.BooleanField(default=False)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "prediction_scenarios"
 
 
 class RiskFactor(Model):

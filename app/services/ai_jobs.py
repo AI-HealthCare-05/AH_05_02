@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 
 from app.core import config
@@ -7,9 +7,11 @@ from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
 from app.models.health import Prediction
+from app.models.model_registry import ModelRegistry
 from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
-from app.prediction.contracts import ACTIVE_MODEL
+from app.prediction.contracts import ACTIVE_MODEL, LIFETIME_RISK_MODEL_KEY
+from app.prediction.errors import ModelNotReadyError
 from app.prediction.providers import get_prediction_provider
 from app.repositories.health_repository import HealthRepository
 from app.services.health import HealthService
@@ -76,10 +78,19 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     eligibility = await repo.latest_eligibility(user.id)
     if eligibility is None or not eligibility.model_eligible:
         raise PermissionError("PREDICTION_NOT_ALLOWED")
+
+    if request.model_key == LIFETIME_RISK_MODEL_KEY:
+        return await _create_lifetime_risk_job()
+
     if checkup.feature_schema_version != ACTIVE_MODEL.feature_schema_version:
         raise ValueError("FEATURE_SCHEMA_VERSION_MISMATCH")
 
-    features = HealthService.features_for(checkup).as_model_record()
+    as_of_date = checkup.checkup_date
+    inference_payload = HealthService.inference_payload(
+        user,
+        checkup,
+        previously_diagnosed_diabetes=eligibility.has_diabetes_diagnosis,
+    )
     job_id = str(uuid4())
     now = datetime.now(UTC)
     job = await PredictionJob.create(
@@ -89,7 +100,8 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         request_payload={
             "model_key": ACTIVE_MODEL.model_key,
             "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
-            "feature_names": list(features),
+            "input_as_of_date": as_of_date.isoformat(),
+            "health_checkup_id": checkup.id,
         },
         model_key=ACTIVE_MODEL.model_key,
         model_version=ACTIVE_MODEL.version,
@@ -102,12 +114,16 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         threshold_version=ACTIVE_MODEL.threshold_version,
         user_id=user.id,
         health_checkup_id=checkup.id,
+        input_as_of_date=as_of_date,
         deadline_at=now + timedelta(seconds=config.PREDICTION_TIMEOUT_SECONDS),
     )
     message = {
         "job_id": job_id,
         "task_type": "diabetes_incidence",
-        "payload": json.dumps({"features": features}, ensure_ascii=False),
+        "payload": json.dumps(
+            {"input": inference_payload, "as_of_date": as_of_date.isoformat()},
+            ensure_ascii=False,
+        ),
         "model_version": ACTIVE_MODEL.version,
         "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
         "input_schema_version": ACTIVE_MODEL.input_schema_version,
@@ -120,7 +136,7 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         "created_at": now.isoformat(),
     }
     if config.DEMO_MODE:
-        await _complete_demo_prediction(job, features)
+        await _complete_demo_prediction(job, inference_payload, as_of_date)
         return job
     try:
         await redis_client.hset(
@@ -140,21 +156,48 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     return job
 
 
-async def _complete_demo_prediction(job: PredictionJob, features: dict[str, object]) -> None:
-    """Complete the formal job contract without Redis only in explicit demo mode."""
-    from app.prediction.contracts import PredictionFeatures
+async def _create_lifetime_risk_job() -> PredictionJob:
+    """API-LIFE-002 scaffold (연령별 당뇨 위험 전망 / 생존곡선).
 
+    diabetes_incidence(RF25)와 달리 이 model_key에는 아직 학습·승인된 생존모델이
+    없다 (모델 소유자: 양준혁). ModelRegistry(model_key="diabetes_lifetime_risk",
+    is_active=True) row가 생기기 전까지는 항상 ModelNotReadyError를 던지는 것이
+    의도된 동작이다 — 없는 모델을 있는 것처럼 잡(job)을 만들어 큐에 넣지 않기
+    위한 안전장치다 (요구사항 정의서 v3.0 핵심 원칙: "위험 곡선은 승인된
+    생존모델 결과가 available일 때만 공개한다").
+
+    TODO(생존모델 승인 후): ModelRegistry row가 생기면, 이 함수를
+    diabetes_incidence 경로와 동일한 패턴으로 확장한다 — inference_payload
+    구성 → PredictionJob(task_type="diabetes_lifetime_risk") 생성 →
+    REDIS_STREAM 큐 적재. 지금은 그 구현이 없으므로 모델이 등록되어도
+    안전하게 501에 준하는 오류로 막는다.
+    """
+    active = await ModelRegistry.active_for(LIFETIME_RISK_MODEL_KEY)
+    if active is None:
+        raise ModelNotReadyError(
+            "연령별 당뇨 위험 전망 모델이 아직 등록되지 않았습니다 (model_key=diabetes_lifetime_risk)."
+        )
+    raise ModelNotReadyError("연령별 당뇨 위험 전망 기능은 아직 준비 중입니다 (작업 큐 연동 미구현).")
+
+
+async def _complete_demo_prediction(
+    job: PredictionJob,
+    inference_payload: dict[str, object],
+    as_of_date: date,
+) -> None:
+    """Complete the formal job contract without Redis only in explicit demo mode."""
     job.status = "running"
     job.started_at = datetime.now(UTC)
     job.worker_name = "embedded-demo-worker"
     job.attempts = 1
     await job.save(update_fields=["status", "started_at", "worker_name", "attempts", "updated_at"])
     provider = get_prediction_provider()
-    result = await provider.predict(PredictionFeatures.model_validate(features))
+    result = await provider.predict(inference_payload, as_of_date=as_of_date)
     prediction = await Prediction.create(
         job_id=job.job_id,
         user_id=job.user_id,
         health_checkup_id=job.health_checkup_id,
+        input_as_of_date=as_of_date,
         model_key=ACTIVE_MODEL.model_key,
         outcome_definition=ACTIVE_MODEL.outcome_definition,
         result_status="development_only",

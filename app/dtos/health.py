@@ -37,9 +37,9 @@ class HealthCheckupCreateRequest(BaseModel):
     exercise_days_per_week: float = Field(ge=0, le=7)
     exercise_minutes: float = Field(ge=0, le=720)
     annual_household_income_10k_krw: float | None = Field(default=None, ge=0)
-    health_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
-    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=10)
-    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=10)
+    health_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    economic_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
+    overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=100)
     hypertension_diagnosis: bool | None = None
     cancer_diagnosis: bool | None = None
     chronic_lung_disease_diagnosis: bool | None = None
@@ -48,11 +48,11 @@ class HealthCheckupCreateRequest(BaseModel):
     cerebrovascular_disease_diagnosis: bool | None = None
     psychiatric_disease_diagnosis: bool | None = None
     arthritis_rheumatism_diagnosis: bool | None = None
-    education_level: str | None = Field(default=None, max_length=50)
-    marital_status: str | None = Field(default=None, max_length=50)
-    household_structure: str | None = Field(default=None, max_length=50)
-    depressed_feeling_last_week: bool | None = None
-    sleep_difficulty_last_week: bool | None = None
+    education_level: Literal["code_1", "code_2", "code_3", "code_4", "code_97"] | None = None
+    marital_status: Literal["code_1", "code_2", "code_3", "code_4", "code_5"] | None = None
+    household_structure: Literal["single_person", "multi_person"] | None = None
+    depressed_feeling_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
+    sleep_difficulty_last_week: Literal["code_1", "code_2", "code_3", "code_4"] | None = None
     feature_schema_version: str = Field(default=ACTIVE_MODEL.feature_schema_version, max_length=100)
 
     @model_validator(mode="after")
@@ -67,7 +67,17 @@ class HealthCheckupCreateRequest(BaseModel):
 
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
-    model_key: Literal["diabetes_incidence"] = "diabetes_incidence"
+    model_key: Literal["diabetes_incidence", "diabetes_lifetime_risk"] = "diabetes_incidence"
+    # diabetes_lifetime_risk에서만 쓰인다 (API-LIFE-002). 다른 값은 계약 위반으로 거부한다.
+    prediction_type: Literal["survival_curve"] | None = None
+
+    @model_validator(mode="after")
+    def validate_prediction_type(self) -> PredictionJobCreateRequest:
+        if self.model_key == "diabetes_lifetime_risk" and self.prediction_type != "survival_curve":
+            raise ValueError("diabetes_lifetime_risk requires prediction_type=survival_curve")
+        if self.model_key == "diabetes_incidence" and self.prediction_type is not None:
+            raise ValueError("diabetes_incidence does not accept prediction_type")
+        return self
 
 
 class ChallengeCycleCreateRequest(BaseModel):
