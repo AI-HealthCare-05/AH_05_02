@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from app.core import config
 from app.prediction.contracts import ACTIVE_MODEL
+
 if TYPE_CHECKING:
     from src.ml.inference.diabetes_standard import LoadedDiabetesModel
     from src.ml.preprocessing.diabetes_api_features import DiabetesRiskInput
