@@ -323,24 +323,16 @@
         <div id="future-prediction-result">
         <p class="eyebrow">내일이 · 약 2년 후 신규 당뇨 발병 위험</p>
         <div id="result-unavailable" class="notice safety" role="status" hidden><span>!</span><div><strong>현재 공개할 수 있는 예측 결과가 없습니다</strong><p>모델 임계값과 설명 방법이 승인되기 전에는 위험 범주·확률·위험요인을 표시하지 않습니다.</p></div></div>
-        <section class="risk-confirm-card" id="risk-confirm-card" data-risk="low" aria-labelledby="risk-confirm-title">
-          <div class="risk-confirm-main">
-            <div class="risk-badge" aria-hidden="true">
-              <span id="risk-confirm-icon">✓</span>
-              <strong id="risk-confirm-label">낮음</strong>
-              <small id="risk-confirm-short">현재 위험이 낮은 범주</small>
-            </div>
-            <div class="risk-confirm-copy">
-              <h3 id="risk-confirm-title">현재 모델 기준 위험 범주는 ‘낮음’입니다</h3>
-              <p id="risk-confirm-message">이 결과만으로 당뇨병을 진단할 수 없습니다.</p>
-              <p id="risk-confirm-action">위험이 낮아도 정기검사와 생활습관 점검을 이어가세요.</p>
-              <p class="risk-safety">안전 안내 · 진단/치료/처방 판단을 대신하지 않습니다</p>
-              <button class="primary" id="risk-factor-focus" type="button">위험·보호 요인 보기</button>
-            </div>
-            <div class="risk-legend" aria-label="낮음 주의 높음 범례">
-              <div class="legend-row low"><span>✓</span><strong>낮음</strong><small>위험이 낮은 범주</small></div>
-              <div class="legend-row caution"><span>!</span><strong>주의</strong><small>확인할 요인이 있는 범주</small></div>
-              <div class="legend-row high"><span>+</span><strong>높음</strong><small>의료기관 확인 우선</small></div>
+        <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
+          <div class="current-risk-signal-heading">
+            <h3 id="risk-confirm-title">내일이 · 미래 발병 위험 신호</h3>
+            <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
+          </div>
+          <div class="current-risk-signal-body">
+            <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="미래 발병 위험 신호 결과 준비 중">
+              <span class="traffic-signal high"><i aria-hidden="true"></i><b>높음</b></span>
+              <span class="traffic-signal caution"><i aria-hidden="true"></i><b>주의</b></span>
+              <span class="traffic-signal low"><i aria-hidden="true"></i><b>낮음</b></span>
             </div>
           </div>
           <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 범주는 진단 결과가 아닙니다. 챌린지보다 검사를 받고 의료진과 상담하는 것을 우선 권합니다.</p></div></div>

@@ -156,31 +156,27 @@
 .prediction-status-track li.failed span{background:#b5443c;color:#fff}
 .prediction-status-track li.warning{color:#8a6400}
 .prediction-status-track li.warning span{background:#d8a313;color:#fff}
-.risk-confirm-card{border:3px solid var(--green);border-radius:24px;background:#fff;padding:34px 38px;margin:30px 0;box-shadow:0 8px 20px rgba(18,52,43,.05)}
-.risk-confirm-main{display:grid;grid-template-columns:190px minmax(0,1fr) 300px;gap:28px;align-items:center}
-.risk-badge{min-height:160px;border:2px solid var(--green);border-radius:24px;background:var(--mint);display:grid;place-items:center;text-align:center;color:var(--green-dark);padding:20px}
-.risk-badge>span{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;font-size:30px;font-weight:900;margin-bottom:8px}
-.risk-badge strong{display:block;font-size:30px;line-height:1.2}
-.risk-badge small{display:block;margin-top:10px;font-size:17px;line-height:1.35;font-weight:900}
-.risk-confirm-copy h3{font-size:32px;line-height:1.25;letter-spacing:-.03em;margin:0 0 16px;color:var(--ink)}
-.risk-confirm-copy p{margin:6px 0;color:var(--muted);font-size:19px}
-.risk-confirm-copy .risk-safety{display:inline-flex;width:auto;margin:18px 0 20px;padding:10px 17px;border:1px solid #e6bf40;border-radius:999px;background:var(--warning-bg);color:#72540b;font-size:16px;font-weight:900}
-.risk-confirm-copy .primary{display:block;min-width:250px}
-.risk-confirm-card[data-risk="caution"]{border-color:#d9a20b}
-.risk-confirm-card[data-risk="caution"] .risk-badge{border-color:#d9a20b;background:#fff8df;color:#8a6400}
-.risk-confirm-card[data-risk="caution"] .risk-badge>span{background:#d9a20b}
-.risk-confirm-card[data-risk="high"]{border-color:#bd4d43}
-.risk-confirm-card[data-risk="high"] .risk-badge{border-color:#bd4d43;background:#fff1ef;color:#8d3029}
-.risk-confirm-card[data-risk="high"] .risk-badge>span{background:#bd4d43}
-.risk-confirm-card[data-risk="high"] .risk-confirm-copy .primary{background:#a93f37;border-color:#a93f37}
-.risk-legend{border:1px solid var(--line);border-radius:16px;background:#fbfdfc;padding:14px 18px;display:grid;gap:12px}
-.legend-row{display:grid;grid-template-columns:42px 58px 1fr;gap:10px;align-items:center}
-.legend-row span{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:#fff;font-weight:900}
-.legend-row.low span{background:var(--green)}
-.legend-row.caution span{background:#d9a20b}
-.legend-row.high span{background:#bd4d43}
-.legend-row strong{font-size:18px;color:var(--ink)}
-.legend-row small{font-size:15px;color:var(--muted);line-height:1.35}
+.current-risk-signal-card{margin:30px 0;padding:24px 28px;border:2px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 8px 20px rgba(18,52,43,.05)}
+.current-risk-signal-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:20px}
+.current-risk-signal-heading h3{margin:0;font-size:25px;line-height:1.35;color:var(--ink)}
+.current-signal-status{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:8px 15px;border:1px solid #b9c9c4;border-radius:999px;background:#f4f7f6;color:#53635e;font-size:16px;font-weight:900;white-space:nowrap}
+.current-risk-signal-body{width:100%}
+.risk-traffic-light{display:grid;grid-template-columns:repeat(3,minmax(74px,1fr));gap:14px;width:100%;padding:24px 32px;border-radius:24px;background:#26322f;border:3px solid #17211f;box-shadow:inset 0 2px 12px rgba(0,0,0,.28)}
+.traffic-signal{display:grid;justify-items:center;gap:8px;color:#fff;font-size:15px;font-weight:900;opacity:.32;transition:opacity .2s,transform .2s}
+.traffic-signal i{display:block;width:clamp(70px,8vw,108px);height:clamp(70px,8vw,108px);border:4px solid rgba(255,255,255,.38);border-radius:50%;background:#77817e;box-shadow:inset 0 -8px 15px rgba(0,0,0,.2)}
+.traffic-signal.high i{background:#d9564d}
+.traffic-signal.caution i{background:#e3aa17}
+.traffic-signal.low i{background:#2c9a77}
+.current-risk-signal-card[data-risk="high"] .traffic-signal.high,.current-risk-signal-card[data-risk="caution"] .traffic-signal.caution,.current-risk-signal-card[data-risk="low"] .traffic-signal.low{opacity:1;transform:scale(1.05)}
+.current-risk-signal-card[data-risk="high"] .traffic-signal.high i{box-shadow:0 0 0 5px #fff,0 0 22px #ff766b,inset 0 -8px 15px rgba(0,0,0,.18)}
+.current-risk-signal-card[data-risk="caution"] .traffic-signal.caution i{box-shadow:0 0 0 5px #fff,0 0 22px #ffd65f,inset 0 -8px 15px rgba(0,0,0,.18)}
+.current-risk-signal-card[data-risk="low"] .traffic-signal.low i{box-shadow:0 0 0 5px #fff,0 0 22px #63d8b3,inset 0 -8px 15px rgba(0,0,0,.18)}
+.current-risk-signal-card[data-risk="high"]{border-color:#d7847d}
+.current-risk-signal-card[data-risk="caution"]{border-color:#dfbd54}
+.current-risk-signal-card[data-risk="low"]{border-color:#82bdaa}
+.current-risk-signal-card[data-risk="high"] .current-signal-status{border-color:#d7847d;background:#fff1ef;color:#8d3029}
+.current-risk-signal-card[data-risk="caution"] .current-signal-status{border-color:#dfbd54;background:#fff8df;color:#8a6400}
+.current-risk-signal-card[data-risk="low"] .current-signal-status{border-color:#82bdaa;background:var(--mint);color:var(--green-dark)}
 .compact-result-notice{margin:24px 0 0}
 .factor-panel{margin-top:24px;padding:22px 24px;border:2px dashed #cdd9d5;border-radius:18px;background:#fbfdfc;display:grid;grid-template-columns:310px minmax(0,1fr);gap:22px;align-items:start}
 .factor-panel h3{font-size:25px;line-height:1.25;margin:0 0 8px}
@@ -206,6 +202,12 @@
 .age-risk-point small{max-width:120px;color:var(--ink);font-size:15px;font-weight:900;text-align:center;line-height:1.3}
 .age-risk-bar{display:flex;align-items:flex-end;width:42px;height:190px;border:2px solid #8eaaa0;border-radius:12px 12px 6px 6px;background:#eef4f1;overflow:hidden}
 .age-risk-bar i{display:block;width:100%;height:var(--forecast-value);min-height:4px;background:repeating-linear-gradient(135deg,var(--green) 0,var(--green) 8px,#39947c 8px,#39947c 16px)}
+.age-risk-signal-track{position:relative;display:block;width:58px;height:190px;border:2px solid #8eaaa0;border-radius:16px;background:linear-gradient(to top,#e8f6f0 0 32%,#fff7d9 32% 66%,#fff0ee 66% 100%)}
+.age-risk-signal-track::after{content:"";position:absolute;left:50%;top:10px;bottom:10px;width:4px;border-radius:999px;background:#b9c9c4;transform:translateX(-50%)}
+.age-risk-signal-track img{position:absolute;left:50%;z-index:1;width:54px;height:54px;border:4px solid #fff;border-radius:50%;object-fit:cover;transform:translate(-50%,50%);box-shadow:0 4px 12px rgba(20,33,61,.28)}
+.age-risk-signal-track[data-level="low"] img{bottom:17%;background:#dff5eb}
+.age-risk-signal-track[data-level="caution"] img{bottom:50%;background:#fff2bd}
+.age-risk-signal-track[data-level="high"] img{bottom:83%;background:#ffe0dd}
 .scenario-comparison{margin-top:26px}
 .scenario-comparison h4{margin:0 0 14px;font-size:25px;color:var(--ink)}
 .scenario-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -348,7 +350,7 @@
 @media(max-width:1000px){.glucose-map{grid-template-columns:1fr}.glucose-character{min-height:280px}.glucose-character img{width:96%;height:260px}.prediction-mascot{width:132px;height:132px}}
 @media(max-width:1000px){.health-input-panel.two-column,.lifestyle-question-grid,.review-grid,.prediction-status-track{grid-template-columns:1fr}.smoking-status-card,.exercise-detail-card{grid-column:auto}.exercise-detail-grid{grid-template-columns:1fr}.health-input-panel .actions{flex-direction:column-reverse}.health-input-panel .actions button{width:100%}.prediction-status-card{padding:28px 22px}}
 @media(prefers-reduced-motion:reduce){.glucose-character img,.glucose-character svg,.glucose-shadow,.glucose-eye,.glucose-arm,.prediction-mascot{animation:none!important}}
-@media(forced-colors:active){.age-risk-bar i{background:Highlight}.forecast-status-badge,.scenario-card,.uncertainty-panel{border:2px solid CanvasText}}
+@media(forced-colors:active){.age-risk-bar i{background:Highlight}.age-risk-signal-track img{border:3px solid CanvasText}.forecast-status-badge,.scenario-card,.uncertainty-panel,.risk-traffic-light,.traffic-signal i{border:2px solid CanvasText}.current-risk-signal-card[data-risk="high"] .traffic-signal.high,.current-risk-signal-card[data-risk="caution"] .traffic-signal.caution,.current-risk-signal-card[data-risk="low"] .traffic-signal.low{outline:4px solid Highlight;outline-offset:3px}}
 
 /* 모바일 헤더 보정: 서비스명이 "간당 / 간당"처럼 줄바꿈되지 않도록 유지 */
 .brand,
@@ -1126,4 +1128,8 @@ body.intro-mode .intro-progress-groups{display:flex}
   .scenario-symbol{width:46px;height:46px}
   .uncertainty-panel{grid-template-columns:42px minmax(0,1fr);padding:16px}
   .uncertainty-panel>span{width:40px;height:40px}
+  .current-risk-signal-card{padding:20px 16px}
+  .current-risk-signal-heading{align-items:flex-start;flex-direction:column;gap:10px}
+  .risk-traffic-light{padding:16px 12px;gap:10px}
+  .traffic-signal i{width:58px;height:58px}
 }
