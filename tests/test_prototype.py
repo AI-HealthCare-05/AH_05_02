@@ -75,6 +75,27 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "약 2년 뒤" not in html
 
 
+def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+    assert 'id="risk-forecast-panel"' in html
+    assert 'id="age-risk-chart" role="img"' in html
+    assert 'id="forecast-state" role="status" aria-live="polite"' in html
+    assert "현재 생활습관 유지" in html
+    assert "생활습관 개선" in html
+    assert "효과를 보장하거나 치료 결과를 예측하는 값이 아닙니다." in html
+    assert "불확실성 범위" in html
+    assert 'forecast?.status === "approved"' in script
+    assert 'forecast?.public_display_approved === true' in script
+    assert "approvedDisplayPercent" in script
+    assert "임의 수치나 그래프를 만들지 않습니다." in script
+    assert "renderAgeRiskForecast(prediction, isApprovedRisk)" in script
+    assert "@media(forced-colors:active)" in styles
+    assert "repeating-linear-gradient" in styles
+
+
 def test_together_shares_only_challenge_completion_status() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
@@ -91,6 +112,39 @@ def test_service_and_model_age_are_separately_explained() -> None:
     assert "만 14~18세는 생활습관 챌린지" in html
     assert "만 19~44세는 현재 건강 신호" in html
     assert "만 45세 이상은 미래 발병 위험" in html
+
+
+def test_health_form_uses_rf25_smoking_status_contract() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'name="smoking-status"' in html
+    for value in ("never", "former", "current"):
+        assert f'value="{value}"' in html
+    assert 'smoking_status: selectedRadioValue("smoking-status")' in script
+    assert 'current_smoker: selectedRadioValue("current-smoker")' not in script
+
+
+def test_health_form_uses_rf25_exercise_detail_contract() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="exercise-days"' in html
+    assert 'min="0" max="7"' in html
+    assert 'id="exercise-minutes"' in html
+    assert 'min="0" max="720"' in html
+    assert "exercise_days_per_week:" in script
+    assert "exercise_minutes:" in script
+    assert 'days.value = "0"' in script
+    assert 'minutes.value = "0"' in script
+    assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
+    assert html.index('id="current-drinker-title"') < html.index('id="smoking-status-title"')
+    lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
+    assert "필수" not in lifestyle
+    assert lifestyle.index('id="regular-exercise-title"') < lifestyle.index('for="self-health"') < lifestyle.index('for="meal-count"')
+    assert 'card.hidden = !isRegularExercise' in script
+    assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
+    assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split('</div>', 2)[0]
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:

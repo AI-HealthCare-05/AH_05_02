@@ -537,6 +537,30 @@ function boolLabel(value) {
   return value === "true" || value === true ? "예" : "아니요";
 }
 
+function smokingStatusLabel(value) {
+  return { never: "비흡연", former: "과거 흡연", current: "현재 흡연" }[value] || "-";
+}
+
+function syncExerciseDetails() {
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
+  const days = $("#exercise-days");
+  const minutes = $("#exercise-minutes");
+  const card = $("#exercise-detail-card");
+  if (!days || !minutes || !card) return;
+  if (!isRegularExercise) {
+    if (!days.disabled) days.dataset.previousValue = days.value;
+    if (!minutes.disabled) minutes.dataset.previousValue = minutes.value;
+    days.value = "0";
+    minutes.value = "0";
+  } else {
+    if (days.disabled) days.value = days.dataset.previousValue || "3";
+    if (minutes.disabled) minutes.value = minutes.dataset.previousValue || "30";
+  }
+  days.disabled = !isRegularExercise;
+  minutes.disabled = !isRegularExercise;
+  card.hidden = !isRegularExercise;
+}
+
 function currentAgeLabel() {
   const birth = $("#eligibility-birth-date").value;
   const age = getAgeFromBirth(birth);
@@ -579,6 +603,7 @@ function dlRows(rows) {
 
 function renderHealthReview() {
   const selfHealthLabel = $("#self-health").selectedOptions[0]?.textContent || "-";
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
   $("#health-review-panel .lead").textContent = state.currentHealthOnly
     ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
@@ -599,9 +624,11 @@ function renderHealthReview() {
     ["허리둘레", $("#waist").value ? `${$("#waist").value} cm` : "입력 안 함"],
   ]);
   $("#review-lifestyle").innerHTML = dlRows([
-    ["현재 흡연", boolLabel(selectedRadioValue("current-smoker"))],
+    ["흡연 상태", smokingStatusLabel(selectedRadioValue("smoking-status"))],
     ["현재 음주", boolLabel(selectedRadioValue("current-drinker"))],
     ["규칙적인 운동", boolLabel(selectedRadioValue("regular-exercise"))],
+    ["주당 운동 일수", `${isRegularExercise ? $("#exercise-days").value : 0}일`],
+    ["한 번 운동할 때 시간", `${isRegularExercise ? $("#exercise-minutes").value : 0}분`],
     ["주관적 건강상태", selfHealthLabel],
     ["어제 식사 횟수", `${$("#meal-count").value}회`],
   ]);
@@ -611,6 +638,7 @@ function collectInvalidHealthFields() {
   return $$("#health-form input, #health-form select").filter((input) => !input.checkValidity()).map((input) => {
     const label = document.querySelector(`label[for="${input.id}"]`)?.childNodes?.[0]?.textContent?.trim()
       || input.closest("fieldset")?.querySelector("legend")?.childNodes?.[0]?.textContent?.trim()
+      || input.closest('[role="group"]')?.querySelector(".choice-title")?.childNodes?.[0]?.textContent?.trim()
       || input.id;
     return { id: input.id, label, message: input.validationMessage || "입력값을 확인해 주세요." };
   });
@@ -871,7 +899,7 @@ function updateResultConfirmation() {
 
 function updateLifestyleSummary() {
   const mealCount = $("#meal-count").value;
-  const smoker = boolLabel(selectedRadioValue("current-smoker"));
+  const smokingStatus = selectedRadioValue("smoking-status");
   const drinker = boolLabel(selectedRadioValue("current-drinker"));
   const exercise = boolLabel(selectedRadioValue("regular-exercise"));
   if (!$("#summary-meals")) return;
@@ -881,8 +909,10 @@ function updateLifestyleSummary() {
   $("#summary-activity").textContent = exercise === "예"
     ? "규칙적인 운동을 하고 있어요. 지금의 활동 습관을 무리 없이 유지하는 방향이 좋아요."
     : "규칙적인 운동을 하지 않는다고 기록했어요. 짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
-  $("#summary-metabolic").textContent = smoker === "예" || drinker === "예"
+  $("#summary-metabolic").textContent = smokingStatus === "current" || drinker === "예"
     ? "흡연·음주 같은 생활습관과 신체 입력값을 함께 보며 점검할 수 있어요."
+    : smokingStatus === "former"
+    ? "과거 흡연 이력과 신체·검진 입력값을 함께 참고해 생활습관을 점검해요."
     : "신체·검진 입력값은 위험 판정이 아니라 생활습관을 점검하는 참고 신호로 확인해요.";
   $("#summary-checkup").textContent = normalizeRiskKey() === "high"
     ? "높음 범주에서는 생활습관 실천보다 검사·의료기관 상담 안내를 먼저 확인해요."
@@ -1011,6 +1041,96 @@ async function pollPrediction(jobId) {
   error.retryAfterSeconds = 30;
   throw error;
 }
+
+function approvedDisplayPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && number <= 100 ? number : null;
+}
+
+function forecastPayload(prediction = {}) {
+  return prediction.age_risk_forecast || prediction.future_risk_forecast || prediction.risk_forecast || null;
+}
+
+function renderScenarioResult(key, scenario, approved) {
+  const summary = $(`#scenario-${key}-summary`);
+  const value = $(`#scenario-${key}-value`);
+  if (!summary || !value) return;
+  const displayPercent = approved ? approvedDisplayPercent(scenario?.display_percent) : null;
+  const displaySummary = approved && typeof scenario?.display_summary === "string"
+    ? scenario.display_summary.trim()
+    : "";
+  summary.textContent = displaySummary || "승인된 시나리오 결과를 기다리고 있습니다.";
+  value.hidden = displayPercent === null;
+  value.textContent = displayPercent === null ? "" : `${displayPercent}%`;
+}
+
+function renderAgeRiskForecast(prediction, approvedPrediction) {
+  const forecast = forecastPayload(prediction);
+  const approvedForecast = approvedPrediction
+    && forecast?.status === "approved"
+    && forecast?.public_display_approved === true;
+  const points = approvedForecast && Array.isArray(forecast.points)
+    ? forecast.points.map((point) => ({
+      label: String(point.display_label || point.age_label || "").trim(),
+      value: approvedDisplayPercent(point.display_percent),
+    })).filter((point) => point.label && point.value !== null)
+    : [];
+  const stateBox = $("#forecast-state");
+  const chart = $("#age-risk-chart");
+  const pointContainer = $("#age-risk-chart-points");
+  const statusBadge = $("#forecast-status-badge");
+  if (!stateBox || !chart || !pointContainer || !statusBadge) return;
+
+  const hasApprovedPoints = approvedForecast && points.length > 0;
+  stateBox.hidden = hasApprovedPoints;
+  chart.hidden = !hasApprovedPoints;
+  stateBox.dataset.state = approvedForecast ? "empty" : "unavailable";
+  $("#forecast-state-title").textContent = approvedForecast
+    ? "표시할 연령별 전망 구간이 없습니다"
+    : "연령별 위험 전망 결과를 준비하고 있습니다";
+  $("#forecast-state-message").textContent = approvedForecast
+    ? "승인된 응답에 전망 구간이 포함되면 이 영역에 표시합니다."
+    : "모델·표현 기준이 승인되기 전에는 임의 수치나 그래프를 만들지 않습니다.";
+  statusBadge.textContent = hasApprovedPoints ? "승인된 결과" : "결과 준비 중";
+  statusBadge.dataset.status = hasApprovedPoints ? "approved" : "pending";
+  pointContainer.replaceChildren();
+  if (hasApprovedPoints) {
+    const fragment = document.createDocumentFragment();
+    points.forEach((point) => {
+      const item = document.createElement("div");
+      item.className = "age-risk-point";
+      const value = document.createElement("strong");
+      value.textContent = `${point.value}%`;
+      const bar = document.createElement("span");
+      bar.className = "age-risk-bar";
+      bar.setAttribute("aria-hidden", "true");
+      bar.style.setProperty("--forecast-value", `${point.value}%`);
+      const fill = document.createElement("i");
+      bar.append(fill);
+      const label = document.createElement("small");
+      label.textContent = point.label;
+      item.append(value, bar, label);
+      fragment.append(item);
+    });
+    pointContainer.append(fragment);
+    chart.setAttribute("aria-label", `연령별 당뇨병 위험 전망 그래프. ${points.map((point) => `${point.label} ${point.value}%`).join(", ")}`);
+  } else {
+    chart.setAttribute("aria-label", "연령별 당뇨병 위험 전망 데이터가 아직 없습니다");
+  }
+
+  const scenarios = approvedForecast ? forecast.scenarios || {} : {};
+  renderScenarioResult("maintain", scenarios.current_maintenance || scenarios.maintain, approvedForecast);
+  renderScenarioResult("improve", scenarios.lifestyle_improvement || scenarios.improve, approvedForecast);
+
+  const uncertainty = approvedForecast ? forecast.uncertainty || {} : {};
+  const lower = approvedDisplayPercent(uncertainty.lower_display_percent);
+  const upper = approvedDisplayPercent(uncertainty.upper_display_percent);
+  const hasRange = lower !== null && upper !== null && lower <= upper;
+  $("#uncertainty-message").textContent = hasRange
+    ? `승인된 불확실성 범위는 ${lower}%~${upper}%입니다. ${uncertainty.display_note || "범위 안에서도 실제 결과는 달라질 수 있습니다."}`
+    : "불확실성 범위가 승인된 응답에 포함되면 함께 표시합니다. 한 번의 결과만으로 진단하거나 치료를 결정하지 마세요.";
+}
+
 function renderPrediction(prediction, factors) {
   const isApprovedRisk = prediction.result_status === "approved"
     && prediction.promotion_status === "approved"
@@ -1040,6 +1160,7 @@ function renderPrediction(prediction, factors) {
   const isHighRisk = isApprovedRisk && isHighRiskPrediction(prediction);
   $("#medical-guidance-detail").hidden = !isHighRisk;
   updateResultConfirmation();
+  renderAgeRiskForecast(prediction, isApprovedRisk);
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
@@ -1821,7 +1942,7 @@ $("#health-error-list").addEventListener("click", (event) => {
   if (!button) return;
   const field = document.getElementById(button.dataset.fieldId);
   if (!field) return;
-  showHealthInputPanel(["self-health", "meal-count", "current-smoker", "current-drinker", "regular-exercise"].includes(field.id) ? "lifestyle" : "metrics");
+  showHealthInputPanel(["self-health", "meal-count", "smoking-never", "smoking-former", "smoking-current", "current-drinker", "regular-exercise", "exercise-days", "exercise-minutes"].includes(field.id) ? "lifestyle" : "metrics");
   field.focus();
 });
 $("#health-form").addEventListener("submit", async (event) => {
@@ -1852,7 +1973,9 @@ $("#health-form").addEventListener("submit", async (event) => {
         systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
         diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
         self_rated_health: $("#self-health").value, meal_count_yesterday: Number($("#meal-count").value),
-        regular_exercise: selectedRadioValue("regular-exercise") === "true", current_smoker: selectedRadioValue("current-smoker") === "true",
+        regular_exercise: selectedRadioValue("regular-exercise") === "true", smoking_status: selectedRadioValue("smoking-status"),
+        exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
+        exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
         current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa-diabetes-incident-v1",
       }) });
       state.checkupId = checkup.checkup_id;
@@ -2436,4 +2559,6 @@ function resumeFromForest() {
 }
 
 configureEnvironmentControls();
+$$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
+syncExerciseDetails();
 resumeFromForest();
