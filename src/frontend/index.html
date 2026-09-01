@@ -306,8 +306,8 @@
         <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled hidden>결과 확인하기</button></div>
       </section>
       <section class="screen" data-step="6" aria-labelledby="factors-title">
-        <p class="eyebrow" id="result-confirmation-eyebrow">예측 결과</p><h2 id="factors-title">결과를 확인해 주세요</h2>
-        <p class="lead" id="result-confirmation-lead">입력한 건강정보를 기준으로 당뇨병 위험 신호를 범주로 표시했습니다.</p>
+        <p class="eyebrow" id="result-confirmation-eyebrow">결과 확인</p><h2 id="factors-title">현재와 미래 위험 신호를 확인해 주세요</h2>
+        <p class="lead" id="result-confirmation-lead">현재 위험 신호를 먼저 확인한 뒤, 시간에 따른 미래 전망을 살펴볼 수 있습니다.</p>
         <section id="current-health-result" class="current-health-result" aria-labelledby="current-health-result-title" hidden>
           <div class="current-health-result-heading">
             <span class="current-health-result-icon" aria-hidden="true">✓</span>
@@ -322,44 +322,35 @@
         </section>
         <div id="future-prediction-result">
         <div id="result-unavailable" class="notice safety" role="status" hidden><span>!</span><div><strong>현재 공개할 수 있는 예측 결과가 없습니다</strong><p>모델 임계값과 설명 방법이 승인되기 전에는 위험 범주·확률·위험요인을 표시하지 않습니다.</p></div></div>
-        <section class="risk-confirm-card" id="risk-confirm-card" data-risk="low" aria-labelledby="risk-confirm-title">
-          <div class="risk-confirm-main">
-            <div class="risk-badge" aria-hidden="true">
-              <span id="risk-confirm-icon">✓</span>
-              <strong id="risk-confirm-label">낮음</strong>
-              <small id="risk-confirm-short">현재 위험이 낮은 범주</small>
-            </div>
-            <div class="risk-confirm-copy">
-              <h3 id="risk-confirm-title">현재 모델 기준 위험 범주는 ‘낮음’입니다</h3>
-              <p id="risk-confirm-message">이 결과만으로 당뇨병을 진단할 수 없습니다.</p>
-              <p id="risk-confirm-action">위험이 낮아도 정기검사와 생활습관 점검을 이어가세요.</p>
-              <p class="risk-safety">안전 안내 · 진단/치료/처방 판단을 대신하지 않습니다</p>
-              <button class="primary" id="risk-factor-focus" type="button">위험·보호 요인 보기</button>
-            </div>
-            <div class="risk-legend" aria-label="낮음 주의 높음 범례">
-              <div class="legend-row low"><span>✓</span><strong>낮음</strong><small>위험이 낮은 범주</small></div>
-              <div class="legend-row caution"><span>!</span><strong>주의</strong><small>확인할 요인이 있는 범주</small></div>
-              <div class="legend-row high"><span>+</span><strong>높음</strong><small>의료기관 확인 우선</small></div>
+        <div id="development-preview-notice" class="notice safety" role="status" hidden><span>개발</span><div><strong>개발 확인용 모델 결과입니다</strong><p>로컬 데모에서 화면 연결을 확인하기 위한 위험 범주이며, 운영 승인 결과가 아닙니다. 숫자 점수·확률·위험요인은 표시하지 않습니다.</p></div></div>
+        <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
+          <div class="current-risk-signal-heading">
+            <h3 id="risk-confirm-title">현재 위험 신호</h3>
+            <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
+          </div>
+          <div class="risk-preview-controls" id="risk-preview-controls" aria-label="현재 위험 신호 화면 확인" hidden>
+            <span>화면 확인용</span>
+            <button type="button" data-risk-preview="low">낮음 보기</button>
+            <button type="button" data-risk-preview="caution">주의 보기</button>
+            <button type="button" data-risk-preview="high">높음 보기</button>
+          </div>
+          <div class="current-risk-signal-body">
+            <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="현재 위험 신호 결과 준비 중">
+              <span class="traffic-signal high"><i aria-hidden="true"></i><b>높음</b></span>
+              <span class="traffic-signal caution"><i aria-hidden="true"></i><b>주의</b></span>
+              <span class="traffic-signal low"><i aria-hidden="true"></i><b>낮음</b></span>
             </div>
           </div>
-          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 범주는 진단 결과가 아닙니다. 챌린지보다 검사를 받고 의료진과 상담하는 것을 우선 권합니다.</p></div></div>
-          <section class="factor-panel" aria-labelledby="factor-panel-title">
-            <div>
-              <h3 id="factor-panel-title">위험·보호 요인 영역</h3>
-              <p>검증된 요인만 표시합니다. 아직 확인된 항목이 없으면 임의로 만들지 않습니다.</p>
-            </div>
-            <ul class="factor-list" id="factor-list"><li><strong>아직 표시할 위험·보호 요인이 없습니다.</strong><p>모델과 설명 기준이 확정되면 검증된 항목만 보여드립니다.</p></li></ul>
-          </section>
+          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p></div></div>
         </section>
         <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="risk-forecast-title">
           <div class="risk-forecast-heading">
             <div>
-              <p class="eyebrow">연령별 위험 전망</p>
               <h3 id="risk-forecast-title">시간에 따른 위험 신호 변화를 확인해요</h3>
             </div>
             <span class="forecast-status-badge" id="forecast-status-badge">결과 준비 중</span>
           </div>
-          <p class="risk-forecast-description">현재 입력을 유지한 경우와 생활습관을 개선한 경우를 구분해 표시합니다. 공개 승인을 받은 결과만 보여드립니다.</p>
+          <p class="risk-forecast-description">KLoSA 관측 주기에 맞춰 2년 간격의 위험 신호를 보여줍니다. 실제 서비스에서는 공개 승인을 받은 결과만 표시합니다.</p>
           <div class="forecast-state" id="forecast-state" role="status" aria-live="polite" data-state="loading">
             <strong id="forecast-state-title">연령별 위험 전망 결과를 불러오고 있어요</strong>
             <p id="forecast-state-message">승인된 전망 데이터가 도착하면 이 영역에 표시합니다.</p>
@@ -480,9 +471,9 @@
           <div class="today-card">
             <img class="today-card-mascot" src="/static/assets/hyeoldangi-daily-record.png" alt="오늘의 챌린지 기록을 안내하는 혈당이">
             <p class="eyebrow">오늘의 할 일</p>
-            <h3>챌린지 실천을 기록해 주세요</h3>
-            <p>기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
-            <button class="primary workspace-shortcut" type="button" data-workspace="challenge">오늘 기록하기</button>
+            <h3 id="today-task-title">챌린지 실천을 기록해 주세요</h3>
+            <p id="today-task-description">기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
+            <button class="primary workspace-shortcut" id="today-record-action" type="button" data-workspace="challenge">오늘 기록하기</button>
           </div>
           <div class="dashboard-grid summary-grid">
             <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
@@ -597,11 +588,11 @@
             </section>
 
             <section class="report-period-panel" id="report-panel-four-week" role="tabpanel" aria-labelledby="report-period-four-week" data-report-panel="four-week" hidden>
-              <article class="report-empty"><strong>4주 전체 기록은 아직 준비 중이에요</strong><p>실제 4주 집계 API가 연결되면 주차별 수행률을 표시합니다.</p></article>
+              <article class="report-empty"><strong>4주 전체 기록을 모으고 있어요</strong><p>기능이 준비되는 동안에는 주간 기록에서 이번 주 실천을 확인해 주세요.</p></article>
             </section>
 
             <section class="report-period-panel" id="report-panel-all" role="tabpanel" aria-labelledby="report-period-all" data-report-panel="all" hidden>
-              <article class="report-empty"><strong>완료한 챌린지 회차가 아직 없어요</strong><p>전체 기간 이력 API가 연결되면 회차별 기록을 확인할 수 있습니다.</p></article>
+              <article class="report-empty"><strong>완료한 챌린지 회차가 아직 없어요</strong><p>챌린지를 완료하면 회차별 기록을 이곳에서 확인할 수 있어요.</p></article>
             </section>
           </div>
           <div class="report-pdf-card">
