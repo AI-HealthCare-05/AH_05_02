@@ -411,7 +411,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v72" in worker
+    assert "gandang-carrot-forest-pwa-v73" in worker
     assert "when-the-morning-comes.mp3" in worker
     assert "avatar-title.mp3" in worker
     assert "home-elfwood.mp3" in worker
@@ -637,7 +637,7 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     assert "renameOutfit" in game_script
     assert "applyRequestedDefaultOutfit" in game_script
     assert 'label: "나만의 코디 5"' in game_script
-    assert 'label: "나만의 코디 2"' in game_script
+    assert 'label: "나만의 코디 8"' in game_script
     assert 'lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none"' not in game_script
     assert "아이템을 선택해주세요" in html
     assert "record?.sources?.[gender] || record?.sources?.male" in (
@@ -645,16 +645,17 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     ).read_text(encoding="utf-8")
 
 
-def test_gender_defaults_open_with_female_five_and_switch_male_to_two() -> None:
+def test_gender_defaults_open_with_female_five_and_switch_male_to_eight() -> None:
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    assert "const OUTFIT_DEFAULT_VERSION = 2" in game_script
+    assert "const OUTFIT_DEFAULT_VERSION = 3" in game_script
     assert 'gender: "female", engine: "lpc"' in game_script
     assert 'normalizeGenderDefaultOutfit(null, "female", Date.now())' in game_script
     assert 'normalizeGenderDefaultOutfit(null, "male", Date.now() - 1)' in game_script
     assert 'applyGenderDefaultOutfit(target, "female")' in game_script
     assert "const applied = applyGenderDefaultOutfit(state, selectedGender)" in game_script
-    assert "look.presetRole === gender || look.label === preset.label" in game_script
+    assert "history.find((look) => look.label === preset.label)" in game_script
+    assert "history.find((look) => look.presetRole === gender)" in game_script
 
 
 def test_each_preset_uses_directional_walk_and_vehicle_motion_in_world() -> None:

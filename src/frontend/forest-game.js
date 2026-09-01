@@ -288,7 +288,7 @@
     hatColor: "brown", glassesColor: "brown", mobilityColor: "black",
   };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
-  const OUTFIT_DEFAULT_VERSION = 2;
+  const OUTFIT_DEFAULT_VERSION = 3;
   const genderDefaultOutfits = {
     female: {
       label: "나만의 코디 5",
@@ -299,7 +299,7 @@
       },
     },
     male: {
-      label: "나만의 코디 2",
+      label: "나만의 코디 8",
       cosmetics: {
         bodyType: "male", lpcHead: "human_male", lpcHair: "messy",
         lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots",
@@ -370,7 +370,9 @@
     const history = Array.isArray(target.outfitHistory) ? target.outfitHistory : [];
     const defaults = ["female", "male"].map((gender, index) => {
       const preset = genderDefaultOutfits[gender];
-      const existing = history.find((look) => look.presetRole === gender || look.label === preset.label);
+      // 프리셋 번호를 바꿀 때는 새 번호로 저장된 실제 코디를 이전 presetRole보다 우선한다.
+      const existing = history.find((look) => look.label === preset.label)
+        || history.find((look) => look.presetRole === gender);
       return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
     });
     const defaultIds = new Set(defaults.map((look) => look.id));
