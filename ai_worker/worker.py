@@ -4,12 +4,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
 from redis.asyncio import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from ai_worker.core import config, logger
 from ai_worker.db import ensure_schema, persist_prediction, update_job
 from ai_worker.handlers import run_task_with_timeout
+from app.prediction.errors import classify_ml_input_error
+from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
 
 
 class StreamWorker:
@@ -20,6 +25,7 @@ class StreamWorker:
             db=config.REDIS_DB,
             decode_responses=True,
             health_check_interval=30,
+            socket_timeout=None,
         )
         self.consumer = config.WORKER_NAME
 
@@ -106,6 +112,31 @@ class StreamWorker:
             await self.redis.xdel(config.REDIS_STREAM, message_id)
         except TimeoutError as exc:
             await self.handle_failure(message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="TIMEOUT")
+        except (ValidationError, ValueError) as exc:
+            # 모델 입력 계약 위반: 데이터를 고치지 않는 한 재시도해도 계속 실패하므로 즉시 종결한다.
+            error_code = classify_ml_input_error(exc)
+            await self.handle_failure(message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code=error_code)
+        except ModelArtifactUnavailableError as exc:
+            await self.handle_failure(
+                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_UNAVAILABLE"
+            )
+        except ModelContractError as exc:
+            await self.handle_failure(
+                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_CONTRACT_ERROR"
+            )
+        except RuntimeError as exc:
+            # providers.load_standard_model()/_predict_score()가 던지는 영구적 모델 계약 오류.
+            # 배포를 고치지 않는 한 재시도해도 동일하게 실패하므로 즉시 종결하고, 다른 Provider로 자동 전환하지 않는다.
+            permanent_model_errors = {
+                "MODEL_ARTIFACT_UNAVAILABLE",
+                "MODEL_DIGEST_MISMATCH",
+                "MODEL_CONTRACT_MISMATCH",
+            }
+            error_code = str(exc) if str(exc) in permanent_model_errors else None
+            if error_code is not None:
+                await self.handle_failure(message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code=error_code)
+            else:
+                await self.handle_failure(message_id, fields, attempt, exc)
         except Exception as exc:
             await self.handle_failure(message_id, fields, attempt, exc)
 
@@ -204,6 +235,6 @@ async def run_worker() -> None:
         try:
             await worker.run()
             return
-        except (ConnectionError, OSError) as exc:
+        except (RedisConnectionError, RedisTimeoutError, ConnectionError, OSError) as exc:
             logger.warning("Worker dependency unavailable; retrying in 3 seconds: %s", exc)
             await asyncio.sleep(3)

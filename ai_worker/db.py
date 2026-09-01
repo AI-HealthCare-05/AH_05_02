@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS prediction_jobs (
     threshold_version VARCHAR(100) NULL,
     user_id BIGINT NULL,
     health_checkup_id BIGINT NULL,
+    input_as_of_date DATE NULL,
     prediction_id BIGINT NULL,
     error_code VARCHAR(50) NULL,
     retryable BOOL NOT NULL DEFAULT 0,
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS predictions (
     job_id VARCHAR(36) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL,
     health_checkup_id BIGINT NOT NULL,
+    input_as_of_date DATE NOT NULL,
     model_key VARCHAR(100) NOT NULL,
     outcome_definition VARCHAR(120) NOT NULL,
     result_status VARCHAR(40) NOT NULL,
@@ -98,6 +100,7 @@ PREDICTION_JOB_COLUMNS = {
     "threshold_version": "VARCHAR(100) NULL",
     "user_id": "BIGINT NULL",
     "health_checkup_id": "BIGINT NULL",
+    "input_as_of_date": "DATE NULL",
     "prediction_id": "BIGINT NULL",
     "error_code": "VARCHAR(50) NULL",
     "retryable": "BOOL NOT NULL DEFAULT 0",
@@ -187,7 +190,7 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
     try:
         async with connection.cursor() as cursor:
             await cursor.execute(
-                "SELECT user_id, health_checkup_id FROM prediction_jobs WHERE job_id=%s",
+                "SELECT user_id, health_checkup_id, input_as_of_date FROM prediction_jobs WHERE job_id=%s",
                 (job_id,),
             )
             row = await cursor.fetchone()
@@ -198,18 +201,19 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
             await cursor.execute(
                 """
                 INSERT INTO predictions (
-                    job_id, user_id, health_checkup_id, model_key, outcome_definition,
+                    job_id, user_id, health_checkup_id, input_as_of_date, model_key, outcome_definition,
                     result_status, risk_category, internal_score, model_version,
                     feature_schema_version, input_schema_version, preprocessing_version,
                     target_definition_version, calibration_version, model_artifact_digest,
                     threshold_version, decision_threshold, class_probabilities, output_status,
                     model_population, explanation_status, disclaimer
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     job_id,
                     row[0],
                     row[1],
+                    row[2],
                     result["model_key"],
                     result["outcome_definition"],
                     result_status,
@@ -223,7 +227,7 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result["calibration_version"],
                     result.get("model_artifact_digest"),
                     result["threshold_version"],
-                    result.get("decision_threshold") if result_status == "approved" else None,
+                    result.get("decision_threshold"),
                     None,
                     "approved" if result_status == "approved" else "uncalibrated_research_probability_only",
                     config.PREDICTION_MODEL_POPULATION,

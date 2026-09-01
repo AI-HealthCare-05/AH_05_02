@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from app.core import config
-from app.prediction.contracts import ACTIVE_MODEL, STANDARD_MODEL_FEATURES, PredictionFeatures
+from app.prediction.contracts import ACTIVE_MODEL
+if TYPE_CHECKING:
+    from src.ml.inference.diabetes_standard import LoadedDiabetesModel
+    from src.ml.preprocessing.diabetes_api_features import DiabetesRiskInput
 
-RiskCategory = Literal["low", "moderate", "high"]
-MODERATE_THRESHOLD = 0.016719708895315412
-HIGH_THRESHOLD = 0.022410835788097848
+RiskCategory = Literal["low", "caution", "high"]
 
 
 @dataclass(frozen=True)
@@ -35,7 +37,12 @@ class ProviderResult:
 class PredictionProvider(Protocol):
     provider_kind: str
 
-    async def predict(self, features: PredictionFeatures) -> ProviderResult: ...
+    async def predict(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> ProviderResult: ...
 
 
 class DevelopmentPredictionProvider:
@@ -43,9 +50,26 @@ class DevelopmentPredictionProvider:
 
     provider_kind = "development"
 
-    async def predict(self, features: PredictionFeatures) -> ProviderResult:
-        # Contract validation is the only inference performed by this provider.
-        features.as_model_record()
+    async def predict(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> ProviderResult:
+        required = {
+            "birth_date",
+            "sex",
+            "height_cm",
+            "weight_kg",
+            "smoking_status",
+            "current_drinker",
+            "regular_exercise",
+            "exercise_days_per_week",
+            "exercise_minutes",
+            "previously_diagnosed_diabetes",
+        }
+        if not required.issubset(payload):
+            raise ValueError("invalid diabetes risk input: required fields are missing")
         return ProviderResult(
             internal_score=None,
             risk_category=None,
@@ -65,66 +89,40 @@ class DevelopmentPredictionProvider:
 class ArtifactPredictionProvider:
     provider_kind = "artifact"
 
-    async def predict(self, features: PredictionFeatures) -> ProviderResult:
-        bundle = await asyncio.to_thread(load_standard_model)
-        score = await asyncio.to_thread(_predict_score, bundle, features.as_model_record())
-        category: RiskCategory | None = None
-        decision_threshold = None
-        if ACTIVE_MODEL.promotion_status == "approved":
-            category = "low" if score < MODERATE_THRESHOLD else "moderate" if score < HIGH_THRESHOLD else "high"
-            decision_threshold = ACTIVE_MODEL.decision_threshold
+    async def predict(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> ProviderResult:
+        from src.ml.inference.diabetes_standard import predict_with_loaded_model
+        from src.ml.preprocessing.diabetes_api_features import DiabetesRiskInput, parse_diabetes_risk_input
+
+        user_input = payload if isinstance(payload, DiabetesRiskInput) else parse_diabetes_risk_input(dict(payload))
+        loaded = await asyncio.to_thread(load_standard_model)
+        output = await asyncio.to_thread(predict_with_loaded_model, loaded, user_input, as_of_date=as_of_date)
         return ProviderResult(
-            internal_score=score,
-            risk_category=category,
-            model_version=ACTIVE_MODEL.version,
-            feature_schema_version=ACTIVE_MODEL.feature_schema_version,
-            input_schema_version=ACTIVE_MODEL.input_schema_version,
-            preprocessing_version=ACTIVE_MODEL.preprocessing_version,
+            internal_score=float(output["risk_score"]),
+            risk_category=output["risk_category"],
+            model_version=output["model_version"],
+            feature_schema_version=output["feature_schema_version"],
+            input_schema_version=output["input_schema_version"],
+            preprocessing_version=loaded.manifest["preprocessing_version"],
             target_definition_version=ACTIVE_MODEL.target_definition_version,
             calibration_version=ACTIVE_MODEL.calibration_version,
-            model_artifact_digest=ACTIVE_MODEL.model_artifact_digest,
-            threshold_version=ACTIVE_MODEL.threshold_version,
-            decision_threshold=decision_threshold,
-            promotion_status=ACTIVE_MODEL.promotion_status,
+            model_artifact_digest=loaded.manifest["artifact_sha256"],
+            threshold_version=output["threshold_version"],
+            decision_threshold=float(output["decision_threshold"]),
+            promotion_status=loaded.manifest["promotion_status"],
         )
 
 
 @lru_cache(maxsize=1)
-def load_standard_model() -> object:
-    import joblib
+def load_standard_model() -> LoadedDiabetesModel:
+    from src.ml.inference.diabetes_standard import load_standard_model as load_candidate_model
 
-    if not config.MODEL_URI:
-        raise RuntimeError("MODEL_ARTIFACT_UNAVAILABLE")
-    path = Path(config.MODEL_URI)
-    if not path.is_file():
-        raise RuntimeError("MODEL_ARTIFACT_UNAVAILABLE")
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    if ACTIVE_MODEL.model_artifact_digest and digest != ACTIVE_MODEL.model_artifact_digest:
-        raise RuntimeError("MODEL_DIGEST_MISMATCH")
-    bundle = joblib.load(path)
-    metadata = bundle.get("metadata", {}) if isinstance(bundle, dict) else {}
-    feature_names = metadata.get("features") or metadata.get("feature_names")
-    if feature_names != list(STANDARD_MODEL_FEATURES):
-        raise RuntimeError("MODEL_CONTRACT_MISMATCH")
-    for key, expected in {
-        "model_version": ACTIVE_MODEL.version,
-        "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
-        "input_schema_version": ACTIVE_MODEL.input_schema_version,
-        "threshold_version": ACTIVE_MODEL.threshold_version,
-    }.items():
-        if metadata.get(key) != expected:
-            raise RuntimeError("MODEL_CONTRACT_MISMATCH")
-    return bundle
-
-
-def _predict_score(bundle: object, record: dict[str, object]) -> float:
-    import pandas as pd
-
-    model = bundle.get("pipeline") if isinstance(bundle, dict) else bundle
-    if model is None or not hasattr(model, "predict_proba"):
-        raise RuntimeError("MODEL_CONTRACT_MISMATCH")
-    frame = pd.DataFrame([record], columns=STANDARD_MODEL_FEATURES)
-    return float(model.predict_proba(frame)[0, 1])
+    model_path = Path(config.MODEL_URI) if config.MODEL_URI else None
+    return load_candidate_model(manifest_path=Path(config.MODEL_MANIFEST_URI), model_path=model_path)
 
 
 def get_prediction_provider() -> PredictionProvider:

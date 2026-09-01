@@ -1,9 +1,9 @@
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from ai_worker.model_loader import load_model
-from app.prediction import PredictionFeatures, get_prediction_provider
+from app.prediction import get_prediction_provider
 
 MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보조용이며 진단·처방이 아닙니다."
 
@@ -40,12 +40,16 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         return result
 
     if task_type == "diabetes_incidence":
-        features = payload.get("features")
-        if not isinstance(features, dict):
-            raise ValueError("diabetes_incidence payload에는 features 객체가 필요합니다.")
-        validated = PredictionFeatures.model_validate(features)
+        model_input = payload.get("input")
+        as_of_date_raw = payload.get("as_of_date")
+        if not isinstance(model_input, dict) or not isinstance(as_of_date_raw, str):
+            raise ValueError("diabetes_incidence payload에는 input 객체와 as_of_date가 필요합니다.")
+        try:
+            as_of_date = date.fromisoformat(as_of_date_raw)
+        except ValueError as exc:
+            raise ValueError("as_of_date must use YYYY-MM-DD") from exc
         provider = get_prediction_provider()
-        result = await provider.predict(validated)
+        result = await provider.predict(model_input, as_of_date=as_of_date)
         return {
             "model_key": "diabetes_incidence",
             "outcome_definition": "next_observation_new_diabetes_diagnosis",
@@ -62,6 +66,7 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
             "decision_threshold": result.decision_threshold,
             "promotion_status": result.promotion_status,
             "explanation_status": result.explanation_status,
+            "input_as_of_date": as_of_date.isoformat(),
             "medical_notice": MEDICAL_NOTICE,
         }
 

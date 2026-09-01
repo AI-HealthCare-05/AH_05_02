@@ -11,7 +11,7 @@ from app.dtos.health import PredictionJobCreateRequest
 from app.models.health import Prediction, PredictionRiskCurvePoint
 from app.models.model_registry import ModelRegistry
 from app.models.users import User
-from app.prediction.contracts import ACTIVE_MODEL, LIFETIME_RISK_MODEL_KEY
+from app.prediction.contracts import ACTIVE_MODEL
 from app.prediction.errors import ModelNotReadyError, classify_ml_input_error
 from app.repositories.health_repository import HealthRepository
 from app.services.ai_jobs import create_prediction_job, get_prediction_job
