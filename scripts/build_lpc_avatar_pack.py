@@ -303,11 +303,7 @@ def is_complete_garment(relative: str, category: str) -> bool:
         # Feet accessories, socks, sandals and slippers expose most of the
         # underlying foot and read as "barefoot" in the compact editor card.
         # Keep only complete shoes/boots plus the one full-foot armour sheet.
-        return (
-            "/shoes/" in path
-            or "/boots/" in path
-            or path.endswith("feet_armour.json")
-        )
+        return "/shoes/" in path or "/boots/" in path or path.endswith("feet_armour.json")
     return True
 
 
@@ -334,7 +330,9 @@ def garment_sort_key(item: PackItem) -> tuple[int, str]:
         return -1, f"{everyday[item.item_id]:03d}"
     path = item.definition.lower()
     priority = 9
-    for index, token in enumerate(("/shirts/", "/jacket/", "/vest/", "/dresses/", "/aprons/", "/pants/", "/skirts/", "/shoes/", "/armour/")):
+    for index, token in enumerate(
+        ("/shirts/", "/jacket/", "/vest/", "/dresses/", "/aprons/", "/pants/", "/skirts/", "/shoes/", "/armour/")
+    ):
         if token in path:
             priority = index
             break
@@ -350,11 +348,7 @@ def discover_official_clothing(source: Path) -> tuple[PackItem, ...]:
     are intentionally excluded from this service.
     """
 
-    curated = {
-        item.definition: item
-        for item in ITEMS
-        if item.category in set(CLOTHING_ROOTS.values())
-    }
+    curated = {item.definition: item for item in ITEMS if item.category in set(CLOTHING_ROOTS.values())}
     discovered: list[PackItem] = []
     for root, category in CLOTHING_ROOTS.items():
         definition_root = source / "sheet_definitions" / root
@@ -366,7 +360,9 @@ def discover_official_clothing(source: Path) -> tuple[PackItem, ...]:
             if not is_complete_garment(relative, category):
                 continue
             definition = json.loads(path.read_text(encoding="utf-8"))
-            layers = [value for key, value in definition.items() if key.startswith("layer_") and isinstance(value, dict)]
+            layers = [
+                value for key, value in definition.items() if key.startswith("layer_") and isinstance(value, dict)
+            ]
             if not layers or not any(any(body_type in layer for body_type in BODY_TYPES) for layer in layers):
                 continue
             if relative in curated:
@@ -534,7 +530,9 @@ def compose_layer_sheet(
     return sheet, supported
 
 
-def compose_wheelchair_sheet(source: Path, relative: str, preferred_variant: str = "black") -> tuple[Image.Image, list[str]]:
+def compose_wheelchair_sheet(
+    source: Path, relative: str, preferred_variant: str = "black"
+) -> tuple[Image.Image, list[str]]:
     """Normalize the official 2-frame x 4-direction wheelchair into LPC rows."""
     folder = source / "spritesheets" / relative
     source_file = folder / f"{preferred_variant}.png"

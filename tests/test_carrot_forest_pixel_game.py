@@ -220,7 +220,7 @@ def test_avatar_editor_uses_item_colors_and_quick_outfit_actions_instead_of_manu
     assert 'id="avatar-strip-basics"' in html
     assert 'id="avatar-restore-outfit"' in html
     for key in ("skin", "hairColor", "outfitColor", "bottomColor", "shoeColor", "hatColor", "glassesColor"):
-        assert f'{key}:' in script or f'"{key}":' in script
+        assert f"{key}:" in script or f'"{key}":' in script
     assert 'id="avatar-tuning-reset"' not in html
     assert "avatarTuningDraft" in script
     assert "headOffsetY" in compositor
@@ -345,7 +345,21 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert 'id="phaser-world" role="application"' in html
     assert "/static/vendor/phaser-3.90.0.min.js" in html
     assert "/static/forest-phaser.js" in html
-    for category in ("bodyType", "skin", "head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle", "pet"):
+    for category in (
+        "bodyType",
+        "skin",
+        "head",
+        "hair",
+        "headwear",
+        "arms",
+        "torso",
+        "legs",
+        "feet",
+        "tools",
+        "weapons",
+        "vehicle",
+        "pet",
+    ):
         assert f'id: "{category}"' in game_script
     for event_name in (
         "forest-avatar-updated",
@@ -569,7 +583,7 @@ def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     assert 'dagger: ["slash", "thrust", "halfslash"]' in engine_script
     assert 'arming_sword: ["slash", "halfslash", "backslash"]' in engine_script
     assert 'options.pose === "attack" && cosmetics.lpcWeapon !== "none"' in engine_script
-    assert 'supported.includes(animation)' in engine_script
+    assert "supported.includes(animation)" in engine_script
 
 
 def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_on_selection() -> None:
@@ -582,15 +596,15 @@ def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_o
     assert 'avatarPreviewPose = "harvest"' in game_script
     assert 'targetSlot === "lpcWeapon"' in game_script
     assert 'avatarPreviewPose = "attack"' in game_script
-    assert 'const layerFrameSize = Number(layer.frameSize || FRAME)' in engine_script
-    assert 'destinationX = target.x - (destinationWidth - target.width) / 2' in engine_script
+    assert "const layerFrameSize = Number(layer.frameSize || FRAME)" in engine_script
+    assert "destinationX = target.x - (destinationWidth - target.width) / 2" in engine_script
 
 
 def test_local_daily_reset_preserves_profile_but_reopens_daily_reward() -> None:
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
     assert "function resetTodayProgress(current)" in game_script
-    assert 'next.quests = { walk: false, meal: false, check: false }' in game_script
+    assert "next.quests = { walk: false, meal: false, check: false }" in game_script
     assert "next.rewardClaimed = false" in game_script
     assert "completed: member.me ? 0 : 3" in game_script
     assert 'localDemoOrigin && params.get("resetToday") === "1"' in game_script
@@ -615,14 +629,16 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     assert "나만의 코디 1" in game_script
     assert "nextOutfitNumber" in game_script
     assert "data-outfit-name-form" in game_script
-    assert '<strong>${safeLabel}</strong>' not in game_script
+    assert "<strong>${safeLabel}</strong>" not in game_script
     assert 'value="${safeLabel}"' in game_script
     assert "renameOutfit" in game_script
     assert "applyRequestedDefaultOutfit" in game_script
     assert "saved.getHours() === 22 && saved.getMinutes() === 30" in game_script
     assert 'lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none"' not in game_script
     assert "아이템을 선택해주세요" in html
-    assert 'record?.sources?.[gender] || record?.sources?.male' in (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+    assert "record?.sources?.[gender] || record?.sources?.male" in (
+        ROOT / "src/frontend/lpc-avatar-engine.js"
+    ).read_text(encoding="utf-8")
 
 
 def test_each_preset_uses_directional_walk_and_vehicle_motion_in_world() -> None:
@@ -674,7 +690,9 @@ def test_official_lpc_mobility_aprons_and_transient_actions_are_complete() -> No
     aprons = [item for item in items if "/aprons/" in item.get("definition", "")]
 
     assert {"wheelchair", "feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"}.issubset(mobility)
-    assert all({"idle", "walk", "run", "sit"}.issubset(item["animations"]) for item in items if item["id"] == "wheelchair")
+    assert all(
+        {"idle", "walk", "run", "sit"}.issubset(item["animations"]) for item in items if item["id"] == "wheelchair"
+    )
     assert len(aprons) >= 3
     assert "carrot" not in tools
     assert 'options.pose === "attack"' in engine
@@ -774,20 +792,20 @@ def test_avatar_catalog_cards_render_actual_lpc_previews_instead_of_emoji() -> N
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
     assert 'data-lpc-color-category="${itemSlot}"' in game_script
-    assert 'canvas[data-lpc-color-category]' in game_script
+    assert "canvas[data-lpc-color-category]" in game_script
     assert 'data-lpc-pose="${item.id}"' in game_script
-    assert 'canvas[data-lpc-pose]' in game_script
+    assert "canvas[data-lpc-pose]" in game_script
     assert 'data-speech-thumb="${item.id}"' in game_script
-    assert 'canvas[data-speech-thumb]' in game_script
-    assert 'effect: { magic_burst: 5, sword_arc: 6, arrow_volley: 8, leaf_blade: 9 }' not in game_script
+    assert "canvas[data-speech-thumb]" in game_script
+    assert "effect: { magic_burst: 5, sword_arc: 6, arrow_volley: 8, leaf_blade: 9 }" not in game_script
     assert 'data-lpc-category="lpcMobility"' in game_script
-    assert 'canvas[data-empty-preview]' in game_script
+    assert "canvas[data-empty-preview]" in game_script
     assert 'class="item-visual lpc-color-swatch"' not in game_script
     assert 'class="item-visual speech-item-visual"' not in game_script
     assert "lpcChoiceSupportsBody" in game_script
     assert '"lpcOutfit", "lpcBottom", "lpcShoes"' in game_script
-    assert 'const layerAnimation = supported.includes(requestedAnimation)' in engine_script
-    assert 'layerFrame * layerFrameSize' in engine_script
+    assert "const layerAnimation = supported.includes(requestedAnimation)" in engine_script
+    assert "layerFrame * layerFrameSize" in engine_script
 
 
 def test_avatar_preview_stays_visible_and_muscular_body_keeps_basic_clothes() -> None:
@@ -819,9 +837,11 @@ def test_wheelchair_uses_64px_frames_and_stays_visible_while_moving() -> None:
     manifest = json.loads((ROOT / "src/frontend/assets/lpc-pack/manifest.json").read_text(encoding="utf-8"))
 
     assert 'frame_counts = {"idle": 2, "walk": 9, "run": 8, "sit": 3}' in builder
-    assert 'source_frame = frame % 2' in builder
+    assert "source_frame = frame % 2" in builder
     assert 'FRAME if item.item_id == "wheelchair"' in builder
-    wheelchair = next(item for item in manifest["items"] if item["category"] == "mobility" and item["id"] == "wheelchair")
+    wheelchair = next(
+        item for item in manifest["items"] if item["category"] == "mobility" and item["id"] == "wheelchair"
+    )
     assert all(layer["frameSize"] == 64 for layers in wheelchair["sources"].values() for layer in layers)
     assert 'layer.category === "mobility" && avatar.mounted && options.moving' in engine
 
@@ -830,7 +850,21 @@ def test_lpc_editor_matches_official_top_level_structure_without_child_or_pregna
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     builder = (ROOT / "scripts/build_lpc_avatar_pack.py").read_text(encoding="utf-8")
 
-    expected = ("bodyType", "skin", "head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle", "pet")
+    expected = (
+        "bodyType",
+        "skin",
+        "head",
+        "hair",
+        "headwear",
+        "arms",
+        "torso",
+        "legs",
+        "feet",
+        "tools",
+        "weapons",
+        "vehicle",
+        "pet",
+    )
     positions = [game_script.index(f'{{ id: "{category}"') for category in expected]
     assert positions == sorted(positions)
     assert 'BODY_TYPES = ("male", "female", "muscular", "teen")' in builder
@@ -840,13 +874,13 @@ def test_lpc_editor_matches_official_top_level_structure_without_child_or_pregna
     for vehicle in ("wheelchair", "feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"):
         assert f'"id": "{vehicle}"' in manifest
     assert 'lpcMobility: "mobility"' in game_script
-    assert 'avatarCatalog.mobilityColor = colorChoices' in game_script
+    assert "avatarCatalog.mobilityColor = colorChoices" in game_script
     assert 'slot: "mobilityColor", group: "색상"' in game_script
-    assert 'discover_official_clothing(source)' in builder
-    assert 'discover_official_mobility(source)' in builder
+    assert "discover_official_clothing(source)" in builder
+    assert "discover_official_mobility(source)" in builder
     assert '"category": "outfit"' in manifest
     assert manifest.count('"category": "outfit"') >= 40
     assert '"id": "tshirt"' in manifest
     assert '"id": "cardigan"' in manifest
-    assert 'backpack_contents' not in manifest
+    assert "backpack_contents" not in manifest
     assert manifest.count('"category": "mobility"') >= 10
