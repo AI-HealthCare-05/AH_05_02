@@ -61,9 +61,10 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "검사·상담 안내 보기" in script
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
-    assert '$("#result-next").hidden = !canDisplayRisk' in script
+    assert '$("#result-next").hidden = false' in script
+    assert '$("#result-next").disabled = false' in script
     assert "const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk)" in script
-    assert "options.resultAvailable === true" in script
+    assert "options.showResult !== false" in script
     assert 'factors?.status === "approved"' in script
     assert "factors?.shap_claimed === true" in script
     assert '$("#risk-confirm-card").hidden = false' in script
@@ -452,7 +453,7 @@ def test_returning_user_routes_from_persisted_eligibility_state() -> None:
     assert "state.openFollowUpActionIds.map((actionId)" in script
     assert "api(`/follow-up-actions/${actionId}/acknowledge`" in script
     assert "if (state.currentHealthOnly)" in script
-    assert "if (state.returningUser && state.capabilities.futurePrediction)" in script
+    assert "if (state.returningUser && shouldRunPredictionAfterHealthEdit())" in script
     assert 'return "저장하고 다시 분석하기"' in script
     assert 'showMessage("로컬 미리보기에서는 승인되지 않은 예측 수치를 표시하지 않습니다."' in script
     assert "if (state.cycle?.user_challenges?.length)" in script
