@@ -411,7 +411,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v75" in worker
+    assert "gandang-carrot-forest-pwa-v76" in worker
     assert "when-the-morning-comes.mp3" in worker
     assert "avatar-title.mp3" in worker
     assert "home-elfwood.mp3" in worker
@@ -636,9 +636,9 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     assert 'value="${safeLabel}"' in game_script
     assert "renameOutfit" in game_script
     assert "applyRequestedDefaultOutfit" in game_script
-    assert 'label: "농부 프리셋"' in game_script
+    assert 'label: "농부"' in game_script
     assert 'sourceLabel: "나만의 코디 10"' in game_script
-    assert 'label: "사냥꾼 프리셋"' in game_script
+    assert 'label: "사냥꾼"' in game_script
     assert 'sourceLabel: "나만의 코디 8"' in game_script
     assert 'lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none"' not in game_script
     assert "아이템을 선택해주세요" in html

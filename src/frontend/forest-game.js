@@ -291,7 +291,7 @@
   const OUTFIT_DEFAULT_VERSION = 4;
   const genderDefaultOutfits = {
     female: {
-      label: "농부 프리셋",
+      label: "농부",
       sourceLabel: "나만의 코디 10",
       cosmetics: {
         bodyType: "female", lpcHead: "human_female", lpcHair: "long",
@@ -300,7 +300,7 @@
       },
     },
     male: {
-      label: "사냥꾼 프리셋",
+      label: "사냥꾼",
       sourceLabel: "나만의 코디 8",
       cosmetics: {
         bodyType: "male", lpcHead: "human_male", lpcHair: "messy",
