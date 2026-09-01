@@ -665,11 +665,11 @@ function setPredictionTrack(status, errorCode = "") {
   });
   received.classList.add("done");
   received.querySelector("span").textContent = "✓";
-  if (status === "running" || status === "succeeded") {
+  if (status === "running" || status === "succeeded" || status === "development") {
     analysis.classList.add("done");
     analysis.querySelector("span").textContent = status === "running" ? "•" : "✓";
   }
-  if (status === "succeeded") {
+  if (status === "succeeded" || status === "development") {
     ready.classList.add("done");
     ready.querySelector("span").textContent = "✓";
   }
@@ -715,6 +715,17 @@ function renderPredictionStatus(status, options = {}) {
       policy: "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
       showNext: true,
+    },
+    development: {
+      eyebrow: "개발 모델 실행 확인",
+      title: "모델 연결과 추론을 완료했습니다",
+      stage: "연동 확인 완료",
+      icon: "✓",
+      mascot: "/static/assets/hyeoldangi-complete.png",
+      message: "실제 모델은 실행됐으며, 승인 전이므로 개인 위험 범주와 확률은 표시하지 않습니다.",
+      policy: "개발 검증 결과는 진단·처방 또는 개인의 건강 판단에 사용할 수 없습니다.",
+      showRetry: false,
+      showNext: false,
     },
     failed: {
       eyebrow: "예측 처리 실패",
@@ -1155,9 +1166,15 @@ function renderPrediction(prediction, factors) {
   const hasApprovedExplanation = isApprovedRisk
     && factors?.status === "approved"
     && factors?.shap_claimed === true;
+  const isDevelopmentResult = prediction.result_status === "development_only"
+    && typeof prediction.output_status === "string"
+    && prediction.output_status.length > 0
+    && prediction.raw_probability_exposed !== true;
   renderPredictionStatus(
-    isApprovedRisk ? "succeeded" : "failed",
-    isApprovedRisk ? { resultAvailable: true } : { errorCode: "MODEL_NOT_READY" },
+    isApprovedRisk ? "succeeded" : isDevelopmentResult ? "development" : "failed",
+    isApprovedRisk || isDevelopmentResult
+      ? { resultAvailable: true }
+      : { errorCode: "MODEL_NOT_READY" },
   );
   $("#probability-policy").querySelector("p").textContent = isApprovedRisk
     ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."

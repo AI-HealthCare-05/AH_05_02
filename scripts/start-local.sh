@@ -4,6 +4,18 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 
+required_models=(
+  "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+  "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
+)
+for model in "${required_models[@]}"; do
+  if [[ ! -f "$model" ]]; then
+    echo "필수 모델 파일이 없습니다: $model" >&2
+    echo "docs/MODEL_LOCAL_SETUP.md에 따라 scripts/provision-models.py를 먼저 실행하세요." >&2
+    exit 1
+  fi
+done
+
 command -v docker >/dev/null 2>&1 || {
   echo "Docker CLI를 찾을 수 없습니다. Docker Desktop을 설치·실행한 뒤 다시 시도하세요." >&2
   exit 1

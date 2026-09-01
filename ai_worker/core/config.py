@@ -44,6 +44,10 @@ class Config(BaseSettings):
 
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+    CURRENT_SCREENING_MANIFEST_URI: str = (
+        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
+    )
     MODEL_CACHE_DIR: str = "/app/storage/models"
     AWS_REGION: str = "ap-northeast-2"
     AWS_S3_ENDPOINT_URL: str | None = None

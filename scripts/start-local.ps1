@@ -2,6 +2,16 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 
+$requiredModels = @(
+    "models\artifacts\candidates\diabetes_current_screening\v050\model.joblib",
+    "models\artifacts\candidates\diabetes_incidence\rf25-tuned-spec40-v1\model.joblib"
+)
+foreach ($model in $requiredModels) {
+    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $model))) {
+        throw "필수 모델 파일이 없습니다: $model`n docs\MODEL_LOCAL_SETUP.md에 따라 scripts\provision-models.py를 먼저 실행하세요."
+    }
+}
+
 $dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
 if ($dockerCommand) {
     $docker = $dockerCommand.Source

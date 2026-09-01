@@ -93,7 +93,7 @@ def load_current_screening_model(
         model_path = REPOSITORY_ROOT / manifest["artifact_local_path"]
     if not model_path.is_file():
         raise CurrentScreeningArtifactUnavailableError(
-            "current-screening artifact is missing; reproduce or provision it at " f"{model_path}"
+            f"current-screening artifact is missing; reproduce or provision it at {model_path}"
         )
     if _sha256(model_path) != manifest.get("artifact_sha256"):
         raise CurrentScreeningContractError("model artifact SHA-256 does not match manifest")
