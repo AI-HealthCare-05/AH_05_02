@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -44,6 +44,19 @@ VALID_FEATURES = {
     "overall_quality_of_life_score": None,
     "depressed_feeling_last_week": None,
     "sleep_difficulty_last_week": None,
+}
+
+VALID_RF25_INPUT = {
+    "birth_date": "1965-01-15",
+    "sex": "female",
+    "height_cm": 160,
+    "weight_kg": 62,
+    "smoking_status": "never",
+    "current_drinker": False,
+    "regular_exercise": True,
+    "exercise_days_per_week": 3,
+    "exercise_minutes": 40,
+    "previously_diagnosed_diabetes": False,
 }
 
 
@@ -136,7 +149,7 @@ def test_input_schema_names_leakage_fields_as_excluded() -> None:
 
 @pytest.mark.asyncio
 async def test_development_provider_does_not_fabricate_probability_or_category() -> None:
-    result = await DevelopmentPredictionProvider().predict(PredictionFeatures.model_validate(VALID_FEATURES))
+    result = await DevelopmentPredictionProvider().predict(VALID_RF25_INPUT, as_of_date=date(2026, 8, 31))
     assert result.internal_score is None
     assert result.risk_category is None
     assert result.promotion_status == "development_only"
@@ -144,7 +157,10 @@ async def test_development_provider_does_not_fabricate_probability_or_category()
 
 @pytest.mark.asyncio
 async def test_worker_development_inference_returns_versioned_safe_result() -> None:
-    result = await run_task("diabetes_incidence", {"features": VALID_FEATURES})
+    result = await run_task(
+        "diabetes_incidence",
+        {"input": VALID_RF25_INPUT, "as_of_date": "2026-08-31"},
+    )
     assert result["risk_category"] is None
     assert result["internal_score"] is None
     assert result["feature_schema_version"] == ACTIVE_MODEL.feature_schema_version
@@ -177,6 +193,7 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
     item = SimpleNamespace(
         id=9,
         health_checkup_id=4,
+        input_as_of_date=date(2026, 8, 31),
         model_key="diabetes_incidence",
         outcome_definition="next_observation_new_diabetes_diagnosis",
         result_status="development_only",
@@ -201,3 +218,31 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
     assert public["raw_probability_exposed"] is False
     assert "internal_score" not in public
     assert "probability" not in public
+
+
+def test_approved_caution_prediction_exposes_a_korean_risk_label() -> None:
+    item = SimpleNamespace(
+        id=10,
+        health_checkup_id=5,
+        input_as_of_date=date(2026, 8, 31),
+        model_key="diabetes_incidence",
+        outcome_definition="next_observation_new_diabetes_diagnosis",
+        result_status="approved",
+        risk_category="caution",
+        internal_score=0.02,
+        model_version="rf25-tuned-spec40-v1",
+        input_schema_version="diabetes-incidence-api-25features-v1",
+        feature_schema_version="klosa_stage3_25features_v1",
+        preprocessing_version="train-median-indicator-mode-onehot-v1",
+        target_definition_version="next-observation-new-diabetes-v1",
+        calibration_version="unapproved",
+        model_artifact_digest="abc",
+        threshold_version="validation-spec043-caution-recall090-v1",
+        decision_threshold=0.021153602801262862,
+        output_status="approved",
+        model_population="undiagnosed_klosa_age_45_105",
+        predicted_at=datetime.now(UTC),
+    )
+    public = prediction_payload(item)
+    assert public["risk_category"] == "caution"
+    assert public["risk_category_label"] == "주의"

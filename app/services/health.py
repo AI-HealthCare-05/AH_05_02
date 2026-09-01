@@ -180,6 +180,11 @@ class HealthService:
                     "expected": ACTIVE_MODEL.feature_schema_version,
                 },
             )
+        if user.gender not in {Gender.FEMALE, Gender.MALE}:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"error_code": "ML_INPUT_MISSING", "message": "예측 전에 프로필 성별을 입력해 주세요."},
+            )
         bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
         sex = "female" if user.gender == Gender.FEMALE else "male"
         PredictionFeatures(
@@ -306,6 +311,48 @@ class HealthService:
             depressed_feeling_last_week=checkup.depressed_feeling_last_week,
             sleep_difficulty_last_week=checkup.sleep_difficulty_last_week,
         )
+
+    @staticmethod
+    def inference_payload(
+        user: User,
+        checkup: HealthCheckup,
+        *,
+        previously_diagnosed_diabetes: bool,
+    ) -> dict[str, object]:
+        """Build the raw RF25 API contract without persisting it in PredictionJob."""
+        if user.birthday is None or user.gender not in {Gender.FEMALE, Gender.MALE}:
+            raise ValueError("ML_INPUT_MISSING")
+        if checkup.smoking_status is None or checkup.exercise_days_per_week is None or checkup.exercise_minutes is None:
+            raise ValueError("ML_INPUT_MISSING")
+        return {
+            "birth_date": user.birthday.isoformat(),
+            "sex": "female" if user.gender == Gender.FEMALE else "male",
+            "height_cm": checkup.height_cm,
+            "weight_kg": checkup.weight_kg,
+            "smoking_status": checkup.smoking_status,
+            "current_drinker": checkup.current_drinker,
+            "regular_exercise": checkup.regular_exercise,
+            "exercise_days_per_week": checkup.exercise_days_per_week,
+            "exercise_minutes": checkup.exercise_minutes,
+            "previously_diagnosed_diabetes": previously_diagnosed_diabetes,
+            "annual_household_income_10k_krw": checkup.annual_household_income_10k_krw,
+            "health_satisfaction_score": checkup.health_satisfaction_score,
+            "economic_satisfaction_score": checkup.economic_satisfaction_score,
+            "overall_quality_of_life_score": checkup.overall_quality_of_life_score,
+            "hypertension_diagnosis": checkup.hypertension_diagnosis,
+            "cancer_diagnosis": checkup.cancer_diagnosis,
+            "chronic_lung_disease_diagnosis": checkup.chronic_lung_disease_diagnosis,
+            "liver_disease_diagnosis": checkup.liver_disease_diagnosis,
+            "heart_disease_diagnosis": checkup.heart_disease_diagnosis,
+            "cerebrovascular_disease_diagnosis": checkup.cerebrovascular_disease_diagnosis,
+            "psychiatric_disease_diagnosis": checkup.psychiatric_disease_diagnosis,
+            "arthritis_rheumatism_diagnosis": checkup.arthritis_rheumatism_diagnosis,
+            "education_level": checkup.education_level,
+            "marital_status": checkup.marital_status,
+            "household_structure": checkup.household_structure,
+            "depressed_feeling_last_week": checkup.depressed_feeling_last_week,
+            "sleep_difficulty_last_week": checkup.sleep_difficulty_last_week,
+        }
 
     @staticmethod
     def input_schema() -> dict[str, object]:
