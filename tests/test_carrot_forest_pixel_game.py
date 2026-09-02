@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v102" in worker
+    assert "gandang-carrot-forest-pwa-v104" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -576,6 +576,17 @@ def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
     assert 'reaction = y < placedTarget.item.y - 28 ? "head" : "body"' in game_script
     assert "placed-object-copy" in game_script
     assert "width:122px" in css
+
+
+def test_interactive_placed_objects_use_their_visible_sprite_as_click_target() -> None:
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+
+    assert 'window.addEventListener("forest-placed-object-pointer"' in game_script
+    assert 'await interact(`object:${index}`)' in game_script
+    assert 'actor.getData("pointerTargets") || [actor]' in phaser_script
+    assert 'target.setInteractive({ useHandCursor: true })' in phaser_script
+    assert 'new CustomEvent("forest-placed-object-pointer"' in phaser_script
 
 
 def test_day_night_pond_animation_and_water_object_placement_contract() -> None:

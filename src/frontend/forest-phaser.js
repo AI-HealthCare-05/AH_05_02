@@ -219,7 +219,7 @@
       });
     }
 
-    createPlacedObjectActor(item, preview = false) {
+    createPlacedObjectActor(item, preview = false, placedIndex = -1) {
         let actor;
         if (Object.hasOwn(animatedObjectRows, item.code)) {
           const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
@@ -230,19 +230,19 @@
           const base = this.add.image(0, 3, "reward-cow-base").setOrigin(0.5, 0.86).setDisplaySize(88, 88);
           const body = this.add.image(0, -7, "reward-cow-body").setOrigin(0.5, 0.86).setDisplaySize(84, 84);
           actor = this.add.container(item.x, item.y, [base, body]);
-          actor.setData("motionTarget", body);
+          actor.setData("motionTarget", body).setData("pointerTargets", [base, body]);
         } else if (item.code === "campfire") {
           const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
           const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(94, 94);
           const onFire = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.campfire).setOrigin(0.5, 0.9).setDisplaySize(94, 94);
           actor = this.add.container(item.x, item.y, [shadow, offFire, onFire]);
-          actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire);
+          actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire).setData("pointerTargets", [offFire, onFire]);
         } else if (item.code === "lantern") {
           const shadow = this.add.ellipse(0, -2, 42, 12, 0x1b241d, .32);
           const lantern = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.lantern)
             .setOrigin(0.5, 0.9).setDisplaySize(82, 82);
           actor = this.add.container(item.x, item.y, [shadow, lantern]);
-          actor.setData("visualTarget", lantern);
+          actor.setData("visualTarget", lantern).setData("pointerTargets", [lantern]);
         } else if (Object.hasOwn(storageObjectIndex, item.code)) {
           const largeObjects = new Set(["tent", "light_tent", "picnic_table", "bbq_table", "pond", "fence", "flower_cart", "carrot_crate"]);
           const smallObjects = new Set(["chair_green", "chair_red", "lantern", "mailbox", "watering_can"]);
@@ -258,6 +258,21 @@
           .setDepth(preview ? 998 : item.y - 2 + interactiveDepthBoost)
           .setVisible(this.sceneName === "world");
         actor.setData("item", { ...item });
+        if (!preview && placedIndex >= 0) {
+          // Bind input to the visible child images. Container hit areas drifted
+          // after responsive scaling, so clicks on a visible flame/lamp were
+          // incorrectly reported as clicks on empty ground.
+          const pointerTargets = actor.getData("pointerTargets") || [actor];
+          pointerTargets.forEach((target) => target.setInteractive({ useHandCursor: true }).on(
+            "pointerdown",
+            (pointer, _localX, _localY, inputEvent) => {
+              inputEvent?.stopPropagation?.();
+              window.dispatchEvent(new CustomEvent("forest-placed-object-pointer", {
+                detail: { index: placedIndex, x: pointer.worldX, y: pointer.worldY },
+              }));
+            },
+          ));
+        }
         this.applyPlacedObjectState(actor, item);
         return actor;
     }
@@ -320,7 +335,7 @@
         this.tweens.killTweensOf(actor.getData?.("motionTarget"));
         actor.destroy();
       });
-      this.placedObjectActors = placed.map((item) => this.createPlacedObjectActor(item)).filter(Boolean);
+      this.placedObjectActors = placed.map((item, index) => this.createPlacedObjectActor(item, false, index)).filter(Boolean);
     }
 
     currentLocalHour() {

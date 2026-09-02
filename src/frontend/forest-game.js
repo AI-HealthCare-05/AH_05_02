@@ -2695,6 +2695,19 @@
     if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
     await handleWorldPointer(detail.x, detail.y);
   });
+  window.addEventListener("forest-placed-object-pointer", async (event) => {
+    const detail = event.detail || {};
+    const index = Number(detail.index);
+    const item = state.placed[index];
+    if (!Number.isInteger(index) || !item || currentScene !== "world" || placementCode) return;
+    canvas.focus();
+    if (item.code === "reward_cow") {
+      const reaction = Number(detail.y) < item.y - 28 ? "head" : "body";
+      reactToCow(index, reaction);
+      return;
+    }
+    await interact(`object:${index}`);
+  });
 
   $("#reward-button").addEventListener("click", async () => {
     if (groupCompleted() < 15 || state.rewardClaimed) return;
