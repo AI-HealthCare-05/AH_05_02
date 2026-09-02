@@ -129,8 +129,11 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
 - `src/frontend/assets/carrot-forest-main-theme.mp3`: 당근의 숲 메인 화면용 BGM. 사용자가 제공한 `Untitled.mp3`를 서비스용 파일명으로 변경해 반입했다.
-- `src/frontend/assets/town-pro-sensory-cc0.mp3`: 집 내부용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
-- `src/frontend/assets/peaceful-forest-samza-cc0.wav`: 아바타 꾸미기 전용 무료 BGM `Peaceful Forest`. 느린 현악·저음 중심의 차분한 곡이며 Samza가 CC0로 공개했다. 출처: https://opengameart.org/content/peaceful-forest
+- `src/frontend/assets/home-small-fire-cc0.wav`: 집 내부 기본 BGM `A Small Fire Will Do`. Cal McEachern(Trex0n)이 CC0로 공개한 차분한 루프다. 출처: https://opengameart.org/content/a-small-fire-will-do-calming-loop
+- `src/frontend/assets/home-record-player-simple-loop-cc0.ogg`: 집 안 LP 재생기 전용 BGM `Simple Menu/Background Music Loop`. polosik이 CC0로 공개했으며 LP를 켜면 이 곡으로 전환되고 끄면 집 기본곡으로 복귀한다. 출처: https://opengameart.org/content/simple-menubackground-music-loop
+- `src/frontend/assets/avatar-forget-me-not-cc0.ogg`: 아바타 꾸미기 전용 BGM `Forget Me Not`. Kistol이 CC0로 공개한 잔잔한 루프다. 출처: https://opengameart.org/content/forget-me-not
+- `src/frontend/assets/town-pro-sensory-cc0.mp3`: 당근밭용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
+- `src/frontend/assets/peaceful-forest-samza-cc0.wav`: 야간용 무료 BGM `Peaceful Forest`. 느린 현악·저음 중심의 차분한 곡이며 Samza가 CC0로 공개했다. 출처: https://opengameart.org/content/peaceful-forest
 - `src/frontend/assets/forest-main-breeze-original.wav`: 이전 메인 화면용 오리지널 BGM. 무료 외부 음원의 대체·장애 대응 후보로 보존한다.
 - `src/frontend/assets/forest-canopy-original.wav`: 이전 집 내부용 96초 오리지널 루프 BGM. 대체·복구용 자산으로 유지한다.
 - `src/frontend/assets/carrot-forest-original.wav`: 당근밭 전용 오리지널 루프 BGM. `scripts/generate_original_bgm.py`로 재현할 수 있다.
@@ -142,7 +145,7 @@ python scripts/build_modular_avatar_atlas.py
 
 ## 배치 오브젝트 상호작용
 
-월드에 배치한 행운의 젖소·모닥불·숲 등불·반딧불 랜턴·전구 텐트는 개별 `active` 상태를 저장한다. 새로 배치하면 정지·소등 상태로 시작하며, 아바타가 가까이 간 뒤 `Q`를 누르거나 오브젝트를 클릭하면 즉시 켜지고 다시 조작하면 꺼진다. 젖소는 통통 움직이고, 모닥불은 빠르게 깜빡이며, 등불류는 느리게 밝아지는 애니메이션을 사용한다. 서버 연동 시에도 `placed[].active`를 그대로 보존해야 한다.
+월드에 배치한 행운의 젖소·모닥불·숲 등불·반딧불 랜턴·전구 텐트는 개별 `active` 상태를 저장한다. 새로 배치하면 정지·소등 상태로 시작하며, 아바타가 가까이 간 뒤 `Q`를 누르거나 오브젝트를 클릭하면 즉시 켜지고 다시 조작하면 꺼진다. 젖소는 통통 움직이고, 모닥불은 빠르게 깜빡이며, 등불류는 느리게 밝아지는 애니메이션을 사용한다. 서버 연동 시에도 `placed[].active`를 그대로 보존해야 한다. 집 내부의 고정 LP 재생기도 클릭 또는 근거리 `Q`로 켜고 끄며, 선택 상태와 장면 BGM을 함께 저장한다.
 
 등불·모닥불의 ON/OFF는 배치 좌표를 유지한 채 불꽃·주변광만 전환한다. 젖소는 `Q`로 지속 움직임을 켜고 끌 수 있으며, 직접 클릭할 때는 머리와 몸의 클릭 위치에 따라 쓰다듬기·토닥이기 반응이 다르게 재생된다.
 - 첨부 화면은 픽셀 밀도·치비 비율·카드 가독성의 참고 자료로만 사용했으며 기존 캐릭터·아이템·로고·UI 이미지는 복제하지 않았다.

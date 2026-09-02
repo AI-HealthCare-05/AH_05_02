@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v116";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v117";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -8,13 +8,16 @@ const CORE_SHELL = [
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260901-25",
-  "/static/forest-phaser.js?v=20260902-27",
-  "/static/forest-game.js?v=20260902-68",
+  "/static/forest-phaser.js?v=20260902-28",
+  "/static/forest-game.js?v=20260902-69",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
   "/static/assets/town-pro-sensory-cc0.mp3",
+  "/static/assets/home-small-fire-cc0.wav",
+  "/static/assets/home-record-player-simple-loop-cc0.ogg",
+  "/static/assets/avatar-forget-me-not-cc0.ogg",
   "/static/assets/carrot-forest-main-theme.mp3",
   "/static/assets/forest-canopy-original.wav",
   "/static/assets/peaceful-forest-samza-cc0.wav",

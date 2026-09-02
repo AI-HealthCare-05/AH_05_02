@@ -88,6 +88,7 @@
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
       this.lastStepSfxAt = 0;
+      this.homeRecordPlaying = Boolean(storedState().homeRecordPlaying);
     }
 
     preload() {
@@ -120,6 +121,7 @@
       this.lightFx = this.add.graphics().setDepth(1.5).setBlendMode(Phaser.BlendModes.ADD);
       this.lastLightingRefresh = 0;
       this.nightStrength = 0;
+      this.createHomeRecordPlayer();
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.motionFx = this.add.graphics().setDepth(2);
       this.player.add(this.motionFx);
@@ -221,6 +223,37 @@
           repeat: -1,
         });
       });
+    }
+
+    createHomeRecordPlayer() {
+      const x = 610;
+      const y = 324;
+      const shadow = this.add.rectangle(0, 28, 66, 9, 0x2d2118, .22);
+      const caseBack = this.add.rectangle(0, 3, 68, 52, 0x6f4027).setStrokeStyle(3, 0x4b2c1e);
+      const caseFront = this.add.rectangle(0, 3, 58, 42, 0xbb7847);
+      const deck = this.add.rectangle(0, -2, 50, 29, 0xefd3a2).setStrokeStyle(2, 0x9f693f);
+      const disc = this.add.circle(-8, -2, 14, 0x252735).setStrokeStyle(2, 0x11141d);
+      const label = this.add.circle(-8, -2, 4, 0xd9b064);
+      const arm = this.add.rectangle(15, -2, 4, 23, 0x695847).setOrigin(.5, .1).setAngle(-18);
+      const needle = this.add.rectangle(19, 9, 12, 3, 0x695847);
+      const light = this.add.rectangle(25, -17, 5, 5, 0x4c554a);
+      const note = this.add.text(29, -44, "♪", {
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#f0a342",
+      }).setOrigin(.5).setVisible(false);
+      this.recordPlayerActor = this.add.container(x, y, [shadow, caseBack, caseFront, deck, disc, label, arm, needle, light, note])
+        .setDepth(y - 2).setVisible(false);
+      this.recordPlayerDisc = disc;
+      this.recordPlayerLabel = label;
+      this.recordPlayerLight = light;
+      this.recordPlayerNote = note;
+      this.syncHomeRecordPlayer(this.homeRecordPlaying);
+    }
+
+    syncHomeRecordPlayer(playing) {
+      this.homeRecordPlaying = Boolean(playing);
+      this.recordPlayerLabel?.setFillStyle(this.homeRecordPlaying ? 0xef9540 : 0xd9b064);
+      this.recordPlayerLight?.setFillStyle(this.homeRecordPlaying ? 0x78d68a : 0x4c554a);
+      this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
     }
 
     createPlacedObjectActor(item, preview = false, placedIndex = -1) {
@@ -433,6 +466,7 @@
         }
         if (detail.scene) this.setScene(detail.scene);
         if (Array.isArray(detail.placed)) this.syncPlacedObjects(detail.placed);
+        if (typeof detail.homeRecordPlaying === "boolean") this.syncHomeRecordPlayer(detail.homeRecordPlaying);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
       window.addEventListener("forest-state-updated", this.onState);
@@ -567,6 +601,8 @@
     setScene(sceneName) {
       this.sceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
+      this.recordPlayerActor?.setVisible(this.sceneName === "home");
+      this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
       this.ratActor?.setVisible(this.sceneName === "world" && this.ratActive);
       this.placedObjectActors?.forEach((actor) => actor.setVisible(this.sceneName === "world"));
       this.updateWorldAtmosphere(performance.now());
@@ -594,6 +630,10 @@
 
     update(time, delta) {
       if (this.mountTransitioning) return;
+      if (this.sceneName === "home" && this.homeRecordPlaying) {
+        this.recordPlayerDisc?.setAngle(time / 10);
+        this.recordPlayerNote?.setY(-44 + Math.sin(time / 280) * 3).setAlpha(.72 + Math.sin(time / 220) * .2);
+      }
       this.updateWorldAtmosphere(time);
       this.updateRat(time, delta);
       const inputAllowed = !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);

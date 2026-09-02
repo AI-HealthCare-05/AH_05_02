@@ -502,6 +502,7 @@
       fishCaught: false,
       fishing: false,
       petFedCount: 0,
+      homeRecordPlaying: false,
     };
   }
 
@@ -526,6 +527,7 @@
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
+      fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
@@ -565,6 +567,7 @@
       .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
       .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
     state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
+    state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -736,9 +739,10 @@
       this.tracks = {
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
         night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
-        home: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
+        home: new Audio("/static/assets/home-small-fire-cc0.wav"),
+        homeRecord: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg"),
         garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
-        avatar: new Audio("/static/assets/avatar-studio-original.wav"),
+        avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
       };
       this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
       this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
@@ -846,7 +850,7 @@
     return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
   }
   function sceneMusicName(scene = currentScene) {
-    if (scene === "home") return "home";
+    if (scene === "home") return state.homeRecordPlaying ? "homeRecord" : "home";
     if (scene === "garden") return "garden";
     const hour = currentLocalHour();
     if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
@@ -865,7 +869,7 @@
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying } }));
     if (message) setStatus(message);
   }
 
@@ -1001,6 +1005,7 @@
         drawVehicle();
         drawPlacedObjects();
       }
+      if (currentScene === "home") drawHomeRecordPlayer();
       return;
     }
     fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
@@ -1028,6 +1033,26 @@
     [[275, 302, "#fff0a1"], [458, 284, "#ff9db0"], [690, 292, "#bba4ff"], [106, 285, "#fff0a1"]].forEach(([x, y, color]) => drawFlower(x, y, color));
     drawVehicle();
     drawPlacedObjects();
+  }
+
+  function drawHomeRecordPlayer() {
+    const x = 610;
+    const y = 324;
+    fillPixelRect(x - 31, y + 25, 62, 8, "rgba(37,31,25,.22)");
+    fillPixelRect(x - 32, y - 20, 64, 48, "#6f4027");
+    fillPixelRect(x - 27, y - 15, 54, 37, "#bb7847");
+    fillPixelRect(x - 23, y - 11, 46, 25, "#efd3a2");
+    context.fillStyle = "#252735";
+    context.beginPath();
+    context.arc(x - 7, y + 1, 14, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = state.homeRecordPlaying ? "#ef9540" : "#d9b064";
+    context.beginPath();
+    context.arc(x - 7, y + 1, 4, 0, Math.PI * 2);
+    context.fill();
+    fillPixelRect(x + 12, y - 7, 4, 20, "#695847");
+    fillPixelRect(x + 12, y + 10, 12, 3, "#695847");
+    fillPixelRect(x + 22, y - 13, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
   }
 
   function drawPlacedObject(item, preview = false) {
@@ -1459,6 +1484,7 @@
     if (currentScene === "home") {
       if (distanceTo(292, 246) < 95) return "sofa";
       if (distanceTo(558, 205) < 100) return "wardrobe";
+      if (distanceTo(610, 324) < 82) return "record_player";
       if (distanceTo(384, 438) < 78) return "exit_home";
       return null;
     }
@@ -1485,6 +1511,7 @@
     } else if (target) prompt.querySelector("span").textContent = {
       home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
+      record_player: state.homeRecordPlaying ? "LP 끄기" : "LP 켜기",
       crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
   }
@@ -1517,12 +1544,31 @@
       else await togglePlacedObject(index);
       return;
     }
+    if (target === "record_player") {
+      await toggleHomeRecordPlayer();
+      return;
+    }
     const pose = {
       crops: "harvest", pond: "fishing", home: "door", garden: "door",
       exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
     }[target];
     if (pose) window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose, duration: pose === "fishing" ? 1800 : 1100 } }));
     openWorldDialog(target);
+  }
+
+  async function toggleHomeRecordPlayer() {
+    if (currentScene !== "home") return;
+    state.homeRecordPlaying = !state.homeRecordPlaying;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
+    renderCanvas();
+    try {
+      await musicEngine?.switchTo(sceneMusicName("home"), { restart: true });
+    } catch {
+      setStatus("LP 음악을 전환하지 못했지만 다른 기능은 계속 이용할 수 있어요.");
+    }
+    await persist(state.homeRecordPlaying
+      ? "LP 재생기를 켰습니다. Simple Menu 음악이 재생됩니다."
+      : "LP 재생기를 껐습니다. 집 안 음악으로 돌아갑니다.");
   }
 
   function switchScene(scene) {
@@ -2657,8 +2703,9 @@
       if (currentScene === "home") {
         if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
+        else if (x >= 560 && x <= 670 && y >= 270 && y <= 375) await interact("record_player");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
-        else setStatus("소파·옷장·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else setStatus("소파·옷장·LP 재생기·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
       } else if (currentScene === "garden") {
         if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
@@ -3188,6 +3235,7 @@
     const params = new URLSearchParams(window.location.search);
     const localReset = localDemoOrigin && params.get("resetToday") === "1";
     state = localReset ? resetTodayProgress(loaded) : loaded;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
     if (localReset) {
       adapter.save(state);
       params.delete("resetToday");

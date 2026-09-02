@@ -417,18 +417,24 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         "forest-canopy-original.wav",
         "carrot-forest-original.wav",
         "peaceful-forest-samza-cc0.wav",
+        "home-small-fire-cc0.wav",
+        "home-record-player-simple-loop-cc0.ogg",
+        "avatar-forget-me-not-cc0.ogg",
     ):
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v116" in worker
+    assert "gandang-carrot-forest-pwa-v117" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
     assert "peaceful-forest-samza-cc0.wav" in worker
     assert "avatar-studio-original.wav" in worker
+    assert "home-small-fire-cc0.wav" in worker
+    assert "home-record-player-simple-loop-cc0.ogg" in worker
+    assert "avatar-forget-me-not-cc0.ogg" in worker
     assert "reward-chest-success.mp3" in worker
 
 
@@ -458,10 +464,14 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert "this.motionFx?.clear()" in phaser_script
     assert 'forest: new Audio("/static/assets/carrot-forest-main-theme.mp3")' in game_script
     assert 'night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
-    assert 'avatar: new Audio("/static/assets/avatar-studio-original.wav")' in game_script
+    assert 'avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg")' in game_script
     assert '(hour >= 20 || hour < 5)) return "night"' in game_script
-    assert 'home: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
+    assert 'home: new Audio("/static/assets/home-small-fire-cc0.wav")' in game_script
+    assert 'homeRecord: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg")' in game_script
     assert 'garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
+    assert 'if (scene === "home") return state.homeRecordPlaying ? "homeRecord" : "home"' in game_script
+    assert 'target === "record_player"' in game_script
+    assert "createHomeRecordPlayer()" in phaser_script
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
     assert "musicEngine?.switchTo(sceneMusicName(scene))" in game_script
     assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
