@@ -6,8 +6,8 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260831-intro-challenge">
-  <script src="/static/app.js?v=20260901-demo-stability-v1" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260902-face-signal-v2">
+  <script src="/static/app.js?v=20260902-face-signal-v2" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -306,8 +306,8 @@
         <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled hidden>결과 확인</button></div>
       </section>
       <section class="screen" data-step="6" aria-labelledby="factors-title">
-        <p class="eyebrow" id="result-confirmation-eyebrow">결과 확인</p><h2 id="factors-title">현재와 미래 위험 신호를 확인해 주세요</h2>
-        <p class="lead" id="result-confirmation-lead">현재 위험 신호를 먼저 확인한 뒤, 시간에 따른 미래 전망을 살펴볼 수 있습니다.</p>
+        <p class="eyebrow" id="result-confirmation-eyebrow">결과 확인</p><h2 id="factors-title">현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요</h2>
+        <p class="lead" id="result-confirmation-lead">현재 위험 신호 선별 결과를 먼저 확인한 뒤, 미래 신규 발병 위험을 별도 영역에서 확인합니다.</p>
         <section id="current-health-result" class="current-health-result" aria-labelledby="current-health-result-title" hidden>
           <div class="current-health-result-heading">
             <span class="current-health-result-icon" aria-hidden="true">✓</span>
@@ -325,7 +325,7 @@
         <div id="development-preview-notice" class="notice safety" role="status" hidden><span>개발</span><div><strong>개발 확인용 모델 결과입니다</strong><p>로컬 데모에서 화면 연결을 확인하기 위한 위험 범주이며, 운영 승인 결과가 아닙니다. 숫자 점수·확률·위험요인은 표시하지 않습니다.</p></div></div>
         <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
           <div class="current-risk-signal-heading">
-            <h3 id="risk-confirm-title">현재 위험 신호</h3>
+            <div><p class="eyebrow">현재 위험 신호 선별</p><h3 id="risk-confirm-title">현재 위험 신호 선별 결과</h3></div>
             <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
           </div>
           <div class="risk-preview-controls" id="risk-preview-controls" aria-label="현재 위험 신호 화면 확인" hidden>
@@ -336,21 +336,34 @@
           </div>
           <div class="current-risk-signal-body">
             <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="현재 위험 신호 결과 준비 중">
-              <span class="traffic-signal high"><i aria-hidden="true"></i><b>높음</b></span>
-              <span class="traffic-signal caution"><i aria-hidden="true"></i><b>주의</b></span>
-              <span class="traffic-signal low"><i aria-hidden="true"></i><b>낮음</b></span>
+              <span class="traffic-signal high"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-high.png" alt=""></i><b>높음</b></span>
+              <span class="traffic-signal caution"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-caution.png" alt=""></i><b>주의</b></span>
+              <span class="traffic-signal low"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-low.png" alt=""></i><b>낮음</b></span>
             </div>
           </div>
-          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p></div></div>
+          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p>
+            <div class="medical-facility-list" aria-label="가까운 의료기관 안내">
+              <article>
+                <strong>가까운 검사 가능 의료기관</strong>
+                <p>위치 동의와 의료기관 API가 연결되면 기관명·진료과·주소·전화번호·거리·지도 링크를 표시합니다.</p>
+                <div class="facility-actions">
+                  <button class="secondary" type="button" disabled>전화</button>
+                  <button class="secondary" type="button" disabled>주소</button>
+                  <button class="secondary" type="button" disabled>지도 보기</button>
+                </div>
+              </article>
+            </div>
+          </div></div>
         </section>
         <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="risk-forecast-title">
           <div class="risk-forecast-heading">
             <div>
-              <h3 id="risk-forecast-title">시간에 따른 위험 신호 변화를 확인해요</h3>
+              <p class="eyebrow">미래 신규 발병 위험</p>
+              <h3 id="risk-forecast-title">미래 신규 발병 위험 전망</h3>
             </div>
             <span class="forecast-status-badge" id="forecast-status-badge">결과 준비 중</span>
           </div>
-          <p class="risk-forecast-description">KLoSA 관측 주기에 맞춰 2년 간격의 위험 신호를 보여줍니다. 실제 서비스에서는 공개 승인을 받은 결과만 표시합니다.</p>
+          <p class="risk-forecast-description">현재 위험 신호 선별 결과와 분리해서 앞으로의 신규 발병 위험을 확인합니다. 실제 서비스에서는 공개 승인을 받은 결과만 표시합니다.</p>
           <div class="forecast-state" id="forecast-state" role="status" aria-live="polite" data-state="loading">
             <strong id="forecast-state-title">연령별 위험 전망 결과를 불러오고 있어요</strong>
             <p id="forecast-state-message">승인된 전망 데이터가 도착하면 이 영역에 표시합니다.</p>
@@ -429,11 +442,33 @@
               <p>작고 구체적인 목표로 적으면 매일 기록하기 쉬워요.</p>
             </div>
             <div class="two-column">
-              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" required disabled></div>
-              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" required disabled></div>
+              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" disabled></div>
+              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" disabled></div>
               <div class="form-row full"><label for="custom-challenge-record-type">기록 방법</label><select id="custom-challenge-record-type" disabled><option value="simple">간편 체크</option><option value="time">시간 입력</option><option value="count">횟수 입력</option></select></div>
             </div>
             <div class="custom-challenge-actions"><button class="secondary" id="cancel-custom-challenge" type="button">취소</button><button class="primary" id="save-custom-challenge" type="button">이 항목 추가하기</button></div>
+          </section>
+          <section class="rag-challenge-generator" id="rag-challenge-generator" aria-labelledby="rag-challenge-title">
+            <div>
+              <p class="eyebrow">RAG 맞춤 챌린지 설계</p>
+              <h3 id="rag-challenge-title">생활습관 자료 기반 초안을 만들어봐요</h3>
+              <p>백엔드 RAG API가 연결되기 전까지 화면 흐름을 확인하는 영역입니다.</p>
+            </div>
+            <div class="rag-challenge-controls">
+              <div class="form-row"><label for="rag-challenge-preference">관심 방향</label><select id="rag-challenge-preference"><option value="activity">움직이기</option><option value="diet">건강하게 먹기</option><option value="tracking">기록하기</option></select></div>
+              <button class="secondary" id="generate-rag-challenge" type="button">초안 생성</button>
+              <button class="secondary" id="regenerate-rag-challenge" type="button" hidden>다시 생성</button>
+            </div>
+            <div class="rag-challenge-state" id="rag-challenge-state" role="status" aria-live="polite" data-state="idle">
+              <strong id="rag-challenge-state-title">생성할 준비가 되었어요</strong>
+              <p id="rag-challenge-state-message">관심 방향을 고른 뒤 초안을 생성해 주세요.</p>
+            </div>
+            <article class="rag-challenge-draft" id="rag-challenge-draft" hidden>
+              <strong id="rag-challenge-draft-title"></strong>
+              <p id="rag-challenge-draft-goal"></p>
+              <small id="rag-challenge-draft-source"></small>
+              <button class="primary" id="apply-rag-challenge" type="button">나만의 챌린지로 사용</button>
+            </article>
           </section>
           <fieldset class="walking-level-picker" id="walking-level-picker" aria-labelledby="walking-level-title" hidden>
             <legend id="walking-level-title">걷기 실천 수준을 선택해 주세요</legend>

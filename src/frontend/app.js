@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, ragChallengeDraft: null, ragChallengeStatus: "idle" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -513,7 +513,9 @@ function syncReturningEligibilityState(eligibility) {
   const inferredFuturePrediction = inferFuturePredictionCapability(eligibility);
   state.eligibility = eligibility;
   state.capabilities = eligibilityCapabilities(eligibility);
-  state.capabilities.futurePrediction = state.capabilities.futurePrediction || inferredFuturePrediction;
+  if (state.capabilities.futurePrediction == null) {
+    state.capabilities.futurePrediction = inferredFuturePrediction;
+  }
   state.currentHealthOnly = state.capabilities.currentHealth && !state.capabilities.futurePrediction;
   state.modelOutOfRange = state.currentHealthOnly;
   state.requiresEligibility = !eligibility;
@@ -795,7 +797,7 @@ function renderPredictionStatus(status, options = {}) {
       message: "가짜 결과를 표시하지 않으며, 다시 시도할 수 있습니다.",
       policy: "반복해서 실패하면 잠시 후 다시 시도하거나 입력정보를 확인해 주세요.",
       showRetry: true,
-      showNext: false,
+      showNext: true,
     },
   }[status] || {};
   if (status === "failed" && errorCode === "TIMEOUT") Object.assign(config, {
@@ -904,8 +906,8 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
 function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "결과 확인";
-  $("#factors-title").textContent = "현재와 미래 위험 신호를 확인해 주세요";
-  $("#result-confirmation-lead").textContent = "현재 위험 신호를 먼저 확인한 뒤, 시간에 따른 미래 전망을 살펴볼 수 있습니다.";
+  $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
+  $("#result-confirmation-lead").textContent = "현재 위험 신호 선별 결과를 먼저 확인한 뒤, 미래 신규 발병 위험을 별도 영역에서 확인합니다.";
   if (getCurrentHealthSignal()) renderCurrentHealthResult(state.healthCheckupResult, { standalone: false });
   else $("#current-health-result").hidden = true;
 }
@@ -1176,7 +1178,7 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
   stateBox.dataset.state = approvedForecast ? "empty" : "unavailable";
   $("#forecast-state-title").textContent = approvedForecast
     ? "표시할 미래 전망 구간이 없습니다"
-    : "미래 위험 전망 결과를 준비하고 있습니다";
+    : "미래 신규 발병 위험 결과를 준비하고 있습니다";
   $("#forecast-state-message").textContent = approvedForecast
     ? "승인된 응답에 2년 단위 전망 구간이 포함되면 이 영역에 표시합니다."
     : "모델·표현 기준이 승인되기 전에는 임의 수치나 그래프를 만들지 않습니다.";
@@ -1394,6 +1396,71 @@ function customChallengeSlot() {
     </label>
     <button class="text-button edit-custom-challenge" type="button">수정</button>
   </article>`;
+}
+
+function localRagChallengeDraft(preference) {
+  const drafts = {
+    activity: {
+      title: "식후 10분 천천히 걷기",
+      goal: "하루 한 번 식사 후 편한 속도로 10분 걷기",
+      recordType: "simple",
+      source: "질병관리청 신체활동·걷기 건강정보 기반",
+    },
+    diet: {
+      title: "단 음료 대신 물 고르기",
+      goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기",
+      recordType: "simple",
+      source: "국가건강정보포털 당뇨병 생활습관 자료 기반",
+    },
+    tracking: {
+      title: "오늘 건강수치 한 가지 기록하기",
+      goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기",
+      recordType: "simple",
+      source: "정기 건강 점검 안내 자료 기반",
+    },
+  };
+  return drafts[preference] || drafts.activity;
+}
+
+function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
+  state.ragChallengeStatus = status;
+  const box = $("#rag-challenge-state");
+  const card = $("#rag-challenge-draft");
+  if (!box || !card) return;
+  box.dataset.state = status;
+  const copy = {
+    idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
+    loading: ["챌린지 초안을 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
+    done: ["챌린지 초안을 확인해 주세요", "마음에 들면 나만의 챌린지로 사용할 수 있어요."],
+    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성하거나 직접 나만의 챌린지를 추가해 주세요."],
+  }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
+  $("#rag-challenge-state-title").textContent = copy[0];
+  $("#rag-challenge-state-message").textContent = copy[1];
+  $("#generate-rag-challenge").hidden = status === "done";
+  $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "failed";
+  card.hidden = status !== "done" || !draft;
+  if (status === "done" && draft) {
+    $("#rag-challenge-draft-title").textContent = draft.title;
+    $("#rag-challenge-draft-goal").textContent = draft.goal;
+    $("#rag-challenge-draft-source").textContent = draft.source;
+  }
+}
+
+async function generateRagChallengeDraft() {
+  const releaseBusy = setButtonBusy($("#generate-rag-challenge"), "생성 중…");
+  $("#regenerate-rag-challenge").disabled = true;
+  renderRagChallengeState("loading");
+  try {
+    await sleep(500);
+    state.ragChallengeDraft = localRagChallengeDraft($("#rag-challenge-preference").value);
+    renderRagChallengeState("done", state.ragChallengeDraft);
+  } catch (error) {
+    renderRagChallengeState("failed");
+    showMessage(error.message || "맞춤 챌린지 초안을 만들지 못했습니다.");
+  } finally {
+    releaseBusy();
+    $("#regenerate-rag-challenge").disabled = false;
+  }
 }
 
 function renderChallengeChoices() {
@@ -2241,7 +2308,18 @@ $("#cancel-custom-challenge").addEventListener("click", () => {
 $("#save-custom-challenge").addEventListener("click", () => {
   const titleInput = $("#custom-challenge-title");
   const goalInput = $("#custom-challenge-goal");
-  if (!titleInput.reportValidity() || !goalInput.reportValidity()) return;
+  if (!titleInput.value.trim()) {
+    titleInput.setCustomValidity("챌린지 이름을 입력해 주세요.");
+    titleInput.reportValidity();
+    titleInput.setCustomValidity("");
+    return;
+  }
+  if (!goalInput.value.trim()) {
+    goalInput.setCustomValidity("실천 목표를 입력해 주세요.");
+    goalInput.reportValidity();
+    goalInput.setCustomValidity("");
+    return;
+  }
   const recordType = $("#custom-challenge-record-type").value;
   state.customChallenge = {
     title: titleInput.value.trim(),
@@ -2262,6 +2340,27 @@ $("#save-custom-challenge").addEventListener("click", () => {
   syncWalkingLevelPicker();
   $("#custom-challenge-choice").focus();
   showMessage("나만의 챌린지를 추가했어요.", "success");
+});
+$("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#apply-rag-challenge")?.addEventListener("click", () => {
+  if (!state.ragChallengeDraft) {
+    renderRagChallengeState("failed");
+    return;
+  }
+  if (state.selectedChallengeIds.size >= 3 && !state.customChallengeSelected) {
+    showMessage("챌린지는 최대 3개까지 선택할 수 있어요. 기존 선택을 하나 해제한 뒤 추가해 주세요.");
+    return;
+  }
+  state.customChallenge = {
+    title: state.ragChallengeDraft.title,
+    goal: state.ragChallengeDraft.goal,
+    recordType: state.ragChallengeDraft.recordType,
+    recordLabel: { simple: "간편 체크", time: "시간 입력", count: "횟수 입력" }[state.ragChallengeDraft.recordType],
+  };
+  state.customChallengeSelected = true;
+  renderChallengeChoices();
+  showMessage("RAG 초안을 나만의 챌린지로 추가했어요.", "success");
 });
 $("#walking-level-picker").addEventListener("change", (event) => {
   if (event.target.name === "walking-level") state.walkingLevel = event.target.value;
@@ -2718,6 +2817,37 @@ function resumeFromForest() {
   showWorkspace("together", { moveFocus: false });
 }
 
+function resumeReturningPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("resume") !== "returning") return;
+  if (!isDemoEnvironment()) return;
+
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.checkupId = "local-demo-checkup";
+  $("#eligibility-birth-date").value = "1960-05-12";
+  $("#gender").value = "female";
+  syncLifestyleAvatar();
+  syncReturningEligibilityState({
+    age: getAgeFromBirth($("#eligibility-birth-date").value),
+    service_eligible: true,
+    challenge_eligible: true,
+    current_health_check_eligible: true,
+    future_prediction_eligible: true,
+    model_eligible: true,
+    reason_codes: [],
+  });
+  state.healthCheckupResult = { checkup_id: state.checkupId };
+  state.cycle = createLocalDemoCycle([101, 102, 103]);
+  state.navigationHistory = [2];
+  [2, 4, 5, 6, 7, 8].forEach((step) => state.visitedSteps.add(step));
+
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  unlockReturningUserRoutes();
+  showMessage("로컬 시연용 기존회원으로 들어왔어요. 실제 로그인 정보는 사용하지 않습니다.", "success");
+}
+
 function resumeForecastPreview() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("preview") !== "forecast") return;
@@ -2751,14 +2881,14 @@ function resumeForecastPreview() {
   };
   state.navigationHistory = [1, 5, 6];
   [1, 5, 6].forEach((step) => state.visitedSteps.add(step));
+  state.developmentPreviewRiskCategory = "caution";
   renderPrediction(state.prediction, {
     status: "pending_validation",
     items: [],
     shap_claimed: false,
     message: "승인된 모델 설명이 제공되기 전에는 임의 위험요인을 표시하지 않습니다.",
   });
-  $("#result-unavailable strong").textContent = "아래 미래 전망은 화면 확인용 예시입니다";
-  $("#result-unavailable p").textContent = "2년·4년·6년 뒤 신호 배치를 확인하기 위한 예시이며 실제 분석 결과가 아닙니다.";
+  $("#result-unavailable").hidden = true;
   $("#risk-preview-controls").hidden = false;
   showStep(6, { recordHistory: false });
   setForecastRiskPreview("caution");
@@ -2769,4 +2899,5 @@ $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("
 syncExerciseDetails();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 resumeFromForest();
+resumeReturningPreview();
 resumeForecastPreview();
