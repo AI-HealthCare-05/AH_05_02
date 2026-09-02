@@ -3133,8 +3133,9 @@ $("#restart")?.addEventListener("click", () => window.location.reload());
 $("#dashboard-back")?.addEventListener("click", goBack);
 
 function resumeFromForest() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("resume") !== "together") return;
+  const requestedView = new URLSearchParams(window.location.search);
+  const requestedWorkspace = requestedView.get("workspace");
+  if (requestedView.get("resume") !== "together" && requestedWorkspace !== "together") return;
   if (!isDemoEnvironment()) return;
 
   state.token = "local-demo-token";
@@ -3146,7 +3147,7 @@ function resumeFromForest() {
   renderCycle(state.cycle);
   renderLocalDemoDashboard();
   showStep(8, { recordHistory: false });
-  showWorkspace("together", { moveFocus: false });
+  showWorkspace(requestedWorkspace || "together", { moveFocus: false });
 }
 
 function resumeReturningPreview() {

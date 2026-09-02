@@ -503,6 +503,15 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "지도 닫기" in html
     assert "체형이나 건강 위험을 판정하지 않습니다." in html
     assert "3D 생활습관 안내 캐릭터" in html
+
+
+def test_forest_return_accepts_resume_and_workspace_links() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'requestedView.get("resume") !== "together"' in script
+    assert 'requestedView.get("workspace")' in script
+    assert 'showWorkspace(requestedWorkspace || "together"' in script
     assert "lifestyle-avatar-female-60.webp" in html
     assert '"male" : "female"' in script
     assert "ageBand" in script
