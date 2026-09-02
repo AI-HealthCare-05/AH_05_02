@@ -280,18 +280,19 @@ def test_signup_and_existing_login_use_separate_forms() -> None:
     assert '$("#login-existing")' not in script
 
 
-def test_challenge_grid_has_a_custom_challenge_slot() -> None:
+def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="custom-challenge-editor"' in html
-    assert 'id="custom-challenge-title"' in html
-    assert 'id="custom-challenge-goal"' in html
-    assert 'id="custom-challenge-record-type"' in html
-    assert "나만의 챌린지 추가" in script
+    assert 'id="custom-challenge-editor"' not in html
+    assert 'id="custom-challenge-title"' not in html
+    assert 'id="rag-challenge-generator"' in html
+    assert 'id="close-rag-challenge"' in html
+    assert "맞춤 챌린지 추가" in script
+    assert 'id="open-rag-challenge"' in script
     assert "function customChallengeSlot()" in script
     assert "function renderChallengeChoices()" in script
-    assert "나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
+    assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
 
 
 def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> None:

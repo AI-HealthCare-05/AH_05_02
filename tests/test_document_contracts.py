@@ -42,13 +42,12 @@ def test_privacy_lifecycle_policy_is_not_tbd() -> None:
     assert "복구 불가능한 익명화" in safety
 
 
-def test_hidden_custom_challenge_fields_do_not_block_standard_challenge_submit() -> None:
+def test_optional_rag_challenge_does_not_add_hidden_required_fields() -> None:
     html = read("src/frontend/index.html")
     frontend = read("src/frontend/app.js")
 
-    assert 'id="custom-challenge-title"' in html
-    assert 'id="custom-challenge-goal"' in html
-    assert "required disabled" in html
-    assert '["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"]' in frontend
-    assert "$(selector).disabled = false" in frontend
-    assert "$(selector).disabled = true" in frontend
+    assert 'id="custom-challenge-title"' not in html
+    assert 'id="custom-challenge-goal"' not in html
+    assert 'id="rag-challenge-generator"' in html
+    assert 'id="open-rag-challenge"' in frontend
+    assert "if (!ids.length && !customSelected)" in frontend

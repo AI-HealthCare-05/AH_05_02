@@ -439,24 +439,14 @@
             <div class="challenge-category-heading"><div><p class="eyebrow">세부 챌린지 선택</p><h3 id="challenge-category-title">실천할 항목을 선택해 주세요</h3></div><span id="challenge-selection-count">0/3 선택</span></div>
             <div class="challenge-detail-grid" id="challenge-detail-list"></div>
           </section>
-          <section class="custom-challenge-editor" id="custom-challenge-editor" aria-labelledby="custom-challenge-editor-title" hidden>
-            <div>
-              <p class="eyebrow">나만의 챌린지</p>
-              <h3 id="custom-challenge-editor-title">직접 실천할 목표를 추가해 주세요</h3>
-              <p>작고 구체적인 목표로 적으면 매일 기록하기 쉬워요.</p>
-            </div>
-            <div class="two-column">
-              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" required disabled></div>
-              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" required disabled></div>
-              <div class="form-row full"><label for="custom-challenge-record-type">기록 방법</label><select id="custom-challenge-record-type" disabled><option value="simple">간편 체크</option><option value="time">시간 입력</option><option value="count">횟수 입력</option></select></div>
-            </div>
-            <div class="custom-challenge-actions"><button class="secondary" id="cancel-custom-challenge" type="button">취소</button><button class="primary" id="save-custom-challenge" type="button">이 항목 추가하기</button></div>
-          </section>
-          <section class="rag-challenge-generator" id="rag-challenge-generator" aria-labelledby="rag-challenge-title">
-            <div>
+          <section class="rag-challenge-generator" id="rag-challenge-generator" aria-labelledby="rag-challenge-title" tabindex="-1" hidden>
+            <div class="rag-challenge-generator-heading">
+              <div>
               <p class="eyebrow">RAG 맞춤 챌린지</p>
               <h3 id="rag-challenge-title">생활습관 자료를 바탕으로 세 가지 후보를 비교해요</h3>
               <p>관심 방향에 맞는 목표·주의사항·출처를 확인하고 한 가지를 선택할 수 있습니다.</p>
+              </div>
+              <button class="text-button" id="close-rag-challenge" type="button">닫기</button>
             </div>
             <div class="rag-challenge-controls">
               <div class="form-row"><label for="rag-challenge-preference">관심 방향</label><select id="rag-challenge-preference"><option value="activity">움직이기</option><option value="diet">건강하게 먹기</option><option value="tracking">기록하기</option></select></div>

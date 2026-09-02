@@ -1535,16 +1535,16 @@ async function loadChallenges() {
 
 function customChallengeSlot() {
   if (!state.customChallenge) {
-    return `<button class="challenge-add-card" id="open-custom-challenge" type="button">
-      <b aria-hidden="true">+</b><strong>나만의 챌린지 추가</strong><small>내 생활에 맞는 목표를 직접 적어보세요.</small>
+    return `<button class="challenge-add-card" id="open-rag-challenge" type="button" aria-controls="rag-challenge-generator" aria-expanded="false">
+      <b aria-hidden="true">+</b><strong>맞춤 챌린지 추가</strong><small>생활습관 자료를 바탕으로 맞춤 후보를 받아보세요.</small>
     </button>`;
   }
   return `<article class="challenge-card custom-challenge-slot">
     <label>
       <input id="custom-challenge-choice" type="checkbox" name="custom-challenge" ${state.customChallengeSelected ? "checked" : ""}>
-      <span><span class="custom-challenge-icon" aria-hidden="true">+</span><div class="challenge-card-copy"><strong>${escapeHtml(state.customChallenge.title)}</strong><small>목표: ${escapeHtml(state.customChallenge.goal)}</small><em>직접 추가 · ${escapeHtml(state.customChallenge.recordLabel)}</em></div></span>
+      <span><span class="custom-challenge-icon" aria-hidden="true">+</span><div class="challenge-card-copy"><strong>${escapeHtml(state.customChallenge.title)}</strong><small>목표: ${escapeHtml(state.customChallenge.goal)}</small><em>맞춤 챌린지 · ${escapeHtml(state.customChallenge.recordLabel)}</em></div></span>
     </label>
-    <button class="text-button edit-custom-challenge" type="button">수정</button>
+    <button class="text-button edit-rag-challenge" type="button" aria-controls="rag-challenge-generator" aria-expanded="false">다시 선택</button>
   </article>`;
 }
 
@@ -1631,7 +1631,7 @@ function renderRagChallengeState(status, candidates = state.ragChallengeCandidat
     idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
     loading: ["챌린지 후보를 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
     done: ["맞춤 챌린지 후보 3개가 준비됐어요", "목표·주의사항·출처를 비교한 뒤 한 가지를 선택해 주세요."],
-    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성하거나 직접 나만의 챌린지를 추가해 주세요."],
+    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성해 주세요."],
   }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
   $("#rag-challenge-state-title").textContent = copy[0];
   $("#rag-challenge-state-message").textContent = copy[1];
@@ -1665,7 +1665,7 @@ async function generateRagChallengeDraft() {
 
 function renderChallengeChoices() {
   const challengeList = $("#challenge-list");
-  const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 나만의 챌린지를 직접 추가할 수 있어요.</p>';
+  const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 맞춤 챌린지 후보를 생성해 선택할 수 있어요.</p>';
   challengeList.innerHTML = emptyMessage + Object.entries(challengeCategories).map(([key, category]) => {
     const count = state.challengeCatalog.filter((item) => item.category === key).length;
     return `<button class="challenge-category-card ${state.activeChallengeCategory === key ? "active" : ""}" type="button" data-challenge-category="${key}" aria-pressed="${state.activeChallengeCategory === key}">
@@ -2560,17 +2560,13 @@ $("#challenge-list").addEventListener("click", (event) => {
     $("#challenge-category-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
     return;
   }
-  if (!event.target.closest("#open-custom-challenge, .edit-custom-challenge")) return;
-  const editor = $("#custom-challenge-editor");
-  editor.hidden = false;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = false;
-  });
-  $("#custom-challenge-title").value = state.customChallenge?.title || "";
-  $("#custom-challenge-goal").value = state.customChallenge?.goal || "";
-  $("#custom-challenge-record-type").value = state.customChallenge?.recordType || "simple";
-  editor.scrollIntoView({ behavior: "smooth", block: "center" });
-  $("#custom-challenge-title").focus({ preventScroll: true });
+  const trigger = event.target.closest("#open-rag-challenge, .edit-rag-challenge");
+  if (!trigger) return;
+  const generator = $("#rag-challenge-generator");
+  generator.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  generator.scrollIntoView({ behavior: "smooth", block: "center" });
+  generator.focus({ preventScroll: true });
 });
 $("#challenge-list").addEventListener("change", (event) => {
   if (!event.target.matches("#custom-challenge-choice")) return;
@@ -2596,48 +2592,11 @@ $("#challenge-detail-list").addEventListener("change", (event) => {
   syncWalkingLevelPicker();
   if (!$("#walking-level-picker").hidden) $("#walking-level-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
-$("#cancel-custom-challenge").addEventListener("click", () => {
-  $("#custom-challenge-editor").hidden = true;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = true;
-  });
-  $("#open-custom-challenge, .edit-custom-challenge")?.focus();
-});
-$("#save-custom-challenge").addEventListener("click", () => {
-  const titleInput = $("#custom-challenge-title");
-  const goalInput = $("#custom-challenge-goal");
-  if (!titleInput.value.trim()) {
-    titleInput.setCustomValidity("챌린지 이름을 입력해 주세요.");
-    titleInput.reportValidity();
-    titleInput.setCustomValidity("");
-    return;
-  }
-  if (!goalInput.value.trim()) {
-    goalInput.setCustomValidity("실천 목표를 입력해 주세요.");
-    goalInput.reportValidity();
-    goalInput.setCustomValidity("");
-    return;
-  }
-  const recordType = $("#custom-challenge-record-type").value;
-  state.customChallenge = {
-    title: titleInput.value.trim(),
-    goal: goalInput.value.trim(),
-    recordType,
-    recordLabel: { simple: "간편 체크", time: "시간 입력", count: "횟수 입력" }[recordType],
-  };
-  if (state.selectedChallengeIds.size >= 3 && !state.customChallengeSelected) {
-    showMessage("챌린지는 최대 3개까지 선택할 수 있어요. 기존 선택을 하나 해제한 뒤 추가해 주세요.");
-    return;
-  }
-  state.customChallengeSelected = true;
-  renderChallengeChoices();
-  $("#custom-challenge-editor").hidden = true;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = true;
-  });
-  syncWalkingLevelPicker();
-  $("#custom-challenge-choice").focus();
-  showMessage("나만의 챌린지를 추가했어요.", "success");
+$("#close-rag-challenge")?.addEventListener("click", () => {
+  $("#rag-challenge-generator").hidden = true;
+  const trigger = $("#open-rag-challenge, .edit-rag-challenge");
+  trigger?.setAttribute("aria-expanded", "false");
+  trigger?.focus();
 });
 $("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
 $("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
@@ -2663,7 +2622,10 @@ $("#apply-rag-challenge")?.addEventListener("click", () => {
   };
   state.customChallengeSelected = true;
   renderChallengeChoices();
-  showMessage("RAG 초안을 나만의 챌린지로 추가했어요.", "success");
+  $("#rag-challenge-generator").hidden = true;
+  syncWalkingLevelPicker();
+  $("#custom-challenge-choice")?.focus();
+  showMessage("맞춤 챌린지를 추가했어요.", "success");
 });
 $("#walking-level-picker").addEventListener("change", (event) => {
   if (event.target.name === "walking-level") state.walkingLevel = event.target.value;
@@ -2688,7 +2650,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     if (customSelected) {
-      showMessage("나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요. 작성한 내용은 현재 화면에 유지됩니다.");
+      showMessage("맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요. 선택한 내용은 현재 화면에 유지됩니다.");
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
