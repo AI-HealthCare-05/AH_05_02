@@ -178,6 +178,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
             if public_category
             else DEVELOPMENT_DISCLAIMER
         ),
+        "age_risk_forecast": item.age_risk_forecast if public_result_available else None,
         "raw_probability_exposed": False,
     }
 
@@ -295,7 +296,7 @@ async def read_risk_curve(
                 {"age": p.age, "cumulative_risk": p.cumulative_risk, "lower": p.lower, "upper": p.upper} for p in points
             ],
             "summary": _risk_curve_summary(points),
-            "disclaimer": "이 전망은 통계적 위험 추정치이며 개인의 확정된 미래를 의미하지 않습니다.",
+            "disclaimer": "이 전망은 별도의 생존모델이 아니라 동일 모델을 연령만 다르게 반복 계산한 근사 추정치이며, 개인의 확정된 미래를 의미하지 않습니다.",
         }
     )
 

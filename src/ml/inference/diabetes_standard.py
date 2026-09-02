@@ -181,6 +181,55 @@ def predict_with_loaded_model(
     }
 
 
+DEFAULT_AGE_CURVE_HORIZON_YEARS: tuple[int, ...] = (2, 4, 6)
+
+
+def predict_age_curve(
+    loaded: LoadedDiabetesModel,
+    user_input: DiabetesRiskInput,
+    *,
+    as_of_date: date,
+    horizon_years: tuple[int, ...] = DEFAULT_AGE_CURVE_HORIZON_YEARS,
+) -> list[dict[str, Any]]:
+    """Approximate an age-indexed risk curve by re-running the SAME trained
+    classifier with as_of_date shifted forward, so only the derived `age`
+    feature changes while every other input stays fixed.
+
+    This is NOT a survival/lifetime model — no separate model is trained or
+    loaded. It is a same-model, age-shifted approximation (comparable to a
+    partial-dependence sweep over `age`) and does not represent a validated
+    cumulative multi-year probability. Only `horizon_years` offsets from
+    today are computed (default: 2/4/6 years out) rather than sweeping the
+    full supported age range, and points are only produced within the
+    manifest's supported age range.
+    """
+    current_age = (
+        as_of_date.year
+        - user_input.birth_date.year
+        - ((as_of_date.month, as_of_date.day) < (user_input.birth_date.month, user_input.birth_date.day))
+    )
+    points: list[dict[str, Any]] = []
+    for year_offset in horizon_years:
+        target_age = current_age + year_offset
+        if target_age < SUPPORTED_AGE_MINIMUM or target_age > SUPPORTED_AGE_MAXIMUM:
+            continue
+        try:
+            shifted_date = as_of_date.replace(year=as_of_date.year + year_offset)
+        except ValueError:
+            # Feb 29 on a birth/as_of date shifted onto a non-leap year.
+            shifted_date = as_of_date.replace(year=as_of_date.year + year_offset, day=28)
+        output = predict_with_loaded_model(loaded, user_input, as_of_date=shifted_date)
+        points.append(
+            {
+                "age": target_age,
+                "years_from_now": year_offset,
+                "risk_score": output["risk_score"],
+                "risk_category": output["risk_category"],
+            }
+        )
+    return points
+
+
 def predict_diabetes_risk(
     payload: DiabetesRiskInput | Mapping[str, Any],
     *,

@@ -13,6 +13,62 @@ async def run_task_with_timeout(task_type: str, payload: dict[str, Any], timeout
     return await asyncio.wait_for(run_task(task_type, payload), timeout=timeout_seconds)
 
 
+async def _augment_with_risk_curve(
+    provider: Any,
+    response: dict[str, Any],
+    model_input: dict[str, Any],
+    as_of_date: date,
+) -> None:
+    """Attach a same-model, age-shifted risk curve when the base result is approved.
+
+    No separate survival model is trained here; see
+    src.ml.inference.diabetes_standard.predict_age_curve. Failures are
+    swallowed on purpose — the curve is a supplementary addition and must
+    never fail the primary approved prediction.
+    """
+    if response.get("promotion_status") != "approved":
+        return
+    try:
+        curve_points = await provider.predict_curve(model_input, as_of_date=as_of_date)
+        if curve_points:
+            response["risk_curve_points"] = curve_points
+            response["output_definition_version"] = "rf25_same_model_age_shift_approximation_v1"
+            response["age_risk_forecast"] = _build_age_risk_forecast(curve_points)
+    except Exception:
+        # The curve/forecast is a supplementary addition and must never
+        # fail the primary approved prediction, so any failure here
+        # (including in the display-shape conversion) is swallowed.
+        response.pop("risk_curve_points", None)
+        response.pop("age_risk_forecast", None)
+
+
+def _build_age_risk_forecast(curve_points: list[dict[str, Any]]) -> dict[str, Any]:
+    """Descriptive age-curve display payload only.
+
+    scenarios/uncertainty are intentionally left empty: REQ-PRED-012 keeps
+    PredictionScenario.is_active False until a scenario method is
+    separately validated, so an unvalidated "lifestyle improvement"
+    comparison must not be surfaced here as if it were causal.
+    """
+    return {
+        "status": "approved",
+        "public_display_approved": True,
+        "points": [
+            {
+                "display_label": (
+                    f"{point['years_from_now']}년 후 ({point['age']}세)"
+                    if "years_from_now" in point
+                    else f"{point['age']}세"
+                ),
+                "display_percent": round(float(point["risk_score"]) * 100, 1),
+            }
+            for point in curve_points
+        ],
+        "scenarios": {},
+        "uncertainty": {},
+    }
+
+
 async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
     if task_type == "demo_inference":
         await asyncio.sleep(0.5)
@@ -51,7 +107,7 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("as_of_date must use YYYY-MM-DD") from exc
         provider = get_prediction_provider()
         result = await provider.predict(model_input, as_of_date=as_of_date)
-        return {
+        response: dict[str, Any] = {
             "model_key": "diabetes_incidence",
             "outcome_definition": "next_observation_new_diabetes_diagnosis",
             "internal_score": result.internal_score,
@@ -70,6 +126,8 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:
             "input_as_of_date": as_of_date.isoformat(),
             "medical_notice": MEDICAL_NOTICE,
         }
+        await _augment_with_risk_curve(provider, response, model_input, as_of_date)
+        return response
 
     if task_type == "diabetes_current_screening":
         model_input = payload.get("input")

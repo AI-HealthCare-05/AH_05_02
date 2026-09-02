@@ -67,9 +67,25 @@ CREATE TABLE IF NOT EXISTS predictions (
     model_population VARCHAR(120) NOT NULL,
     explanation_status VARCHAR(40) NOT NULL DEFAULT 'not_available',
     disclaimer TEXT NOT NULL,
+    risk_curve_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable',
+    output_definition_version VARCHAR(100) NULL,
+    age_risk_forecast JSON NULL,
     predicted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     INDEX idx_predictions_user_id (user_id),
     INDEX idx_predictions_health_checkup_id (health_checkup_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+"""
+
+CREATE_PREDICTION_RISK_CURVE_POINTS_TABLE = """
+CREATE TABLE IF NOT EXISTS prediction_risk_curve_points (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    prediction_id BIGINT NOT NULL,
+    age INT NOT NULL,
+    cumulative_risk DOUBLE NOT NULL,
+    lower DOUBLE NOT NULL,
+    upper DOUBLE NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    UNIQUE KEY uq_risk_curve_prediction_age (prediction_id, age)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
 
@@ -88,6 +104,12 @@ CREATE TABLE IF NOT EXISTS follow_up_actions (
     INDEX idx_follow_up_actions_user_id (user_id)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
+
+PREDICTION_COLUMNS = {
+    "risk_curve_status": "VARCHAR(20) NOT NULL DEFAULT 'not_applicable'",
+    "output_definition_version": "VARCHAR(100) NULL",
+    "age_risk_forecast": "JSON NULL",
+}
 
 PREDICTION_JOB_COLUMNS = {
     "model_key": "VARCHAR(100) NOT NULL DEFAULT 'diabetes_incidence'",
@@ -127,6 +149,7 @@ async def ensure_schema() -> None:
             await cursor.execute(CREATE_PREDICTION_JOBS_TABLE)
             await cursor.execute(CREATE_PREDICTIONS_TABLE)
             await cursor.execute(CREATE_FOLLOW_UP_ACTIONS_TABLE)
+            await cursor.execute(CREATE_PREDICTION_RISK_CURVE_POINTS_TABLE)
             await cursor.execute(
                 "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='prediction_jobs'",
                 (config.DB_NAME,),
@@ -135,6 +158,14 @@ async def ensure_schema() -> None:
             for column, definition in PREDICTION_JOB_COLUMNS.items():
                 if column not in existing:
                     await cursor.execute(f"ALTER TABLE prediction_jobs ADD COLUMN {column} {definition}")
+            await cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='predictions'",
+                (config.DB_NAME,),
+            )
+            existing_predictions = {row[0] for row in await cursor.fetchall()}
+            for column, definition in PREDICTION_COLUMNS.items():
+                if column not in existing_predictions:
+                    await cursor.execute(f"ALTER TABLE predictions ADD COLUMN {column} {definition}")
     finally:
         connection.close()
 
@@ -205,6 +236,7 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
             disclaimer = result.get("medical_notice") or (
                 "이 결과는 당뇨병 진단이 아닌 위험 선별 및 건강교육 정보입니다."
             )
+            age_risk_forecast = result.get("age_risk_forecast")
             await cursor.execute(
                 """
                 INSERT INTO predictions (
@@ -213,8 +245,8 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     feature_schema_version, input_schema_version, preprocessing_version,
                     target_definition_version, calibration_version, model_artifact_digest,
                     threshold_version, decision_threshold, class_probabilities, output_status,
-                    model_population, explanation_status, disclaimer
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    model_population, explanation_status, disclaimer, age_risk_forecast
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     job_id,
@@ -240,6 +272,7 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     model_population,
                     result.get("explanation_status", "not_available"),
                     disclaimer,
+                    json.dumps(age_risk_forecast, ensure_ascii=False) if age_risk_forecast is not None else None,
                 ),
             )
             prediction_id = int(cursor.lastrowid)
@@ -253,5 +286,41 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     (row[0], prediction_id),
                 )
             return prediction_id
+    finally:
+        connection.close()
+
+
+async def persist_risk_curve(
+    prediction_id: int,
+    points: list[dict[str, Any]],
+    output_definition_version: str | None,
+) -> None:
+    """Store an age-indexed risk curve for an already-approved prediction.
+
+    `points` are same-model, age-shifted approximations (no separate
+    survival model) — see src.ml.inference.diabetes_standard.predict_age_curve.
+    The model does not produce an uncertainty band, so lower/upper are set
+    equal to the point estimate rather than fabricating a confidence interval.
+    """
+    if not points:
+        return
+    connection = await connect_db()
+    try:
+        async with connection.cursor() as cursor:
+            for point in points:
+                score = float(point["risk_score"])
+                await cursor.execute(
+                    """
+                    INSERT INTO prediction_risk_curve_points (prediction_id, age, cumulative_risk, lower, upper)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE cumulative_risk=VALUES(cumulative_risk),
+                        lower=VALUES(lower), upper=VALUES(upper)
+                    """,
+                    (prediction_id, int(point["age"]), score, score, score),
+                )
+            await cursor.execute(
+                "UPDATE predictions SET risk_curve_status=%s, output_definition_version=%s WHERE id=%s",
+                ("available", output_definition_version, prediction_id),
+            )
     finally:
         connection.close()

@@ -11,13 +11,9 @@ from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from ai_worker.core import config, logger
-from ai_worker.db import ensure_schema, persist_prediction, update_job
+from ai_worker.db import ensure_schema, persist_prediction, persist_risk_curve, update_job
 from ai_worker.handlers import run_task_with_timeout
 from app.prediction.errors import classify_ml_input_error
-from src.ml.inference.diabetes_current_screening import (
-    CurrentScreeningArtifactUnavailableError,
-    CurrentScreeningContractError,
-)
 from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
 
 
@@ -66,6 +62,19 @@ class StreamWorker:
             if "BUSYGROUP" not in str(exc):
                 raise
 
+    @staticmethod
+    async def _persist_result(task_type: str, job_id: str, result: dict[str, Any]) -> int | None:
+        if task_type not in {"diabetes_incidence", "diabetes_current_screening"}:
+            return None
+        prediction_id = await persist_prediction(job_id, result)
+        if result.get("risk_curve_points"):
+            await persist_risk_curve(
+                prediction_id,
+                result["risk_curve_points"],
+                result.get("output_definition_version"),
+            )
+        return prediction_id
+
     async def handle_message(self, message_id: str, fields: dict[str, str]) -> None:
         job_id = fields["job_id"]
         task_type = fields["task_type"]
@@ -91,11 +100,7 @@ class StreamWorker:
         try:
             payload = json.loads(fields.get("payload", "{}"))
             result = await run_task_with_timeout(task_type, payload, config.PREDICTION_TIMEOUT_SECONDS)
-            prediction_id = (
-                await persist_prediction(job_id, result)
-                if task_type in {"diabetes_incidence", "diabetes_current_screening"}
-                else None
-            )
+            prediction_id = await self._persist_result(task_type, job_id, result)
             completed_at = datetime.now(config.TIMEZONE)
             completed_event = {
                 "job_id": job_id,
@@ -132,14 +137,6 @@ class StreamWorker:
             await self.handle_failure(
                 message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_CONTRACT_ERROR"
             )
-        except CurrentScreeningArtifactUnavailableError as exc:
-            await self.handle_failure(
-                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_UNAVAILABLE"
-            )
-        except CurrentScreeningContractError as exc:
-            await self.handle_failure(
-                message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code="ML_MODEL_CONTRACT_ERROR"
-            )
         except RuntimeError as exc:
             # providers.load_standard_model()/_predict_score()가 던지는 영구적 모델 계약 오류.
             # 배포를 고치지 않는 한 재시도해도 동일하게 실패하므로 즉시 종결하고, 다른 Provider로 자동 전환하지 않는다.
@@ -154,7 +151,24 @@ class StreamWorker:
             else:
                 await self.handle_failure(message_id, fields, attempt, exc)
         except Exception as exc:
-            await self.handle_failure(message_id, fields, attempt, exc)
+            # 현재위험 선별 모델은 선택적으로 설치되므로 예외 타입도 해당 작업을
+            # 실행할 때만 로드된다. 클래스 이름으로 영구적 배포 오류를 분류하면
+            # RF25 워커가 선택 모델의 의존성(lightgbm) 없이도 기동할 수 있다.
+            current_screening_error_codes = {
+                "CurrentScreeningArtifactUnavailableError": "ML_MODEL_UNAVAILABLE",
+                "CurrentScreeningContractError": "ML_MODEL_CONTRACT_ERROR",
+            }
+            error_code = current_screening_error_codes.get(type(exc).__name__)
+            if error_code is not None:
+                await self.handle_failure(
+                    message_id,
+                    fields,
+                    config.AI_JOB_MAX_ATTEMPTS,
+                    exc,
+                    error_code=error_code,
+                )
+            else:
+                await self.handle_failure(message_id, fields, attempt, exc)
 
     async def handle_failure(
         self,

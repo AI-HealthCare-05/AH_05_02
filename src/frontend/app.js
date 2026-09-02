@@ -808,10 +808,12 @@ function getCurrentHealthSignal(checkup = state.healthCheckupResult) {
       ? {
         category_label: prediction.screening_result_label,
         message: prediction.disclaimer,
+        risk_key: prediction.screening_result_label === "검사 권고" ? "high" : "low",
       }
       : {
         category_label: "오늘이 연결을 완료했습니다",
         message: "현재 위험 신호 모델은 연결되었지만 운영 승인 전이라 개인 판정 결과는 표시하지 않습니다.",
+        risk_key: null,
       };
   }
   return checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal || null;
@@ -834,6 +836,10 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
   }
 
   const signal = getCurrentHealthSignal(checkup);
+  const riskKey = typeof signal === "object" && signal && signal.risk_key ? signal.risk_key : "";
+  panel.dataset.risk = riskKey;
+  const icon = $("#current-health-result-icon");
+  if (icon) icon.textContent = riskKey === "high" ? "!" : riskKey === "caution" ? "!" : "\u2713";
   const title = typeof signal === "object" && signal
     ? signal.category_label || signal.status_label || signal.title || "현재 건강 신호를 확인했습니다"
     : typeof signal === "string" && signal.trim()
@@ -1183,10 +1189,10 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
       const item = document.createElement("div");
       item.className = "age-risk-point";
       const value = document.createElement("strong");
-      value.textContent = point.level ? forecastSignalLabel(point.level) : `${point.value}%`;
+      value.textContent = point.value !== null ? `${point.value}%` : (point.level ? forecastSignalLabel(point.level) : "");
       const marker = document.createElement("span");
       marker.setAttribute("aria-hidden", "true");
-      if (point.level) {
+      if (point.value === null && point.level) {
         marker.className = "age-risk-signal-track";
         marker.dataset.level = point.level;
         const face = document.createElement("img");
@@ -2106,7 +2112,7 @@ $("#health-form").addEventListener("submit", async (event) => {
         regular_exercise: selectedRadioValue("regular-exercise") === "true", smoking_status: selectedRadioValue("smoking-status"),
         exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
         exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
-        current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa-diabetes-incident-v1",
+        current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa_stage3_25features_v1",
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;

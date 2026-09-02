@@ -20,6 +20,15 @@ class EligibilityCreateRequest(BaseModel):
     has_urgent_warning_sign: bool = False
     population_in_scope: bool = True
 
+    @model_validator(mode="after")
+    def validate_birth_date(self) -> EligibilityCreateRequest:
+        if self.birth_date is not None:
+            if self.birth_date > date.today():
+                raise ValueError("생년월일은 오늘보다 미래일 수 없습니다.")
+            if self.birth_date < date(1900, 1, 1):
+                raise ValueError("생년월일이 올바르지 않습니다.")
+        return self
+
 
 class HealthCheckupCreateRequest(BaseModel):
     checkup_type: Literal["initial", "reassessment"] = "initial"

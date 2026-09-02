@@ -24,6 +24,7 @@ class PredictionJob(Model):
     threshold_version = fields.CharField(max_length=100, null=True)
     user_id = fields.BigIntField(null=True, db_index=True)
     health_checkup_id = fields.BigIntField(null=True, db_index=True)
+    input_as_of_date = fields.DateField(null=True)
     prediction_id = fields.BigIntField(null=True)
     error_code = fields.CharField(max_length=50, null=True)
     retryable = fields.BooleanField(default=False)

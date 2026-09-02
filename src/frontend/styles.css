@@ -1029,6 +1029,10 @@ body.intro-mode .intro-progress-groups{display:flex}
 .current-health-result-heading h3{margin:2px 0 0;font-size:30px;color:var(--ink)}
 .current-health-result-heading .eyebrow{margin:0}
 .current-health-result-icon{display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;font-size:28px;font-weight:900}
+#current-health-result[data-risk="caution"]{border-color:#d9a20b;background:linear-gradient(135deg,#fffaf0,#fff)}
+#current-health-result[data-risk="caution"] .current-health-result-icon{background:#d9a20b}
+#current-health-result[data-risk="high"]{border-color:#bd4d43;background:linear-gradient(135deg,#fff3f1,#fff)}
+#current-health-result[data-risk="high"] .current-health-result-icon{background:#bd4d43}
 .current-health-result>p{font-size:20px;line-height:1.65;color:var(--muted)}
 .current-health-result-details{display:grid;gap:10px;margin:20px 0;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff}
 .current-health-result-details strong{font-size:23px;color:var(--ink)}
