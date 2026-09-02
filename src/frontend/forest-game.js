@@ -1832,6 +1832,18 @@
     drawWardrobeLookThumbnails();
     drawAnimatedObjectThumbnails($("#storage-list"));
     renderPlacementUI();
+    window.requestAnimationFrame(syncStorageScroller);
+  }
+
+  function syncStorageScroller() {
+    const list = $("#storage-list");
+    const range = $("#storage-scroll-range");
+    const max = Math.max(0, list.scrollWidth - list.clientWidth);
+    range.max = String(Math.ceil(max));
+    range.value = String(Math.min(max, list.scrollLeft));
+    range.disabled = max <= 0;
+    $("#storage-scroll-prev").disabled = list.scrollLeft <= 1;
+    $("#storage-scroll-next").disabled = list.scrollLeft >= max - 1;
   }
 
   function renderPlaced() {
@@ -2638,6 +2650,19 @@
       carousel.scrollLeft += delta;
     }, { passive: false });
   });
+  $("#storage-scroll-range").addEventListener("input", (event) => {
+    $("#storage-list").scrollLeft = Number(event.currentTarget.value);
+    syncStorageScroller();
+  });
+  const moveStorageCarousel = (direction) => {
+    const list = $("#storage-list");
+    list.scrollBy({ left: direction * Math.max(176, list.clientWidth * .82), behavior: "smooth" });
+    window.setTimeout(syncStorageScroller, 260);
+  };
+  $("#storage-scroll-prev").addEventListener("click", () => moveStorageCarousel(-1));
+  $("#storage-scroll-next").addEventListener("click", () => moveStorageCarousel(1));
+  $("#storage-list").addEventListener("scroll", syncStorageScroller, { passive: true });
+  window.addEventListener("resize", syncStorageScroller);
 
   $("#cancel-placement").addEventListener("click", () => cancelPlacement());
   $("#rotate-placement").addEventListener("click", rotatePlacement);

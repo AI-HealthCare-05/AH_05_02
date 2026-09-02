@@ -185,8 +185,11 @@ body{overflow-x:hidden}
 .rail-assets .outfit-name-form{height:27px}.rail-assets .outfit-name-form input,.rail-assets .outfit-name-form button{min-height:27px;height:27px;padding:2px 4px;font-size:8px}
 .rail-assets #storage-list .storage-icon-item{flex:0 0 88px;width:88px;min-width:88px;height:108px;min-height:108px;padding:3px;aspect-ratio:auto;scroll-snap-align:start}
 .rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .storage-reward-cow{width:78px!important;height:78px!important}
-.rail-assets #storage-list{height:132px;max-height:132px;padding-bottom:14px;overflow-x:scroll;overflow-y:hidden;scrollbar-width:auto;scrollbar-color:#6f9e7d #e6eee8}
-.rail-assets #storage-list::-webkit-scrollbar{height:12px}.rail-assets #storage-list::-webkit-scrollbar-track{border-radius:999px;background:#e6eee8}.rail-assets #storage-list::-webkit-scrollbar-thumb{border:2px solid #e6eee8;border-radius:999px;background:#6f9e7d}.rail-assets #storage-list::-webkit-scrollbar-thumb:hover{background:#397451}
+.rail-assets #storage-list{display:grid;grid-auto-flow:column;grid-auto-columns:88px;grid-template-columns:none;justify-content:start;align-items:stretch;height:120px;max-height:120px;padding-bottom:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.rail-assets #storage-list::-webkit-scrollbar{display:none}
+.storage-scroll-controls{display:grid;grid-template-columns:30px minmax(0,1fr) 30px;align-items:center;gap:5px;margin-top:4px}
+.storage-scroll-controls button{display:grid;place-items:center;min-width:30px;width:30px;min-height:30px;height:30px;padding:0;border:1px solid #9eb6a5;border-radius:8px;background:#f4f8f4;color:#315b40;font-size:22px;font-weight:950;cursor:pointer}.storage-scroll-controls button:disabled{cursor:default;opacity:.38}
+.storage-scroll-controls input[type="range"]{width:100%;min-height:30px;height:30px;margin:0;accent-color:#4c8b60;cursor:ew-resize}
 .stage-footer.arcade-deck{grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr);grid-template-areas:"controls objects";align-items:stretch}
 .stage-footer .footer-objects{grid-area:objects;min-width:0;min-height:198px;max-height:198px;padding:10px;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:none}
 .stage-footer .footer-objects .panel-title{margin-bottom:7px}.stage-footer .footer-objects .panel-title h2{font-size:15px}.stage-footer .footer-objects .eyebrow{font-size:9px}

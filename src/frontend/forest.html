@@ -42,12 +42,12 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260902-29" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260902-31" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260901-24" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260902-25" defer></script>
-  <script src="/static/forest-game.js?v=20260902-65" defer></script>
+  <script src="/static/forest-game.js?v=20260902-66" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
@@ -128,6 +128,11 @@
             <section class="asset-group" aria-labelledby="storage-title">
               <div class="asset-group-title"><span aria-hidden="true">📦</span><div><h3 id="storage-title">창고</h3><p>숲에 배치하는 오브젝트</p></div><button id="cancel-placement" class="plain-button" type="button" hidden>배치 취소</button></div>
               <div id="storage-list" class="inventory-list"></div>
+              <div class="storage-scroll-controls" aria-label="창고 목록 좌우 이동">
+                <button id="storage-scroll-prev" type="button" aria-label="이전 창고 아이템">‹</button>
+                <input id="storage-scroll-range" type="range" min="0" max="0" value="0" step="1" aria-label="창고 가로 스크롤">
+                <button id="storage-scroll-next" type="button" aria-label="다음 창고 아이템">›</button>
+              </div>
             </section>
           </div>
         </section>

@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v110" in worker
+    assert "gandang-carrot-forest-pwa-v112" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -866,8 +866,12 @@ def test_avatar_rail_wardrobe_and_storage_use_single_row_wheel_carousels() -> No
     assert "carousel.scrollLeft += delta" in game_script
     assert "Math.abs(event.deltaX) > Math.abs(event.deltaY)" in game_script
     assert ".rail-assets .inventory-list{display:flex;flex-wrap:nowrap" in css
-    assert ".rail-assets #storage-list{height:132px;max-height:132px" in css
-    assert "overflow-x:scroll" in css
+    for control_id in ("storage-scroll-prev", "storage-scroll-range", "storage-scroll-next"):
+        assert f'id="{control_id}"' in html
+    assert ".storage-scroll-controls{display:grid" in css
+    assert "grid-auto-flow:column;grid-auto-columns:88px" in css
+    assert "function syncStorageScroller()" in game_script
+    assert "list.scrollBy({ left: direction" in game_script
     assert "scroll-snap-type:x proximity" in css
     assert 'classList.toggle("is-wardrobe", view === "wardrobe")' in game_script
     assert ".inventory-dialog-grid.is-wardrobe{display:flex" in css
