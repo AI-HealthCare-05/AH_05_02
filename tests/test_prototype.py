@@ -291,6 +291,8 @@ def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> No
     assert "맞춤 챌린지 추가" in script
     assert 'id="open-rag-challenge"' in script
     assert "function customChallengeSlot()" in script
+    assert "function closeRagChallengeGenerator" in script
+    assert 'button.classList.toggle("active", active)' in script
     assert "function renderChallengeChoices()" in script
     assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
 

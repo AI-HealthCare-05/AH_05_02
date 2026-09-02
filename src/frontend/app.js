@@ -1621,6 +1621,16 @@ function renderRagChallengeSelection() {
   applyButton.disabled = !selected;
 }
 
+function closeRagChallengeGenerator({ moveFocus = false } = {}) {
+  const generator = $("#rag-challenge-generator");
+  if (!generator) return;
+  generator.hidden = true;
+  $$("#open-rag-challenge, .edit-rag-challenge").forEach((trigger) => {
+    trigger.setAttribute("aria-expanded", "false");
+  });
+  if (moveFocus) $("#open-rag-challenge, .edit-rag-challenge")?.focus();
+}
+
 function renderRagChallengeState(status, candidates = state.ragChallengeCandidates) {
   state.ragChallengeStatus = status;
   const box = $("#rag-challenge-state");
@@ -2555,8 +2565,15 @@ $("#to-challenges").addEventListener("click", async () => {
 $("#challenge-list").addEventListener("click", (event) => {
   const categoryButton = event.target.closest("[data-challenge-category]");
   if (categoryButton) {
+    closeRagChallengeGenerator();
     state.activeChallengeCategory = categoryButton.dataset.challengeCategory;
-    renderChallengeChoices();
+    $$("[data-challenge-category]").forEach((button) => {
+      const active = button.dataset.challengeCategory === state.activeChallengeCategory;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    renderChallengeDetails();
+    updateChallengeSelectionCount();
     $("#challenge-category-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
     return;
   }
@@ -2580,6 +2597,7 @@ $("#challenge-list").addEventListener("change", (event) => {
 });
 $("#challenge-detail-list").addEventListener("change", (event) => {
   if (!event.target.matches("input[name='challenge']")) return;
+  closeRagChallengeGenerator();
   const challengeId = Number(event.target.value);
   if (event.target.checked && state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0) >= 3) {
     event.target.checked = false;
@@ -2593,10 +2611,7 @@ $("#challenge-detail-list").addEventListener("change", (event) => {
   if (!$("#walking-level-picker").hidden) $("#walking-level-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
 $("#close-rag-challenge")?.addEventListener("click", () => {
-  $("#rag-challenge-generator").hidden = true;
-  const trigger = $("#open-rag-challenge, .edit-rag-challenge");
-  trigger?.setAttribute("aria-expanded", "false");
-  trigger?.focus();
+  closeRagChallengeGenerator({ moveFocus: true });
 });
 $("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
 $("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
@@ -2622,7 +2637,7 @@ $("#apply-rag-challenge")?.addEventListener("click", () => {
   };
   state.customChallengeSelected = true;
   renderChallengeChoices();
-  $("#rag-challenge-generator").hidden = true;
+  closeRagChallengeGenerator();
   syncWalkingLevelPicker();
   $("#custom-challenge-choice")?.focus();
   showMessage("맞춤 챌린지를 추가했어요.", "success");
