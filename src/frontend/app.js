@@ -1,8 +1,16 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, ragChallengeDraft: null, ragChallengeStatus: "idle" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+const safeExternalUrl = (value) => {
+  try {
+    const url = new URL(String(value));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+};
 const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 const isLocalPreview = () => isDemoEnvironment() && state.token === "local-demo-token";
 
@@ -414,7 +422,12 @@ function showStep(step, { recordHistory = true } = {}) {
       updateLifestyleSummary();
     }
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const activeScreen = $(`.screen[data-step="${state.step}"]`);
+  const activeHeading = activeScreen?.querySelector("h1, h2, h3");
+  if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  window.requestAnimationFrame(() => activeHeading?.focus({ preventScroll: true }));
 }
 
 async function goStepFromNav(step) {
@@ -969,6 +982,95 @@ function updateResultConfirmation(prediction = state.prediction || {}, approvedO
   if (challengeButton) challengeButton.textContent = content.next;
 }
 
+function setMedicalFacilityStatus(status, title, message) {
+  const box = $("#medical-facility-status");
+  if (!box) return;
+  box.dataset.state = status;
+  box.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>`;
+}
+
+function medicalFacilityDistance(value) {
+  const meters = Number(value);
+  if (!Number.isFinite(meters) || meters < 0) return "거리 정보 없음";
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)}km`;
+}
+
+function renderMedicalFacilities(payload = {}) {
+  const facilities = Array.isArray(payload.facilities) ? payload.facilities : [];
+  const results = $("#medical-facility-results");
+  const meta = $("#medical-facility-meta");
+  if (!results || !meta) return;
+  results.hidden = facilities.length === 0;
+  meta.hidden = false;
+  const radius = Number(payload.retrieved_radius_meters);
+  const provider = payload.provider_kind === "kakao_local_api" ? "카카오 로컬 API" : "의료기관 정보 API";
+  meta.innerHTML = `<p><strong>정보 출처</strong> ${escapeHtml(provider)}${Number.isFinite(radius) ? ` · 반경 ${escapeHtml(medicalFacilityDistance(radius))}` : ""}</p>${payload.disclaimer ? `<p>${escapeHtml(payload.disclaimer)}</p>` : ""}`;
+  if (!facilities.length) {
+    setMedicalFacilityStatus("empty", "근처 의료기관을 찾지 못했어요", "검색 반경을 넓혀서 다시 확인해 주세요.");
+    return;
+  }
+  results.innerHTML = facilities.map((facility) => {
+    const address = facility.road_address || facility.address || "주소 정보 없음";
+    const phone = String(facility.phone || "").trim();
+    const phoneHref = phone.replace(/[^0-9+]/g, "");
+    const mapUrl = safeExternalUrl(facility.map_url);
+    return `<article class="medical-facility-card">
+      <div class="medical-facility-card-heading"><strong>${escapeHtml(facility.name || "의료기관")}</strong><span>${escapeHtml(medicalFacilityDistance(facility.distance_meters))}</span></div>
+      <p class="medical-facility-address">${escapeHtml(address)}</p>
+      <div class="facility-actions">
+        ${phone && phoneHref ? `<a class="secondary" href="tel:${escapeHtml(phoneHref)}">전화 ${escapeHtml(phone)}</a>` : `<span class="facility-action-unavailable">전화번호 없음</span>`}
+        ${mapUrl ? `<a class="secondary" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">주소·지도 보기</a>` : `<span class="facility-action-unavailable">지도 링크 없음</span>`}
+      </div>
+    </article>`;
+  }).join("");
+  setMedicalFacilityStatus("done", `가까운 의료기관 ${facilities.length}곳을 찾았어요`, "거리순 안내이며 특정 의료기관을 추천하거나 보증하지 않습니다.");
+}
+
+function geolocationFailureCopy(error) {
+  if (error?.code === 1) return ["위치 권한이 허용되지 않았어요", "위치를 허용하면 근처 의료기관을 보여드려요. 다른 기능은 계속 이용할 수 있습니다."];
+  if (error?.code === 3) return ["위치 확인 시간이 오래 걸렸어요", "잠시 후 다시 시도하거나 브라우저의 위치 설정을 확인해 주세요."];
+  return ["현재 위치를 확인하지 못했어요", "브라우저의 위치 설정을 확인한 뒤 다시 시도해 주세요."];
+}
+
+async function findNearbyMedicalFacilities() {
+  const button = $("#find-nearby-medical-facilities");
+  const results = $("#medical-facility-results");
+  const meta = $("#medical-facility-meta");
+  if (!button) return;
+  if (!navigator.geolocation) {
+    setMedicalFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "위치 기능을 지원하는 브라우저에서 다시 확인해 주세요.");
+    return;
+  }
+  if (results) results.hidden = true;
+  if (meta) meta.hidden = true;
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  setMedicalFacilityStatus("loading", "현재 위치를 확인하고 있어요", "위치는 근처 의료기관을 찾는 요청에만 사용합니다.");
+  try {
+    const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000,
+    }));
+    setMedicalFacilityStatus("loading", "근처 의료기관을 찾고 있어요", "거리순으로 정보를 불러오는 중입니다.");
+    const params = new URLSearchParams({
+      lat: String(position.coords.latitude),
+      lon: String(position.coords.longitude),
+      radius: "5000",
+    });
+    renderMedicalFacilities(await api(`/medical-facilities/nearby?${params.toString()}`));
+  } catch (error) {
+    if (typeof error?.code === "number" && error.code >= 1 && error.code <= 3) {
+      const [title, message] = geolocationFailureCopy(error);
+      setMedicalFacilityStatus("permission", title, message);
+    } else {
+      setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
+    }
+  } finally {
+    releaseBusy();
+  }
+}
+
 function setForecastRiskPreview(risk) {
   const controls = $("#risk-preview-controls");
   if (!controls || controls.hidden || !isLocalPreview()) return;
@@ -1398,31 +1500,80 @@ function customChallengeSlot() {
   </article>`;
 }
 
-function localRagChallengeDraft(preference) {
-  const drafts = {
-    activity: {
-      title: "식후 10분 천천히 걷기",
-      goal: "하루 한 번 식사 후 편한 속도로 10분 걷기",
-      recordType: "simple",
-      source: "질병관리청 신체활동·걷기 건강정보 기반",
-    },
-    diet: {
-      title: "단 음료 대신 물 고르기",
-      goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기",
-      recordType: "simple",
-      source: "국가건강정보포털 당뇨병 생활습관 자료 기반",
-    },
-    tracking: {
-      title: "오늘 건강수치 한 가지 기록하기",
-      goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기",
-      recordType: "simple",
-      source: "정기 건강 점검 안내 자료 기반",
-    },
+const ragChallengeSources = {
+  kdcaDiabetes: {
+    title: "질병관리청 국가건강정보포털 · 당뇨병",
+    url: "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5292",
+  },
+  whoActivity: {
+    title: "WHO · 신체활동 및 좌식 행동 지침",
+    url: "https://www.who.int/publications/i/item/9789240015128",
+  },
+  cdcPreventT2: {
+    title: "CDC · PreventT2 생활습관 교육과정",
+    url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+  },
+  kdcaHypertension: {
+    title: "질병관리청 국가건강정보포털 · 고혈압",
+    url: "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5300",
+  },
+};
+
+function localRagChallengeCandidates(preference) {
+  const candidates = {
+    activity: [
+      { id: "activity-walk", title: "식후 10분 천천히 걷기", goal: "하루 한 번 식사 후 편한 속도로 10분 걷기", reason: "짧고 구체적인 활동부터 시작하는 후보예요.", recordType: "simple", caution: "통증·어지럼·심한 호흡곤란이 생기면 즉시 중단해 주세요.", citations: [ragChallengeSources.whoActivity, ragChallengeSources.kdcaDiabetes] },
+      { id: "activity-sit-less", title: "한 시간마다 가볍게 움직이기", goal: "오래 앉아 있었다면 한 시간마다 3분 동안 일어나 움직이기", reason: "앉아 있는 시간을 나누어 줄이는 후보예요.", recordType: "count", caution: "균형 잡기가 어렵다면 의자나 벽을 잡고 안전하게 움직여 주세요.", citations: [ragChallengeSources.whoActivity] },
+      { id: "activity-stretch", title: "아침·저녁 5분 스트레칭", goal: "아침 또는 저녁에 무리 없는 범위에서 5분 스트레칭하기", reason: "실내에서도 부담 없이 시작할 수 있는 후보예요.", recordType: "time", caution: "반동을 주거나 통증을 참으며 자세를 유지하지 마세요.", citations: [ragChallengeSources.whoActivity, ragChallengeSources.cdcPreventT2] },
+    ],
+    diet: [
+      { id: "diet-water", title: "단 음료 대신 물 고르기", goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기", reason: "기존 선택 한 가지를 가볍게 바꾸는 후보예요.", recordType: "simple", caution: "의료진에게 수분 섭취 제한을 안내받았다면 그 지침을 우선해 주세요.", citations: [ragChallengeSources.kdcaDiabetes] },
+      { id: "diet-vegetable", title: "한 끼에 채소 반찬 더하기", goal: "하루 한 끼에 평소 먹던 채소 반찬 한 가지 더하기", reason: "식사량을 갑자기 제한하지 않고 구성을 살피는 후보예요.", recordType: "simple", caution: "알레르기나 별도 식이 지침이 있다면 해당 식품은 선택하지 마세요.", citations: [ragChallengeSources.kdcaDiabetes, ragChallengeSources.cdcPreventT2] },
+      { id: "diet-meal-log", title: "한 끼 식사 간단히 기록하기", goal: "오늘 한 끼의 음식과 식사 시간을 짧게 기록하기", reason: "평가보다 관찰을 먼저 시작하는 후보예요.", recordType: "simple", caution: "끼니를 거르거나 음식량을 과도하게 줄이는 목표로 사용하지 마세요.", citations: [ragChallengeSources.cdcPreventT2, ragChallengeSources.kdcaDiabetes] },
+    ],
+    tracking: [
+      { id: "tracking-health", title: "오늘 건강수치 한 가지 기록하기", goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기", reason: "가능한 항목 한 가지만 골라 기록하는 후보예요.", recordType: "simple", caution: "한 번의 수치만으로 상태를 진단하거나 약을 변경하지 마세요.", citations: [ragChallengeSources.kdcaHypertension, ragChallengeSources.kdcaDiabetes] },
+      { id: "tracking-habit", title: "오늘 실천 한 줄 남기기", goal: "오늘 지킨 생활습관과 어려웠던 점을 한 줄로 기록하기", reason: "성공과 방해 요인을 함께 살펴보는 후보예요.", recordType: "simple", caution: "실천하지 못한 날도 실패로 단정하지 말고 다음 목표를 작게 조정해 보세요.", citations: [ragChallengeSources.cdcPreventT2] },
+      { id: "tracking-pressure", title: "같은 시간에 혈압 기록하기", goal: "안정된 상태에서 안내받은 방법으로 혈압을 재고 기록하기", reason: "측정 조건을 일정하게 유지하는 후보예요.", recordType: "simple", caution: "높은 수치가 반복되거나 증상이 있으면 기록만 하지 말고 의료진과 상담해 주세요.", citations: [ragChallengeSources.kdcaHypertension] },
+    ],
   };
-  return drafts[preference] || drafts.activity;
+  return candidates[preference] || candidates.activity;
 }
 
-function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
+function ragChallengeCandidateMarkup(candidate, index) {
+  const citations = candidate.citations.map((citation) => {
+    const url = safeExternalUrl(citation.url);
+    return `<li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(citation.title)}</a>` : escapeHtml(citation.title)}</li>`;
+  }).join("");
+  return `<article class="rag-challenge-candidate">
+    <label class="rag-challenge-candidate-choice">
+      <input type="radio" name="rag-challenge-candidate" value="${escapeHtml(candidate.id)}">
+      <span class="rag-challenge-candidate-number">후보 ${index + 1}</span>
+      <span class="rag-challenge-candidate-card">
+        <strong class="rag-challenge-candidate-title">${escapeHtml(candidate.title)}</strong>
+        <span class="rag-challenge-candidate-goal"><strong>일일 목표</strong><br>${escapeHtml(candidate.goal)}</span>
+        <span class="rag-challenge-candidate-reason">${escapeHtml(candidate.reason)}</span>
+        <span class="rag-challenge-meta">
+          <strong>주의사항</strong>
+          <span class="rag-challenge-caution">${escapeHtml(candidate.caution)}</span>
+        </span>
+      </span>
+    </label>
+    <div class="rag-challenge-source-panel"><strong>근거 및 출처</strong><ul class="rag-challenge-sources">${citations}</ul></div>
+  </article>`;
+}
+
+function renderRagChallengeSelection() {
+  const selected = state.ragChallengeCandidates.find((candidate) => candidate.id === state.selectedRagChallengeId) || null;
+  state.ragChallengeDraft = selected;
+  const summary = $("#rag-challenge-selection-summary");
+  const applyButton = $("#apply-rag-challenge");
+  if (!summary || !applyButton) return;
+  summary.textContent = selected ? `선택됨: ${selected.title}` : "후보를 선택하면 적용할 수 있어요.";
+  applyButton.disabled = !selected;
+}
+
+function renderRagChallengeState(status, candidates = state.ragChallengeCandidates) {
   state.ragChallengeStatus = status;
   const box = $("#rag-challenge-state");
   const card = $("#rag-challenge-draft");
@@ -1430,19 +1581,18 @@ function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
   box.dataset.state = status;
   const copy = {
     idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
-    loading: ["챌린지 초안을 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
-    done: ["챌린지 초안을 확인해 주세요", "마음에 들면 나만의 챌린지로 사용할 수 있어요."],
+    loading: ["챌린지 후보를 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
+    done: ["맞춤 챌린지 후보 3개가 준비됐어요", "목표·주의사항·출처를 비교한 뒤 한 가지를 선택해 주세요."],
     failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성하거나 직접 나만의 챌린지를 추가해 주세요."],
   }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
   $("#rag-challenge-state-title").textContent = copy[0];
   $("#rag-challenge-state-message").textContent = copy[1];
   $("#generate-rag-challenge").hidden = status === "done";
   $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "failed";
-  card.hidden = status !== "done" || !draft;
-  if (status === "done" && draft) {
-    $("#rag-challenge-draft-title").textContent = draft.title;
-    $("#rag-challenge-draft-goal").textContent = draft.goal;
-    $("#rag-challenge-draft-source").textContent = draft.source;
+  card.hidden = status !== "done" || !candidates.length;
+  if (status === "done" && candidates.length) {
+    $("#rag-challenge-candidate-grid").innerHTML = candidates.map(ragChallengeCandidateMarkup).join("");
+    renderRagChallengeSelection();
   }
 }
 
@@ -1452,8 +1602,10 @@ async function generateRagChallengeDraft() {
   renderRagChallengeState("loading");
   try {
     await sleep(500);
-    state.ragChallengeDraft = localRagChallengeDraft($("#rag-challenge-preference").value);
-    renderRagChallengeState("done", state.ragChallengeDraft);
+    state.ragChallengeCandidates = localRagChallengeCandidates($("#rag-challenge-preference").value);
+    state.selectedRagChallengeId = null;
+    state.ragChallengeDraft = null;
+    renderRagChallengeState("done", state.ragChallengeCandidates);
   } catch (error) {
     renderRagChallengeState("failed");
     showMessage(error.message || "맞춤 챌린지 초안을 만들지 못했습니다.");
@@ -1591,7 +1743,10 @@ function renderLocalDemoDashboard() {
     completed: state.dailyCompleted.has(String(item.user_challenge_id)) ? 1 : 0,
     planned: 1,
   })));
-  $("#education-list").innerHTML = `<article class="challenge-card"><span><strong>생활습관 교육 준비 중</strong><small>검증된 공공기관 자료만 연결해 제공할 예정입니다.</small></span></article>`;
+  const education = localEducationContents();
+  state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
+  renderEducationList();
+  $("#education-learning-flow").hidden = true;
   $("#connection-list").innerHTML = renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
 }
 function updateDailyRecordSummary() {
@@ -1736,20 +1891,114 @@ async function loadWeeklyReport() {
     renderWeeklyReportMessage("주간 기록을 확인할 수 없어요", "잠시 후 다시 시도해 주세요.");
   }
 }
+function localEducationContents() {
+  const source = { title: "CDC PreventT2 Curriculum", url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html" };
+  return {
+    medical_notice: "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.",
+    items: [
+      { content_id: "preview-1", week_number: 1, title: "위험 선별 결과 이해하기", summary: "예측 결과는 향후 위험을 살펴보는 건강교육 정보이며 당뇨병 진단이 아닙니다.", quiz_question: "이 서비스의 예측 결과는 당뇨병 진단인가요?", source },
+      { content_id: "preview-2", week_number: 2, title: "일상에서 활동 늘리기", summary: "실천 가능한 작은 활동 목표를 정하고 기록하면서 자신에게 맞는 습관을 찾습니다.", quiz_question: "목표가 너무 어렵다면 작은 목표로 조정해도 되나요?", source },
+      { content_id: "preview-3", week_number: 3, title: "식사 습관 기록하기", summary: "식사 기록을 통해 자신의 패턴을 확인하되 특정 식품을 치료법처럼 표현하지 않습니다.", quiz_question: "식사 기록만으로 당뇨병 치료 효과를 판단할 수 있나요?", source },
+      { content_id: "preview-4", week_number: 4, title: "중단해도 다시 시작하기", summary: "실천하지 못한 이유를 확인하고 목표·시간·챌린지를 조정해 다시 시작합니다.", quiz_question: "하루 실패하면 4주 챌린지를 모두 포기해야 하나요?", source },
+    ],
+  };
+}
+
+function inferredEducationAnswer(question = "") {
+  return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
+}
+
+function educationQuestions(item) {
+  const questions = Array.isArray(item.quiz_questions) && item.quiz_questions.length
+    ? item.quiz_questions
+    : [{ prompt: item.quiz_question, correct_answer: inferredEducationAnswer(item.quiz_question), explanation: item.summary }];
+  return questions.filter((question) => question?.prompt).slice(0, 3).map((question) => ({
+    prompt: question.prompt,
+    correctAnswer: question.correct_answer || question.correctAnswer || inferredEducationAnswer(question.prompt),
+    explanation: question.explanation || item.summary,
+  }));
+}
+
+function renderEducationList() {
+  const list = $("#education-list");
+  if (!state.educationContents.length) {
+    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    return;
+  }
+  list.innerHTML = state.educationContents.map((item) => {
+    const completed = Boolean(item.completed && item.is_correct !== false);
+    const questionCount = educationQuestions(item).length;
+    return `<article class="education-overview-card" data-completed="${completed}">
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
+      <p>${escapeHtml(item.summary)}</p>
+      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
+    </article>`;
+  }).join("");
+}
+
+function activeEducationContent() {
+  return state.educationContents.find((item) => String(item.content_id) === String(state.activeEducationId)) || null;
+}
+
+function openEducationFlow(contentId) {
+  const item = state.educationContents.find((entry) => String(entry.content_id) === String(contentId));
+  if (!item) return;
+  state.activeEducationId = item.content_id;
+  state.educationQuizIndex = 0;
+  state.educationQuizCorrectCount = 0;
+  $("#education-flow-week").textContent = `${item.week_number}주차 건강교육`;
+  $("#education-flow-title").textContent = item.title;
+  $("#education-flow-summary").textContent = item.summary;
+  $("#education-flow-notice").textContent = item.medical_notice || "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.";
+  const sourceUrl = safeExternalUrl(item.source?.url);
+  const sourceLink = $("#education-flow-source");
+  sourceLink.textContent = item.source?.title ? `근거: ${item.source.title}` : "근거 자료 확인";
+  sourceLink.hidden = !sourceUrl;
+  if (sourceUrl) sourceLink.href = sourceUrl;
+  $("#education-reading-card").hidden = false;
+  $("#education-quiz-form").hidden = true;
+  $("#education-feedback-card").hidden = true;
+  const flow = $("#education-learning-flow");
+  flow.hidden = false;
+  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  $("#education-flow-title").setAttribute("tabindex", "-1");
+  $("#education-flow-title").focus({ preventScroll: true });
+}
+
+function renderEducationQuizQuestion() {
+  const item = activeEducationContent();
+  const questions = item ? educationQuestions(item) : [];
+  const question = questions[state.educationQuizIndex];
+  if (!question) return;
+  $("#education-reading-card").hidden = true;
+  $("#education-feedback-card").hidden = true;
+  const form = $("#education-quiz-form");
+  form.hidden = false;
+  form.reset();
+  $("#education-quiz-question").textContent = question.prompt;
+  $("#education-quiz-progress-text").textContent = `${state.educationQuizIndex + 1}/${questions.length} 문항`;
+  $("#education-quiz-progress").max = questions.length;
+  $("#education-quiz-progress").value = state.educationQuizIndex + 1;
+  $("#education-quiz-question").setAttribute("tabindex", "-1");
+  $("#education-quiz-question").focus();
+}
+
+function closeEducationFlow() {
+  $("#education-learning-flow").hidden = true;
+  const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
+  state.activeEducationId = null;
+  button?.focus();
+}
+
 async function loadEducation() {
   const list = $("#education-list");
   list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
-    const contents = await api("/education-contents");
-    if (!contents.items?.length) {
-      list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
-      return;
-    }
-    list.innerHTML = contents.items.map((item) => {
-      const noAnswer = item.quiz_question.includes("진단") || item.quiz_question.includes("치료") || item.quiz_question.includes("포기");
-      return `<article class="challenge-card"><span><strong>${item.week_number}주차 · ${escapeHtml(item.title)}</strong><small>${escapeHtml(item.summary)}</small><small>${escapeHtml(item.quiz_question)}</small><button class="secondary education-complete" type="button" data-id="${item.content_id}" data-answer="${noAnswer ? "아니요" : "네"}">${item.completed ? "다시 확인" : "퀴즈 답변·완료"}</button><small><a href="${escapeHtml(item.source.url)}" target="_blank" rel="noopener">근거: ${escapeHtml(item.source.title)}</a></small></span></article>`;
-    }).join("");
+    const contents = isLocalPreview() ? localEducationContents() : await api("/education-contents");
+    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
+    renderEducationList();
   } catch (error) {
+    state.educationContents = [];
     list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오지 못했어요</strong><p>잠시 후 다시 시도해 주세요.</p></article>`;
   }
 }
@@ -2232,6 +2481,7 @@ $$("[data-demo-status]").forEach((button) => button.addEventListener("click", ()
 $("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
+$("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
 $("#feedback-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!state.predictionId) return showMessage("피드백을 연결할 분석 결과가 없습니다.");
@@ -2343,6 +2593,11 @@ $("#save-custom-challenge").addEventListener("click", () => {
 });
 $("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
 $("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#rag-challenge-candidate-grid")?.addEventListener("change", (event) => {
+  if (event.target.name !== "rag-challenge-candidate") return;
+  state.selectedRagChallengeId = event.target.value;
+  renderRagChallengeSelection();
+});
 $("#apply-rag-challenge")?.addEventListener("click", () => {
   if (!state.ragChallengeDraft) {
     renderRagChallengeState("failed");
@@ -2518,16 +2773,73 @@ $("#barrier-form").addEventListener("submit", async (event) => {
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
-$("#education-list").addEventListener("click", async (event) => {
-  const button = event.target.closest(".education-complete");
-  if (!button) return;
-  const releaseBusy = setButtonBusy(button, "완료 처리 중…");
+$("#education-list").addEventListener("click", (event) => {
+  const button = event.target.closest(".education-open");
+  if (button) openEducationFlow(button.dataset.id);
+});
+$("#close-education-flow")?.addEventListener("click", closeEducationFlow);
+$("#start-education-quiz")?.addEventListener("click", renderEducationQuizQuestion);
+$("#education-quiz-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const item = activeEducationContent();
+  const questions = item ? educationQuestions(item) : [];
+  const question = questions[state.educationQuizIndex];
+  const answer = new FormData(event.currentTarget).get("education-answer");
+  if (!item || !question || !answer) return;
+  const submitButton = event.submitter;
+  const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
-    const result = await api(`/education-contents/${button.dataset.id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: button.dataset.answer }) });
-    if (!result.is_correct) showMessage("내용을 다시 확인해 주세요.", "error");
-    await loadEducation();
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+    const result = isLocalPreview()
+      ? { is_correct: answer === question.correctAnswer }
+      : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
+    const isCorrect = Boolean(result.is_correct);
+    if (isCorrect) state.educationQuizCorrectCount += 1;
+    $("#education-quiz-form").hidden = true;
+    const feedback = $("#education-feedback-card");
+    feedback.hidden = false;
+    feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    $("#education-feedback-title").textContent = isCorrect
+      ? `정답입니다 · 정답: ${question.correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
+    $("#education-feedback-explanation").textContent = question.explanation;
+    $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
+    const action = $("#education-feedback-action");
+    if (!isCorrect) {
+      action.dataset.action = "review";
+      action.textContent = "교육 내용 다시 보기";
+    } else if (state.educationQuizIndex < questions.length - 1) {
+      action.dataset.action = "next";
+      action.textContent = "다음 문항";
+    } else {
+      item.completed = true;
+      item.is_correct = true;
+      renderEducationList();
+      action.dataset.action = "close";
+      action.textContent = "교육 목록으로";
+    }
+    $("#education-feedback-title").setAttribute("tabindex", "-1");
+    $("#education-feedback-title").focus();
+  } catch (error) {
+    showMessage(error.message || "퀴즈 답변을 저장하지 못했습니다.");
+  } finally {
+    releaseBusy();
+  }
+});
+$("#education-feedback-action")?.addEventListener("click", (event) => {
+  const action = event.currentTarget.dataset.action;
+  if (action === "review") {
+    $("#education-feedback-card").hidden = true;
+    $("#education-reading-card").hidden = false;
+    $("#education-reading-card").scrollIntoView({ block: "start" });
+    $("#start-education-quiz").focus();
+    return;
+  }
+  if (action === "next") {
+    state.educationQuizIndex += 1;
+    renderEducationQuizQuestion();
+    return;
+  }
+  closeEducationFlow();
 });
 $("#invite-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -2714,11 +3026,31 @@ $("#wearable-form")?.addEventListener("submit", async (event) => {
 });
 $("#rag-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
+  const releaseBusy = setFormBusy(form, event.submitter, "근거 자료 검색 중…");
+  const box = $("#rag-result");
+  box.hidden = false;
+  box.dataset.state = "loading";
+  box.innerHTML = "<div><strong>승인된 건강자료에서 근거를 찾고 있어요.</strong><p>잠시만 기다려 주세요.</p></div>";
   try {
     const result = await api("/health-education/questions", { method: "POST", body: JSON.stringify({ question: $("#rag-question").value }) });
-    const citations = result.citations.map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a></li>`).join("");
-    const box = $("#rag-result"); box.hidden = false; box.innerHTML = `<div><strong>${escapeHtml(result.answer)}</strong>${citations ? `<ul>${citations}</ul>` : ""}<small>${escapeHtml(result.medical_notice)}</small></div>`;
-  } catch (error) { showMessage(error.message); }
+    const citations = (Array.isArray(result.citations) ? result.citations : []).map((item) => {
+      const url = safeExternalUrl(item.url);
+      return url ? `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(item.title || "근거 자료")}</a></li>` : "";
+    }).filter(Boolean).join("");
+    const statusCopy = {
+      grounded: ["근거 자료에서 답변을 찾았어요", "done"],
+      insufficient_evidence: ["근거를 충분히 찾지 못했어요", "insufficient"],
+      medical_safety_refusal: ["의료진 확인이 필요한 질문입니다", "refused"],
+    }[result.answer_status] || ["건강교육 정보를 확인했어요", "done"];
+    box.dataset.state = statusCopy[1];
+    box.innerHTML = `<div><strong>${escapeHtml(statusCopy[0])}</strong><p>${escapeHtml(result.answer || "표시할 답변이 없습니다.")}</p>${citations ? `<p class="rag-citation-title">근거 및 출처</p><ul>${citations}</ul>` : ""}${result.medical_notice ? `<small>${escapeHtml(result.medical_notice)}</small>` : ""}</div>`;
+  } catch (error) {
+    box.dataset.state = "failed";
+    box.innerHTML = `<div><strong>건강교육 정보를 불러오지 못했어요</strong><p>${escapeHtml(error?.retryable ? "잠시 후 다시 시도해 주세요." : error.message)}</p></div>`;
+  } finally {
+    releaseBusy();
+  }
 });
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
 $("#checkup-image-input")?.addEventListener("change", (event) => {

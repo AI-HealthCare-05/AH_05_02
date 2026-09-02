@@ -473,9 +473,10 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert "report.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
-    assert "완료 처리 중…" in script
+    assert "답 확인 중…" in script
     assert "정답입니다. 교육 콘텐츠를 완료했습니다." not in script
-    assert 'if (!result.is_correct) showMessage("내용을 다시 확인해 주세요.", "error")' in script
+    assert "다시 확인해 볼까요? · 정답:" in script
+    assert "교육 내용 다시 보기" in script
     assert "completed: 5, planned: 7" not in script
 
 
