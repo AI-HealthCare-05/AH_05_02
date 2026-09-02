@@ -80,7 +80,7 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "전화 상담 가능한 기관 보기" in html
     assert "의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요." in html
     assert "SAME_DAY_MEDICAL_ATTENTION" in script
-    assert 'has_urgent_warning_sign: false' in script
+    assert "has_urgent_warning_sign: false" in script
     assert 'params.get("preview") !== "emergency-questionnaire"' in script
 
 
@@ -116,6 +116,10 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
+    assert 'id="medical-region"' in html
+    assert 'id="find-medical-facilities-by-region"' in html
+    assert "medicalRegionCenters" in script
+    assert "정보 확인일" in script
     assert 'id="model-version"' not in html
     assert "prediction.model_version" not in script
     assert "prediction.feature_schema_version" not in script
