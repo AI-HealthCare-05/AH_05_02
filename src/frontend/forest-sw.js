@@ -1,15 +1,15 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v117";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v118";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260902-33",
+  "/static/forest-game.css?v=20260902-34",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260901-25",
-  "/static/forest-phaser.js?v=20260902-28",
-  "/static/forest-game.js?v=20260902-69",
+  "/static/forest-phaser.js?v=20260902-29",
+  "/static/forest-game.js?v=20260902-70",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
@@ -18,6 +18,10 @@ const MEDIA_ASSETS = [
   "/static/assets/home-small-fire-cc0.wav",
   "/static/assets/home-record-player-simple-loop-cc0.ogg",
   "/static/assets/avatar-forget-me-not-cc0.ogg",
+  "/static/assets/home-record-elfwood-nexon.mp3",
+  "/static/assets/home-record-untitled-hoon.mp3",
+  "/static/assets/home-record-bright-time-sam.mp3",
+  "/static/assets/home-record-warm-afternoon-hyuk.mp3",
   "/static/assets/carrot-forest-main-theme.mp3",
   "/static/assets/forest-canopy-original.wav",
   "/static/assets/peaceful-forest-samza-cc0.wav",
@@ -51,7 +55,7 @@ const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-reward-cow-v1.png",
   "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1",
   "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1",
-  "/static/assets/carrot-forest-campfire-off-v2.png?v=20260901-1",
+  "/static/assets/carrot-forest-campfire-off-v3.png?v=20260902-1",
   "/static/assets/carrot-forest-lpc-pets-v1.png",
   "/static/assets/carrot-forest-lpc-rat-v1.png",
   "/static/assets/carrot-forest-loading-v1.png?v=20260831-1",

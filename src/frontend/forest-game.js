@@ -18,6 +18,13 @@
   let rewardSkipResolve = null;
   const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
   const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
+  const homeRecordCatalog = {
+    simple: { name: "Simple Menu", credit: "polosik · CC0", audioKey: "homeRecordSimple" },
+    elfwood: { name: "Elfwood", credit: "넥슨", audioKey: "homeRecordElfwood" },
+    untitled: { name: "무제", credit: "훈", audioKey: "homeRecordUntitled" },
+    bright: { name: "밝은 시간", credit: "샘", audioKey: "homeRecordBright" },
+    warm: { name: "따뜻한 오후", credit: "혁", audioKey: "homeRecordWarm" },
+  };
 
   function generateNickname() {
     const random = new Uint32Array(3);
@@ -503,6 +510,7 @@
       fishing: false,
       petFedCount: 0,
       homeRecordPlaying: false,
+      homeRecordTrack: "simple",
     };
   }
 
@@ -528,6 +536,7 @@
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
       fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+      fallback.homeRecordTrack = homeRecordCatalog[value.homeRecordTrack] ? value.homeRecordTrack : "simple";
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
@@ -568,6 +577,7 @@
       .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
     state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
     state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+    state.homeRecordTrack = homeRecordCatalog[value.homeRecordTrack] ? value.homeRecordTrack : "simple";
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -740,7 +750,11 @@
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
         night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
         home: new Audio("/static/assets/home-small-fire-cc0.wav"),
-        homeRecord: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg"),
+        homeRecordSimple: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg"),
+        homeRecordElfwood: new Audio("/static/assets/home-record-elfwood-nexon.mp3"),
+        homeRecordUntitled: new Audio("/static/assets/home-record-untitled-hoon.mp3"),
+        homeRecordBright: new Audio("/static/assets/home-record-bright-time-sam.mp3"),
+        homeRecordWarm: new Audio("/static/assets/home-record-warm-afternoon-hyuk.mp3"),
         garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
       };
@@ -850,7 +864,7 @@
     return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
   }
   function sceneMusicName(scene = currentScene) {
-    if (scene === "home") return state.homeRecordPlaying ? "homeRecord" : "home";
+    if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordSimple" : "home";
     if (scene === "garden") return "garden";
     const hour = currentLocalHour();
     if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
@@ -869,7 +883,7 @@
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
     if (message) setStatus(message);
   }
 
@@ -1038,21 +1052,26 @@
   function drawHomeRecordPlayer() {
     const x = 610;
     const y = 324;
-    fillPixelRect(x - 31, y + 25, 62, 8, "rgba(37,31,25,.22)");
-    fillPixelRect(x - 32, y - 20, 64, 48, "#6f4027");
-    fillPixelRect(x - 27, y - 15, 54, 37, "#bb7847");
-    fillPixelRect(x - 23, y - 11, 46, 25, "#efd3a2");
+    fillPixelRect(x - 39, y + 30, 78, 8, "rgba(37,31,25,.22)");
+    fillPixelRect(x - 36, y - 14, 72, 45, "#5a321f");
+    fillPixelRect(x - 31, y - 10, 62, 34, "#b66e3e");
+    fillPixelRect(x - 28, y - 35, 56, 24, "#633924");
+    fillPixelRect(x - 24, y - 31, 48, 17, "#2b2425");
+    fillPixelRect(x - 27, y - 7, 54, 25, "#e6c58f");
     context.fillStyle = "#252735";
     context.beginPath();
-    context.arc(x - 7, y + 1, 14, 0, Math.PI * 2);
+    context.arc(x - 9, y + 5, 13, 0, Math.PI * 2);
     context.fill();
     context.fillStyle = state.homeRecordPlaying ? "#ef9540" : "#d9b064";
     context.beginPath();
-    context.arc(x - 7, y + 1, 4, 0, Math.PI * 2);
+    context.arc(x - 9, y + 5, 4, 0, Math.PI * 2);
     context.fill();
-    fillPixelRect(x + 12, y - 7, 4, 20, "#695847");
-    fillPixelRect(x + 12, y + 10, 12, 3, "#695847");
-    fillPixelRect(x + 22, y - 13, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
+    fillPixelRect(x + 11, y - 2, 4, 20, "#695847");
+    fillPixelRect(x + 11, y + 15, 13, 3, "#695847");
+    fillPixelRect(x + 23, y - 8, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
+    for (let stripe = -21; stripe <= 19; stripe += 8) fillPixelRect(x + stripe, y + 23, 4, 4, "#3f2b24");
+    fillPixelRect(x - 29, y + 30, 7, 7, "#4b2a1c");
+    fillPixelRect(x + 22, y + 30, 7, 7, "#4b2a1c");
   }
 
   function drawPlacedObject(item, preview = false) {
@@ -1511,19 +1530,21 @@
     } else if (target) prompt.querySelector("span").textContent = {
       home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
-      record_player: state.homeRecordPlaying ? "LP 끄기" : "LP 켜기",
+      record_player: state.homeRecordPlaying ? `${homeRecordCatalog[state.homeRecordTrack]?.name || "LP"} 재생 중` : "LP 음악 고르기",
       crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
   }
 
   function openWorldDialog(target) {
     const dialog = $("#world-dialog");
+    const recordActions = Object.entries(homeRecordCatalog).map(([id, record]) => `<button type="button" data-world-action="record_music" data-record-track="${id}" aria-pressed="${state.homeRecordPlaying && state.homeRecordTrack === id}"><strong>${record.name}</strong><small>${record.credit}</small></button>`).join("");
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
       garden: { icon: "🥕", title: "당근 밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
       pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
       sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
       wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
+      record_player: { icon: "💿", title: "숲속 LP 재생기", copy: "집 안에서 듣고 싶은 레코드를 골라 보세요.", actions: `<div class="record-music-list">${recordActions}</div><button class="record-stop" type="button" data-world-action="record_off" ${state.homeRecordPlaying ? "" : "disabled"}>LP 끄기 · 집 음악으로</button>` },
       exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
       crops: { icon: "🥕", title: "챌린지 당근 수확", copy: pendingChallengeCarrots() ? `완료한 챌린지 보상 당근 ${pendingChallengeCarrots()}개를 수확할 수 있어요.` : "오늘 완료한 챌린지 보상은 모두 수확했어요.", actions: `<button type="button" data-world-action="harvest_challenge" ${pendingChallengeCarrots() ? "" : "disabled"}>${pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확하기` : "수확 완료"}</button><button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button>` },
       exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "당근 밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
@@ -1545,7 +1566,7 @@
       return;
     }
     if (target === "record_player") {
-      await toggleHomeRecordPlayer();
+      openWorldDialog(target);
       return;
     }
     const pose = {
@@ -1556,9 +1577,10 @@
     openWorldDialog(target);
   }
 
-  async function toggleHomeRecordPlayer() {
+  async function selectHomeRecordTrack(trackId = null) {
     if (currentScene !== "home") return;
-    state.homeRecordPlaying = !state.homeRecordPlaying;
+    state.homeRecordPlaying = Boolean(trackId && homeRecordCatalog[trackId]);
+    if (state.homeRecordPlaying) state.homeRecordTrack = trackId;
     window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
     renderCanvas();
     try {
@@ -1567,7 +1589,7 @@
       setStatus("LP 음악을 전환하지 못했지만 다른 기능은 계속 이용할 수 있어요.");
     }
     await persist(state.homeRecordPlaying
-      ? "LP 재생기를 켰습니다. Simple Menu 음악이 재생됩니다."
+      ? `LP 재생기에서 ${homeRecordCatalog[state.homeRecordTrack].name} 음악을 재생합니다.`
       : "LP 재생기를 껐습니다. 집 안 음악으로 돌아갑니다.");
   }
 
@@ -3024,8 +3046,19 @@
 
   $("#world-dialog-close").addEventListener("click", () => $("#world-dialog").close());
   $("#world-dialog-actions").addEventListener("click", async (event) => {
-    const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
+    const actionButton = event.target.closest("[data-world-action]");
+    const action = actionButton?.dataset.worldAction;
     if (!action) return;
+    if (action === "record_music") {
+      await selectHomeRecordTrack(actionButton.dataset.recordTrack);
+      $("#world-dialog").close();
+      return;
+    }
+    if (action === "record_off") {
+      await selectHomeRecordTrack(null);
+      $("#world-dialog").close();
+      return;
+    }
     if (action === "enter_home") {
       playSfx("door-open", { volume: 0.36 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));

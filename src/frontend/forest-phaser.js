@@ -102,7 +102,7 @@
       this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1");
       this.load.image("reward-cow-body", "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1");
       this.load.image("reward-cow-base", "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1");
-      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v2.png?v=20260901-1");
+      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v3.png?v=20260902-1");
     }
 
     create() {
@@ -228,19 +228,25 @@
     createHomeRecordPlayer() {
       const x = 610;
       const y = 324;
-      const shadow = this.add.rectangle(0, 28, 66, 9, 0x2d2118, .22);
-      const caseBack = this.add.rectangle(0, 3, 68, 52, 0x6f4027).setStrokeStyle(3, 0x4b2c1e);
-      const caseFront = this.add.rectangle(0, 3, 58, 42, 0xbb7847);
-      const deck = this.add.rectangle(0, -2, 50, 29, 0xefd3a2).setStrokeStyle(2, 0x9f693f);
-      const disc = this.add.circle(-8, -2, 14, 0x252735).setStrokeStyle(2, 0x11141d);
-      const label = this.add.circle(-8, -2, 4, 0xd9b064);
-      const arm = this.add.rectangle(15, -2, 4, 23, 0x695847).setOrigin(.5, .1).setAngle(-18);
-      const needle = this.add.rectangle(19, 9, 12, 3, 0x695847);
-      const light = this.add.rectangle(25, -17, 5, 5, 0x4c554a);
-      const note = this.add.text(29, -44, "♪", {
+      const shadow = this.add.rectangle(0, 34, 82, 9, 0x2d2118, .22);
+      const cabinet = this.add.rectangle(0, 8, 76, 49, 0x5a321f).setStrokeStyle(3, 0x3f251b);
+      const cabinetFront = this.add.rectangle(0, 7, 66, 39, 0xb66e3e);
+      const lid = this.add.rectangle(0, -30, 60, 26, 0x633924).setStrokeStyle(3, 0x43271b);
+      const lidInset = this.add.rectangle(0, -30, 50, 18, 0x2b2425);
+      const deck = this.add.rectangle(0, -2, 58, 28, 0xe6c58f).setStrokeStyle(2, 0x96613d);
+      const disc = this.add.circle(-10, -1, 14, 0x252735).setStrokeStyle(2, 0x11141d);
+      const label = this.add.circle(-10, -1, 4, 0xd9b064);
+      const arm = this.add.rectangle(15, -3, 4, 23, 0x695847).setOrigin(.5, .1).setAngle(-18);
+      const needle = this.add.rectangle(19, 8, 12, 3, 0x695847);
+      const speaker = this.add.rectangle(0, 24, 48, 8, 0x3f2b24);
+      const speakerBars = [-18, -9, 0, 9, 18].map((offset) => this.add.rectangle(offset, 24, 3, 7, 0xd49a57));
+      const leftFoot = this.add.rectangle(-27, 35, 7, 7, 0x4b2a1c);
+      const rightFoot = this.add.rectangle(27, 35, 7, 7, 0x4b2a1c);
+      const light = this.add.rectangle(28, -8, 5, 5, 0x4c554a);
+      const note = this.add.text(34, -51, "♪", {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#f0a342",
       }).setOrigin(.5).setVisible(false);
-      this.recordPlayerActor = this.add.container(x, y, [shadow, caseBack, caseFront, deck, disc, label, arm, needle, light, note])
+      this.recordPlayerActor = this.add.container(x, y, [shadow, cabinet, cabinetFront, lid, lidInset, deck, disc, label, arm, needle, speaker, ...speakerBars, leftFoot, rightFoot, light, note])
         .setDepth(y - 2).setVisible(false);
       this.recordPlayerDisc = disc;
       this.recordPlayerLabel = label;
@@ -632,7 +638,7 @@
       if (this.mountTransitioning) return;
       if (this.sceneName === "home" && this.homeRecordPlaying) {
         this.recordPlayerDisc?.setAngle(time / 10);
-        this.recordPlayerNote?.setY(-44 + Math.sin(time / 280) * 3).setAlpha(.72 + Math.sin(time / 220) * .2);
+        this.recordPlayerNote?.setY(-51 + Math.sin(time / 280) * 3).setAlpha(.72 + Math.sin(time / 220) * .2);
       }
       this.updateWorldAtmosphere(time);
       this.updateRat(time, delta);
