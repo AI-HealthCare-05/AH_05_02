@@ -53,6 +53,41 @@
 .urgent-card .card-icon{background:#fff1ef;color:#b5443c}
 .age-card .card-icon{background:#eef7ff;color:#2d72b8}
 .diagnosis-card .card-icon{background:var(--warning-bg);color:#9a6500}
+.urgent-title-row{width:100%;flex-wrap:wrap}
+.urgent-title-row .emergency-questionnaire-open{margin-left:auto}
+.urgent-answer-row{margin-top:10px}
+.urgent-answer-row .segmented-choice{margin:0}
+.emergency-questionnaire-open{min-width:220px;min-height:52px;padding:11px 20px;font-size:17px}
+.emergency-questionnaire-modal[hidden]{display:none}
+.emergency-questionnaire-modal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,20,18,.58)}
+.emergency-questionnaire-modal-card{position:relative;width:min(1180px,100%);max-height:calc(100vh - 48px);overflow:auto;border-radius:24px;background:#fff;padding:38px;box-shadow:0 24px 70px rgba(6,32,27,.28)}
+.emergency-questionnaire-modal-card>h3{margin:0;padding-right:54px;font-size:31px;color:var(--ink)}
+.emergency-questionnaire-close[aria-label]{position:absolute;top:20px;right:20px;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted);font-size:29px;font-weight:900;cursor:pointer}
+.emergency-questionnaire-modal-actions{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:4px}
+.emergency-questionnaire-modal-actions button{width:100%;min-height:60px}
+.modal-inline-message{margin:0;padding:14px 16px;border:1px solid #d4776f;border-radius:12px;background:#fff1ef;color:#8e2f28;font-size:18px;font-weight:900}
+body.modal-open{overflow:hidden}
+.emergency-questionnaire{display:grid;gap:22px}
+.emergency-questionnaire .emergency-questionnaire-intro{margin:-4px 0 0;padding:18px 20px;border-radius:14px;background:#fff7e7;color:#5f4618;font-size:19px;line-height:1.6;font-weight:800}
+.emergency-stage{min-width:0;margin:0;padding:26px 28px;border:2px solid #d6e1de;border-radius:16px;background:#fbfdfc}
+.emergency-stage legend{float:none;width:auto;padding:0 8px;margin:0;color:var(--ink);font-size:24px}
+.emergency-stage>p{margin:2px 0 18px;font-size:19px}
+.emergency-stage-urgent{border-color:#e9aaa4;background:#fffafa}
+.emergency-stage-same-day{border-color:#e5c36a;background:#fffdf5}
+.emergency-symptom-list{display:grid;grid-template-columns:1fr;gap:9px;margin:0;padding:0;list-style:none}
+.emergency-symptom-list li{display:flex;align-items:flex-start;gap:12px;min-height:52px;padding:13px 17px;border:1px solid #cbd8d5;border-radius:13px;background:#fff;color:var(--ink);font-size:18px;line-height:1.45;font-weight:800}
+.emergency-symptom-list li::before{content:"•";flex:0 0 auto;color:#b5443c;font-size:24px;line-height:1.05}
+.emergency-summary-choices label{position:relative;display:block;cursor:pointer}
+.emergency-summary-choices input{position:absolute;width:1px;height:1px;opacity:0}
+.emergency-summary-choices input:focus-visible+span{outline:4px solid #bce6dc;outline-offset:3px}
+.emergency-summary-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:12px;margin-top:18px}
+.emergency-summary-choices span{align-items:center;justify-content:center;min-height:58px;text-align:center}
+.emergency-summary-choices span{display:flex;padding:14px 16px;border:2px solid #cbd8d5;border-radius:13px;background:#fff;color:var(--ink);font-size:18px;line-height:1.45;font-weight:900}
+.emergency-summary-choices input:checked+span{border-color:var(--green);background:var(--mint);color:var(--green-dark)}
+.emergency-guidance-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.emergency-guidance-actions a,.emergency-guidance-actions button{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;text-align:center;text-decoration:none}
+.emergency-guidance-actions .danger-link{border-color:#c34d43;color:#9c3029}
+.emergency-do-not-feed{grid-column:1/-1;margin:0;padding:16px 18px;border:1px solid #d4776f;border-radius:12px;background:#fff;color:#8e2f28!important;font-size:18px!important;font-weight:900}
 .segmented-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:28px 0 12px}
 .segmented-choice label{position:relative;cursor:pointer}
 .segmented-choice input{position:absolute;opacity:0;inset:0}
@@ -180,7 +215,14 @@
 .legend-row.high span{background:#bd4d43}
 .legend-row strong{font-size:18px;color:var(--ink)}
 .legend-row small{font-size:15px;color:var(--muted);line-height:1.35}
-.compact-result-notice{margin:24px 0 0}
+.notice.safety.medical-guidance-alert{align-items:flex-start;width:100%;margin:0 0 30px;padding:24px 26px;border:2px solid #d35f55;border-radius:20px;background:#fff7f6;box-shadow:0 6px 16px rgba(147,48,40,.08)}
+.medical-guidance-alert>span{background:#b83f36;color:#fff}
+.medical-guidance-alert>div{flex:1;min-width:0}
+.medical-guidance-alert>div>strong{display:block;font-size:24px;line-height:1.35;color:#8d3029}
+.medical-guidance-alert>div>p{font-size:18px;line-height:1.6;color:#69413e}
+.medical-guidance-alert .medical-facility-list{border-color:#ecc5c1;box-shadow:none}
+.medical-guidance-alert .medical-facility-search-heading .primary{border-color:#a93f37;background:#a93f37}
+.medical-guidance-alert .medical-facility-search-heading .primary:hover{border-color:#8d3029;background:#8d3029}
 .factor-panel{margin-top:24px;padding:22px 24px;border:2px dashed #cdd9d5;border-radius:18px;background:#fbfdfc;display:grid;grid-template-columns:310px minmax(0,1fr);gap:22px;align-items:start}
 .factor-panel h3{font-size:25px;line-height:1.25;margin:0 0 8px}
 .factor-panel p{margin:0;color:var(--muted)}
@@ -253,28 +295,16 @@
 .current-risk-signal-card[data-risk="high"] .current-signal-status{border-color:#d7847d;background:#fff1ef;color:#8d3029}
 .current-risk-signal-card[data-risk="caution"] .current-signal-status{border-color:#dfbd54;background:#fff8df;color:#8a6400}
 .current-risk-signal-card[data-risk="low"] .current-signal-status{border-color:#82bdaa;background:var(--mint);color:var(--green-dark)}
-.glucose-map{display:grid;grid-template-columns:340px minmax(0,1fr);gap:34px;align-items:stretch;border:2px solid var(--line);border-radius:24px;background:#fff;padding:28px 34px;margin:30px 0}
-.glucose-character{min-height:320px;border-radius:26px;background:linear-gradient(145deg,#fff8ec,#eaf7f1);display:grid;place-items:center;overflow:hidden;position:relative;border:1px solid #d8e5df}
-.glucose-character img{width:96%;height:96%;object-fit:contain;animation:glucose-float 3.2s ease-in-out infinite;filter:drop-shadow(0 14px 18px rgba(18,52,43,.14))}
-.glucose-character svg{width:190px;height:190px;overflow:visible;animation:glucose-float 3.2s ease-in-out infinite}
-.glucose-shadow{fill:#b8d7cd;opacity:.6;animation:glucose-shadow 3.2s ease-in-out infinite;transform-origin:center}
-.glucose-drop{fill:#8edac4;stroke:var(--green);stroke-width:7;stroke-linejoin:round}
-.glucose-eye{fill:#0d4e45;transform-origin:center;animation:glucose-blink 4.8s infinite}
-.glucose-smile,.glucose-arm{fill:none;stroke:#0d4e45;stroke-width:8;stroke-linecap:round}
-.glucose-arm.left{animation:glucose-wave-left 2.8s ease-in-out infinite;transform-origin:50px 132px}
-.glucose-arm.right{animation:glucose-wave-right 2.8s ease-in-out infinite;transform-origin:170px 132px}
-.glucose-map-copy h3{font-size:32px;line-height:1.25;margin:0 0 10px}
-.glucose-map-copy>p:not(.eyebrow){color:var(--muted);margin:0 0 22px}
-.lifestyle-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.lifestyle-summary-grid article{border:1px solid var(--line);border-left:6px solid var(--green);border-radius:14px;background:#f8fbfa;padding:17px 18px}
-.lifestyle-summary-grid strong,.lifestyle-summary-grid span{display:block}
-.lifestyle-summary-grid strong{font-size:19px;margin-bottom:7px;color:var(--ink)}
-.lifestyle-summary-grid span{font-size:16px;color:var(--muted);line-height:1.55}
-@keyframes glucose-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-@keyframes glucose-shadow{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.82)}}
-@keyframes glucose-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
-@keyframes glucose-wave-left{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-7deg)}}
-@keyframes glucose-wave-right{0%,100%{transform:rotate(0deg)}50%{transform:rotate(7deg)}}
+.lifestyle-summary-card{border:2px solid var(--line);border-radius:20px;background:#fff;padding:22px 24px;margin:24px 0}
+.lifestyle-summary-heading{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.lifestyle-summary-heading img{flex:0 0 82px;width:82px;height:82px;border-radius:50%;object-fit:contain;background:var(--mint)}
+.lifestyle-summary-heading h3{font-size:26px;line-height:1.3;margin:2px 0 4px}
+.lifestyle-summary-heading p{margin:0}.lifestyle-summary-heading p:last-child{color:var(--muted);font-size:16px}
+.lifestyle-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.lifestyle-summary-toggle{width:100%;min-height:64px;padding:12px 10px;border:1px solid #c7d7d2;border-radius:14px;background:#fff;color:var(--ink);font-size:19px;font-weight:900;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(25,69,57,.05);transition:border-color .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
+.lifestyle-summary-toggle:hover{border-color:#7ea99d;background:#f5faf8}.lifestyle-summary-toggle:focus-visible{outline:4px solid #bce6dc;outline-offset:2px}.lifestyle-summary-toggle[aria-expanded="true"]{border-color:var(--green);background:var(--green);color:#fff;box-shadow:0 6px 16px rgba(25,92,74,.18)}
+.lifestyle-summary-details{margin-top:12px}
+.lifestyle-summary-panel{padding:20px 22px;border:1px solid #c7d7d2;border-radius:14px;background:#f6faf8;color:#40534d}.lifestyle-summary-panel p{margin:0;font-size:17px;line-height:1.65}.lifestyle-summary-panel p+p{margin-top:14px;padding-top:14px;border-top:1px solid #d9e4e0}
 .correction-summary{border:2px solid #e37166;border-radius:16px;background:#fff8f6;padding:24px;margin:28px 0}
 .correction-summary h3{font-size:30px;margin:0 0 8px}
 .correction-summary>p:not(.eyebrow){color:var(--muted);margin:0 0 16px}
@@ -376,14 +406,15 @@
 
 @media(max-width:1000px){.eligibility-grid{grid-template-columns:1fr}.eligibility-card{min-height:auto}.eligibility-card .single-line-copy{white-space:normal}.eligibility-profile-fields{grid-template-columns:1fr}.eligibility-actions{flex-direction:column-reverse;align-items:stretch}.eligibility-actions .primary,.eligibility-actions .secondary{width:100%}.branch-result-grid{grid-template-columns:1fr}.branch-result .actions{flex-direction:column-reverse}.branch-result .actions button{width:100%}.status-demo-panel button{flex:1 1 30%}}
 @media(max-width:1000px){.eligibility-card{padding:28px 26px}.eligibility-card legend,.eligibility-card h3{font-size:26px}.eligibility-card p{font-size:20px}.segmented-choice{grid-template-columns:1fr}.segmented-choice span{min-height:68px;font-size:22px;padding:16px 20px}}
+@media(max-width:1000px){.urgent-title-row .emergency-questionnaire-open{width:100%;min-width:0;margin:4px 0 0}.emergency-questionnaire-modal{align-items:flex-end;padding:10px}.emergency-questionnaire-modal-card{max-height:calc(100vh - 20px);padding:28px 18px 22px;border-radius:22px 22px 0 0}.emergency-stage{padding:22px 18px}.emergency-symptom-list{grid-template-columns:1fr}.emergency-summary-choices{grid-template-columns:1fr}.emergency-questionnaire-modal-actions{grid-template-columns:1fr}.emergency-guidance-actions{grid-template-columns:1fr}.emergency-do-not-feed{grid-column:auto}}
 @media(max-width:1000px){.challenge-grid,.challenge-detail-grid{grid-template-columns:1fr}.challenge-card span{min-height:auto}#challenge-list{grid-auto-rows:auto}#challenge-list .challenge-card span{height:auto}.challenge-category-heading{align-items:flex-start}.challenge-category-card{min-height:160px}.rag-challenge-controls,.rag-challenge-draft{grid-template-columns:1fr}.rag-challenge-draft button{grid-column:auto;grid-row:auto;width:100%}.rag-challenge-candidate-grid{grid-template-columns:1fr}.rag-challenge-candidate-card{min-height:0}.rag-challenge-selection-actions{align-items:stretch;flex-direction:column}.rag-challenge-selection-actions .primary{width:100%}}
 @media(max-width:1000px){.returning-route-grid{grid-template-columns:1fr}.returning-route{min-height:auto}.dashboard-account-actions{align-items:stretch;flex-direction:column}.dashboard-account-buttons{width:100%;flex-direction:column}.dashboard-account-buttons button{width:100%}.dashboard-exit-actions{flex-direction:column-reverse}.dashboard-exit-actions button{width:100%}}
 @media(max-width:1000px){.walking-level-grid{grid-template-columns:1fr}}
 @media(max-width:1000px){.daily-record-card{grid-template-columns:48px minmax(0,1fr);align-items:flex-start}.daily-record-icon{width:48px;height:48px}.daily-record-card .daily-record-open{grid-column:1/-1;width:100%}.record-modal{align-items:flex-end;padding:12px}.record-modal-card{border-radius:22px 22px 0 0;padding:30px 22px 24px}.record-modal-actions{grid-template-columns:1fr}.photo-upload-box{min-height:150px}}
-@media(max-width:1000px){.risk-confirm-main,.factor-panel,.glucose-map{grid-template-columns:1fr}.risk-legend{grid-template-columns:1fr}.risk-confirm-copy .primary{width:100%}.lifestyle-summary-grid,.scenario-grid{grid-template-columns:1fr}}
-@media(max-width:1000px){.glucose-map{grid-template-columns:1fr}.glucose-character{min-height:280px}.glucose-character img{width:96%;height:260px}.prediction-mascot{width:132px;height:132px}}
+@media(max-width:1000px){.risk-confirm-main,.factor-panel{grid-template-columns:1fr}.risk-legend{grid-template-columns:1fr}.risk-confirm-copy .primary{width:100%}.scenario-grid{grid-template-columns:1fr}}
+@media(max-width:1000px){.prediction-mascot{width:132px;height:132px}}
 @media(max-width:1000px){.health-input-panel.two-column,.lifestyle-question-grid,.review-grid,.prediction-status-track{grid-template-columns:1fr}.smoking-status-card,.exercise-detail-card{grid-column:auto}.exercise-detail-grid{grid-template-columns:1fr}.health-input-panel .actions{flex-direction:column-reverse}.health-input-panel .actions button{width:100%}.prediction-status-card{padding:28px 22px}}
-@media(prefers-reduced-motion:reduce){.glucose-character img,.glucose-character svg,.glucose-shadow,.glucose-eye,.glucose-arm,.prediction-mascot{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.prediction-mascot{animation:none!important}}
 @media(forced-colors:active){.age-risk-signal-track img{border:3px solid CanvasText}.forecast-status-badge,.scenario-card,.uncertainty-panel,.risk-traffic-light,.traffic-signal i{border:2px solid CanvasText}.current-risk-signal-card[data-risk="high"] .traffic-signal.high,.current-risk-signal-card[data-risk="caution"] .traffic-signal.caution,.current-risk-signal-card[data-risk="low"] .traffic-signal.low{outline:4px solid Highlight;outline-offset:3px}}
 
 /* 모바일 헤더 보정: 서비스명이 "간당 / 간당"처럼 줄바꿈되지 않도록 유지 */
@@ -637,9 +668,7 @@
   .lifestyle-question-grid,
   .review-grid,
   .branch-result-grid,
-  .factor-panel,
-  .glucose-map,
-  .lifestyle-summary-grid{
+  .factor-panel{
     grid-template-columns:1fr!important;
     gap:16px;
   }
@@ -659,7 +688,7 @@
   .choice-block,
   .risk-confirm-card,
   .factor-panel,
-  .glucose-map,
+  .lifestyle-summary-card,
   .walking-level-picker{
     padding:20px;
     border-radius:16px;
@@ -795,7 +824,7 @@
   }
 
   .risk-confirm-copy h3,
-  .glucose-map-copy h3{
+  .lifestyle-summary-heading h3{
     font-size:26px;
   }
 
@@ -804,15 +833,11 @@
     gap:8px;
   }
 
-  .glucose-character{
-    min-height:240px;
-  }
-
-  .glucose-character img{
-    width:100%;
-    height:230px;
-    object-fit:contain;
-  }
+  .lifestyle-summary-heading{align-items:flex-start}
+  .lifestyle-summary-heading img{flex-basis:68px;width:68px;height:68px}
+  .lifestyle-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .lifestyle-summary-toggle{min-height:58px;padding:10px 4px;font-size:16px}
+  .lifestyle-summary-panel{padding:17px 16px}
 
   .walking-level-grid,
   .challenge-grid,

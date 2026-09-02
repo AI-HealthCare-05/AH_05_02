@@ -54,6 +54,36 @@ def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
     assert script.count('$("#eligibility-guidance").hidden = true;') >= 4
 
 
+def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "응급상황 사전 문진표" in html
+    assert "1. 지금 긴급한 증상이 있나요?" in html
+    assert 'id="open-emergency-questionnaire"' in html
+    assert 'role="dialog" aria-modal="true"' in html
+    assert "문진 결과 적용하기" in html
+    assert "이 문진은 당뇨병을 진단하기 위한 검사가 아닙니다." in html
+    assert 'name="urgent-symptom"' not in html
+    assert 'name="same-day-symptom"' not in html
+    assert html.count('name="urgent-summary"') == 3
+    assert html.count('name="same-day-summary"') == 3
+    assert "증상이 있습니다" in html
+    assert "증상이 없습니다" in html
+    assert "잘 모르겠습니다" in html
+    assert "선택한 증상이 없습니다." not in html
+    assert "심한 가슴 통증, 숨쉬기 매우 어려움, 의식이 흐려지는 등의 증상을 확인해 주세요." not in html
+    assert "119에 전화하기" in html
+    assert "현재 위치 확인하기" in html
+    assert "주변 응급실 보기" in html
+    assert "가까운 의료기관 찾기" in html
+    assert "전화 상담 가능한 기관 보기" in html
+    assert "의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요." in html
+    assert "SAME_DAY_MEDICAL_ATTENTION" in script
+    assert 'has_urgent_warning_sign: false' in script
+    assert 'params.get("preview") !== "emergency-questionnaire"' in script
+
+
 def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
@@ -295,6 +325,37 @@ def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> No
     assert 'button.classList.toggle("active", active)' in script
     assert "function renderChallengeChoices()" in script
     assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
+
+
+def test_lifestyle_summary_uses_expandable_cards_without_result_feedback_form() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert html.count('class="lifestyle-summary-toggle"') == 4
+    assert html.count('aria-expanded="false"') >= 4
+    assert 'id="feedback-form"' not in html
+    assert "결과 안내가 이해하기 쉬웠나요?" not in html
+    assert '$("#lifestyle-summary-grid")?.addEventListener("click"' in script
+    assert 'button.setAttribute("aria-expanded", String(expanded))' in script
+
+
+def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+    assert 'id="medical-guidance-detail" class="notice safety medical-guidance-alert"' in html
+    assert html.index('id="medical-guidance-detail"') > html.index('id="lifestyle-map-title"')
+    assert html.index('id="medical-guidance-detail"') > html.index('id="risk-forecast-panel"')
+    assert 'next: "검사·상담 안내 보기"' in script
+    assert '$("#medical-guidance-detail").hidden = true;' in script
+    assert '$("#medical-guidance-detail").hidden = false;' in script
+    assert 'const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();' in script
+    assert 'displayedRisk === "high"' in script
+    assert ".notice.safety.medical-guidance-alert" in styles
+    assert "border-left:8px solid #b83f36" not in styles
+    assert "border:2px solid #d35f55;border-radius:20px" in styles
+    assert ".medical-guidance-alert>span{background:#b83f36;color:#fff}" in styles
 
 
 def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> None:

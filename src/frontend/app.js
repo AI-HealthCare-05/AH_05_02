@@ -216,12 +216,21 @@ const predictionFailureGuidance = {
 
 const eligibilityGuidance = {
   URGENT_MEDICAL_ATTENTION: {
-    code: "E03", title: "즉시 의료 확인이 필요합니다",
-    message: "급한 경고 증상이 있으면 온라인 위험 분석을 진행하지 않습니다.",
-    reasonTitle: "긴급 증상 확인",
-    reason: "심한 가슴 통증, 호흡 곤란, 의식 저하처럼 즉시 확인이 필요한 증상을 선택했습니다.",
-    action: "지체하지 말고 119 또는 가까운 응급의료기관에 연락하세요.",
-    primaryLabel: "안내 확인하고 종료",
+    code: "E03", title: "즉시 도움이 필요합니다",
+    message: "지금은 당뇨 위험도 예측보다 즉시 도움을 받는 것이 우선입니다.",
+    reasonTitle: "즉시 도움이 필요한 증상",
+    reason: "한 가지 이상의 즉시 도움이 필요한 증상을 선택했습니다.",
+    action: "직접 운전하거나 병원을 검색하며 기다리지 말고 119에 연락해 현재 위치와 증상을 알려주세요.",
+    primaryLabel: "119 안내 확인하기",
+    primaryStep: null,
+  },
+  SAME_DAY_MEDICAL_ATTENTION: {
+    code: "E04", title: "오늘 의료기관에 확인해 주세요",
+    message: "현재 증상은 온라인 위험도 예측만으로 판단하기 어렵습니다.",
+    reasonTitle: "당일 의료기관 확인이 필요한 증상",
+    reason: "한 가지 이상의 당일 확인이 필요한 증상을 선택했습니다.",
+    action: "예측과 챌린지를 중단하고 의료기관에 문의하거나 진료를 받아주세요. 증상이 심해지거나 이동하기 어려우면 119에 연락하세요.",
+    primaryLabel: "의료기관 안내 확인하기",
     primaryStep: null,
   },
   DIAGNOSED_DIABETES: {
@@ -298,15 +307,9 @@ function getRiskCategoryLabel(prediction) {
   return prediction?.risk_category_label || riskCategoryLabels[prediction?.risk_category] || "확인 필요";
 }
 
-function isHighRiskPrediction(prediction) {
-  return prediction?.risk_category === "high"
-    || prediction?.risk_category === "diabetes_screening_advised"
-    || prediction?.risk_category_label === "높음";
-}
-
 function showEligibilityGuidance(reasonCodes) {
   const priority = [
-    "URGENT_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
+    "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
   ];
   const reason = priority.find((code) => reasonCodes.includes(code));
@@ -331,6 +334,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-reason").textContent = guidance.reason;
   $("#eligibility-guidance-action").textContent = guidance.action;
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
+  const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
+  const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  $("#urgent-guidance-actions").hidden = !isUrgent;
+  $("#same-day-guidance-actions").hidden = !isSameDay;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -662,15 +670,94 @@ function getAgeFromBirth(birth) {
   return Number.isFinite(age) ? age : null;
 }
 
+function questionnaireAnswer(name) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || null;
+}
+
+function hasUrgentSymptoms() {
+  return questionnaireAnswer("urgent-summary") === "yes";
+}
+
+function isUrgentAnswerUncertain() {
+  return questionnaireAnswer("urgent-summary") === "unsure";
+}
+
+function hasSameDaySymptoms() {
+  return questionnaireAnswer("same-day-summary") === "yes";
+}
+
+function isSameDayAnswerUncertain() {
+  return questionnaireAnswer("same-day-summary") === "unsure";
+}
+
+function clearQuestionnaireAnswers(name) {
+  $$(`input[name="${name}"]`).forEach((input) => { input.checked = false; });
+}
+
+function syncEmergencyQuestionnaire() {
+  const canContinueToSameDay = questionnaireAnswer("urgent-summary") === "none";
+  $("#same-day-stage").hidden = !canContinueToSameDay;
+  if (!canContinueToSameDay) clearQuestionnaireAnswers("same-day-summary");
+}
+
+function emergencyScreeningSummary() {
+  if (hasUrgentSymptoms() || isUrgentAnswerUncertain()) return "즉시 도움 안내 대상";
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) return "당일 의료기관 확인 안내 대상";
+  if ($("#urgent-warning-yes").checked) return "긴급 증상 있음";
+  return "해당 증상 없음";
+}
+
+function openEmergencyQuestionnaire() {
+  $("#emergency-questionnaire-modal-message").hidden = true;
+  $("#emergency-questionnaire-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("#emergency-questionnaire-title").focus?.();
+}
+
+function closeEmergencyQuestionnaire() {
+  $("#emergency-questionnaire-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  $("#open-emergency-questionnaire").focus();
+}
+
+function applyEmergencyQuestionnaire() {
+  const modalMessage = $("#emergency-questionnaire-modal-message");
+  const summary = $("#emergency-questionnaire-summary");
+  modalMessage.hidden = true;
+
+  if (hasUrgentSymptoms() || isUrgentAnswerUncertain()) {
+    $("#urgent-warning-yes").checked = true;
+    summary.textContent = "문진 결과: 즉시 도움 안내가 필요한 증상을 확인했습니다.";
+  } else if (questionnaireAnswer("urgent-summary") !== "none") {
+    modalMessage.textContent = "1단계 문항을 읽고 증상 여부를 선택해 주세요.";
+    modalMessage.hidden = false;
+    return;
+  } else if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) {
+    $("#urgent-warning-no").checked = true;
+    summary.textContent = "문진 결과: 오늘 의료기관 확인이 필요한 증상을 확인했습니다.";
+  } else if (questionnaireAnswer("same-day-summary") === "none") {
+    $("#urgent-warning-no").checked = true;
+    summary.textContent = "문진 결과: 해당 증상이 없습니다.";
+  } else {
+    modalMessage.textContent = "2단계 문항을 읽고 증상 여부를 선택해 주세요.";
+    modalMessage.hidden = false;
+    return;
+  }
+
+  summary.hidden = false;
+  closeEmergencyQuestionnaire();
+}
+
 function getLocalEligibilityResult() {
   const age = getAgeFromBirth($("#eligibility-birth-date").value);
   const reasonCodes = [];
-  if ($("#urgent-warning-yes").checked) reasonCodes.push("URGENT_MEDICAL_ATTENTION");
+  if ($("#urgent-warning-yes").checked || hasUrgentSymptoms() || isUrgentAnswerUncertain()) reasonCodes.push("URGENT_MEDICAL_ATTENTION");
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) reasonCodes.push("SAME_DAY_MEDICAL_ATTENTION");
   if (Number.isFinite(age) && age < 14) reasonCodes.push("UNDER_MINIMUM_SERVICE_AGE");
   if (Number.isFinite(age) && age >= 14 && age < 19) reasonCodes.push("CHALLENGE_ONLY_AGE");
   if ($("#diagnosed-diabetes-yes").checked) reasonCodes.push("DIAGNOSED_DIABETES");
   if (Number.isFinite(age) && age >= 19 && age < 45) reasonCodes.push("MODEL_AGE_OUT_OF_RANGE");
-  const safetyBlocked = reasonCodes.some((code) => code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES");
+  const safetyBlocked = reasonCodes.some((code) => ["URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES"].includes(code));
   return {
     age,
     service_eligible: Number.isFinite(age) && age >= 19,
@@ -698,7 +785,7 @@ function renderHealthReview() {
     ["생년월일", $("#eligibility-birth-date").value || "-"],
     ["현재 만 나이", currentAgeLabel()],
     ["당뇨병 진단 여부", $("#diagnosed-diabetes-yes").checked ? "진단받음" : "진단받지 않음"],
-    ["긴급 경고 증상", $("#urgent-warning-yes").checked ? "있음" : "없음"],
+    ["응급상황 사전 문진", emergencyScreeningSummary()],
   ]);
   $("#review-health").innerHTML = dlRows([
     ["공복혈당", $("#fasting-glucose").value ? `${$("#fasting-glucose").value} mg/dL` : "입력 안 함"],
@@ -992,7 +1079,7 @@ function updateResultConfirmation(prediction = state.prediction || {}, approvedO
     riskMascot.src = content.mascot;
     riskMascot.alt = content.mascotAlt;
   }
-  $("#medical-guidance-detail").hidden = risk !== "high";
+  $("#medical-guidance-detail").hidden = true;
   const challengeButton = $("#to-challenges");
   if (challengeButton) challengeButton.textContent = content.next;
 }
@@ -1104,19 +1191,31 @@ function updateLifestyleSummary() {
   const exercise = boolLabel(selectedRadioValue("regular-exercise"));
   if (!$("#summary-meals")) return;
   $("#summary-meals").textContent = mealCount
-    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요. 규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요.`
-    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요. 다음 입력 때 함께 점검해요.";
+    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요.`
+    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요.";
+  $("#summary-meals-action").textContent = mealCount
+    ? "규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요."
+    : "다음 입력 때 식사 리듬을 함께 점검해요.";
   $("#summary-activity").textContent = exercise === "예"
-    ? "규칙적인 운동을 하고 있어요. 지금의 활동 습관을 무리 없이 유지하는 방향이 좋아요."
-    : "규칙적인 운동을 하지 않는다고 기록했어요. 짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
+    ? "규칙적인 운동을 하고 있다고 기록했어요."
+    : "규칙적인 운동을 하지 않는다고 기록했어요.";
+  $("#summary-activity-action").textContent = exercise === "예"
+    ? "지금의 활동 습관을 무리 없이 유지해 보세요."
+    : "짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
   $("#summary-metabolic").textContent = smokingStatus === "current" || drinker === "예"
-    ? "흡연·음주 같은 생활습관과 신체 입력값을 함께 보며 점검할 수 있어요."
+    ? "흡연·음주와 관련된 생활습관 기록이 있어요."
     : smokingStatus === "former"
-    ? "과거 흡연 이력과 신체·검진 입력값을 함께 참고해 생활습관을 점검해요."
-    : "신체·검진 입력값은 위험 판정이 아니라 생활습관을 점검하는 참고 신호로 확인해요.";
+    ? "과거 흡연 이력이 기록되어 있어요."
+    : "입력한 생활습관과 신체·검진 정보를 확인했어요.";
+  $("#summary-metabolic-action").textContent = smokingStatus === "current" || drinker === "예"
+    ? "현재 기록을 바탕으로 바꾸기 쉬운 생활습관부터 점검해요."
+    : "이 정보는 위험 판정이 아니라 생활습관 점검을 위한 참고 신호예요.";
   $("#summary-checkup").textContent = normalizeRiskKey() === "high"
-    ? "높음 범주에서는 생활습관 실천보다 검사·의료기관 상담 안내를 먼저 확인해요."
-    : "위험 범주가 낮거나 주의여도 정기 검진과 기록을 이어가는 것이 중요해요.";
+    ? "현재 위험 신호가 높음으로 확인되었어요."
+    : "현재 위험 신호와 관계없이 정기적인 확인이 필요해요.";
+  $("#summary-checkup-action").textContent = normalizeRiskKey() === "high"
+    ? "챌린지보다 검사·의료기관 상담 안내를 먼저 확인해 주세요."
+    : "정기 검진과 생활습관 기록을 이어가 주세요.";
 }
 
 function syncLifestyleAvatar() {
@@ -1372,8 +1471,7 @@ function renderPrediction(prediction, factors) {
   $("#risk-confirm-card").hidden = false;
   $("#result-unavailable").hidden = canDisplayRisk;
   $("#development-preview-notice").hidden = !developmentPreviewRisk;
-  const isHighRisk = canDisplayRisk && isHighRiskPrediction(displayPrediction);
-  $("#medical-guidance-detail").hidden = !isHighRisk;
+  $("#medical-guidance-detail").hidden = true;
   updateResultConfirmation(displayPrediction, canDisplayRisk);
   renderAgeRiskForecast(prediction, isApprovedRisk);
   updateLifestyleSummary();
@@ -2361,9 +2459,27 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#eligibility-guidance").hidden = true;
   const urgentAnswer = document.querySelector("input[name='urgent-warning']:checked");
+  if (!urgentAnswer) {
+    showMessage("긴급 증상 여부를 선택해 주세요. 판단하기 어렵다면 ‘증상 자세히 확인하기’를 이용할 수 있습니다.");
+    return;
+  }
+  if (urgentAnswer.value === "yes" || hasUrgentSymptoms() || isUrgentAnswerUncertain()) {
+    showEligibilityGuidance(["URGENT_MEDICAL_ATTENTION"]);
+    $("#eligibility-guidance-reason").textContent = isUrgentAnswerUncertain()
+      ? "증상 여부를 확실히 판단하기 어렵다고 답했습니다."
+      : "긴급한 증상이 있다고 답했습니다.";
+    return;
+  }
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) {
+    showEligibilityGuidance(["SAME_DAY_MEDICAL_ATTENTION"]);
+    $("#eligibility-guidance-reason").textContent = isSameDayAnswerUncertain()
+      ? "당일 확인이 필요한 증상인지 판단하기 어렵다고 답했습니다."
+      : "당일 확인이 필요한 증상이 있다고 답했습니다.";
+    return;
+  }
   const diagnosisAnswer = document.querySelector("input[name='diabetes-diagnosis']:checked");
-  if (!urgentAnswer || !diagnosisAnswer) {
-    showMessage("긴급 증상 여부와 당뇨병 진단 여부를 모두 선택해 주세요.");
+  if (!diagnosisAnswer) {
+    showMessage("당뇨병 진단 여부를 선택해 주세요.");
     return;
   }
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
@@ -2379,7 +2495,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
       : await api("/eligibility-checks", { method: "POST", body: JSON.stringify({
         birth_date: $("#eligibility-birth-date").value,
         has_diabetes_diagnosis: diagnosisAnswer.value === "yes",
-        has_urgent_warning_sign: urgentAnswer.value === "yes",
+        has_urgent_warning_sign: false,
         population_in_scope: true,
       }) });
     syncReturningEligibilityState(result);
@@ -2404,6 +2520,26 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
 });
 $("#eligibility-form").addEventListener("change", () => {
   $("#eligibility-guidance").hidden = true;
+});
+$$('input[name="urgent-summary"], input[name="same-day-summary"]').forEach((input) => {
+  input.addEventListener("change", syncEmergencyQuestionnaire);
+});
+$$('input[name="urgent-warning"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    clearQuestionnaireAnswers("urgent-summary");
+    clearQuestionnaireAnswers("same-day-summary");
+    $("#emergency-questionnaire-summary").hidden = true;
+    syncEmergencyQuestionnaire();
+  });
+});
+$("#open-emergency-questionnaire").addEventListener("click", openEmergencyQuestionnaire);
+$$('.emergency-questionnaire-close').forEach((button) => button.addEventListener("click", closeEmergencyQuestionnaire));
+$("#apply-emergency-questionnaire").addEventListener("click", applyEmergencyQuestionnaire);
+$("#emergency-questionnaire-modal").addEventListener("click", (event) => {
+  if (event.target.id === "emergency-questionnaire-modal") closeEmergencyQuestionnaire();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
 });
 $("#diagnosis-help-toggle").addEventListener("click", (event) => {
   const help = $("#diagnosis-help");
@@ -2430,6 +2566,26 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     $("#submit-analysis").textContent = "저장하고 현재 건강 신호 확인";
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
+});
+$("#confirm-current-location")?.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    showMessage("이 브라우저에서는 현재 위치를 확인할 수 없습니다. 위치 확인 없이도 119에 전화할 수 있습니다.");
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    () => showMessage("현재 위치를 확인했습니다. 주변 응급실 검색 연결에 사용할 수 있습니다.", "success"),
+    () => showMessage("위치 권한을 허용하지 않아도 119에 전화할 수 있습니다."),
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+  );
+});
+$("#find-nearby-emergency")?.addEventListener("click", () => {
+  showMessage("주변 응급실 검색은 보조 기능입니다. 연결을 준비하는 동안 위급하면 바로 119에 연락해 주세요.");
+});
+$("#find-same-day-medical")?.addEventListener("click", () => {
+  showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
+});
+$("#find-phone-consultation")?.addEventListener("click", () => {
+  showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
 });
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
@@ -2540,24 +2696,22 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
-$("#feedback-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!state.predictionId) return showMessage("피드백을 연결할 분석 결과가 없습니다.");
-  try {
-    await api("/feedback", { method: "POST", body: JSON.stringify({
-      context_type: "prediction",
-      prediction_id: state.predictionId,
-      rating: Number($("#feedback-rating").value),
-      comment: $("#feedback-comment").value || null,
-    }) });
-    showMessage("의견을 저장했습니다.", "success");
-  } catch (error) { showMessage(error.message); }
+$("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".lifestyle-summary-toggle");
+  if (!toggle) return;
+  const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
+  $$(".lifestyle-summary-toggle").forEach((button) => {
+    const panel = $(`#${button.getAttribute("aria-controls")}`);
+    const expanded = button === toggle && shouldOpen;
+    button.setAttribute("aria-expanded", String(expanded));
+    if (panel) panel.hidden = !expanded;
+  });
 });
 $("#to-challenges").addEventListener("click", async () => {
-  if (!state.currentHealthOnly && normalizeRiskKey() === "high") {
+  const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();
+  if (!state.currentHealthOnly && displayedRisk === "high") {
     $("#medical-guidance-detail").hidden = false;
     $("#medical-guidance-detail").scrollIntoView({ behavior: "smooth", block: "center" });
-    showMessage("높음 범주에서는 검사·의료기관 상담 안내를 먼저 확인해 주세요.", "success");
     return;
   }
   try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }
@@ -3252,10 +3406,27 @@ function resumeForecastPreview() {
   setForecastRiskPreview("caution");
 }
 
+function resumeEmergencyQuestionnairePreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "emergency-questionnaire") return;
+  if (!isDemoEnvironment()) return;
+
+  state.token = "local-demo-token";
+  state.navigationHistory = [1, 2, 3];
+  [1, 2, 3].forEach((step) => state.visitedSteps.add(step));
+  $("#eligibility-birth-date").value = "1960-05-12";
+  $("#gender").value = "FEMALE";
+  $("#diagnosed-diabetes-no").checked = true;
+  syncEmergencyQuestionnaire();
+  showStep(3, { recordHistory: false });
+}
+
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 syncExerciseDetails();
+syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 resumeFromForest();
 resumeReturningPreview();
 resumeForecastPreview();
+resumeEmergencyQuestionnairePreview();
