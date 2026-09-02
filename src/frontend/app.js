@@ -1,4 +1,4 @@
-const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null };
+const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, sharedGroups: [], forestGroupId: null, forestCatalog: null, forestHome: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -269,9 +269,11 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
+  if (name === "forest") loadForestWorkspace().catch((error) => showMessage(error.message));
 }
 async function loadSharedGroups() {
   const result = await api("/shared-challenge-groups");
+  state.sharedGroups = result.items;
   $("#shared-group-list").innerHTML = result.items.length ? result.items.map((group) => {
     const me = group.members.find((member) => member.is_me);
     const partner = group.members.find((member) => !member.is_me && member.status === "active");
@@ -280,6 +282,73 @@ async function loadSharedGroups() {
       : partner ? `<button class="text-button cheer-shared" data-id="${group.group_id}" data-user="${partner.user_id}" type="button">응원 보내기</button>` : "";
     return `<article class="challenge-card"><span><strong>${escapeHtml(group.title)}</strong><small>${escapeHtml(group.common_goal)}</small><small>참여자 ${group.members.length}명 · 수행 상태만 공유</small>${action}</span></article>`;
   }).join("") : `<p class="lead">아직 공동 챌린지가 없습니다.</p>`;
+  const activeGroups = result.items.filter((group) => group.members.some((member) => member.is_me && member.status === "active"));
+  const selected = state.forestGroupId || Number($("#forest-group-select").value) || activeGroups[0]?.group_id;
+  $("#forest-group-select").innerHTML = activeGroups.length
+    ? activeGroups.map((group) => `<option value="${group.group_id}" ${group.group_id === selected ? "selected" : ""}>${escapeHtml(group.title)}</option>`).join("")
+    : `<option value="">공동 챌린지를 먼저 만들어 주세요</option>`;
+  state.forestGroupId = selected || null;
+}
+
+const forestObjectIcons = { sunflower: "🌻", bench: "🪵", mushroom: "🍄", rabbit: "🐇" };
+
+function forestOptions(items, selected, allowedCodes = null) {
+  return items
+    .filter((item) => !allowedCodes || allowedCodes.has(item.code))
+    .map((item) => `<option value="${item.code}" ${item.code === selected ? "selected" : ""}>${escapeHtml(item.name)}</option>`)
+    .join("");
+}
+
+async function loadForestCatalog() {
+  if (!state.forestCatalog) state.forestCatalog = await api("/forest/catalog");
+  return state.forestCatalog;
+}
+
+function renderForest(home) {
+  state.forestHome = home;
+  state.forestGroupId = home.group_id;
+  $("#forest-empty").hidden = true;
+  $("#forest-content").hidden = false;
+  $("#forest-name").textContent = home.name;
+  $("#forest-carrot-balance").textContent = home.me.carrot_balance;
+  $("#forest-progress-count").textContent = `${home.today.completed}/${home.today.target}`;
+  $("#forest-progress-bar").style.width = `${home.today.target ? Math.min(100, home.today.completed / home.today.target * 100) : 0}%`;
+  $("#forest-member-list").innerHTML = home.members.map((member) => `<li><span>${member.today_completed >= member.today_target ? "✅" : "🌱"}</span><div><strong>${escapeHtml(member.display_name)}</strong><small>오늘 ${member.today_completed}/${member.today_target} 완료</small></div></li>`).join("");
+  const rewardButton = $("#forest-reward");
+  rewardButton.disabled = !home.today.group_reward_ready || home.today.group_reward_claimed;
+  rewardButton.textContent = home.today.group_reward_claimed ? "오늘 보상 받음" : home.today.group_reward_ready ? "보상 상자 열기" : "공동 목표 진행 중";
+  $("#forest-display-name").value = home.me.display_name;
+  $("#forest-hair").innerHTML = forestOptions(state.forestCatalog.hair, home.me.hair_code);
+  $("#forest-outfit").innerHTML = forestOptions(state.forestCatalog.outfits, home.me.outfit_code);
+  const allowedAccessories = new Set(["none", ...home.inventory]);
+  $("#forest-accessory").innerHTML = forestOptions(state.forestCatalog.accessories, home.me.accessory_code, allowedAccessories);
+  $("#forest-object-shop").innerHTML = state.forestCatalog.objects.map((item) => `<button class="secondary forest-object-buy" type="button" data-code="${item.code}"><span>${forestObjectIcons[item.code]}</span>${escapeHtml(item.name)} · 🥕 ${item.cost}</button>`).join("");
+  $("#forest-object-layer").innerHTML = home.objects.map((item) => `<span class="forest-placed-object" style="left:${item.position_x}%;top:${item.position_y}%" title="${item.object_code}">${forestObjectIcons[item.object_code]}</span>`).join("");
+}
+
+async function loadForest(groupId) {
+  try {
+    renderForest(await api(`/forest/spaces/${groupId}`));
+  } catch (error) {
+    if (!error.message.includes("아직 열리지")) throw error;
+    state.forestHome = null;
+    $("#forest-content").hidden = true;
+    $("#forest-empty").hidden = false;
+    $("#forest-empty strong").textContent = "이 그룹의 당근의 숲을 시작해 보세요";
+    $("#forest-empty p").textContent = "숲을 열면 오늘의 공동 진행률과 꾸미기 기능이 연결됩니다.";
+  }
+}
+
+async function loadForestWorkspace() {
+  await Promise.all([loadForestCatalog(), loadSharedGroups()]);
+  const groupId = Number($("#forest-group-select").value || state.forestGroupId);
+  if (!groupId) {
+    $("#forest-content").hidden = true;
+    $("#forest-empty").hidden = false;
+    return;
+  }
+  state.forestGroupId = groupId;
+  await loadForest(groupId);
 }
 async function loadNotifications() {
   const [preferences, notifications] = await Promise.all([api("/notification-preferences"), api("/notifications")]);
@@ -516,6 +585,55 @@ $("#shared-group-list").addEventListener("click", async (event) => {
     await loadSharedGroups();
   } catch (error) { showMessage(error.message); }
 });
+$("#forest-group-select").addEventListener("change", async (event) => {
+  const groupId = Number(event.target.value);
+  if (!groupId) return;
+  state.forestGroupId = groupId;
+  try { await loadForest(groupId); } catch (error) { showMessage(error.message); }
+});
+$("#forest-start").addEventListener("click", async () => {
+  const groupId = Number($("#forest-group-select").value);
+  if (!groupId) { showMessage("먼저 공동 챌린지를 만들어 주세요."); return; }
+  try {
+    const home = await api("/forest/spaces", { method: "POST", body: JSON.stringify({ group_id: groupId, name: "당근의 숲" }) });
+    renderForest(home);
+    showMessage("당근의 숲을 시작했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#forest-avatar-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await api("/forest/avatar", { method: "PATCH", body: JSON.stringify({
+      display_name: $("#forest-display-name").value,
+      hair_code: $("#forest-hair").value,
+      outfit_code: $("#forest-outfit").value,
+      accessory_code: $("#forest-accessory").value,
+    }) });
+    await loadForest(state.forestGroupId);
+    showMessage("아바타 코디를 저장했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#forest-reward").addEventListener("click", async () => {
+  try {
+    const reward = await api(`/forest/spaces/${state.forestGroupId}/rewards/group-daily`, { method: "POST" });
+    await loadForest(state.forestGroupId);
+    showMessage(`${reward.item_name ? `${reward.item_name}와 ` : ""}당근 ${reward.carrot_amount}개를 받았습니다.`, "success");
+  } catch (error) { showMessage(error.message); }
+});
+$("#forest-object-shop").addEventListener("click", async (event) => {
+  const button = event.target.closest(".forest-object-buy");
+  if (!button) return;
+  const count = state.forestHome?.objects.length || 0;
+  try {
+    await api(`/forest/spaces/${state.forestGroupId}/objects`, { method: "POST", body: JSON.stringify({
+      object_code: button.dataset.code,
+      position_x: 18 + (count * 17) % 66,
+      position_y: 72 - (count % 3) * 12,
+    }) });
+    await loadForest(state.forestGroupId);
+    showMessage("숲에 새 장식을 배치했습니다.", "success");
+  } catch (error) { showMessage(error.message); }
+});
 $("#wearable-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -586,3 +704,12 @@ $("#download-report").addEventListener("click", async () => {
   } catch (error) { showMessage(error.message); }
 });
 $("#restart").addEventListener("click", () => window.location.reload());
+
+const requestedView = new URLSearchParams(window.location.search);
+const requestedStep = Number(requestedView.get("step"));
+if (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 8) showStep(requestedStep);
+const requestedWorkspace = requestedView.get("workspace");
+const allowedRequestedWorkspaces = new Set(["home", "challenge", "report", "together", "forest", "tools"]);
+if (requestedStep === 8 && allowedRequestedWorkspaces.has(requestedWorkspace)) {
+  showWorkspace(requestedWorkspace, { moveFocus: false });
+}

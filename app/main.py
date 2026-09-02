@@ -42,6 +42,32 @@ async def home() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
+@app.get("/forest", include_in_schema=False)
+async def carrot_forest() -> FileResponse:
+    response = FileResponse(FRONTEND_DIR / "forest.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+async def forest_manifest() -> FileResponse:
+    response = FileResponse(
+        FRONTEND_DIR / "forest.webmanifest",
+        media_type="application/manifest+json",
+    )
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.get("/forest-sw.js", include_in_schema=False)
+async def forest_service_worker() -> FileResponse:
+    response = FileResponse(FRONTEND_DIR / "forest-sw.js", media_type="text/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/forest"
+    return response
+
+
 @app.get("/health", tags=["Health"])
 async def liveness() -> dict[str, str]:
     return {"status": "ok"}
