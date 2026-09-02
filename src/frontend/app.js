@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -1230,9 +1230,130 @@ async function findMedicalFacilitiesByRegion() {
   await requestMedicalFacilities({ lat: region.lat, lon: region.lon, areaLabel: region.label }, button);
 }
 
+function setEmergencyFacilityStatus(status, title, message) {
+  const box = $("#emergency-facility-status");
+  if (!box) return;
+  box.dataset.state = status;
+  box.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>`;
+}
+
+function renderEmergencyFacilities(payload = {}) {
+  const facilities = Array.isArray(payload.facilities) ? payload.facilities : [];
+  const results = $("#emergency-facility-results");
+  const meta = $("#emergency-facility-meta");
+  if (!results || !meta) return;
+  results.hidden = facilities.length === 0;
+  meta.hidden = false;
+  const radius = Number(payload.retrieved_radius_meters);
+  const checkedAt = medicalFacilityCheckedAt(payload.retrieved_at || payload.checked_at);
+  const area = String(payload.search_area_label || "").trim();
+  meta.innerHTML = `<p><strong>정보 출처</strong> 국립중앙의료원 응급의료기관 정보</p><p><strong>정보 확인일</strong> ${escapeHtml(checkedAt)}${area ? ` · ${escapeHtml(area)} 중심` : ""}</p>${payload.disclaimer ? `<p>${escapeHtml(payload.disclaimer)}</p>` : ""}${Number.isFinite(radius) ? `<p><strong>검색 반경</strong> ${escapeHtml(medicalFacilityDistance(radius))}</p>` : ""}`;
+  if (!facilities.length) {
+    setEmergencyFacilityStatus("empty", "검색 범위에서 응급의료기관을 찾지 못했어요", "위급하면 검색을 계속하지 말고 119에 연락해 주세요.");
+    return;
+  }
+  results.innerHTML = facilities.map((facility) => {
+    const address = facility.road_address || facility.address || "주소 정보 없음";
+    const phone = String(facility.phone || "").trim();
+    const phoneHref = phone.replace(/[^0-9+]/g, "");
+    const mapUrl = safeExternalUrl(facility.map_url);
+    return `<article class="medical-facility-card emergency-facility-card">
+      <div class="medical-facility-card-heading"><strong>${escapeHtml(facility.name || "응급의료기관")}</strong><span>${escapeHtml(medicalFacilityDistance(facility.distance_meters))}</span></div>
+      <p class="medical-facility-address">${escapeHtml(address)}</p>
+      <div class="facility-actions">
+        ${phone && phoneHref ? `<a class="secondary" href="tel:${escapeHtml(phoneHref)}">전화 ${escapeHtml(phone)}</a>` : `<span class="facility-action-unavailable">전화번호 없음</span>`}
+        ${mapUrl ? `<a class="secondary" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">주소·지도 보기</a>` : `<span class="facility-action-unavailable">지도 링크 없음</span>`}
+      </div>
+    </article>`;
+  }).join("");
+  setEmergencyFacilityStatus("done", `가까운 응급의료기관 ${facilities.length}곳을 찾았어요`, "기관 정보와 수용 가능 여부는 이동 전에 119 또는 해당 기관에 확인해 주세요.");
+}
+
+async function requestEmergencyFacilities({ lat, lon, areaLabel = "" }, button) {
+  const results = $("#emergency-facility-results");
+  const meta = $("#emergency-facility-meta");
+  if (results) results.hidden = true;
+  if (meta) meta.hidden = true;
+  const releaseBusy = setButtonBusy(button, "검색 중…");
+  setEmergencyFacilityStatus("loading", "가까운 응급의료기관을 찾고 있어요", "위급하면 결과를 기다리지 말고 119에 연락해 주세요.");
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "10000" });
+    const payload = await api(`/emergency-facilities/nearby?${params.toString()}`);
+    renderEmergencyFacilities({ ...payload, search_area_label: areaLabel });
+  } catch (error) {
+    setEmergencyFacilityStatus("failed", "응급의료기관 정보를 불러오지 못했어요", "위급하면 검색을 다시 시도하지 말고 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
+function currentBrowserPosition() {
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
+    enableHighAccuracy: false,
+    timeout: 10000,
+    maximumAge: 300000,
+  }));
+}
+
+async function confirmEmergencyLocation() {
+  const button = $("#confirm-current-location");
+  if (!navigator.geolocation) {
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    return;
+  }
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  try {
+    const position = await currentBrowserPosition();
+    state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+    setEmergencyFacilityStatus("permission", "현재 위치를 확인했어요", "주변 응급실 보기를 누르면 이 위치를 기준으로 검색합니다.");
+  } catch (error) {
+    const [title] = geolocationFailureCopy(error);
+    setEmergencyFacilityStatus("permission", title, "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
+async function findNearbyEmergencyFacilities() {
+  const button = $("#find-nearby-emergency");
+  if (!button) return;
+  if (state.lastKnownLocation) {
+    await requestEmergencyFacilities(state.lastKnownLocation, button);
+    return;
+  }
+  if (!navigator.geolocation) {
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    return;
+  }
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  let position;
+  try {
+    position = await currentBrowserPosition();
+    state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+  } catch (error) {
+    const [title] = geolocationFailureCopy(error);
+    setEmergencyFacilityStatus("permission", title, "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+  if (position) await requestEmergencyFacilities(state.lastKnownLocation, button);
+}
+
+async function findEmergencyFacilitiesByRegion() {
+  const button = $("#find-emergency-facilities-by-region");
+  const region = medicalRegionCenters[$("#emergency-region")?.value];
+  if (!button) return;
+  if (!region) {
+    setEmergencyFacilityStatus("empty", "지역을 선택해 주세요", "목록에서 찾고 싶은 지역을 먼저 선택해 주세요.");
+    $("#emergency-region")?.focus();
+    return;
+  }
+  await requestEmergencyFacilities({ lat: region.lat, lon: region.lon, areaLabel: region.label }, button);
+}
+
 function setForecastRiskPreview(risk) {
   const controls = $("#risk-preview-controls");
-  if (!controls || controls.hidden || !isLocalPreview()) return;
+  if (!controls || controls.hidden || !isDemoEnvironment()) return;
   updateResultConfirmation({ risk_category: risk }, true);
   $$('[data-risk-preview]').forEach((button) => {
     const selected = button.dataset.riskPreview === risk;
@@ -1526,6 +1647,7 @@ function renderPrediction(prediction, factors) {
     }).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   $("#risk-confirm-card").hidden = false;
+  $("#risk-preview-controls").hidden = !isDemoEnvironment();
   $("#result-unavailable").hidden = canDisplayRisk;
   $("#development-preview-notice").hidden = !developmentPreviewRisk;
   $("#medical-guidance-detail").hidden = true;
@@ -2493,14 +2615,10 @@ $("#signup-form").addEventListener("submit", async (event) => {
     const birthDate = $("#signup-birth-date").value;
     const gender = $("#signup-gender").value;
     await api("/auth/signup", { method: "POST", body: JSON.stringify({
-      email, password, terms_agreed: $("#personal-consent").checked,
+      email, password, gender, birth_date: birthDate,
     }) });
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
     state.token = login.access_token;
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
-      birthday: birthDate,
-      gender,
-    }) });
     await api("/consents", { method: "POST", body: JSON.stringify({ consent_item: "health_data", version: "1.0", is_agreed: $("#health-consent").checked }) });
     $("#eligibility-birth-date").value = birthDate;
     $("#gender").value = gender;
@@ -2542,7 +2660,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
   try {
     if (!isLocalPreview()) {
-      await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      await api("/users/me", { method: "PATCH", body: JSON.stringify({
         birthday: $("#eligibility-birth-date").value,
         gender: $("#gender").value,
       }) });
@@ -2624,20 +2742,9 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
 });
-$("#confirm-current-location")?.addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    showMessage("이 브라우저에서는 현재 위치를 확인할 수 없습니다. 위치 확인 없이도 119에 전화할 수 있습니다.");
-    return;
-  }
-  navigator.geolocation.getCurrentPosition(
-    () => showMessage("현재 위치를 확인했습니다. 주변 응급실 검색 연결에 사용할 수 있습니다.", "success"),
-    () => showMessage("위치 권한을 허용하지 않아도 119에 전화할 수 있습니다."),
-    { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
-  );
-});
-$("#find-nearby-emergency")?.addEventListener("click", () => {
-  showMessage("주변 응급실 검색은 보조 기능입니다. 연결을 준비하는 동안 위급하면 바로 119에 연락해 주세요.");
-});
+$("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
+$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
+$("#find-emergency-facilities-by-region")?.addEventListener("click", findEmergencyFacilitiesByRegion);
 $("#find-same-day-medical")?.addEventListener("click", () => {
   showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
 });
@@ -2706,10 +2813,11 @@ $("#health-form").addEventListener("submit", async (event) => {
         diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
         self_rated_health: $("#self-health").value, meal_count_yesterday: Number($("#meal-count").value),
         regular_exercise: selectedRadioValue("regular-exercise") === "true",
+        current_smoker: smokingStatus === "current",
         smoking_status: smokingStatus,
         exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
         exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
-        current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa_stage3_25features_v1",
+        current_drinker: selectedRadioValue("current-drinker") === "true",
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;

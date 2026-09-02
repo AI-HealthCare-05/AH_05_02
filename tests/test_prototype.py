@@ -76,6 +76,12 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "119에 전화하기" in html
     assert "현재 위치 확인하기" in html
     assert "주변 응급실 보기" in html
+    assert 'id="emergency-facility-search"' in html
+    assert 'id="emergency-region"' in html
+    assert 'id="find-emergency-facilities-by-region"' in html
+    assert "api(`/emergency-facilities/nearby?" in script
+    assert "renderEmergencyFacilities" in script
+    assert "국립중앙의료원 응급의료기관 정보" in script
     assert "가까운 의료기관 찾기" in html
     assert "전화 상담 가능한 기관 보기" in html
     assert "의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요." in html
@@ -172,7 +178,7 @@ def test_service_and_model_age_are_separately_explained() -> None:
     assert "만 45세 이상은 미래 발병 위험" in html
 
 
-def test_health_form_uses_rf25_smoking_status_contract() -> None:
+def test_health_form_keeps_current_backend_smoking_field_and_rf25_field() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
@@ -181,8 +187,8 @@ def test_health_form_uses_rf25_smoking_status_contract() -> None:
         assert f'value="{value}"' in html
     assert 'const smokingStatus = selectedRadioValue("smoking-status")' in script
     assert "smoking_status: smokingStatus" in script
-    assert 'current_smoker: smokingStatus === "current"' not in script
-    assert 'feature_schema_version: "klosa_stage3_25features_v1"' in script
+    assert 'current_smoker: smokingStatus === "current"' in script
+    assert 'feature_schema_version: "klosa_stage3_25features_v1"' not in script
 
 
 def test_health_form_uses_rf25_exercise_detail_contract() -> None:
@@ -277,11 +283,10 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'name: $("#display-name").value' not in script
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
-    assert 'email, password, terms_agreed: $("#personal-consent").checked' in script
-    assert "email, password, gender, birth_date: birthDate" not in script
-    assert 'api("/users/me/profile", { method: "PATCH"' in script
-    assert 'api("/users/me", { method: "PATCH"' not in script
-    assert "birthday: birthDate" in script
+    assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
+    assert "email, password, gender, birth_date: birthDate" in script
+    assert 'api("/users/me/profile", { method: "PATCH"' not in script
+    assert 'api("/users/me", { method: "PATCH"' in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
@@ -454,6 +459,19 @@ def test_local_model_preview_shows_category_without_exposing_numeric_score() -> 
     assert "developmentPreviewRiskCategory" in script
     assert "개발 확인용 위험 범주만 표시합니다." in script
     assert "job.development_preview_internal_score" not in script
+    assert '$("#risk-preview-controls").hidden = !isDemoEnvironment();' in script
+
+
+def test_medical_facility_ui_has_safe_empty_permission_and_failure_states() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="medical-region"' in html
+    assert 'id="find-medical-facilities-by-region"' in html
+    assert "위치 권한이 허용되지 않았어요" in script
+    assert "근처 의료기관을 찾지 못했어요" in script
+    assert "의료기관 정보를 불러오지 못했어요" in script
+    assert "정보 확인일" in script
 
 
 def test_signup_and_login_block_duplicate_requests_while_busy() -> None:

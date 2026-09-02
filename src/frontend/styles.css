@@ -88,6 +88,10 @@ body.modal-open{overflow:hidden}
 .emergency-guidance-actions a,.emergency-guidance-actions button{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;text-align:center;text-decoration:none}
 .emergency-guidance-actions .danger-link{border-color:#c34d43;color:#9c3029}
 .emergency-do-not-feed{grid-column:1/-1;margin:0;padding:16px 18px;border:1px solid #d4776f;border-radius:12px;background:#fff;color:#8e2f28!important;font-size:18px!important;font-weight:900}
+.emergency-facility-search{grid-column:1/-1;margin-top:0;text-align:left}
+.emergency-facility-search .medical-facility-status{border:1px solid #ebc0bc;background:#fff8f7}
+.emergency-facility-card{border-color:#ebc0bc}
+.emergency-facility-card .medical-facility-card-heading>span{background:#fff0ee;color:#8e2f28}
 .segmented-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:28px 0 12px}
 .segmented-choice label{position:relative;cursor:pointer}
 .segmented-choice input{position:absolute;opacity:0;inset:0}
