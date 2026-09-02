@@ -866,53 +866,51 @@ function showFuturePredictionResult() {
   else $("#current-health-result").hidden = true;
 }
 
-function updateResultConfirmation() {
+function updateResultConfirmation(prediction = state.prediction || {}, approvedOverride = null) {
   showFuturePredictionResult();
   const card = $("#risk-confirm-card");
   if (!card) return;
-  const risk = normalizeRiskKey();
+  const isApprovedRisk = approvedOverride ?? (
+    prediction.result_status === "approved"
+    && prediction.promotion_status === "approved"
+    && prediction.output_status !== "uncalibrated_research_probability_only"
+    && prediction.raw_probability_exposed !== true
+    && Boolean(prediction.risk_category)
+  );
+  const risk = isApprovedRisk ? normalizeRiskKey(prediction) : "pending";
   const content = {
     low: {
-      icon: "✓",
       label: "낮음",
-      short: "현재 위험이 낮은 범주",
-      title: "내일이 기준 미래 발병 위험 범주는 ‘낮음’입니다",
-      message: "이 결과만으로 당뇨병을 진단할 수 없습니다.",
-      action: "위험이 낮아도 정기검사와 생활습관 점검을 이어가세요.",
       next: "챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-low.png",
       mascotAlt: "좋은 습관을 이어가자고 응원하는 간당간당 캐릭터 혈당이",
     },
     caution: {
-      icon: "!",
       label: "주의",
-      short: "확인할 요인이 있는 범주",
-      title: "내일이 기준 미래 발병 위험 범주는 ‘주의’입니다",
-      message: "이 결과만으로 당뇨병을 진단할 수 없습니다.",
-      action: "확인이 필요한 위험 요인이 있을 수 있으니 입력 정보와 생활습관을 살펴보세요.",
       next: "챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-caution.png",
       mascotAlt: "확인할 요인을 살펴보자고 안내하는 간당간당 캐릭터 혈당이",
     },
     high: {
-      icon: "+",
       label: "높음",
-      short: "의료기관 확인이 우선",
-      title: "내일이 기준 미래 발병 위험 범주는 ‘높음’입니다",
-      message: "높은 위험 범주는 진단 결과가 아닙니다.",
-      action: "지금은 생활습관 챌린지보다 의료기관의 검사와 상담 안내를 먼저 확인해 주세요.",
       next: "검사·상담 안내 보기",
       mascot: "/static/assets/hyeoldangi-risk-high.png",
       mascotAlt: "검사와 상담을 먼저 확인하자고 안내하는 간당간당 캐릭터 혈당이",
     },
+    pending: {
+      label: "결과 준비 중",
+      next: "챌린지 보기",
+      mascot: "/static/assets/hyeoldangi-risk-low.png",
+      mascotAlt: "결과를 기다리며 응원하는 간당간당 캐릭터 혈당이",
+    },
   }[risk];
   card.dataset.risk = risk;
-  $("#risk-confirm-icon").textContent = content.icon;
   $("#risk-confirm-label").textContent = content.label;
-  $("#risk-confirm-short").textContent = content.short;
-  $("#risk-confirm-title").textContent = content.title;
-  $("#risk-confirm-message").textContent = content.message;
-  $("#risk-confirm-action").textContent = content.action;
+  const trafficLight = $("#risk-traffic-light");
+  if (trafficLight) trafficLight.setAttribute(
+    "aria-label",
+    risk === "pending" ? "미래 발병 위험 신호 결과 준비 중" : `미래 발병 위험 신호 ${content.label}`,
+  );
   const riskMascot = $("#risk-hyeoldangi");
   if (riskMascot) {
     riskMascot.src = content.mascot;
@@ -1126,6 +1124,15 @@ function forecastPayload(prediction = {}) {
   return prediction.age_risk_forecast || prediction.future_risk_forecast || prediction.risk_forecast || null;
 }
 
+function normalizeForecastSignal(value) {
+  const normalized = String(value || "").toLowerCase();
+  return ["low", "caution", "high"].includes(normalized) ? normalized : null;
+}
+
+function forecastSignalLabel(level) {
+  return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
+}
+
 function renderScenarioResult(key, scenario, approved) {
   const summary = $(`#scenario-${key}-summary`);
   const value = $(`#scenario-${key}-value`);
@@ -1148,7 +1155,8 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
     ? forecast.points.map((point) => ({
       label: String(point.display_label || point.age_label || "").trim(),
       value: approvedDisplayPercent(point.display_percent),
-    })).filter((point) => point.label && point.value !== null)
+      level: normalizeForecastSignal(point.signal_level || point.risk_category),
+    })).filter((point) => point.label && (point.level || point.value !== null))
     : [];
   const stateBox = $("#forecast-state");
   const chart = $("#age-risk-chart");
@@ -1175,20 +1183,28 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
       const item = document.createElement("div");
       item.className = "age-risk-point";
       const value = document.createElement("strong");
-      value.textContent = `${point.value}%`;
-      const bar = document.createElement("span");
-      bar.className = "age-risk-bar";
-      bar.setAttribute("aria-hidden", "true");
-      bar.style.setProperty("--forecast-value", `${point.value}%`);
-      const fill = document.createElement("i");
-      bar.append(fill);
+      value.textContent = point.level ? forecastSignalLabel(point.level) : `${point.value}%`;
+      const marker = document.createElement("span");
+      marker.setAttribute("aria-hidden", "true");
+      if (point.level) {
+        marker.className = "age-risk-signal-track";
+        marker.dataset.level = point.level;
+        const face = document.createElement("img");
+        face.src = `/static/assets/hyeoldangi-face-${point.level}.png`;
+        face.alt = "";
+        marker.append(face);
+      } else {
+        marker.className = "age-risk-bar";
+        marker.style.setProperty("--forecast-value", `${point.value}%`);
+        marker.append(document.createElement("i"));
+      }
       const label = document.createElement("small");
       label.textContent = point.label;
-      item.append(value, bar, label);
+      item.append(value, marker, label);
       fragment.append(item);
     });
     pointContainer.append(fragment);
-    chart.setAttribute("aria-label", `연령별 당뇨병 위험 전망 그래프. ${points.map((point) => `${point.label} ${point.value}%`).join(", ")}`);
+    chart.setAttribute("aria-label", `연령별 당뇨병 위험 전망 그래프. ${points.map((point) => `${point.label} ${point.level ? forecastSignalLabel(point.level) : `${point.value}%`}`).join(", ")}`);
   } else {
     chart.setAttribute("aria-label", "연령별 당뇨병 위험 전망 데이터가 아직 없습니다");
   }
@@ -1236,11 +1252,11 @@ function renderPrediction(prediction, factors) {
       return `<li><strong>${escapeHtml(factorName)}</strong><p>${escapeHtml(factorDescription)}</p></li>`;
     }).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
-  $("#risk-confirm-card").hidden = !isApprovedRisk;
+  $("#risk-confirm-card").hidden = false;
   $("#result-unavailable").hidden = isApprovedRisk;
   const isHighRisk = isApprovedRisk && isHighRiskPrediction(prediction);
   $("#medical-guidance-detail").hidden = !isHighRisk;
-  updateResultConfirmation();
+  updateResultConfirmation(prediction, isApprovedRisk);
   renderAgeRiskForecast(prediction, isApprovedRisk);
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
@@ -2119,7 +2135,7 @@ $$("[data-demo-status]").forEach((button) => button.addEventListener("click", ()
   renderPredictionStatus(button.dataset.demoStatus);
   showStep(5);
 }));
-$("#risk-factor-focus").addEventListener("click", () => {
+$("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 $("#feedback-form").addEventListener("submit", async (event) => {

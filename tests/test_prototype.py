@@ -65,7 +65,9 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "options.resultAvailable === true" in script
     assert 'factors?.status === "approved"' in script
     assert "factors?.shap_claimed === true" in script
-    assert '$("#risk-confirm-card").hidden = !isApprovedRisk' in script
+    assert '$("#risk-confirm-card").hidden = false' in script
+    assert 'id="risk-traffic-light" role="img"' in html
+    assert 'data-risk="pending"' in html
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
@@ -90,6 +92,10 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert 'forecast?.status === "approved"' in script
     assert "forecast?.public_display_approved === true" in script
     assert "approvedDisplayPercent" in script
+    assert "hyeoldangi-face-${point.level}.png" in script
+    assert ".age-risk-signal-track" in styles
+    for level in ("low", "caution", "high"):
+        assert (ROOT / f"src/frontend/assets/hyeoldangi-face-{level}.png").is_file()
     assert "임의 수치나 그래프를 만들지 않습니다." in script
     assert "renderAgeRiskForecast(prediction, isApprovedRisk)" in script
     assert "@media(forced-colors:active)" in styles
