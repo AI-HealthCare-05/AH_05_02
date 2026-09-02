@@ -2632,9 +2632,10 @@
   });
   [$("#wardrobe-list"), $("#storage-list")].forEach((carousel) => {
     carousel.addEventListener("wheel", (event) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
       event.preventDefault();
-      carousel.scrollLeft += event.deltaY;
+      carousel.scrollLeft += delta;
     }, { passive: false });
   });
 

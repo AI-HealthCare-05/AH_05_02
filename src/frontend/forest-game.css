@@ -170,6 +170,7 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 @media(max-width:620px){.stage-footer .asset-group{min-height:198px;max-height:198px}.stage-footer .asset-library-grid{height:auto}}
 
 /* v105 workspace: avatar rail owns wardrobe/storage; stage footer owns placed objects. */
+body{overflow-x:hidden}
 .workspace{grid-template-areas:"rail stage inspector"}
 .tool-rail{max-height:calc(100dvh - 92px);overflow-x:hidden;overflow-y:auto}
 .rail-assets{padding:10px;border:0;border-top:1px solid var(--line);border-radius:0;background:#fbfdfb;box-shadow:none}
@@ -184,6 +185,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .rail-assets .outfit-name-form{height:27px}.rail-assets .outfit-name-form input,.rail-assets .outfit-name-form button{min-height:27px;height:27px;padding:2px 4px;font-size:8px}
 .rail-assets #storage-list .storage-icon-item{flex:0 0 88px;width:88px;min-width:88px;height:108px;min-height:108px;padding:3px;aspect-ratio:auto;scroll-snap-align:start}
 .rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .storage-reward-cow{width:78px!important;height:78px!important}
+.rail-assets #storage-list{height:132px;max-height:132px;padding-bottom:14px;overflow-x:scroll;overflow-y:hidden;scrollbar-width:auto;scrollbar-color:#6f9e7d #e6eee8}
+.rail-assets #storage-list::-webkit-scrollbar{height:12px}.rail-assets #storage-list::-webkit-scrollbar-track{border-radius:999px;background:#e6eee8}.rail-assets #storage-list::-webkit-scrollbar-thumb{border:2px solid #e6eee8;border-radius:999px;background:#6f9e7d}.rail-assets #storage-list::-webkit-scrollbar-thumb:hover{background:#397451}
 .stage-footer.arcade-deck{grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr);grid-template-areas:"controls objects";align-items:stretch}
 .stage-footer .footer-objects{grid-area:objects;min-width:0;min-height:198px;max-height:198px;padding:10px;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:none}
 .stage-footer .footer-objects .panel-title{margin-bottom:7px}.stage-footer .footer-objects .panel-title h2{font-size:15px}.stage-footer .footer-objects .eyebrow{font-size:9px}
