@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v113" in worker
+    assert "gandang-carrot-forest-pwa-v114" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -461,7 +461,7 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'avatar: new Audio("/static/assets/avatar-studio-original.wav")' in game_script
     assert '(hour >= 20 || hour < 5)) return "night"' in game_script
     assert 'home: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
-    assert 'garden: new Audio("/static/assets/carrot-forest-original.wav")' in game_script
+    assert 'garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
     assert "musicEngine?.switchTo(sceneMusicName(scene))" in game_script
     assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
@@ -870,6 +870,7 @@ def test_avatar_rail_wardrobe_and_storage_use_single_row_wheel_carousels() -> No
     assert "storage-scroll-range" not in html
     assert "grid-auto-flow:column;grid-auto-columns:88px" in css
     assert "scrollbar-color:#4c8b60 #e6eee8" in css
+    assert ".rail-assets #wardrobe-list,.stage-footer .footer-objects .placed-list{scrollbar-width:thin" in css
     assert "function syncStorageScroller()" not in game_script
     assert "scroll-snap-type:x proximity" in css
     assert 'classList.toggle("is-wardrobe", view === "wardrobe")' in game_script

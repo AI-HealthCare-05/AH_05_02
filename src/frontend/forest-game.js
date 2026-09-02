@@ -737,7 +737,7 @@
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
         night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
         home: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
-        garden: new Audio("/static/assets/carrot-forest-original.wav"),
+        garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         avatar: new Audio("/static/assets/avatar-studio-original.wav"),
       };
       this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
