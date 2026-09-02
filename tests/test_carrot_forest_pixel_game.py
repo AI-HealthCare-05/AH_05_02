@@ -418,18 +418,17 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         "carrot-forest-original.wav",
         "peaceful-forest-samza-cc0.wav",
         "home-small-fire-cc0.wav",
-        "home-record-player-simple-loop-cc0.ogg",
         "avatar-forget-me-not-cc0.ogg",
-        "home-record-elfwood-nexon.mp3",
-        "home-record-untitled-hoon.mp3",
-        "home-record-bright-time-sam.mp3",
-        "home-record-warm-afternoon-hyuk.mp3",
+        "lp-our-home-v2.mp3",
+        "lp-warm-afternoon-v2.mp3",
+        "lp-bright-sam-v2.mp3",
+        "lp-untitled-v2.mp3",
     ):
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v118" in worker
+    assert "gandang-carrot-forest-pwa-v119" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -437,12 +436,12 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert "peaceful-forest-samza-cc0.wav" in worker
     assert "avatar-studio-original.wav" in worker
     assert "home-small-fire-cc0.wav" in worker
-    assert "home-record-player-simple-loop-cc0.ogg" in worker
     assert "avatar-forget-me-not-cc0.ogg" in worker
-    assert "home-record-elfwood-nexon.mp3" in worker
-    assert "home-record-untitled-hoon.mp3" in worker
-    assert "home-record-bright-time-sam.mp3" in worker
-    assert "home-record-warm-afternoon-hyuk.mp3" in worker
+    assert "lp-our-home-v2.mp3" in worker
+    assert "lp-warm-afternoon-v2.mp3" in worker
+    assert "lp-bright-sam-v2.mp3" in worker
+    assert "lp-untitled-v2.mp3" in worker
+    assert "home-record-" not in worker
     assert "reward-chest-success.mp3" in worker
 
 
@@ -475,10 +474,14 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg")' in game_script
     assert '(hour >= 20 || hour < 5)) return "night"' in game_script
     assert 'home: new Audio("/static/assets/home-small-fire-cc0.wav")' in game_script
-    assert 'homeRecordSimple: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg")' in game_script
-    assert 'homeRecordElfwood: new Audio("/static/assets/home-record-elfwood-nexon.mp3")' in game_script
+    assert 'homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3")' in game_script
+    assert 'homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3")' in game_script
+    assert 'homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3")' in game_script
+    assert 'homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3")' in game_script
+    assert 'homeRecordSimple' not in game_script
+    assert 'homeRecordElfwood' not in game_script
     assert 'garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
-    assert 'homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordSimple"' in game_script
+    assert 'homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome"' in game_script
     assert 'target === "record_player"' in game_script
     assert 'data-world-action="record_music"' in game_script
     assert 'data-world-action="record_off"' in game_script

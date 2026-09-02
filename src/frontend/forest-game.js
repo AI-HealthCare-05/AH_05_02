@@ -19,11 +19,10 @@
   const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
   const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
   const homeRecordCatalog = {
-    simple: { name: "Simple Menu", credit: "polosik · CC0", audioKey: "homeRecordSimple" },
-    elfwood: { name: "Elfwood", credit: "넥슨", audioKey: "homeRecordElfwood" },
-    untitled: { name: "무제", credit: "훈", audioKey: "homeRecordUntitled" },
-    bright: { name: "밝은 시간", credit: "샘", audioKey: "homeRecordBright" },
-    warm: { name: "따뜻한 오후", credit: "혁", audioKey: "homeRecordWarm" },
+    home: { name: "우리 집", audioKey: "homeRecordHome" },
+    warm: { name: "따뜻한 오후", audioKey: "homeRecordWarm" },
+    bright: { name: "밝은 샘", audioKey: "homeRecordBright" },
+    untitled: { name: "무제", audioKey: "homeRecordUntitled" },
   };
 
   function generateNickname() {
@@ -510,7 +509,7 @@
       fishing: false,
       petFedCount: 0,
       homeRecordPlaying: false,
-      homeRecordTrack: "simple",
+      homeRecordTrack: "home",
     };
   }
 
@@ -536,7 +535,7 @@
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
       fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
-      fallback.homeRecordTrack = homeRecordCatalog[value.homeRecordTrack] ? value.homeRecordTrack : "simple";
+      fallback.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
@@ -577,7 +576,7 @@
       .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
     state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
     state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
-    state.homeRecordTrack = homeRecordCatalog[value.homeRecordTrack] ? value.homeRecordTrack : "simple";
+    state.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -750,11 +749,10 @@
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
         night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
         home: new Audio("/static/assets/home-small-fire-cc0.wav"),
-        homeRecordSimple: new Audio("/static/assets/home-record-player-simple-loop-cc0.ogg"),
-        homeRecordElfwood: new Audio("/static/assets/home-record-elfwood-nexon.mp3"),
-        homeRecordUntitled: new Audio("/static/assets/home-record-untitled-hoon.mp3"),
-        homeRecordBright: new Audio("/static/assets/home-record-bright-time-sam.mp3"),
-        homeRecordWarm: new Audio("/static/assets/home-record-warm-afternoon-hyuk.mp3"),
+        homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3"),
+        homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3"),
+        homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3"),
+        homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3"),
         garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
       };
@@ -864,7 +862,7 @@
     return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
   }
   function sceneMusicName(scene = currentScene) {
-    if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordSimple" : "home";
+    if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome" : "home";
     if (scene === "garden") return "garden";
     const hour = currentLocalHour();
     if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
@@ -1537,7 +1535,7 @@
 
   function openWorldDialog(target) {
     const dialog = $("#world-dialog");
-    const recordActions = Object.entries(homeRecordCatalog).map(([id, record]) => `<button type="button" data-world-action="record_music" data-record-track="${id}" aria-pressed="${state.homeRecordPlaying && state.homeRecordTrack === id}"><strong>${record.name}</strong><small>${record.credit}</small></button>`).join("");
+    const recordActions = Object.entries(homeRecordCatalog).map(([id, record]) => `<button type="button" data-world-action="record_music" data-record-track="${id}" aria-pressed="${state.homeRecordPlaying && state.homeRecordTrack === id}"><strong>${record.name}</strong></button>`).join("");
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
       garden: { icon: "🥕", title: "당근 밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
