@@ -372,7 +372,9 @@
           .strokeEllipse(x + Math.sin(ripplePhase + index) * 3, y, width + wave * 12, 7 + wave * 3);
       });
 
-      if (this.nightStrength <= 0) return;
+      // A soft pool of light remains visible during the day; night only makes
+      // it broader and brighter. This keeps the on/off interaction readable.
+      const illuminationStrength = Math.max(this.nightStrength, .32);
       this.placedObjectActors.forEach((actor) => {
         const item = actor.getData?.("item");
         const type = interactiveObjectTypes[item?.code];
@@ -380,8 +382,8 @@
         const flicker = type === "fire" ? Math.sin(time / 95) * 5 : Math.sin(time / 420) * 2;
         const y = item.y - (type === "fire" ? 24 : 30);
         const radius = (type === "fire" ? 46 : 58) + flicker;
-        this.lightFx.fillStyle(type === "fire" ? 0xffa33a : 0xffefad, .07 + this.nightStrength * .14).fillCircle(item.x, y, radius * 1.75);
-        this.lightFx.fillStyle(type === "fire" ? 0xffc55a : 0xfff5c8, .12 + this.nightStrength * .2).fillCircle(item.x, y, radius);
+        this.lightFx.fillStyle(type === "fire" ? 0xffa33a : 0xffefad, .12 + illuminationStrength * .18).fillCircle(item.x, y, radius * 1.75);
+        this.lightFx.fillStyle(type === "fire" ? 0xffc55a : 0xfff5c8, .2 + illuminationStrength * .22).fillCircle(item.x, y, radius);
       });
     }
 

@@ -422,12 +422,13 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v104" in worker
+    assert "gandang-carrot-forest-pwa-v108" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
     assert "peaceful-forest-samza-cc0.wav" in worker
+    assert "avatar-studio-original.wav" in worker
     assert "reward-chest-success.mp3" in worker
 
 
@@ -456,7 +457,9 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert "delta / 260" in phaser_script
     assert "this.motionFx?.clear()" in phaser_script
     assert 'forest: new Audio("/static/assets/carrot-forest-main-theme.mp3")' in game_script
-    assert 'avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
+    assert 'night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
+    assert 'avatar: new Audio("/static/assets/avatar-studio-original.wav")' in game_script
+    assert '(hour >= 20 || hour < 5)) return "night"' in game_script
     assert 'home: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
     assert 'garden: new Audio("/static/assets/carrot-forest-original.wav")' in game_script
     assert 'musicEngine?.switchTo("avatar", { restart: true })' in game_script
@@ -600,6 +603,7 @@ def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
     assert "updateWorldAtmosphere(time)" in phaser_script
     assert "this.nightOverlay" in phaser_script
     assert "this.lightFx" in phaser_script
+    assert "const illuminationStrength = Math.max(this.nightStrength, .32)" in phaser_script
     assert 'id="atmosphere-toggle"' in html
     assert ">날씨·시간</button>" in html
     assert 'atmosphereButton.textContent = "날씨·시간"' in game_script
@@ -670,9 +674,10 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)", "공격 (Z)"):
         assert f"<span>{label}</span>" in html
     assert "data-footer-tool=" not in html
-    assert 'class="asset-dock footer-assets"' in html
-    assert html.index('class="asset-dock footer-assets"') > html.index('class="stage-footer arcade-deck"')
-    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in (ROOT / "src/frontend/forest-game.css").read_text(
+    assert 'class="asset-dock rail-assets"' in html
+    assert html.index('class="asset-dock rail-assets"') < html.index('class="stage-footer arcade-deck"')
+    assert 'class="object-inspector footer-objects"' in html
+    assert "grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr)" in (ROOT / "src/frontend/forest-game.css").read_text(
         encoding="utf-8"
     )
     assert 'grid-template-areas:"jump up run" "left interact right" "ride down attack"' in (
@@ -825,6 +830,7 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
 
 
 def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
     assert "const OUTFIT_DEFAULT_VERSION = 5" in game_script
@@ -832,7 +838,6 @@ def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     assert 'normalizeGenderDefaultOutfit(null, "female", Date.now())' in game_script
     assert 'normalizeGenderDefaultOutfit(null, "male", Date.now() - 1)' in game_script
     assert 'applyGenderDefaultOutfit(target, "female")' in game_script
-    assert "const applied = applyGenderDefaultOutfit(state, selectedGender)" in game_script
     assert "const existing = forceCanonical ? null : roleLook || namedLook" in game_script
     assert "history.find((look) => look.presetRole === gender)" in game_script
     assert 'lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara"' in game_script
@@ -841,12 +846,14 @@ def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     assert 'lpcOutfit: "official_torso_jacket_torso_jacket_santa"' in game_script
     assert 'lpcBottom: "official_legs_pants_legs_formal_striped"' in game_script
     assert 'lpcTool: "none", lpcWeapon: "bow", vehicle: "none", pet: "white_pup"' in game_script
-    assert '$("#avatar-gender").addEventListener("change"' in game_script
+    assert 'id="avatar-gender"' not in html
+    assert '>닉네임<input id="avatar-name"' in html
+    assert '<h2 id="avatar-title">아바타</h2>' in html
     assert "기본 프리셋 이름은 변경할 수 없습니다." in game_script
     assert "fixed-preset-name" in game_script
 
 
-def test_footer_wardrobe_and_storage_use_single_row_wheel_carousels() -> None:
+def test_avatar_rail_wardrobe_and_storage_use_single_row_wheel_carousels() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
@@ -857,8 +864,10 @@ def test_footer_wardrobe_and_storage_use_single_row_wheel_carousels() -> None:
     assert '[$("#wardrobe-list"), $("#storage-list")]' in game_script
     assert 'carousel.addEventListener("wheel"' in game_script
     assert "carousel.scrollLeft += event.deltaY" in game_script
-    assert ".stage-footer #storage-list{display:flex;flex-wrap:nowrap" in css
+    assert ".rail-assets .inventory-list{display:flex;flex-wrap:nowrap" in css
     assert "scroll-snap-type:x proximity" in css
+    assert 'classList.toggle("is-wardrobe", view === "wardrobe")' in game_script
+    assert ".inventory-dialog-grid.is-wardrobe{display:flex" in css
 
 
 def test_storage_placement_uses_grid_rotation_and_explicit_confirmation() -> None:

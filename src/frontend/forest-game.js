@@ -735,9 +735,10 @@
     constructor() {
       this.tracks = {
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
+        night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
         home: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
         garden: new Audio("/static/assets/carrot-forest-original.wav"),
-        avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
+        avatar: new Audio("/static/assets/avatar-studio-original.wav"),
       };
       this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
       this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
@@ -839,9 +840,16 @@
   });
 
   function setStatus(message) { $("#game-status").textContent = message; }
+  function currentLocalHour() {
+    const rawHour = new URLSearchParams(window.location.search).get("hour");
+    const forced = rawHour == null ? Number.NaN : Number(rawHour);
+    return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+  }
   function sceneMusicName(scene = currentScene) {
     if (scene === "home") return "home";
     if (scene === "garden") return "garden";
+    const hour = currentLocalHour();
+    if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
     return "forest";
   }
   function activeQuestIds() {
@@ -1750,7 +1758,6 @@
     state.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
     state.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
     state.avatar.equipped = null;
-    $("#avatar-gender").value = state.avatar.gender;
     renderInventory();
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
@@ -1759,6 +1766,7 @@
 
   function renderInventoryDialog(view = "storage") {
     document.querySelectorAll("[data-inventory-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.inventoryView === view));
+    $("#inventory-dialog-grid").classList.toggle("is-wardrobe", view === "wardrobe");
     if (view === "wardrobe") {
       $("#inventory-dialog-grid").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look, true)).join("");
       $("#inventory-dialog").dataset.view = view;
@@ -2320,7 +2328,6 @@
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
-    $("#avatar-gender").value = state.avatar.gender;
     syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
   }
 
@@ -2454,18 +2461,11 @@
   $("#avatar-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const nextName = $("#avatar-name").value.trim();
-    const selectedGender = $("#avatar-gender").value;
-    const applied = applyGenderDefaultOutfit(state, selectedGender);
+    if (!nextName) { setStatus("닉네임을 입력해 주세요."); return; }
     state.avatar.name = nextName;
-    renderInventory();
-    renderCanvas(); await persist(`${state.avatar.name} 아바타에 ${applied?.label || "기본 코디"}를 적용했습니다.`);
-  });
-  $("#avatar-gender").addEventListener("change", async (event) => {
-    const applied = applyGenderDefaultOutfit(state, event.currentTarget.value);
-    renderInventory();
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    await persist(`${applied?.label || "기본 코디"} 코디로 전환했습니다.`);
+    await persist(`${state.avatar.name} 닉네임을 저장했습니다.`);
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
@@ -2909,6 +2909,9 @@
     localStorage.setItem(ATMOSPHERE_KEY, enabled ? "on" : "off");
     updateAtmosphereButton(enabled);
     window.dispatchEvent(new CustomEvent("forest-atmosphere-updated", { detail: { enabled } }));
+    if (musicEngine?.enabled && currentScene === "world" && !$("#avatar-studio").open) {
+      musicEngine.switchTo(sceneMusicName()).catch(() => {});
+    }
     setStatus(enabled ? "현재 시간에 맞춰 숲의 밝기를 적용합니다." : "날씨·시간 효과를 끄고 주간 밝기로 표시합니다.");
   });
 

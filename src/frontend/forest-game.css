@@ -168,3 +168,35 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .stage-footer .outfit-name-form{height:28px}.stage-footer .outfit-name-form input,.stage-footer .outfit-name-form button{min-height:28px;height:28px;padding:2px 5px}.stage-footer .fixed-preset-name{display:grid;place-items:center;text-align:center}.stage-footer .fixed-preset-name small{color:var(--ink);font-size:11px;font-weight:900}
 .stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .storage-reward-cow{width:86px!important;height:86px!important}
 @media(max-width:620px){.stage-footer .asset-group{min-height:198px;max-height:198px}.stage-footer .asset-library-grid{height:auto}}
+
+/* v105 workspace: avatar rail owns wardrobe/storage; stage footer owns placed objects. */
+.workspace{grid-template-areas:"rail stage inspector"}
+.tool-rail{max-height:calc(100dvh - 92px);overflow-x:hidden;overflow-y:auto}
+.rail-assets{padding:10px;border:0;border-top:1px solid var(--line);border-radius:0;background:#fbfdfb;box-shadow:none}
+.rail-assets .asset-library-grid{display:grid;grid-template-columns:1fr;gap:9px;height:auto;margin:0}
+.rail-assets .asset-group{display:grid;grid-template-rows:auto auto;min-width:0;padding:8px;overflow:hidden;background:#fff}
+.rail-assets .asset-group-title>span{width:32px;height:32px;font-size:18px}
+.rail-assets .asset-group-title h3{font-size:13px}.rail-assets .asset-group-title p{font-size:9px}
+.rail-assets .asset-group-title #cancel-placement{margin-left:auto;min-height:30px;padding:3px 6px;font-size:9px}
+.rail-assets .inventory-list{display:flex;flex-wrap:nowrap;gap:7px;width:100%;height:116px;margin:7px 0 0;padding:2px 2px 7px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:thin}
+.rail-assets .recent-outfit-entry{flex:0 0 92px;grid-template-rows:82px 27px;gap:3px;height:112px;scroll-snap-align:start}
+.rail-assets .recent-outfit-card{min-height:82px;height:82px;padding:2px}.rail-assets .recent-outfit-card canvas{width:60px;height:60px}.rail-assets .recent-outfit-card small{font-size:7px}
+.rail-assets .outfit-name-form{height:27px}.rail-assets .outfit-name-form input,.rail-assets .outfit-name-form button{min-height:27px;height:27px;padding:2px 4px;font-size:8px}
+.rail-assets #storage-list .storage-icon-item{flex:0 0 88px;width:88px;min-width:88px;height:108px;min-height:108px;padding:3px;aspect-ratio:auto;scroll-snap-align:start}
+.rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .storage-reward-cow{width:78px!important;height:78px!important}
+.stage-footer.arcade-deck{grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr);grid-template-areas:"controls objects";align-items:stretch}
+.stage-footer .footer-objects{grid-area:objects;min-width:0;min-height:198px;max-height:198px;padding:10px;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:none}
+.stage-footer .footer-objects .panel-title{margin-bottom:7px}.stage-footer .footer-objects .panel-title h2{font-size:15px}.stage-footer .footer-objects .eyebrow{font-size:9px}
+.stage-footer .footer-objects .placed-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:142px;overflow-y:auto}
+.stage-footer .footer-objects .placed-object-row{grid-template-columns:22px minmax(54px,1fr) 112px;min-width:0;padding:7px}
+.stage-footer .footer-objects .placed-object-row .remove-object{width:112px;min-width:112px}
+.inventory-dialog-grid.is-wardrobe{display:flex;align-items:flex-start;gap:9px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity}
+.inventory-dialog{overflow-x:hidden}
+.inventory-dialog-grid.is-wardrobe .recent-outfit-entry{flex:0 0 154px;width:154px;scroll-snap-align:start}
+.inventory-dialog-grid.is-wardrobe .recent-outfit-card{width:100%;min-height:132px;height:132px}
+.inventory-dialog-grid.is-wardrobe .outfit-name-form{display:grid;grid-template-columns:minmax(0,1fr) 58px;height:34px}
+.inventory-dialog-grid.is-wardrobe .outfit-name-form input{min-height:34px;height:34px}
+.inventory-dialog-grid.is-wardrobe .outfit-name-form button{display:inline-flex;align-items:center;justify-content:center;min-height:34px;height:34px;padding:3px 5px;font-size:9px;white-space:nowrap}
+@media(max-width:1200px){.workspace{grid-template-columns:228px minmax(0,1fr);grid-template-areas:"rail stage" "rail inspector"}.stage-footer.arcade-deck{grid-template-columns:1fr;grid-template-areas:"controls" "objects"}.stage-footer .footer-objects{max-height:none}.tool-rail{max-height:none}}
+@media(max-width:820px){.workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"rail" "stage" "inspector"}.tool-rail{position:static}.rail-assets .asset-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.stage-footer .footer-objects .placed-list{grid-template-columns:1fr}.stage-footer .footer-objects{min-height:210px}.rail-assets .asset-library-grid{grid-template-columns:1fr}.rail-assets .inventory-list{height:116px}}
