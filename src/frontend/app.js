@@ -328,6 +328,7 @@ function showEligibilityGuidance(reasonCodes) {
     secondary.textContent = guidance.secondaryLabel || "";
     secondary.hidden = !guidance.secondaryStep;
   }
+  $("#emergency-facility-search").hidden = reason !== "URGENT_MEDICAL_ATTENTION";
   $("#eligibility-guidance").hidden = false;
   $("#eligibility-guidance").focus({ preventScroll: true });
   $("#eligibility-guidance").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3027,6 +3028,302 @@ function resumeForecastPreview() {
   showStep(6, { recordHistory: false });
   setForecastRiskPreview("caution");
 }
+
+let kakaoMapsLoadPromise = null;
+const facilityMapInstances = {};
+const facilityMapMarkers = {};
+
+function ensureKakaoMapsLoaded() {
+  if (kakaoMapsLoadPromise) return kakaoMapsLoadPromise;
+  kakaoMapsLoadPromise = new Promise((resolve, reject) => {
+    if (!window.kakao || !window.kakao.maps) {
+      reject(new Error("카카오 지도 SDK를 불러오지 못했습니다."));
+      return;
+    }
+    window.kakao.maps.load(() => resolve());
+  });
+  return kakaoMapsLoadPromise;
+}
+
+function clearFacilityMapMarkers(target) {
+  (facilityMapMarkers[target] || []).forEach((marker) => marker.setMap(null));
+  facilityMapMarkers[target] = [];
+}
+
+// 카카오 기본 마커 이미지는 광고 차단 확장 프로그램 등에 의해 막히는 경우가 있어,
+// 외부 리소스에 의존하지 않는 인라인 SVG로 직접 마커 아이콘을 그립니다.
+const USER_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="3"/></svg>'
+  );
+const FACILITY_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="9" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>'
+  );
+
+// G278+RR 서울특별시(복구된 전체 Plus Code: 8Q99G278+RR)의 중심 좌표입니다.
+const DEFAULT_FACILITY_LOCATION = {
+  latitude: 37.5144375,
+  longitude: 127.0169375,
+  label: "G278+RR 서울특별시",
+};
+
+async function renderFacilityMap(userLatitude, userLongitude, facilities, target = "medical") {
+  const container = $(`#${target}-facility-map`);
+  if (!container) return;
+  try {
+    await ensureKakaoMapsLoaded();
+    const kakao = window.kakao;
+    const center = new kakao.maps.LatLng(userLatitude, userLongitude);
+    container.hidden = false;
+    if (!facilityMapInstances[target]) {
+      facilityMapInstances[target] = new kakao.maps.Map(container, { center, level: 4 });
+    } else {
+      facilityMapInstances[target].setCenter(center);
+    }
+    const map = facilityMapInstances[target];
+    clearFacilityMapMarkers(target);
+    const bounds = new kakao.maps.LatLngBounds();
+    bounds.extend(center);
+    // 사용자 현재 위치는 병원과 구분되도록 파란색 마커로 표시합니다.
+    const userMarkerImage = new kakao.maps.MarkerImage(USER_MARKER_IMAGE_SRC, new kakao.maps.Size(28, 28), {
+      offset: new kakao.maps.Point(14, 14),
+    });
+    const userMarker = new kakao.maps.Marker({
+      map,
+      position: center,
+      title: "현재 위치",
+      image: userMarkerImage,
+      zIndex: 10,
+    });
+    facilityMapMarkers[target].push(userMarker);
+    const facilityMarkerImage = new kakao.maps.MarkerImage(FACILITY_MARKER_IMAGE_SRC, new kakao.maps.Size(26, 26), {
+      offset: new kakao.maps.Point(13, 13),
+    });
+    facilities.forEach((facility) => {
+      if (facility.latitude == null || facility.longitude == null) return;
+      const position = new kakao.maps.LatLng(facility.latitude, facility.longitude);
+      bounds.extend(position);
+      const marker = new kakao.maps.Marker({
+        map,
+        position,
+        title: facility.name,
+        image: facilityMarkerImage,
+      });
+      const infoWindow = new kakao.maps.InfoWindow({
+        content: `<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">${escapeHtml(facility.name)}</div>`,
+      });
+      kakao.maps.event.addListener(marker, "click", () => {
+        infoWindow.open(map, marker);
+      });
+      facilityMapMarkers[target].push(marker);
+    });
+    // 현재 위치와 검색된 병원들이 모두 한 화면에 들어오도록 확대 수준을 맞춘 뒤,
+    // setBounds()가 병원 좌표 쪽으로 옮긴 중심을 사용자 현재 위치로 되돌립니다.
+    map.setBounds(bounds);
+    map.setCenter(center);
+  } catch (error) {
+    // 지도 SDK 로딩에 실패해도(키/도메인 설정 문제 등) 목록 검색 자체는 계속 동작해야 하므로 지도만 숨깁니다.
+    container.hidden = true;
+  }
+}
+
+function renderNearbyFacilities(result, target = "medical") {
+  const container = $(`#${target}-facility-items`);
+  if (!container) return;
+  const facilities = Array.isArray(result?.facilities) ? result.facilities : [];
+  if (!facilities.length) {
+    container.innerHTML = "<p>근처에서 확인 가능한 의료기관을 찾지 못했습니다.</p>";
+    return;
+  }
+  // department_hint(진료과 추정값)는 부정확할 수 있는 값이라 화면에는 표시하지 않기로 결정했습니다(2026-09-02 팀 회의).
+  const items = facilities.map((facility) => {
+    const addressLine = facility.road_address || facility.address || "";
+    const distanceLabel = facility.distance_meters != null ? `${facility.distance_meters}m` : "";
+    const metaLine = [addressLine, distanceLabel].filter(Boolean).join(" · ");
+    const phoneAction = facility.phone
+      ? `<a class="secondary" href="tel:${escapeHtml(facility.phone)}">전화</a>`
+      : "";
+    const mapAction = facility.map_url
+      ? `<a class="secondary" href="${escapeHtml(facility.map_url)}" target="_blank" rel="noopener">지도 보기</a>`
+      : "";
+    return `<article>
+      <strong>${escapeHtml(facility.name)}</strong>
+      <p>${escapeHtml(metaLine)}</p>
+      <div class="facility-actions">${phoneAction}${mapAction}</div>
+    </article>`;
+  });
+  const disclaimer = result?.disclaimer ? `<p class="facility-disclaimer">${escapeHtml(result.disclaimer)}</p>` : "";
+  container.innerHTML = items.join("") + disclaimer;
+}
+
+function getCurrentPosition(options) {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
+async function getCurrentPositionWithRetry() {
+  try {
+    // 데스크톱은 Wi-Fi 기반 위치가 잠시 불안정할 수 있으므로 최근 좌표도 허용합니다.
+    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  } catch (firstError) {
+    if (![2, 3].includes(firstError.code)) throw firstError;
+    // 위치를 찾지 못했거나 시간이 초과되면 정확도 높은 요청으로 한 번 더 시도합니다.
+    return getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }
+}
+
+async function searchFacilitiesAt(latitude, longitude, target = "medical") {
+  const path = target === "emergency" ? "/emergency-facilities/nearby" : "/medical-facilities/nearby";
+  const radius = target === "emergency" ? 10000 : 5000;
+  const result = await api(`${path}?lat=${latitude}&lon=${longitude}&radius=${radius}`);
+  renderNearbyFacilities(result, target);
+  await renderFacilityMap(latitude, longitude, Array.isArray(result?.facilities) ? result.facilities : [], target);
+}
+
+async function coordinatesForAddress(address) {
+  await ensureKakaoMapsLoaded();
+  return new Promise((resolve, reject) => {
+    const geocoder = new window.kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (results, status) => {
+      if (status !== window.kakao.maps.services.Status.OK || !results.length) {
+        reject(new Error("주소를 찾지 못했습니다. 도로명과 건물 번호까지 입력해주세요."));
+        return;
+      }
+      resolve({ latitude: Number(results[0].y), longitude: Number(results[0].x) });
+    });
+  });
+}
+
+$("#find-nearby-facilities")?.addEventListener("click", async () => {
+  const button = $("#find-nearby-facilities");
+  const status = $("#medical-facility-status");
+  const items = $("#medical-facility-items");
+  if (!button || !status || !items) return;
+  button.disabled = true;
+  status.hidden = false;
+  status.textContent = "위치 확인 중…";
+  items.innerHTML = "";
+  try {
+    if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+    const position = await getCurrentPositionWithRetry();
+    const { latitude, longitude } = position.coords;
+    await searchFacilitiesAt(latitude, longitude);
+    status.hidden = true;
+  } catch (error) {
+    const messages = {
+      1: "위치 권한이 거부되었습니다. 브라우저(또는 macOS 시스템 설정)의 위치 권한을 허용한 뒤 다시 시도해주세요.",
+      2: "Chrome이 현재 좌표를 계산하지 못했습니다. 잠시 후 다시 누르거나 Chrome을 완전히 재시작해주세요.",
+      3: "위치 확인이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.",
+    };
+    status.textContent = messages[error.code] || error.message || "위치 정보를 불러오지 못했습니다.";
+    $("#facility-address-form").hidden = false;
+    if (error.code || !("geolocation" in navigator)) {
+      try {
+        await searchFacilitiesAt(DEFAULT_FACILITY_LOCATION.latitude, DEFAULT_FACILITY_LOCATION.longitude);
+        status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변을 표시합니다.`;
+      } catch (fallbackError) {
+        status.textContent = fallbackError.message || "기본 위치 주변 의료기관을 불러오지 못했습니다.";
+      }
+    }
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#facility-address-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#facility-address");
+  const status = $("#medical-facility-status");
+  const submit = form.querySelector('button[type="submit"]');
+  let address = input?.value.trim();
+  if (!address || !status || !submit) return;
+  submit.disabled = true;
+  status.hidden = false;
+  status.textContent = "입력한 주소를 확인하고 있어요…";
+  try {
+    const { latitude, longitude } = await coordinatesForAddress(address);
+    input.value = "";
+    address = null;
+    await searchFacilitiesAt(latitude, longitude);
+    status.hidden = true;
+  } catch (error) {
+    status.textContent = error.message || "주소로 의료기관을 찾지 못했습니다.";
+  } finally {
+    input.value = "";
+    address = null;
+    submit.disabled = false;
+  }
+});
+
+$("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
+  const button = $("#find-nearby-emergency-facilities");
+  const status = $("#emergency-facility-status");
+  const items = $("#emergency-facility-items");
+  if (!button || !status || !items) return;
+  button.disabled = true;
+  status.hidden = false;
+  status.textContent = "현재 위치와 가까운 응급실을 확인하고 있어요…";
+  items.innerHTML = "";
+  try {
+    if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
+    const position = await getCurrentPositionWithRetry();
+    await searchFacilitiesAt(position.coords.latitude, position.coords.longitude, "emergency");
+    status.hidden = true;
+  } catch (error) {
+    const messages = {
+      1: "위치 권한이 거부되었습니다. 위치 권한을 허용한 뒤 다시 시도해주세요.",
+      2: "Chrome이 현재 좌표를 계산하지 못했습니다. 아래에서 주소로 검색해주세요.",
+      3: "위치 확인이 시간 초과되었습니다. 아래에서 주소로 검색해주세요.",
+    };
+    status.textContent = messages[error.code] || error.message || "응급실 정보를 불러오지 못했습니다.";
+    $("#emergency-address-form").hidden = false;
+    if (error.code || !("geolocation" in navigator)) {
+      try {
+        await searchFacilitiesAt(
+          DEFAULT_FACILITY_LOCATION.latitude,
+          DEFAULT_FACILITY_LOCATION.longitude,
+          "emergency",
+        );
+        status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변 응급실을 표시합니다.`;
+      } catch (fallbackError) {
+        status.textContent = fallbackError.message || "기본 위치 주변 응급실을 불러오지 못했습니다.";
+      }
+    }
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#emergency-address-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#emergency-address");
+  const status = $("#emergency-facility-status");
+  const submit = form.querySelector('button[type="submit"]');
+  let address = input?.value.trim();
+  if (!address || !status || !submit) return;
+  submit.disabled = true;
+  status.hidden = false;
+  status.textContent = "입력한 주소에서 가까운 응급실을 확인하고 있어요…";
+  try {
+    const { latitude, longitude } = await coordinatesForAddress(address);
+    input.value = "";
+    address = null;
+    await searchFacilitiesAt(latitude, longitude, "emergency");
+    status.hidden = true;
+  } catch (error) {
+    status.textContent = error.message || "주소로 응급실을 찾지 못했습니다.";
+  } finally {
+    input.value = "";
+    address = null;
+    submit.disabled = false;
+  }
+});
 
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));

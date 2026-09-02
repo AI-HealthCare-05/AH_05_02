@@ -79,6 +79,28 @@ class Config(BaseSettings):
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
 
+    # 위치 기반 근처 의료기관 조회. 진단·처방을 대신하지 않고, 위치 기반 안내만 제공합니다.
+    MEDICAL_FACILITY_SEARCH_PROVIDER: str = "development"
+    KAKAO_REST_API_KEY: str = ""
+    # 카테고리 검색(HP8, 반경 내 병원 전체) 대신 키워드 검색으로 좁혀서 반환하기로 결정(2026-09-02 팀 회의).
+    MEDICAL_FACILITY_SEARCH_KEYWORDS: str = "당뇨"
+    MEDICAL_FACILITY_SEARCH_CATEGORY_GROUP_CODE: str = "HP8"
+    # 텍스트 매칭 특성상 "내과" 키워드가 "구강내과"(치과 표기)까지 걸려서 치과가 섞여 들어오는 문제가 있어
+    # 카테고리 이름에 아래 단어가 포함되면 결과에서 제외합니다(2026-09-02 팀 회의 이후 발견/보완).
+    MEDICAL_FACILITY_SEARCH_EXCLUDED_CATEGORY_KEYWORDS: str = "치과,한의원"
+    MEDICAL_FACILITY_SEARCH_TIMEOUT_SECONDS: int = 10
+    MEDICAL_FACILITY_DEFAULT_RADIUS_METERS: int = 5000
+    MEDICAL_FACILITY_MAX_RESULTS: int = 15
+
+    # 국립중앙의료원 전국 응급의료기관 정보 조회 서비스
+    EMERGENCY_FACILITY_SEARCH_PROVIDER: str = "nemc"
+    NEMC_SERVICE_KEY: str = ""
+    NEMC_EMERGENCY_API_URL: str = (
+        "https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytLcinfoInqire"
+    )
+    NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
+    EMERGENCY_FACILITY_MAX_RESULTS: int = 10
+
     COOKIE_DOMAIN: str = "localhost"
 
     JWT_ALGORITHM: str = "HS256"

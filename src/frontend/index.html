@@ -6,8 +6,9 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260902-pr23-merge">
-  <script src="/static/app.js?v=20260902-pr23-merge" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260902-medical-facilities-5">
+  <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7f2a1f37ce159b787ecc694265ebf333&autoload=false&libraries=services"></script>
+  <script src="/static/app.js?v=20260902-medical-facilities-8" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -180,6 +181,18 @@
             </article>
           </div>
           <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
+          <section id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급실 안내" hidden>
+            <strong>가까운 응급실 찾기</strong>
+            <p>위급한 경우 검색 결과를 기다리지 말고 119에 연락하세요.</p>
+            <button class="secondary" type="button" id="find-nearby-emergency-facilities">현재 위치로 응급실 찾기</button>
+            <p id="emergency-facility-status" role="status" hidden></p>
+            <form id="emergency-address-form" class="facility-address-form" hidden>
+              <label for="emergency-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
+              <div><input id="emergency-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off" required><button class="secondary" type="submit">주소로 찾기</button></div>
+            </form>
+            <div id="emergency-facility-map" class="facility-map" hidden></div>
+            <div id="emergency-facility-items"></div>
+          </section>
           <div class="actions">
             <button class="secondary" id="eligibility-edit-answer" type="button">답변 다시 확인하기</button>
             <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
@@ -344,15 +357,14 @@
           </div>
           <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p>
             <div class="medical-facility-list" aria-label="가까운 의료기관 안내">
-              <article>
-                <strong>가까운 검사 가능 의료기관</strong>
-                <p>위치 동의와 의료기관 API가 연결되면 기관명·진료과·주소·전화번호·거리·지도 링크를 표시합니다.</p>
-                <div class="facility-actions">
-                  <button class="secondary" type="button" disabled>전화</button>
-                  <button class="secondary" type="button" disabled>주소</button>
-                  <button class="secondary" type="button" disabled>지도 보기</button>
-                </div>
-              </article>
+              <button class="secondary" type="button" id="find-nearby-facilities">근처 의료기관 찾기</button>
+              <p id="medical-facility-status" role="status" hidden></p>
+              <form id="facility-address-form" class="facility-address-form" hidden>
+                <label for="facility-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
+                <div><input id="facility-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off" required><button class="secondary" type="submit">주소로 찾기</button></div>
+              </form>
+              <div id="medical-facility-map" class="facility-map" hidden></div>
+              <div id="medical-facility-items"></div>
             </div>
           </div></div>
         </section>
