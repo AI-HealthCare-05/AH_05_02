@@ -6,8 +6,8 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260901-users-me-fix">
-  <script src="/static/app.js?v=20260901-users-me-fix" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260902-pr23-merge">
+  <script src="/static/app.js?v=20260902-pr23-merge" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -230,7 +230,7 @@
                 <h4 class="choice-title" id="regular-exercise-title">규칙적인 운동 유무</h4>
                 <div class="segmented-choice">
                   <label><input id="regular-exercise" name="regular-exercise" type="radio" value="true" required><span>예</span></label>
-                  <label><input id="regular-exercise-no" name="regular-exercise" type="radio" value="false"><span>아니요</span></label>
+                  <label><input id="regular-exercise-no" name="regular-exercise" type="radio" value="false" checked><span>아니요</span></label>
                 </div>
               </div>
               <div class="choice-block lifestyle-wide-card">
@@ -304,11 +304,11 @@
           <span>!</span><div><strong id="analysis-failure-title">분석을 완료하지 못했습니다</strong><p id="analysis-failure-message">입력정보는 보존되어 있습니다. 내용을 확인하거나 같은 정보로 다시 시도할 수 있습니다.</p><p>분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다.</p></div>
         </div>
         <div id="high-guidance" class="notice safety" hidden><span>!</span><div><strong>의료기관 확인이 우선입니다</strong><p>챌린지보다 검사·상담을 먼저 권합니다.</p></div></div>
-        <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled hidden>결과 확인하기</button></div>
+        <div class="actions"><button class="secondary back" type="button">입력정보 확인하기</button><button class="secondary" id="retry-analysis" type="button" hidden>다시 시도하기</button><button class="primary next" id="result-next" type="button" disabled hidden>결과 확인</button></div>
       </section>
       <section class="screen" data-step="6" aria-labelledby="factors-title">
-        <p class="eyebrow" id="result-confirmation-eyebrow">예측 결과</p><h2 id="factors-title">결과를 확인해 주세요</h2>
-        <p class="lead" id="result-confirmation-lead">입력한 건강정보를 기준으로 당뇨병 위험 신호를 범주로 표시했습니다.</p>
+        <p class="eyebrow" id="result-confirmation-eyebrow">결과 확인</p><h2 id="factors-title">현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요</h2>
+        <p class="lead" id="result-confirmation-lead">현재 위험 신호 선별 결과를 먼저 확인한 뒤, 미래 신규 발병 위험을 별도 영역에서 확인합니다.</p>
         <section id="current-health-result" class="current-health-result" aria-labelledby="current-health-result-title" hidden>
           <div class="current-health-result-heading">
             <span class="current-health-result-icon" aria-hidden="true">✓</span>
@@ -322,38 +322,49 @@
           <p class="risk-safety">안전 안내 · 현재 건강 신호는 진단·치료·처방 판단을 대신하지 않습니다.</p>
         </section>
         <div id="future-prediction-result">
-        <p class="eyebrow">내일이 · 약 2년 후 신규 당뇨 발병 위험</p>
         <div id="result-unavailable" class="notice safety" role="status" hidden><span>!</span><div><strong>현재 공개할 수 있는 예측 결과가 없습니다</strong><p>모델 임계값과 설명 방법이 승인되기 전에는 위험 범주·확률·위험요인을 표시하지 않습니다.</p></div></div>
+        <div id="development-preview-notice" class="notice safety" role="status" hidden><span>개발</span><div><strong>개발 확인용 모델 결과입니다</strong><p>로컬 데모에서 화면 연결을 확인하기 위한 위험 범주이며, 운영 승인 결과가 아닙니다. 숫자 점수·확률·위험요인은 표시하지 않습니다.</p></div></div>
         <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
           <div class="current-risk-signal-heading">
-            <h3 id="risk-confirm-title">내일이 · 미래 발병 위험 신호</h3>
+            <div><p class="eyebrow">내일이 · 약 2년 후 신규 당뇨 발병 위험</p><h3 id="risk-confirm-title">내일이 · 미래 발병 위험 신호</h3></div>
             <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
+          </div>
+          <div class="risk-preview-controls" id="risk-preview-controls" aria-label="미래 발병 위험 신호 화면 확인" hidden>
+            <span>화면 확인용</span>
+            <button type="button" data-risk-preview="low">낮음 보기</button>
+            <button type="button" data-risk-preview="caution">주의 보기</button>
+            <button type="button" data-risk-preview="high">높음 보기</button>
           </div>
           <div class="current-risk-signal-body">
             <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="미래 발병 위험 신호 결과 준비 중">
-              <span class="traffic-signal high"><i aria-hidden="true"></i><b>높음</b></span>
-              <span class="traffic-signal caution"><i aria-hidden="true"></i><b>주의</b></span>
-              <span class="traffic-signal low"><i aria-hidden="true"></i><b>낮음</b></span>
+              <span class="traffic-signal high"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-high.png" alt=""></i><b>높음</b></span>
+              <span class="traffic-signal caution"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-caution.png" alt=""></i><b>주의</b></span>
+              <span class="traffic-signal low"><i aria-hidden="true"><img src="/static/assets/hyeoldangi-face-low.png" alt=""></i><b>낮음</b></span>
             </div>
           </div>
-          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 범주는 진단 결과가 아닙니다. 챌린지보다 검사를 받고 의료진과 상담하는 것을 우선 권합니다.</p></div></div>
-          <section class="factor-panel" aria-labelledby="factor-panel-title">
-            <div>
-              <h3 id="factor-panel-title">위험·보호 요인 영역</h3>
-              <p>검증된 요인만 표시합니다. 아직 확인된 항목이 없으면 임의로 만들지 않습니다.</p>
+          <div id="medical-guidance-detail" class="notice safety compact-result-notice" hidden><span>!</span><div><strong>검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p>
+            <div class="medical-facility-list" aria-label="가까운 의료기관 안내">
+              <article>
+                <strong>가까운 검사 가능 의료기관</strong>
+                <p>위치 동의와 의료기관 API가 연결되면 기관명·진료과·주소·전화번호·거리·지도 링크를 표시합니다.</p>
+                <div class="facility-actions">
+                  <button class="secondary" type="button" disabled>전화</button>
+                  <button class="secondary" type="button" disabled>주소</button>
+                  <button class="secondary" type="button" disabled>지도 보기</button>
+                </div>
+              </article>
             </div>
-            <ul class="factor-list" id="factor-list"><li><strong>아직 표시할 위험·보호 요인이 없습니다.</strong><p>모델과 설명 기준이 확정되면 검증된 항목만 보여드립니다.</p></li></ul>
-          </section>
+          </div></div>
         </section>
         <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="risk-forecast-title">
           <div class="risk-forecast-heading">
             <div>
-              <p class="eyebrow">연령별 위험 전망</p>
-              <h3 id="risk-forecast-title">시간에 따른 위험 신호 변화를 확인해요</h3>
+              <p class="eyebrow">미래 신규 발병 위험</p>
+              <h3 id="risk-forecast-title">미래 신규 발병 위험 전망</h3>
             </div>
             <span class="forecast-status-badge" id="forecast-status-badge">결과 준비 중</span>
           </div>
-          <p class="risk-forecast-description">현재 입력을 유지한 경우와 생활습관을 개선한 경우를 구분해 표시합니다. 공개 승인을 받은 결과만 보여드립니다.</p>
+          <p class="risk-forecast-description">현재 위험 신호 선별 결과와 분리해서 앞으로의 신규 발병 위험을 확인합니다. 실제 서비스에서는 공개 승인을 받은 결과만 표시합니다.</p>
           <div class="forecast-state" id="forecast-state" role="status" aria-live="polite" data-state="loading">
             <strong id="forecast-state-title">연령별 위험 전망 결과를 불러오고 있어요</strong>
             <p id="forecast-state-message">승인된 전망 데이터가 도착하면 이 영역에 표시합니다.</p>
@@ -448,11 +459,33 @@
               <p>작고 구체적인 목표로 적으면 매일 기록하기 쉬워요.</p>
             </div>
             <div class="two-column">
-              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" required></div>
-              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" required></div>
-              <div class="form-row full"><label for="custom-challenge-record-type">기록 방법</label><select id="custom-challenge-record-type"><option value="simple">간편 체크</option><option value="time">시간 입력</option><option value="count">횟수 입력</option></select></div>
+              <div class="form-row"><label for="custom-challenge-title">챌린지 이름</label><input id="custom-challenge-title" maxlength="30" placeholder="예: 저녁 식후 스트레칭" disabled></div>
+              <div class="form-row"><label for="custom-challenge-goal">실천 목표</label><input id="custom-challenge-goal" maxlength="60" placeholder="예: 저녁 식후 5분" disabled></div>
+              <div class="form-row full"><label for="custom-challenge-record-type">기록 방법</label><select id="custom-challenge-record-type" disabled><option value="simple">간편 체크</option><option value="time">시간 입력</option><option value="count">횟수 입력</option></select></div>
             </div>
             <div class="custom-challenge-actions"><button class="secondary" id="cancel-custom-challenge" type="button">취소</button><button class="primary" id="save-custom-challenge" type="button">이 항목 추가하기</button></div>
+          </section>
+          <section class="rag-challenge-generator" id="rag-challenge-generator" aria-labelledby="rag-challenge-title">
+            <div>
+              <p class="eyebrow">RAG 맞춤 챌린지 설계</p>
+              <h3 id="rag-challenge-title">생활습관 자료 기반 초안을 만들어봐요</h3>
+              <p>백엔드 RAG API가 연결되기 전까지 화면 흐름을 확인하는 영역입니다.</p>
+            </div>
+            <div class="rag-challenge-controls">
+              <div class="form-row"><label for="rag-challenge-preference">관심 방향</label><select id="rag-challenge-preference"><option value="activity">움직이기</option><option value="diet">건강하게 먹기</option><option value="tracking">기록하기</option></select></div>
+              <button class="secondary" id="generate-rag-challenge" type="button">초안 생성</button>
+              <button class="secondary" id="regenerate-rag-challenge" type="button" hidden>다시 생성</button>
+            </div>
+            <div class="rag-challenge-state" id="rag-challenge-state" role="status" aria-live="polite" data-state="idle">
+              <strong id="rag-challenge-state-title">생성할 준비가 되었어요</strong>
+              <p id="rag-challenge-state-message">관심 방향을 고른 뒤 초안을 생성해 주세요.</p>
+            </div>
+            <article class="rag-challenge-draft" id="rag-challenge-draft" hidden>
+              <strong id="rag-challenge-draft-title"></strong>
+              <p id="rag-challenge-draft-goal"></p>
+              <small id="rag-challenge-draft-source"></small>
+              <button class="primary" id="apply-rag-challenge" type="button">나만의 챌린지로 사용</button>
+            </article>
           </section>
           <fieldset class="walking-level-picker" id="walking-level-picker" aria-labelledby="walking-level-title" hidden>
             <legend id="walking-level-title">걷기 실천 수준을 선택해 주세요</legend>
@@ -490,9 +523,9 @@
           <div class="today-card">
             <img class="today-card-mascot" src="/static/assets/hyeoldangi-daily-record.png" alt="오늘의 챌린지 기록을 안내하는 혈당이">
             <p class="eyebrow">오늘의 할 일</p>
-            <h3>챌린지 실천을 기록해 주세요</h3>
-            <p>기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
-            <button class="primary workspace-shortcut" type="button" data-workspace="challenge">오늘 기록하기</button>
+            <h3 id="today-task-title">챌린지 실천을 기록해 주세요</h3>
+            <p id="today-task-description">기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
+            <button class="primary workspace-shortcut" id="today-record-action" type="button" data-workspace="challenge">오늘 기록하기</button>
           </div>
           <div class="dashboard-grid summary-grid">
             <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
@@ -607,11 +640,11 @@
             </section>
 
             <section class="report-period-panel" id="report-panel-four-week" role="tabpanel" aria-labelledby="report-period-four-week" data-report-panel="four-week" hidden>
-              <article class="report-empty"><strong>4주 전체 기록은 아직 준비 중이에요</strong><p>실제 4주 집계 API가 연결되면 주차별 수행률을 표시합니다.</p></article>
+              <article class="report-empty"><strong>4주 전체 기록을 모으고 있어요</strong><p>기능이 준비되는 동안에는 주간 기록에서 이번 주 실천을 확인해 주세요.</p></article>
             </section>
 
             <section class="report-period-panel" id="report-panel-all" role="tabpanel" aria-labelledby="report-period-all" data-report-panel="all" hidden>
-              <article class="report-empty"><strong>완료한 챌린지 회차가 아직 없어요</strong><p>전체 기간 이력 API가 연결되면 회차별 기록을 확인할 수 있습니다.</p></article>
+              <article class="report-empty"><strong>완료한 챌린지 회차가 아직 없어요</strong><p>챌린지를 완료하면 회차별 기록을 이곳에서 확인할 수 있어요.</p></article>
             </section>
           </div>
           <div class="report-pdf-card">

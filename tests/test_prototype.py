@@ -61,13 +61,29 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "검사·상담 안내 보기" in script
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
-    assert '$("#result-next").hidden = !isApprovedRisk' in script
-    assert "options.resultAvailable === true" in script
+    assert '$("#result-next").hidden = false' in script
+    assert '$("#result-next").disabled = false' in script
+    assert "const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk)" in script
+    assert "options.showResult !== false" in script
     assert 'factors?.status === "approved"' in script
     assert "factors?.shap_claimed === true" in script
     assert '$("#risk-confirm-card").hidden = false' in script
     assert 'id="risk-traffic-light" role="img"' in html
     assert 'data-risk="pending"' in html
+    assert 'id="risk-confirm-score"' not in html
+    assert "숫자 점수는 표시하지 않아요" not in html
+    assert "prediction.display_score" not in script
+    assert "prediction.public_display_score" not in script
+    assert "승인된 점수가 도착하면 표시합니다." not in script
+    assert 'id="risk-confirm-short"' not in html
+    assert 'id="risk-confirm-message"' not in html
+    assert 'id="risk-preview-controls"' in html
+    assert 'data-risk-preview="low"' in html
+    assert 'data-risk-preview="caution"' in html
+    assert 'data-risk-preview="high"' in html
+    assert 'setForecastRiskPreview("caution")' in script
+    assert "normalizeRiskKey(prediction)" in script
+    assert html.index('id="risk-confirm-card"') < html.index('id="risk-forecast-panel"')
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
@@ -83,6 +99,7 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
 
     assert 'id="risk-forecast-panel"' in html
+    assert "2년 단위 미래 전망" not in html
     assert 'id="age-risk-chart" role="img"' in html
     assert 'id="forecast-state" role="status" aria-live="polite"' in html
     assert "현재 생활습관 유지" in html
@@ -90,16 +107,22 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert "효과를 보장하거나 치료 결과를 예측하는 값이 아닙니다." in html
     assert "불확실성 범위" in html
     assert 'forecast?.status === "approved"' in script
+    assert "`/static/assets/hyeoldangi-face-${point.level}.png`" in script
+    assert ".age-risk-signal-track img{" in styles
     assert "forecast?.public_display_approved === true" in script
     assert "approvedDisplayPercent" in script
     assert "hyeoldangi-face-${point.level}.png" in script
     assert ".age-risk-signal-track" in styles
     for level in ("low", "caution", "high"):
         assert (ROOT / f"src/frontend/assets/hyeoldangi-face-{level}.png").is_file()
+    assert "normalizeForecastSignal" in script
+    assert "point.signal_level" in script
+    assert "point.risk_category" in script
     assert "임의 수치나 그래프를 만들지 않습니다." in script
     assert "renderAgeRiskForecast(prediction, isApprovedRisk)" in script
     assert "@media(forced-colors:active)" in styles
-    assert "repeating-linear-gradient" in styles
+    assert "age-risk-signal-track" in styles
+    assert 'data-status="preview"' in styles
 
 
 def test_rule_forecast_preview_is_local_opt_in_and_non_predictive() -> None:
@@ -141,8 +164,10 @@ def test_health_form_uses_rf25_smoking_status_contract() -> None:
     assert 'name="smoking-status"' in html
     for value in ("never", "former", "current"):
         assert f'value="{value}"' in html
-    assert 'smoking_status: selectedRadioValue("smoking-status")' in script
-    assert 'current_smoker: selectedRadioValue("current-smoker")' not in script
+    assert 'const smokingStatus = selectedRadioValue("smoking-status")' in script
+    assert "smoking_status: smokingStatus" in script
+    assert 'current_smoker: smokingStatus === "current"' not in script
+    assert 'feature_schema_version: "klosa_stage3_25features_v1"' in script
 
 
 def test_health_form_uses_rf25_exercise_detail_contract() -> None:
@@ -367,6 +392,18 @@ def test_rf25_ml_errors_have_safe_actionable_frontend_guidance() -> None:
         assert f'data-error-code="{error_code}"' in styles
 
 
+def test_local_model_preview_shows_category_without_exposing_numeric_score() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="development-preview-notice"' in html
+    assert "개발 확인용 모델 결과입니다" in html
+    assert "job.development_preview_risk_category" in script
+    assert "developmentPreviewRiskCategory" in script
+    assert "개발 확인용 위험 범주만 표시합니다." in script
+    assert "job.development_preview_internal_score" not in script
+
+
 def test_signup_and_login_block_duplicate_requests_while_busy() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
@@ -435,6 +472,9 @@ def test_returning_user_routes_from_persisted_eligibility_state() -> None:
     assert "state.openFollowUpActionIds.map((actionId)" in script
     assert "api(`/follow-up-actions/${actionId}/acknowledge`" in script
     assert "if (state.currentHealthOnly)" in script
+    assert "if (state.returningUser && shouldRunPredictionAfterHealthEdit())" in script
+    assert 'return "저장하고 다시 분석하기"' in script
+    assert 'showMessage("로컬 미리보기에서는 승인되지 않은 예측 수치를 표시하지 않습니다."' in script
     assert "if (state.cycle?.user_challenges?.length)" in script
     assert "이어서 4주 생활습관 챌린지를 선택해 주세요" in script
 
@@ -447,8 +487,8 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
         assert sample_value not in html
     assert 'id="report-week-period">기간 확인 중' in html
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
-    assert "4주 전체 기록은 아직 준비 중이에요" in html
-    assert "전체 기간 이력 API가 연결되면" in html
+    assert "4주 전체 기록을 모으고 있어요" in html
+    assert "챌린지를 완료하면 회차별 기록" in html
     assert "report.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
@@ -467,6 +507,15 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
         assert f'data-workspace-panel="{workspace}"' in html
         assert f'id="workspace-tab-{workspace}"' in html
     assert "오늘 할 일부터 확인하세요" in html
+    assert 'id="today-task-title"' in html
+    assert 'id="today-task-description"' in html
+    assert 'id="today-record-action"' in html
+    assert "function renderTodayTaskStatus()" in script
+    assert "오늘 할 일을 모두 기록했어요" in script
+    assert "가족·친구 목록을 불러오지 못했어요." in script
+    assert "공동 챌린지를 불러오지 못했어요." in script
+    assert "실제 4주 집계 API" not in html
+    assert "전체 기간 이력 API" not in html
     assert "내 생활습관 지도" in html
     assert "지도 보기" in html
     assert "지도 닫기" in html
@@ -488,6 +537,20 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert 'aria-pressed="true"' in html
     assert 'button.setAttribute("aria-pressed", String(selected))' in script
     assert "selectedPanel.focus({ preventScroll: true })" in script
+
+
+def test_local_forecast_preview_opens_safe_result_layout() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "function resumeForecastPreview()" in script
+    assert 'params.get("preview") !== "forecast"' in script
+    assert 'result_status: "development_only"' in script
+    assert 'output_status: "uncalibrated_research_probability_only"' in script
+    assert '{ display_label: "2년 뒤", signal_level: "low" }' in script
+    assert '{ display_label: "4년 뒤", signal_level: "caution" }' in script
+    assert '{ display_label: "6년 뒤", signal_level: "high" }' in script
+    assert "실제 분석값이 아닙니다" in script
+    assert "resumeForecastPreview();" in script
 
 
 def test_only_reviewed_diabetes_contract_is_active() -> None:

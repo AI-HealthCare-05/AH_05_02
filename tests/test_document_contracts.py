@@ -40,3 +40,15 @@ def test_privacy_lifecycle_policy_is_not_tbd() -> None:
     assert "30일 이내 삭제" in requirements
     assert "동의 철회 즉시" in safety
     assert "복구 불가능한 익명화" in safety
+
+
+def test_hidden_custom_challenge_fields_do_not_block_standard_challenge_submit() -> None:
+    html = read("src/frontend/index.html")
+    frontend = read("src/frontend/app.js")
+
+    assert 'id="custom-challenge-title"' in html
+    assert 'id="custom-challenge-goal"' in html
+    assert "required disabled" in html
+    assert '["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"]' in frontend
+    assert "$(selector).disabled = false" in frontend
+    assert "$(selector).disabled = true" in frontend

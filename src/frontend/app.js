@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, ragChallengeDraft: null, ragChallengeStatus: "idle" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -151,6 +151,7 @@ function fallbackApiErrorMessage(code) {
     ML_POPULATION_INELIGIBLE: "현재 입력정보로는 미래 발병 위험 예측을 진행할 수 없습니다.",
     ML_MODEL_UNAVAILABLE: "현재 예측 모델을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.",
     ML_MODEL_CONTRACT_ERROR: "예측 모델 연결을 점검하고 있습니다. 입력정보는 안전하게 유지됩니다.",
+    FEATURE_SCHEMA_VERSION_MISMATCH: "건강정보 입력 규격이 서버와 일치하지 않습니다. 화면을 새로고침한 뒤 다시 시도해 주세요.",
     MODEL_NOT_READY: "현재 예측 모델을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
     TIMEOUT: "요청 처리 시간이 초과되었습니다. 입력정보는 유지되며 다시 시도할 수 있습니다.",
     SERVER_ERROR: "서버에서 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -453,24 +454,88 @@ function showHealthInputPanel(panel) {
 function eligibilityCapabilities(eligibility) {
   const age = Number(eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
   const reasonCodes = eligibility?.reason_codes || [];
+  const hasExplicitCurrentHealth = Object.prototype.hasOwnProperty.call(eligibility || {}, "current_health_check_eligible");
+  const hasExplicitFuture = Object.prototype.hasOwnProperty.call(eligibility || {}, "future_prediction_eligible");
+  const hasExplicitModelEligible = Object.prototype.hasOwnProperty.call(eligibility || {}, "model_eligible");
+  const hasExplicitChallenge = Object.prototype.hasOwnProperty.call(eligibility || {}, "challenge_eligible");
+  const explicitFutureByReason = reasonCodes.some((code) => (
+    code === "MODEL_AGE_OUT_OF_RANGE" || code === "CHALLENGE_ONLY_AGE" || code === "UNDER_MINIMUM_SERVICE_AGE" || code === "MODEL_POPULATION_OUT_OF_SCOPE"
+  ));
   const safetyBlocked = reasonCodes.some((code) => code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES");
+  const inferredCurrentHealth = Number.isFinite(age) && age >= 19 && !safetyBlocked;
+  const inferredFuturePrediction = Number.isFinite(age) && age >= 45 && !safetyBlocked;
+  let futurePrediction = hasExplicitFuture ? eligibility.future_prediction_eligible : null;
+  if (!futurePrediction && hasExplicitModelEligible) futurePrediction = eligibility.model_eligible;
+  if (futurePrediction === null) {
+    futurePrediction = explicitFutureByReason ? false : inferredFuturePrediction;
+  }
   return {
-    challenge: eligibility?.challenge_eligible ?? (Number.isFinite(age) && age >= 14 && !safetyBlocked),
-    currentHealth: eligibility?.current_screening_eligible ?? eligibility?.current_health_check_eligible ?? (Number.isFinite(age) && age >= 19 && !safetyBlocked),
-    futurePrediction: eligibility?.future_prediction_eligible ?? eligibility?.model_eligible ?? false,
+    challenge: hasExplicitChallenge
+      ? eligibility.challenge_eligible
+      : Number.isFinite(age) && age >= 14 && !safetyBlocked,
+    currentHealth: hasExplicitCurrentHealth
+      ? eligibility.current_health_check_eligible
+      : inferredCurrentHealth,
+    futurePrediction,
   };
+}
+
+function inferFuturePredictionCapability(eligibility = state.eligibility) {
+  const age = Number(eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
+  if (!Number.isFinite(age)) return false;
+  const reasonCodes = eligibility?.reason_codes || [];
+  if (reasonCodes.some((code) => (
+    code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "CONSENT_REQUIRED" || code === "UNDER_MINIMUM_SERVICE_AGE"
+  ))) return false;
+  if (reasonCodes.includes("MODEL_AGE_OUT_OF_RANGE") || reasonCodes.includes("CHALLENGE_ONLY_AGE")
+      || reasonCodes.includes("MODEL_POPULATION_OUT_OF_SCOPE")) return false;
+
+  if (Object.prototype.hasOwnProperty.call(eligibility || {}, "future_prediction_eligible")) {
+    if (eligibility?.future_prediction_eligible === true) return true;
+    if (eligibility?.future_prediction_eligible === false) return false;
+  }
+  if (Object.prototype.hasOwnProperty.call(eligibility || {}, "model_eligible")) {
+    if (eligibility?.model_eligible === true) return true;
+    if (eligibility?.model_eligible === false) return false;
+  }
+
+  const activeModel = eligibility?.active_model || {};
+  const minAge = Number(activeModel.min_age);
+  const maxAge = Number(activeModel.max_age);
+  if (Number.isFinite(minAge) && age < minAge) return false;
+  if (Number.isFinite(maxAge) && age > maxAge) return false;
+  if (Number.isFinite(minAge) || Number.isFinite(maxAge)) return true;
+  return age >= 45;
 }
 
 function syncReturningEligibilityState(eligibility) {
   const reasonCodes = eligibility?.reason_codes || [];
+  const inferredFuturePrediction = inferFuturePredictionCapability(eligibility);
   state.eligibility = eligibility;
   state.capabilities = eligibilityCapabilities(eligibility);
+  if (state.capabilities.futurePrediction == null) {
+    state.capabilities.futurePrediction = inferredFuturePrediction;
+  }
   state.currentHealthOnly = state.capabilities.currentHealth && !state.capabilities.futurePrediction;
   state.modelOutOfRange = state.currentHealthOnly;
   state.requiresEligibility = !eligibility;
   state.medicalGuidanceRequired = reasonCodes.some((code) => (
     code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "UNDER_MINIMUM_SERVICE_AGE"
   ));
+}
+
+function shouldRunPredictionAfterHealthEdit() {
+  if (state.currentHealthOnly) return false;
+  if (state.medicalGuidanceRequired) return false;
+  if (state.capabilities.futurePrediction) return true;
+  if (!state.returningUser) return true;
+  if (inferFuturePredictionCapability(state.eligibility)) return true;
+  const age = Number(state.eligibility?.age ?? getAgeFromBirth($("#eligibility-birth-date")?.value));
+  const hasExplicitEligibility = Boolean(state.eligibility);
+  const reasonCodes = state.eligibility?.reason_codes || [];
+  if (!hasExplicitEligibility && Number.isFinite(age)) return age >= 45;
+  if (reasonCodes.includes("MODEL_AGE_OUT_OF_RANGE") || reasonCodes.includes("CHALLENGE_ONLY_AGE")) return false;
+  return state.eligibility?.future_prediction_eligible === true || state.eligibility?.model_eligible === true || false;
 }
 
 function beginReturningEligibility(destination) {
@@ -522,9 +587,16 @@ function showAuthMode(mode, { moveFocus = true } = {}) {
   if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
 }
 
+function healthSubmitLabel() {
+  if (state.currentHealthOnly) return "저장하고 현재 건강 신호 확인";
+  if (state.returningUser && shouldRunPredictionAfterHealthEdit()) return "저장하고 다시 분석하기";
+  if (state.returningUser) return "건강정보 저장하기";
+  return "이 내용으로 분석하기";
+}
+
 function openReturningUserHealthEdit() {
   state.visitedSteps.add(4);
-  $("#submit-analysis").textContent = "건강정보 저장하기";
+  $("#submit-analysis").textContent = healthSubmitLabel();
   showHealthInputPanel("metrics");
   showStep(4);
 }
@@ -608,7 +680,7 @@ function renderHealthReview() {
   $("#health-review-panel .lead").textContent = state.currentHealthOnly
     ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
     : "정보가 정확해야 당뇨병 위험 신호 확인을 요청할 수 있습니다. 수정이 필요하면 각 카드의 수정 버튼을 눌러 주세요.";
-  $("#submit-analysis").textContent = state.currentHealthOnly ? "저장하고 현재 건강 신호 확인" : state.returningUser ? "건강정보 저장하기" : "이 내용으로 분석하기";
+  $("#submit-analysis").textContent = healthSubmitLabel();
   $("#review-eligibility").innerHTML = dlRows([
     ["생년월일", $("#eligibility-birth-date").value || "-"],
     ["현재 만 나이", currentAgeLabel()],
@@ -736,7 +808,7 @@ function renderPredictionStatus(status, options = {}) {
       message: "가짜 결과를 표시하지 않으며, 다시 시도할 수 있습니다.",
       policy: "반복해서 실패하면 잠시 후 다시 시도하거나 입력정보를 확인해 주세요.",
       showRetry: true,
-      showNext: false,
+      showNext: true,
     },
   }[status] || {};
   if (status === "failed" && errorCode === "TIMEOUT") Object.assign(config, {
@@ -779,11 +851,11 @@ function renderPredictionStatus(status, options = {}) {
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
         : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
   }
-  const canShowResult = config.showNext && options.resultAvailable === true;
+  const canShowResult = config.showNext && options.showResult !== false;
   $("#retry-analysis").hidden = !config.showRetry;
   $("#result-next").hidden = !canShowResult;
   $("#result-next").disabled = !canShowResult;
-  $("#result-next").textContent = "결과 확인하기";
+  $("#result-next").textContent = "결과 확인";
   $("#high-guidance").hidden = true;
   $$("[data-demo-status]").forEach((button) => {
     const selected = button.dataset.demoStatus === status;
@@ -866,7 +938,7 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
 function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "예측 결과";
-  $("#factors-title").textContent = "결과를 확인해 주세요";
+  $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
   $("#result-confirmation-lead").textContent = "오늘이의 현재 위험 신호와 내일이의 미래 발병 위험은 서로 다른 결과로 표시합니다.";
   if (getCurrentHealthSignal()) renderCurrentHealthResult(state.healthCheckupResult, { standalone: false });
   else $("#current-health-result").hidden = true;
@@ -925,6 +997,17 @@ function updateResultConfirmation(prediction = state.prediction || {}, approvedO
   $("#medical-guidance-detail").hidden = risk !== "high";
   const challengeButton = $("#to-challenges");
   if (challengeButton) challengeButton.textContent = content.next;
+}
+
+function setForecastRiskPreview(risk) {
+  const controls = $("#risk-preview-controls");
+  if (!controls || controls.hidden || !isLocalPreview()) return;
+  updateResultConfirmation({ risk_category: risk }, true);
+  $$('[data-risk-preview]').forEach((button) => {
+    const selected = button.dataset.riskPreview === risk;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 }
 
 function updateLifestyleSummary() {
@@ -1054,6 +1137,9 @@ async function pollPrediction(jobId) {
           retryable: true,
         });
       }
+      state.developmentPreviewRiskCategory = isDemoEnvironment()
+        ? normalizeForecastSignal(job.development_preview_risk_category)
+        : null;
       return job.prediction_id;
     }
     if (job.status === "failed") {
@@ -1139,17 +1225,16 @@ function forecastSignalLabel(level) {
   return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
 }
 
-function renderScenarioResult(key, scenario, approved) {
+function renderScenarioResult(key, scenario, displayAllowed) {
   const summary = $(`#scenario-${key}-summary`);
   const value = $(`#scenario-${key}-value`);
   if (!summary || !value) return;
-  const displayPercent = approved ? approvedDisplayPercent(scenario?.display_percent) : null;
-  const displaySummary = approved && typeof scenario?.display_summary === "string"
+  const displaySummary = displayAllowed && typeof scenario?.display_summary === "string"
     ? scenario.display_summary.trim()
     : "";
   summary.textContent = displaySummary || "승인된 시나리오 결과를 기다리고 있습니다.";
-  value.hidden = displayPercent === null;
-  value.textContent = displayPercent === null ? "" : `${displayPercent}%`;
+  value.hidden = true;
+  value.textContent = "";
 }
 
 function renderAgeRiskForecast(prediction, approvedPrediction) {
@@ -1157,7 +1242,9 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
   const approvedForecast = approvedPrediction
     && forecast?.status === "approved"
     && forecast?.public_display_approved === true;
-  const points = approvedForecast && Array.isArray(forecast.points)
+  const previewForecast = isLocalPreview() && forecast?.preview_only === true;
+  const displayForecast = approvedForecast || previewForecast;
+  const points = displayForecast && Array.isArray(forecast.points)
     ? forecast.points.map((point) => ({
       label: String(point.display_label || point.age_label || "").trim(),
       value: approvedDisplayPercent(point.display_percent),
@@ -1170,20 +1257,20 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
   const statusBadge = $("#forecast-status-badge");
   if (!stateBox || !chart || !pointContainer || !statusBadge) return;
 
-  const hasApprovedPoints = approvedForecast && points.length > 0;
-  stateBox.hidden = hasApprovedPoints;
-  chart.hidden = !hasApprovedPoints;
+  const hasPoints = displayForecast && points.length > 0;
+  stateBox.hidden = hasPoints;
+  chart.hidden = !hasPoints;
   stateBox.dataset.state = approvedForecast ? "empty" : "unavailable";
   $("#forecast-state-title").textContent = approvedForecast
-    ? "표시할 연령별 전망 구간이 없습니다"
-    : "연령별 위험 전망 결과를 준비하고 있습니다";
+    ? "표시할 미래 전망 구간이 없습니다"
+    : "미래 신규 발병 위험 결과를 준비하고 있습니다";
   $("#forecast-state-message").textContent = approvedForecast
-    ? "승인된 응답에 전망 구간이 포함되면 이 영역에 표시합니다."
+    ? "승인된 응답에 2년 단위 전망 구간이 포함되면 이 영역에 표시합니다."
     : "모델·표현 기준이 승인되기 전에는 임의 수치나 그래프를 만들지 않습니다.";
-  statusBadge.textContent = hasApprovedPoints ? "승인된 결과" : "결과 준비 중";
-  statusBadge.dataset.status = hasApprovedPoints ? "approved" : "pending";
+  statusBadge.textContent = previewForecast ? "화면 확인용 예시" : hasPoints ? "승인된 결과" : "결과 준비 중";
+  statusBadge.dataset.status = previewForecast ? "preview" : hasPoints ? "approved" : "pending";
   pointContainer.replaceChildren();
-  if (hasApprovedPoints) {
+  if (hasPoints) {
     const fragment = document.createDocumentFragment();
     points.forEach((point) => {
       const item = document.createElement("div");
@@ -1210,22 +1297,19 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
       fragment.append(item);
     });
     pointContainer.append(fragment);
-    chart.setAttribute("aria-label", `연령별 당뇨병 위험 전망 그래프. ${points.map((point) => `${point.label} ${point.level ? forecastSignalLabel(point.level) : `${point.value}%`}`).join(", ")}`);
+    chart.setAttribute("aria-label", `${previewForecast ? "화면 확인용 예시. " : ""}연령별 당뇨병 위험 전망 그래프. ${points.map((point) => `${point.label} ${point.level ? forecastSignalLabel(point.level) : `${point.value}%`}`).join(", ")}`);
   } else {
-    chart.setAttribute("aria-label", "연령별 당뇨병 위험 전망 데이터가 아직 없습니다");
+    chart.setAttribute("aria-label", "2년 단위 당뇨병 위험 전망 데이터가 아직 없습니다");
   }
 
-  const scenarios = approvedForecast ? forecast.scenarios || {} : {};
-  renderScenarioResult("maintain", scenarios.current_maintenance || scenarios.maintain, approvedForecast);
-  renderScenarioResult("improve", scenarios.lifestyle_improvement || scenarios.improve, approvedForecast);
+  const scenarios = displayForecast ? forecast.scenarios || {} : {};
+  renderScenarioResult("maintain", scenarios.current_maintenance || scenarios.maintain, displayForecast);
+  renderScenarioResult("improve", scenarios.lifestyle_improvement || scenarios.improve, displayForecast);
 
-  const uncertainty = approvedForecast ? forecast.uncertainty || {} : {};
-  const lower = approvedDisplayPercent(uncertainty.lower_display_percent);
-  const upper = approvedDisplayPercent(uncertainty.upper_display_percent);
-  const hasRange = lower !== null && upper !== null && lower <= upper;
-  $("#uncertainty-message").textContent = hasRange
-    ? `승인된 불확실성 범위는 ${lower}%~${upper}%입니다. ${uncertainty.display_note || "범위 안에서도 실제 결과는 달라질 수 있습니다."}`
-    : "불확실성 범위가 승인된 응답에 포함되면 함께 표시합니다. 한 번의 결과만으로 진단하거나 치료를 결정하지 마세요.";
+  const uncertainty = displayForecast ? forecast.uncertainty || {} : {};
+  $("#uncertainty-message").textContent = typeof uncertainty.display_note === "string" && uncertainty.display_note.trim()
+    ? uncertainty.display_note.trim()
+    : "전망 신호에는 불확실성이 있습니다. 한 번의 결과만으로 진단하거나 치료를 결정하지 마세요.";
 }
 
 function renderPrediction(prediction, factors) {
@@ -1234,6 +1318,13 @@ function renderPrediction(prediction, factors) {
     && prediction.output_status !== "uncalibrated_research_probability_only"
     && prediction.raw_probability_exposed !== true
     && Boolean(prediction.risk_category);
+  const developmentPreviewRisk = isDemoEnvironment()
+    ? normalizeForecastSignal(state.developmentPreviewRiskCategory)
+    : null;
+  const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk);
+  const displayPrediction = developmentPreviewRisk
+    ? { ...prediction, risk_category: developmentPreviewRisk, risk_category_label: riskCategoryLabels[developmentPreviewRisk] }
+    : prediction;
   const hasApprovedExplanation = isApprovedRisk
     && factors?.status === "approved"
     && factors?.shap_claimed === true;
@@ -1242,16 +1333,19 @@ function renderPrediction(prediction, factors) {
     && prediction.output_status.length > 0
     && prediction.raw_probability_exposed !== true;
   renderPredictionStatus(
-    isApprovedRisk ? "succeeded" : isDevelopmentResult ? "development" : "failed",
-    isApprovedRisk || isDevelopmentResult
-      ? { resultAvailable: true }
+    canDisplayRisk ? "succeeded" : isDevelopmentResult ? "development" : "failed",
+    canDisplayRisk || isDevelopmentResult
+      ? { resultAvailable: true, showResult: canDisplayRisk }
       : { errorCode: "MODEL_NOT_READY" },
   );
   $("#probability-policy").querySelector("p").textContent = isApprovedRisk
     ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."
+    : developmentPreviewRisk
+      ? "개발 확인용 위험 범주만 표시합니다. 숫자 점수·확률·위험요인은 표시하지 않습니다."
     : "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
   const factorItems = Array.isArray(factors?.items) ? factors.items : [];
-  $("#factor-list").innerHTML = hasApprovedExplanation && factorItems.length
+  const factorList = $("#factor-list");
+  if (factorList) factorList.innerHTML = hasApprovedExplanation && factorItems.length
     ? factorItems.map((item) => {
       const factorName = item.display_name || item.factor_name || "확인된 요인";
       const factorDescription = item.message || item.description || "검증된 설명만 표시합니다.";
@@ -1259,16 +1353,17 @@ function renderPrediction(prediction, factors) {
     }).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   $("#risk-confirm-card").hidden = false;
-  $("#result-unavailable").hidden = isApprovedRisk;
-  const isHighRisk = isApprovedRisk && isHighRiskPrediction(prediction);
+  $("#result-unavailable").hidden = canDisplayRisk;
+  $("#development-preview-notice").hidden = !developmentPreviewRisk;
+  const isHighRisk = canDisplayRisk && isHighRiskPrediction(displayPrediction);
   $("#medical-guidance-detail").hidden = !isHighRisk;
-  updateResultConfirmation(prediction, isApprovedRisk);
+  updateResultConfirmation(displayPrediction, canDisplayRisk);
   renderAgeRiskForecast(prediction, isApprovedRisk);
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
-  $("#result-next").hidden = !isApprovedRisk;
-  $("#result-next").disabled = !isApprovedRisk;
+  $("#result-next").hidden = false;
+  $("#result-next").disabled = false;
 }
 
 async function requestPredictionModel(modelKey) {
@@ -1283,6 +1378,7 @@ async function requestPredictionModel(modelKey) {
 }
 
 async function runPrediction() {
+  state.developmentPreviewRiskCategory = null;
   if (isLocalPreview()) {
     renderPredictionStatus("queued");
     await sleep(350);
@@ -1304,6 +1400,8 @@ async function runPrediction() {
       shap_claimed: false,
       message: "로컬 화면 확인 모드에서는 검증되지 않은 위험·보호 요인을 만들지 않습니다.",
     });
+    showStep(6);
+    showMessage("로컬 미리보기에서는 승인되지 않은 예측 수치를 표시하지 않습니다.", "success");
     return;
   }
   renderPredictionStatus("queued");
@@ -1429,6 +1527,71 @@ function customChallengeSlot() {
   </article>`;
 }
 
+function localRagChallengeDraft(preference) {
+  const drafts = {
+    activity: {
+      title: "식후 10분 천천히 걷기",
+      goal: "하루 한 번 식사 후 편한 속도로 10분 걷기",
+      recordType: "simple",
+      source: "질병관리청 신체활동·걷기 건강정보 기반",
+    },
+    diet: {
+      title: "단 음료 대신 물 고르기",
+      goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기",
+      recordType: "simple",
+      source: "국가건강정보포털 당뇨병 생활습관 자료 기반",
+    },
+    tracking: {
+      title: "오늘 건강수치 한 가지 기록하기",
+      goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기",
+      recordType: "simple",
+      source: "정기 건강 점검 안내 자료 기반",
+    },
+  };
+  return drafts[preference] || drafts.activity;
+}
+
+function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
+  state.ragChallengeStatus = status;
+  const box = $("#rag-challenge-state");
+  const card = $("#rag-challenge-draft");
+  if (!box || !card) return;
+  box.dataset.state = status;
+  const copy = {
+    idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
+    loading: ["챌린지 초안을 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
+    done: ["챌린지 초안을 확인해 주세요", "마음에 들면 나만의 챌린지로 사용할 수 있어요."],
+    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성하거나 직접 나만의 챌린지를 추가해 주세요."],
+  }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
+  $("#rag-challenge-state-title").textContent = copy[0];
+  $("#rag-challenge-state-message").textContent = copy[1];
+  $("#generate-rag-challenge").hidden = status === "done";
+  $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "failed";
+  card.hidden = status !== "done" || !draft;
+  if (status === "done" && draft) {
+    $("#rag-challenge-draft-title").textContent = draft.title;
+    $("#rag-challenge-draft-goal").textContent = draft.goal;
+    $("#rag-challenge-draft-source").textContent = draft.source;
+  }
+}
+
+async function generateRagChallengeDraft() {
+  const releaseBusy = setButtonBusy($("#generate-rag-challenge"), "생성 중…");
+  $("#regenerate-rag-challenge").disabled = true;
+  renderRagChallengeState("loading");
+  try {
+    await sleep(500);
+    state.ragChallengeDraft = localRagChallengeDraft($("#rag-challenge-preference").value);
+    renderRagChallengeState("done", state.ragChallengeDraft);
+  } catch (error) {
+    renderRagChallengeState("failed");
+    showMessage(error.message || "맞춤 챌린지 초안을 만들지 못했습니다.");
+  } finally {
+    releaseBusy();
+    $("#regenerate-rag-challenge").disabled = false;
+  }
+}
+
 function renderChallengeChoices() {
   const challengeList = $("#challenge-list");
   const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 나만의 챌린지를 직접 추가할 수 있어요.</p>';
@@ -1473,6 +1636,7 @@ function renderCycle(cycle) {
   state.dailyCompleted = new Set();
   $("#dashboard-cycle").textContent = `${cycle.cycle_number}회차 · 4주`;
   renderDailyRecordList();
+  renderTodayTaskStatus();
   $("#barrier-challenge").innerHTML = cycle.user_challenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
 }
 
@@ -1516,6 +1680,31 @@ function createLocalDemoCycle(ids, customChallenge = null) {
   };
 }
 
+function renderTodayTaskStatus() {
+  const title = $("#today-task-title");
+  const description = $("#today-task-description");
+  const action = $("#today-record-action");
+  if (!title || !description || !action) return;
+  const challenges = state.cycle?.user_challenges || [];
+  const completed = challenges.filter((item) => state.dailyCompleted.has(String(item.user_challenge_id))).length;
+  const remaining = Math.max(0, challenges.length - completed);
+  if (challenges.length && remaining === 0) {
+    title.textContent = "오늘 할 일을 모두 기록했어요";
+    description.textContent = "오늘의 실천이 대시보드와 주간 리포트에 반영되었습니다.";
+    action.textContent = "기록 확인하기";
+    return;
+  }
+  if (completed > 0) {
+    title.textContent = `오늘 ${completed}개를 기록했어요`;
+    description.textContent = `남은 ${remaining}개도 기록하거나, 실천하지 못한 이유를 남길 수 있어요.`;
+    action.textContent = "이어서 기록하기";
+    return;
+  }
+  title.textContent = "챌린지 실천을 기록해 주세요";
+  description.textContent = "기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.";
+  action.textContent = "오늘 기록하기";
+}
+
 function renderLocalDemoDashboard() {
   $("#dashboard-stage").textContent = state.prediction ? getRiskCategoryLabel(state.prediction) : "최근 결과 없음";
   $("#dashboard-notice").textContent = "결과는 진단이나 치료 판단을 대신하지 않습니다.";
@@ -1524,6 +1713,7 @@ function renderLocalDemoDashboard() {
   $("#report-week-streak").textContent = state.dailyCompleted.size
     ? `오늘 ${state.dailyCompleted.size}개를 기록했어요`
     : "아직 이번 주 기록이 없어요";
+  renderTodayTaskStatus();
   $("#report-week-days").hidden = true;
   renderWeeklyChallengeProgress((state.cycle?.user_challenges || []).map((item) => ({
     title: item.title,
@@ -1535,6 +1725,10 @@ function renderLocalDemoDashboard() {
 }
 function updateDailyRecordSummary() {
   $("#dashboard-complete").textContent = `${state.dailyCompleted.size}개`;
+  $("#report-week-streak").textContent = state.dailyCompleted.size
+    ? `오늘 ${state.dailyCompleted.size}개를 기록했어요`
+    : "아직 이번 주 기록이 없어요";
+  renderTodayTaskStatus();
   renderWeeklyChallengeProgress((state.cycle?.user_challenges || []).map((item) => ({
     title: item.title,
     completed: state.dailyCompleted.has(String(item.user_challenge_id)) ? 1 : 0,
@@ -1689,8 +1883,13 @@ async function loadEducation() {
   }
 }
 async function loadConnections() {
-  const result = await api("/connections");
-  $("#connection-list").innerHTML = result.items.length ? result.items.map(renderTogetherMember).join("") : renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
+  const list = $("#connection-list");
+  try {
+    const result = await api("/connections");
+    list.innerHTML = result.items.length ? result.items.map(renderTogetherMember).join("") : renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
+  } catch (error) {
+    list.innerHTML = renderTogetherEmpty("가족·친구 목록을 불러오지 못했어요.", "잠시 후 함께하기 탭을 다시 확인해 주세요.");
+  }
 }
 
 function renderTogetherEmpty(title, message) {
@@ -1756,20 +1955,24 @@ function syncForestOverview() {
 async function loadSharedGroups() {
   const list = $("#shared-group-list");
   if (!list) return;
-  const result = await api("/shared-challenge-groups");
-  list.innerHTML = result.items.length ? result.items.map((group) => {
-    const me = group.members.find((member) => member.is_me);
-    const partner = group.members.find((member) => !member.is_me && member.status === "active");
-    const memberStatuses = group.members.map((member) => {
-      const memberLabel = member.is_me ? "나" : `연결 사용자 #${member.user_id}`;
-      const statusLabel = member.status === "active" ? `${Number(member.completed_days || 0)}일 기록` : "참여 대기";
-      return `<li><strong>${escapeHtml(memberLabel)}</strong><span>${escapeHtml(statusLabel)}</span></li>`;
-    }).join("");
-    const action = me?.status === "pending"
-      ? `<button class="text-button accept-shared" data-id="${group.group_id}" type="button">공동 챌린지 수락</button>`
-      : partner ? `<button class="text-button cheer-shared" data-id="${group.group_id}" data-user="${partner.user_id}" type="button">응원 보내기</button>` : "";
-    return `<article class="forest-group-card"><strong>${escapeHtml(group.title)}</strong><p>${escapeHtml(group.common_goal)}</p><small>참여자 ${group.members.length}명 · 챌린지 수행 상태만 공유</small><ul class="shared-member-progress">${memberStatuses}</ul>${action}</article>`;
-  }).join("") : renderTogetherEmpty("아직 공동 챌린지가 없습니다.", "개인 챌린지를 시작한 뒤 함께할 사람에게 공동 챌린지를 보낼 수 있어요.");
+  try {
+    const result = await api("/shared-challenge-groups");
+    list.innerHTML = result.items.length ? result.items.map((group) => {
+      const me = group.members.find((member) => member.is_me);
+      const partner = group.members.find((member) => !member.is_me && member.status === "active");
+      const memberStatuses = group.members.map((member) => {
+        const memberLabel = member.is_me ? "나" : `연결 사용자 #${member.user_id}`;
+        const statusLabel = member.status === "active" ? `${Number(member.completed_days || 0)}일 기록` : "참여 대기";
+        return `<li><strong>${escapeHtml(memberLabel)}</strong><span>${escapeHtml(statusLabel)}</span></li>`;
+      }).join("");
+      const action = me?.status === "pending"
+        ? `<button class="text-button accept-shared" data-id="${group.group_id}" type="button">공동 챌린지 수락</button>`
+        : partner ? `<button class="text-button cheer-shared" data-id="${group.group_id}" data-user="${partner.user_id}" type="button">응원 보내기</button>` : "";
+      return `<article class="forest-group-card"><strong>${escapeHtml(group.title)}</strong><p>${escapeHtml(group.common_goal)}</p><small>참여자 ${group.members.length}명 · 챌린지 수행 상태만 공유</small><ul class="shared-member-progress">${memberStatuses}</ul>${action}</article>`;
+    }).join("") : renderTogetherEmpty("아직 공동 챌린지가 없습니다.", "개인 챌린지를 시작한 뒤 함께할 사람에게 공동 챌린지를 보낼 수 있어요.");
+  } catch (error) {
+    list.innerHTML = renderTogetherEmpty("공동 챌린지를 불러오지 못했어요.", "잠시 후 함께하기 탭을 다시 확인해 주세요.");
+  }
 }
 async function loadNotifications() {
   const toggle = $("#notification-toggle");
@@ -1789,9 +1992,9 @@ async function refreshDashboard() {
   $("#dashboard-stage").textContent = approvedCard
     ? approvedCard.risk_category_label
     : cards.length ? "모델 검증 중" : "기록 없음";
-  $("#dashboard-notice").textContent = summary.disclaimer;
+  $("#dashboard-notice").textContent = summary.disclaimer || "결과와 수행률은 진단이나 치료 효과를 의미하지 않습니다.";
   const progress = await api("/dashboard/challenge-progress");
-  $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
+  $("#dashboard-complete").textContent = `${Number(progress.recent_7_days?.completed || 0)}개`;
   await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups()]);
 }
 
@@ -2096,12 +2299,14 @@ $("#health-form").addEventListener("submit", async (event) => {
     return;
   }
   submit.disabled = true;
-  submit.textContent = state.returningUser || state.currentHealthOnly ? "건강정보 저장 중…" : "분석 요청 중…";
+  const shouldRequestPrediction = shouldRunPredictionAfterHealthEdit();
+  submit.textContent = shouldRequestPrediction ? "분석 요청 중…" : "건강정보 저장 중…";
   try {
     if (isLocalPreview()) {
       state.checkupId = "local-demo-checkup";
       state.healthCheckupResult = { checkup_id: state.checkupId };
     } else {
+      const smokingStatus = selectedRadioValue("smoking-status");
       const checkup = await api("/health-checkups", { method: "POST", body: JSON.stringify({
         checkup_type: "initial", checkup_date: new Date().toISOString().slice(0, 10),
         height_cm: Number($("#height").value), weight_kg: Number($("#weight").value),
@@ -2109,13 +2314,25 @@ $("#health-form").addEventListener("submit", async (event) => {
         systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
         diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
         self_rated_health: $("#self-health").value, meal_count_yesterday: Number($("#meal-count").value),
-        regular_exercise: selectedRadioValue("regular-exercise") === "true", smoking_status: selectedRadioValue("smoking-status"),
+        regular_exercise: selectedRadioValue("regular-exercise") === "true",
+        smoking_status: smokingStatus,
         exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
         exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
         current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa_stage3_25features_v1",
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
+    }
+    if (state.currentHealthOnly) {
+      renderCurrentHealthResult(state.healthCheckupResult);
+      showStep(6);
+      showMessage("건강정보를 저장했습니다. 현재 건강 신호 결과 영역을 확인해 주세요.", "success");
+      return;
+    }
+    if (state.returningUser && shouldRequestPrediction) {
+      showStep(5);
+      await runPrediction();
+      return;
     }
     if (state.returningUser) {
       if (state.cycle?.user_challenges?.length) {
@@ -2134,7 +2351,7 @@ $("#health-form").addEventListener("submit", async (event) => {
     showStep(5);
     await runPrediction();
   } catch (error) { showMessage(error.message); }
-  finally { submit.disabled = false; submit.textContent = state.currentHealthOnly ? "저장하고 현재 건강 신호 확인" : state.returningUser ? "건강정보 저장하기" : "이 내용으로 분석하기"; }
+  finally { submit.disabled = false; submit.textContent = healthSubmitLabel(); }
 });
 $("#retry-analysis").addEventListener("click", runPrediction);
 $$("[data-demo-status]").forEach((button) => button.addEventListener("click", () => {
@@ -2177,6 +2394,9 @@ $("#challenge-list").addEventListener("click", (event) => {
   if (!event.target.closest("#open-custom-challenge, .edit-custom-challenge")) return;
   const editor = $("#custom-challenge-editor");
   editor.hidden = false;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = false;
+  });
   $("#custom-challenge-title").value = state.customChallenge?.title || "";
   $("#custom-challenge-goal").value = state.customChallenge?.goal || "";
   $("#custom-challenge-record-type").value = state.customChallenge?.recordType || "simple";
@@ -2209,12 +2429,26 @@ $("#challenge-detail-list").addEventListener("change", (event) => {
 });
 $("#cancel-custom-challenge").addEventListener("click", () => {
   $("#custom-challenge-editor").hidden = true;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = true;
+  });
   $("#open-custom-challenge, .edit-custom-challenge")?.focus();
 });
 $("#save-custom-challenge").addEventListener("click", () => {
   const titleInput = $("#custom-challenge-title");
   const goalInput = $("#custom-challenge-goal");
-  if (!titleInput.reportValidity() || !goalInput.reportValidity()) return;
+  if (!titleInput.value.trim()) {
+    titleInput.setCustomValidity("챌린지 이름을 입력해 주세요.");
+    titleInput.reportValidity();
+    titleInput.setCustomValidity("");
+    return;
+  }
+  if (!goalInput.value.trim()) {
+    goalInput.setCustomValidity("실천 목표를 입력해 주세요.");
+    goalInput.reportValidity();
+    goalInput.setCustomValidity("");
+    return;
+  }
   const recordType = $("#custom-challenge-record-type").value;
   state.customChallenge = {
     title: titleInput.value.trim(),
@@ -2229,9 +2463,33 @@ $("#save-custom-challenge").addEventListener("click", () => {
   state.customChallengeSelected = true;
   renderChallengeChoices();
   $("#custom-challenge-editor").hidden = true;
+  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
+    $(selector).disabled = true;
+  });
   syncWalkingLevelPicker();
   $("#custom-challenge-choice").focus();
   showMessage("나만의 챌린지를 추가했어요.", "success");
+});
+$("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#apply-rag-challenge")?.addEventListener("click", () => {
+  if (!state.ragChallengeDraft) {
+    renderRagChallengeState("failed");
+    return;
+  }
+  if (state.selectedChallengeIds.size >= 3 && !state.customChallengeSelected) {
+    showMessage("챌린지는 최대 3개까지 선택할 수 있어요. 기존 선택을 하나 해제한 뒤 추가해 주세요.");
+    return;
+  }
+  state.customChallenge = {
+    title: state.ragChallengeDraft.title,
+    goal: state.ragChallengeDraft.goal,
+    recordType: state.ragChallengeDraft.recordType,
+    recordLabel: { simple: "간편 체크", time: "시간 입력", count: "횟수 입력" }[state.ragChallengeDraft.recordType],
+  };
+  state.customChallengeSelected = true;
+  renderChallengeChoices();
+  showMessage("RAG 초안을 나만의 챌린지로 추가했어요.", "success");
 });
 $("#walking-level-picker").addEventListener("change", (event) => {
   if (event.target.name === "walking-level") state.walkingLevel = event.target.value;
@@ -2693,8 +2951,88 @@ function resumeFromForest() {
   showWorkspace(requestedWorkspace || "together", { moveFocus: false });
 }
 
+function resumeReturningPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("resume") !== "returning") return;
+  if (!isDemoEnvironment()) return;
+
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.checkupId = "local-demo-checkup";
+  $("#eligibility-birth-date").value = "1960-05-12";
+  $("#gender").value = "female";
+  syncLifestyleAvatar();
+  syncReturningEligibilityState({
+    age: getAgeFromBirth($("#eligibility-birth-date").value),
+    service_eligible: true,
+    challenge_eligible: true,
+    current_health_check_eligible: true,
+    future_prediction_eligible: true,
+    model_eligible: true,
+    reason_codes: [],
+  });
+  state.healthCheckupResult = { checkup_id: state.checkupId };
+  state.cycle = createLocalDemoCycle([101, 102, 103]);
+  state.navigationHistory = [2];
+  [2, 4, 5, 6, 7, 8].forEach((step) => state.visitedSteps.add(step));
+
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  unlockReturningUserRoutes();
+  showMessage("로컬 시연용 기존회원으로 들어왔어요. 실제 로그인 정보는 사용하지 않습니다.", "success");
+}
+
+function resumeForecastPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "forecast") return;
+  if (!isDemoEnvironment()) return;
+
+  state.token = "local-demo-token";
+  state.predictionId = "local-forecast-preview";
+  state.prediction = {
+    prediction_id: state.predictionId,
+    risk_category: null,
+    risk_category_label: null,
+    result_status: "development_only",
+    promotion_status: "development_only",
+    output_status: "uncalibrated_research_probability_only",
+    raw_probability_exposed: false,
+    age_risk_forecast: {
+      preview_only: true,
+      points: [
+        { display_label: "2년 뒤", signal_level: "low" },
+        { display_label: "4년 뒤", signal_level: "caution" },
+        { display_label: "6년 뒤", signal_level: "high" },
+      ],
+      scenarios: {
+        maintain: { display_summary: "화면 예시에서는 6년 뒤 ‘높음’ 신호에 가까워집니다." },
+        improve: { display_summary: "화면 예시에서는 6년 뒤 ‘주의’ 신호에 머뭅니다." },
+      },
+      uncertainty: {
+        display_note: "화면 구성을 확인하기 위한 예시이며 실제 분석값이 아닙니다. 실제 결과는 2년 단위 모델 응답과 승인된 표현 기준을 따릅니다.",
+      },
+    },
+  };
+  state.navigationHistory = [1, 5, 6];
+  [1, 5, 6].forEach((step) => state.visitedSteps.add(step));
+  state.developmentPreviewRiskCategory = "caution";
+  renderPrediction(state.prediction, {
+    status: "pending_validation",
+    items: [],
+    shap_claimed: false,
+    message: "승인된 모델 설명이 제공되기 전에는 임의 위험요인을 표시하지 않습니다.",
+  });
+  $("#result-unavailable").hidden = true;
+  $("#risk-preview-controls").hidden = false;
+  showStep(6, { recordHistory: false });
+  setForecastRiskPreview("caution");
+}
+
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 syncExerciseDetails();
+$$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 resumeFromForest();
 initializeRuleForecastPreview();
+resumeReturningPreview();
+resumeForecastPreview();

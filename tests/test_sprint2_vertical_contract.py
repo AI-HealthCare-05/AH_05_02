@@ -167,7 +167,7 @@ async def test_worker_development_inference_returns_versioned_safe_result() -> N
     assert "진단·처방이 아닙니다" in result["medical_notice"]
 
 
-def test_eligibility_blocks_minor_diagnosed_warning_and_out_of_scope() -> None:
+def test_eligibility_exposes_challenge_only_tier_for_age_14_to_18() -> None:
     reasons = eligibility_reason_codes(
         age=17,
         has_consent=False,
@@ -176,13 +176,24 @@ def test_eligibility_blocks_minor_diagnosed_warning_and_out_of_scope() -> None:
         population_in_scope=False,
     )
     assert set(reasons) == {
-        "UNDER_MINIMUM_SERVICE_AGE",
+        "CHALLENGE_ONLY_AGE",
         "CONSENT_REQUIRED",
         "DIAGNOSED_DIABETES",
         "URGENT_MEDICAL_ATTENTION",
         "MODEL_AGE_OUT_OF_RANGE",
         "MODEL_POPULATION_OUT_OF_SCOPE",
     }
+
+
+def test_eligibility_blocks_signup_age_below_14() -> None:
+    reasons = eligibility_reason_codes(
+        age=13,
+        has_consent=True,
+        has_diabetes_diagnosis=False,
+        has_urgent_warning_sign=False,
+        population_in_scope=True,
+    )
+    assert set(reasons) == {"UNDER_MINIMUM_SERVICE_AGE", "MODEL_AGE_OUT_OF_RANGE"}
 
 
 def test_service_target_matches_active_klosa_minimum_age() -> None:
