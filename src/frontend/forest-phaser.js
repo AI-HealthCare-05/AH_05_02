@@ -173,7 +173,11 @@
         if (event.repeat || formFocused()) return;
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "feed" }));
       });
-      this.input.keyboard.on("keydown-E", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" })); });
+      this.input.keyboard.on("keydown-E", (event) => {
+        if (event.repeat || formFocused() || this.mountTransitioning) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "ride" }));
+      });
       this.input.keyboard.on("keydown-J", (event) => {
         if (event.repeat || formFocused()) return;
         this.playAction("jump", 620);

@@ -138,12 +138,18 @@
     return output.sort((left, right) => left.z - right.z);
   }
 
+  function sharedAnimation(avatar, options, candidates) {
+    const layers = selectedLayers(avatar, options);
+    return candidates.find((candidate) => layers.every((layer) => (
+      layer.item?.animations || []
+    ).includes(candidate)));
+  }
+
   function resolvedAnimation(avatar, options) {
     if (options.pose === "attack") {
       const weapon = avatar.cosmetics?.lpcWeapon || "arming_sword";
       // 공식 LPC 완드 시트에는 slash 레이어만 있지만, 캐릭터 본체는 spellcast 행을
       // 완전하게 지원한다. 완드는 아래 drawActionProp에서 주문 자세에 맞춰 그린다.
-      if (weapon === "wand") return "spellcast";
       const supported = item("weapon", weapon, "arming_sword")?.animations || [];
       const preferences = {
         wand: ["spellcast", "slash", "thrust"],
@@ -152,7 +158,8 @@
         dagger: ["slash", "thrust", "halfslash"],
         arming_sword: ["slash", "halfslash", "backslash"],
       }[weapon] || ["slash", "thrust", "shoot", "spellcast"];
-      return preferences.find((animation) => supported.includes(animation)) || "slash";
+      const weaponAnimations = preferences.filter((animation) => supported.includes(animation));
+      return sharedAnimation(avatar, options, weaponAnimations) || weaponAnimations[0] || "slash";
     }
     if (options.pose === "harvest") {
       const tool = avatar.cosmetics?.lpcTool || "axe";
@@ -160,13 +167,25 @@
       const preferences = ["axe", "hammer", "pickaxe"].includes(tool)
         ? ["slash", "thrust"]
         : ["thrust", "slash"];
-      return preferences.find((animation) => supported.includes(animation)) || "thrust";
+      const toolAnimations = preferences.filter((animation) => supported.includes(animation));
+      return sharedAnimation(avatar, options, toolAnimations) || toolAnimations[0] || "thrust";
     }
-    if (poseAnimationAliases[options.pose]) return poseAnimationAliases[options.pose];
-    if (options.pose && animationCycles[options.pose]) return options.pose;
-    if (avatar.sitting) return "sit";
+    const requestedPose = poseAnimationAliases[options.pose] || options.pose;
+    if (requestedPose && animationCycles[requestedPose]) {
+      const poseFallbacks = {
+        jump: ["jump", "walk", "idle"],
+        emote: ["emote", "idle", "walk"],
+        sit: ["sit", "idle", "walk"],
+        hurt: ["hurt", "idle", "walk"],
+      }[requestedPose] || [requestedPose, "idle", "walk"];
+      return sharedAnimation(avatar, options, poseFallbacks) || requestedPose;
+    }
+    if (avatar.sitting) return sharedAnimation(avatar, options, ["sit", "idle", "walk"]) || "sit";
     if (avatar.mounted) return usesWingMobility(avatar) ? "idle" : "sit";
-    if (options.moving) return options.running ? "run" : "walk";
+    if (options.moving) {
+      const movementAnimations = options.running ? ["run", "walk", "idle"] : ["walk", "idle"];
+      return sharedAnimation(avatar, options, movementAnimations) || "walk";
+    }
     return "idle";
   }
 

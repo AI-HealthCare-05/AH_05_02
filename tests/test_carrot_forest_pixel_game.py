@@ -422,7 +422,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v114" in worker
+    assert "gandang-carrot-forest-pwa-v116" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -685,6 +685,8 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     ).read_text(encoding="utf-8")
     assert 'this.input.keyboard.on("keydown-J"' in phaser_script
     assert 'this.playAction("jump", 620)' in phaser_script
+    assert 'this.input.keyboard.on("keydown-E", (event)' in phaser_script
+    assert "event.repeat || formFocused() || this.mountTransitioning" in phaser_script
     assert 'data-action="feed"' not in html
     assert "async function feedPet" in game_script
     assert 'new CustomEvent("forest-pet-clicked"' in phaser_script
@@ -759,7 +761,8 @@ def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
     assert 'wand: ["spellcast", "slash", "thrust"]' in engine_script
-    assert 'if (weapon === "wand") return "spellcast"' in engine_script
+    assert "function sharedAnimation(avatar, options, candidates)" in engine_script
+    assert "sharedAnimation(avatar, options, weaponAnimations)" in engine_script
     assert 'pose === "attack" && cosmetics.lpcWeapon === "wand"' in engine_script
     assert 'drawPixel(context, destination, wandX, wandTop + 5, 2, 15, "#6f4528")' in engine_script
     assert 'bow: ["shoot", "slash"]' in engine_script
@@ -768,6 +771,15 @@ def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     assert 'arming_sword: ["slash", "halfslash", "backslash"]' in engine_script
     assert 'options.pose === "attack" && cosmetics.lpcWeapon !== "none"' in engine_script
     assert "supported.includes(animation)" in engine_script
+
+
+def test_lpc_clothing_uses_one_shared_animation_for_body_and_outfit_layers() -> None:
+    engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
+
+    assert 'const movementAnimations = options.running ? ["run", "walk", "idle"]' in engine_script
+    assert 'jump: ["jump", "walk", "idle"]' in engine_script
+    assert "layers.every((layer)" in engine_script
+    assert "return sharedAnimation(avatar, options, movementAnimations) || \"walk\"" in engine_script
 
 
 def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_on_selection() -> None:
