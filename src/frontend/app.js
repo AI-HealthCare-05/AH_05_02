@@ -3050,6 +3050,16 @@ function clearFacilityMapMarkers(target) {
   facilityMapMarkers[target] = [];
 }
 
+// 새 검색을 시작하거나 검색이 실패했을 때, 이전 검색의 지도 마커·목록이 그대로 남아있지 않도록
+// 결과 목록과 지도를 함께 초기화합니다. (2026-09-02 PR 리뷰 반영)
+function resetFacilitySearchUi(target) {
+  const items = $(`#${target}-facility-items`);
+  if (items) items.innerHTML = "";
+  clearFacilityMapMarkers(target);
+  const mapContainer = $(`#${target}-facility-map`);
+  if (mapContainer) mapContainer.hidden = true;
+}
+
 // 카카오 기본 마커 이미지는 광고 차단 확장 프로그램 등에 의해 막히는 경우가 있어,
 // 외부 리소스에 의존하지 않는 인라인 SVG로 직접 마커 아이콘을 그립니다.
 const USER_MARKER_IMAGE_SRC =
@@ -3070,7 +3080,7 @@ const DEFAULT_FACILITY_LOCATION = {
   label: "G278+RR 서울특별시",
 };
 
-async function renderFacilityMap(userLatitude, userLongitude, facilities, target = "medical") {
+async function renderFacilityMap(userLatitude, userLongitude, facilities, target = "medical", referenceLabel = "현재 위치") {
   const container = $(`#${target}-facility-map`);
   if (!container) return;
   try {
@@ -3094,7 +3104,7 @@ async function renderFacilityMap(userLatitude, userLongitude, facilities, target
     const userMarker = new kakao.maps.Marker({
       map,
       position: center,
-      title: "현재 위치",
+      title: referenceLabel,
       image: userMarkerImage,
       zIndex: 10,
     });
@@ -3176,12 +3186,18 @@ async function getCurrentPositionWithRetry() {
   }
 }
 
-async function searchFacilitiesAt(latitude, longitude, target = "medical") {
+async function searchFacilitiesAt(latitude, longitude, target = "medical", referenceLabel = "현재 위치") {
   const path = target === "emergency" ? "/emergency-facilities/nearby" : "/medical-facilities/nearby";
   const radius = target === "emergency" ? 10000 : 5000;
   const result = await api(`${path}?lat=${latitude}&lon=${longitude}&radius=${radius}`);
   renderNearbyFacilities(result, target);
-  await renderFacilityMap(latitude, longitude, Array.isArray(result?.facilities) ? result.facilities : [], target);
+  await renderFacilityMap(
+    latitude,
+    longitude,
+    Array.isArray(result?.facilities) ? result.facilities : [],
+    target,
+    referenceLabel,
+  );
 }
 
 async function coordinatesForAddress(address) {
@@ -3206,7 +3222,7 @@ $("#find-nearby-facilities")?.addEventListener("click", async () => {
   button.disabled = true;
   status.hidden = false;
   status.textContent = "위치 확인 중…";
-  items.innerHTML = "";
+  resetFacilitySearchUi("medical");
   try {
     if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
     const position = await getCurrentPositionWithRetry();
@@ -3219,13 +3235,20 @@ $("#find-nearby-facilities")?.addEventListener("click", async () => {
       2: "Chrome이 현재 좌표를 계산하지 못했습니다. 잠시 후 다시 누르거나 Chrome을 완전히 재시작해주세요.",
       3: "위치 확인이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.",
     };
+    resetFacilitySearchUi("medical");
     status.textContent = messages[error.code] || error.message || "위치 정보를 불러오지 못했습니다.";
     $("#facility-address-form").hidden = false;
     if (error.code || !("geolocation" in navigator)) {
       try {
-        await searchFacilitiesAt(DEFAULT_FACILITY_LOCATION.latitude, DEFAULT_FACILITY_LOCATION.longitude);
+        await searchFacilitiesAt(
+          DEFAULT_FACILITY_LOCATION.latitude,
+          DEFAULT_FACILITY_LOCATION.longitude,
+          "medical",
+          "검색 기준 위치",
+        );
         status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변을 표시합니다.`;
       } catch (fallbackError) {
+        resetFacilitySearchUi("medical");
         status.textContent = fallbackError.message || "기본 위치 주변 의료기관을 불러오지 못했습니다.";
       }
     }
@@ -3245,13 +3268,15 @@ $("#facility-address-form")?.addEventListener("submit", async (event) => {
   submit.disabled = true;
   status.hidden = false;
   status.textContent = "입력한 주소를 확인하고 있어요…";
+  resetFacilitySearchUi("medical");
   try {
     const { latitude, longitude } = await coordinatesForAddress(address);
     input.value = "";
     address = null;
-    await searchFacilitiesAt(latitude, longitude);
+    await searchFacilitiesAt(latitude, longitude, "medical", "검색 기준 위치");
     status.hidden = true;
   } catch (error) {
+    resetFacilitySearchUi("medical");
     status.textContent = error.message || "주소로 의료기관을 찾지 못했습니다.";
   } finally {
     input.value = "";
@@ -3268,7 +3293,7 @@ $("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
   button.disabled = true;
   status.hidden = false;
   status.textContent = "현재 위치와 가까운 응급실을 확인하고 있어요…";
-  items.innerHTML = "";
+  resetFacilitySearchUi("emergency");
   try {
     if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
     const position = await getCurrentPositionWithRetry();
@@ -3280,6 +3305,7 @@ $("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
       2: "Chrome이 현재 좌표를 계산하지 못했습니다. 아래에서 주소로 검색해주세요.",
       3: "위치 확인이 시간 초과되었습니다. 아래에서 주소로 검색해주세요.",
     };
+    resetFacilitySearchUi("emergency");
     status.textContent = messages[error.code] || error.message || "응급실 정보를 불러오지 못했습니다.";
     $("#emergency-address-form").hidden = false;
     if (error.code || !("geolocation" in navigator)) {
@@ -3288,9 +3314,11 @@ $("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
           DEFAULT_FACILITY_LOCATION.latitude,
           DEFAULT_FACILITY_LOCATION.longitude,
           "emergency",
+          "검색 기준 위치",
         );
         status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변 응급실을 표시합니다.`;
       } catch (fallbackError) {
+        resetFacilitySearchUi("emergency");
         status.textContent = fallbackError.message || "기본 위치 주변 응급실을 불러오지 못했습니다.";
       }
     }
@@ -3310,13 +3338,15 @@ $("#emergency-address-form")?.addEventListener("submit", async (event) => {
   submit.disabled = true;
   status.hidden = false;
   status.textContent = "입력한 주소에서 가까운 응급실을 확인하고 있어요…";
+  resetFacilitySearchUi("emergency");
   try {
     const { latitude, longitude } = await coordinatesForAddress(address);
     input.value = "";
     address = null;
-    await searchFacilitiesAt(latitude, longitude, "emergency");
+    await searchFacilitiesAt(latitude, longitude, "emergency", "검색 기준 위치");
     status.hidden = true;
   } catch (error) {
+    resetFacilitySearchUi("emergency");
     status.textContent = error.message || "주소로 응급실을 찾지 못했습니다.";
   } finally {
     input.value = "";
