@@ -259,6 +259,9 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'data-demo-status="model_not_ready"' not in html
     assert 'renderPredictionStatus("failed", {' in script
     assert 'errorCode: isTimeout ? "TIMEOUT"' in script
+    assert 'requestPredictionModel("diabetes_current_screening")' in script
+    assert 'requestPredictionModel("diabetes_incidence")' in script
+    assert "state.currentScreeningPrediction" in script
 
 
 def test_signup_and_existing_login_use_separate_forms() -> None:

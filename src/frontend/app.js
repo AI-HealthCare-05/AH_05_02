@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -874,8 +874,23 @@ function normalizeRiskKey(prediction = state.prediction) {
   return "low";
 }
 
-function getCurrentHealthSignal(checkup = state.healthCheckupResult) {
-  return checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal || null;
+function getCurrentHealthSignal(checkup = state.currentScreeningPrediction || state.healthCheckupResult) {
+  const nestedSignal = checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal;
+  if (nestedSignal) return nestedSignal;
+  if (checkup?.model_key !== "diabetes_current_screening") return null;
+  const isApproved = checkup.result_status === "approved"
+    && checkup.promotion_status === "approved"
+    && Boolean(checkup.risk_category || checkup.risk_category_label);
+  if (isApproved) {
+    return {
+      category_label: checkup.risk_category_label || normalizeRiskKey(checkup),
+      summary: checkup.summary || checkup.guidance || "현재 위험 신호 선별 결과를 확인해 주세요.",
+    };
+  }
+  return {
+    title: "현재 위험 신호 분석을 완료했습니다",
+    summary: "검증과 공개 승인이 끝나기 전에는 위험 범주나 숫자 결과를 표시하지 않습니다.",
+  };
 }
 
 function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standalone = state.currentHealthOnly } = {}) {
@@ -921,7 +936,7 @@ function showFuturePredictionResult() {
   $("#result-confirmation-eyebrow").textContent = "결과 확인";
   $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
   $("#result-confirmation-lead").textContent = "현재 위험 신호 선별 결과를 먼저 확인한 뒤, 미래 신규 발병 위험을 별도 영역에서 확인합니다.";
-  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.healthCheckupResult, { standalone: false });
+  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: false });
   else $("#current-health-result").hidden = true;
 }
 
@@ -1367,6 +1382,18 @@ function renderPrediction(prediction, factors) {
   $("#result-next").hidden = false;
   $("#result-next").disabled = false;
 }
+
+async function requestPredictionModel(modelKey) {
+  const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
+    checkup_id: state.checkupId,
+    model_key: modelKey,
+  }) });
+  renderPredictionStatus(job.status === "running" ? "running" : "queued");
+  const predictionId = await pollPrediction(job.job_id);
+  const prediction = await api(`/predictions/${predictionId}`);
+  return { predictionId, prediction };
+}
+
 async function runPrediction() {
   state.developmentPreviewRiskCategory = null;
   if (isLocalPreview()) {
@@ -1396,17 +1423,38 @@ async function runPrediction() {
   }
   renderPredictionStatus("queued");
   try {
-    const job = await api("/prediction-jobs", { method: "POST", body: JSON.stringify({
-      checkup_id: state.checkupId, model_key: "diabetes_incidence",
-    }) });
-    renderPredictionStatus(job.status === "running" ? "running" : "queued");
-    state.predictionId = await pollPrediction(job.job_id);
-    const [prediction, factors] = await Promise.all([
-      api(`/predictions/${state.predictionId}`),
+    if (state.capabilities.currentHealth) {
+      try {
+        const current = await requestPredictionModel("diabetes_current_screening");
+        state.currentScreeningPredictionId = current.predictionId;
+        state.currentScreeningPrediction = current.prediction;
+      } catch (error) {
+        state.currentScreeningPredictionId = null;
+        state.currentScreeningPrediction = null;
+        if (state.currentHealthOnly) throw error;
+      }
+    }
+    if (state.currentHealthOnly) {
+      state.predictionId = state.currentScreeningPredictionId;
+      state.prediction = state.currentScreeningPrediction;
+      renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: true });
+      renderPredictionStatus("succeeded", { resultAvailable: true, showResult: true });
+      $("#result-next").hidden = false;
+      $("#result-next").disabled = false;
+      showStep(6);
+      return;
+    }
+    const future = await requestPredictionModel("diabetes_incidence");
+    state.predictionId = future.predictionId;
+    state.prediction = future.prediction;
+    const [, factors] = await Promise.all([
+      Promise.resolve(future.prediction),
       api(`/predictions/${state.predictionId}/risk-factors`),
     ]);
-    state.prediction = prediction;
-    renderPrediction(prediction, factors);
+    renderPrediction(future.prediction, factors);
+    if (state.currentScreeningPrediction) {
+      renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
+    }
   } catch (error) {
     const isTimeout = error.code === "TIMEOUT";
     const isModelNotReady = error.code === "MODEL_NOT_READY";
