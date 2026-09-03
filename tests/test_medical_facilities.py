@@ -59,11 +59,11 @@ def test_new_or_failed_search_clears_old_map_and_uses_search_reference_label() -
 
     assert "function resetFacilitySearchUi(target)" in script
     assert "clearFacilityMapMarkers(target)" in script
-    assert "mapContainer.hidden = true" in script
+    assert "map.hidden = true" in script
     assert script.count('resetFacilitySearchUi("medical")') >= 4
     assert script.count('resetFacilitySearchUi("emergency")') >= 4
     assert script.count('"검색 기준 위치"') >= 2
-    assert "119에 연락하세요" in html
+    assert 'href="tel:119"' in html
 
 
 def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:
@@ -71,9 +71,9 @@ def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert 'id="emergency-facility-search"' in html
-    assert 'id="find-nearby-emergency-facilities"' in html
+    assert 'id="find-nearby-emergency"' in html
     assert 'reason !== "URGENT_MEDICAL_ATTENTION"' in script
-    assert '"/emergency-facilities/nearby"' in script
+    assert 'api(`/emergency-facilities/nearby?${params.toString()}`)' in script
 
 
 @pytest.mark.asyncio

@@ -54,6 +54,43 @@ def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
     assert script.count('$("#eligibility-guidance").hidden = true;') >= 4
 
 
+def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "응급상황 사전 문진표" in html
+    assert "1. 지금 긴급한 증상이 있나요?" in html
+    assert 'id="open-emergency-questionnaire"' in html
+    assert 'role="dialog" aria-modal="true"' in html
+    assert "문진 결과 적용하기" in html
+    assert "이 문진은 당뇨병을 진단하기 위한 검사가 아닙니다." in html
+    assert 'name="urgent-symptom"' not in html
+    assert 'name="same-day-symptom"' not in html
+    assert html.count('name="urgent-summary"') == 3
+    assert html.count('name="same-day-summary"') == 3
+    assert "증상이 있습니다" in html
+    assert "증상이 없습니다" in html
+    assert "잘 모르겠습니다" in html
+    assert "선택한 증상이 없습니다." not in html
+    assert "심한 가슴 통증, 숨쉬기 매우 어려움, 의식이 흐려지는 등의 증상을 확인해 주세요." not in html
+    assert "119에 전화하기" in html
+    assert "현재 위치 확인하기" in html
+    assert "주변 응급실 보기" in html
+    assert 'id="emergency-facility-search"' in html
+    assert 'id="emergency-address-form"' in html
+    assert 'id="emergency-address"' in html
+    assert 'id="emergency-facility-map"' in html
+    assert "api(`/emergency-facilities/nearby?" in script
+    assert "renderEmergencyFacilities" in script
+    assert "국립중앙의료원 응급의료기관 정보" in script
+    assert "가까운 의료기관 찾기" in html
+    assert "전화 상담 가능한 기관 보기" in html
+    assert "의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요." in html
+    assert "SAME_DAY_MEDICAL_ATTENTION" in script
+    assert "has_urgent_warning_sign: false" in script
+    assert 'params.get("preview") !== "emergency-questionnaire"' in script
+
+
 def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
@@ -87,6 +124,11 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
+    assert 'id="facility-address-form"' in html
+    assert 'id="facility-address"' in html
+    assert 'id="medical-facility-map"' in html
+    assert "coordinatesForAddress" in script
+    assert "정보 확인일" in script
     assert 'id="model-version"' not in html
     assert "prediction.model_version" not in script
     assert "prediction.feature_schema_version" not in script
@@ -157,7 +199,7 @@ def test_service_and_model_age_are_separately_explained() -> None:
     assert "만 45세 이상은 미래 발병 위험" in html
 
 
-def test_health_form_uses_rf25_smoking_status_contract() -> None:
+def test_health_form_keeps_current_backend_smoking_field_and_rf25_field() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
@@ -166,8 +208,8 @@ def test_health_form_uses_rf25_smoking_status_contract() -> None:
         assert f'value="{value}"' in html
     assert 'const smokingStatus = selectedRadioValue("smoking-status")' in script
     assert "smoking_status: smokingStatus" in script
-    assert 'current_smoker: smokingStatus === "current"' not in script
-    assert 'feature_schema_version: "klosa_stage3_25features_v1"' in script
+    assert 'current_smoker: smokingStatus === "current"' in script
+    assert 'feature_schema_version: "klosa_stage3_25features_v1"' not in script
 
 
 def test_health_form_uses_rf25_exercise_detail_contract() -> None:
@@ -262,11 +304,10 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'name: $("#display-name").value' not in script
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
-    assert 'email, password, terms_agreed: $("#personal-consent").checked' in script
-    assert "email, password, gender, birth_date: birthDate" not in script
-    assert 'api("/users/me/profile", { method: "PATCH"' in script
-    assert 'api("/users/me", { method: "PATCH"' not in script
-    assert "birthday: birthDate" in script
+    assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
+    assert "email, password, gender, birth_date: birthDate" in script
+    assert 'api("/users/me/profile", { method: "PATCH"' not in script
+    assert 'api("/users/me", { method: "PATCH"' in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
@@ -278,6 +319,9 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'data-demo-status="model_not_ready"' not in html
     assert 'renderPredictionStatus("failed", {' in script
     assert 'errorCode: isTimeout ? "TIMEOUT"' in script
+    assert 'requestPredictionModel("diabetes_current_screening")' in script
+    assert 'requestPredictionModel("diabetes_incidence")' in script
+    assert "state.currentScreeningPrediction" in script
 
 
 def test_signup_and_existing_login_use_separate_forms() -> None:
@@ -296,18 +340,52 @@ def test_signup_and_existing_login_use_separate_forms() -> None:
     assert '$("#login-existing")' not in script
 
 
-def test_challenge_grid_has_a_custom_challenge_slot() -> None:
+def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="custom-challenge-editor"' in html
-    assert 'id="custom-challenge-title"' in html
-    assert 'id="custom-challenge-goal"' in html
-    assert 'id="custom-challenge-record-type"' in html
-    assert "나만의 챌린지 추가" in script
+    assert 'id="custom-challenge-editor"' not in html
+    assert 'id="custom-challenge-title"' not in html
+    assert 'id="rag-challenge-generator"' in html
+    assert 'id="close-rag-challenge"' in html
+    assert "맞춤 챌린지 추가" in script
+    assert 'id="open-rag-challenge"' in script
     assert "function customChallengeSlot()" in script
+    assert "function closeRagChallengeGenerator" in script
+    assert 'button.classList.toggle("active", active)' in script
     assert "function renderChallengeChoices()" in script
-    assert "나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
+    assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
+
+
+def test_lifestyle_summary_uses_expandable_cards_without_result_feedback_form() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert html.count('class="lifestyle-summary-toggle"') == 4
+    assert html.count('aria-expanded="false"') >= 4
+    assert 'id="feedback-form"' not in html
+    assert "결과 안내가 이해하기 쉬웠나요?" not in html
+    assert '$("#lifestyle-summary-grid")?.addEventListener("click"' in script
+    assert 'button.setAttribute("aria-expanded", String(expanded))' in script
+
+
+def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
+
+    assert 'id="medical-guidance-detail" class="notice safety medical-guidance-alert"' in html
+    assert html.index('id="medical-guidance-detail"') > html.index('id="lifestyle-map-title"')
+    assert html.index('id="medical-guidance-detail"') > html.index('id="risk-forecast-panel"')
+    assert 'next: "검사·상담 안내 보기"' in script
+    assert '$("#medical-guidance-detail").hidden = true;' in script
+    assert '$("#medical-guidance-detail").hidden = false;' in script
+    assert 'const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();' in script
+    assert 'displayedRisk === "high"' in script
+    assert ".notice.safety.medical-guidance-alert" in styles
+    assert "border-left:8px solid #b83f36" not in styles
+    assert "border:2px solid #d35f55;border-radius:20px" in styles
+    assert ".medical-guidance-alert>span{background:#b83f36;color:#fff}" in styles
 
 
 def test_notion_challenges_are_grouped_into_selectable_habit_categories() -> None:
@@ -402,6 +480,22 @@ def test_local_model_preview_shows_category_without_exposing_numeric_score() -> 
     assert "developmentPreviewRiskCategory" in script
     assert "개발 확인용 위험 범주만 표시합니다." in script
     assert "job.development_preview_internal_score" not in script
+    assert '$("#risk-preview-controls").hidden = !isDemoEnvironment();' in script
+
+
+def test_medical_facility_ui_has_safe_empty_permission_and_failure_states() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="facility-address-form"' in html
+    assert 'id="facility-address"' in html
+    assert 'id="medical-facility-map"' in html
+    assert "coordinatesForAddress" in script
+    assert "resetFacilitySearchUi" in script
+    assert "위치 권한이 허용되지 않았어요" in script
+    assert "근처 의료기관을 찾지 못했어요" in script
+    assert "의료기관 정보를 불러오지 못했어요" in script
+    assert "정보 확인일" in script
 
 
 def test_signup_and_login_block_duplicate_requests_while_busy() -> None:
@@ -492,9 +586,10 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert "report.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
-    assert "완료 처리 중…" in script
+    assert "답 확인 중…" in script
     assert "정답입니다. 교육 콘텐츠를 완료했습니다." not in script
-    assert 'if (!result.is_correct) showMessage("내용을 다시 확인해 주세요.", "error")' in script
+    assert "다시 확인해 볼까요? · 정답:" in script
+    assert "교육 내용 다시 보기" in script
     assert "completed: 5, planned: 7" not in script
 
 
@@ -521,6 +616,15 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "지도 닫기" in html
     assert "체형이나 건강 위험을 판정하지 않습니다." in html
     assert "3D 생활습관 안내 캐릭터" in html
+
+
+def test_forest_return_accepts_resume_and_workspace_links() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'requestedView.get("resume") !== "together"' in script
+    assert 'requestedView.get("workspace")' in script
+    assert 'showWorkspace(requestedWorkspace || "together"' in script
     assert "lifestyle-avatar-female-60.webp" in html
     assert '"male" : "female"' in script
     assert "ageBand" in script

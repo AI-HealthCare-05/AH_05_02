@@ -1,8 +1,16 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, ragChallengeDraft: null, ragChallengeStatus: "idle" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, checkupId: null, healthCheckupResult: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+const safeExternalUrl = (value) => {
+  try {
+    const url = new URL(String(value));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+};
 const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 const isLocalPreview = () => isDemoEnvironment() && state.token === "local-demo-token";
 
@@ -208,12 +216,21 @@ const predictionFailureGuidance = {
 
 const eligibilityGuidance = {
   URGENT_MEDICAL_ATTENTION: {
-    code: "E03", title: "즉시 의료 확인이 필요합니다",
-    message: "급한 경고 증상이 있으면 온라인 위험 분석을 진행하지 않습니다.",
-    reasonTitle: "긴급 증상 확인",
-    reason: "심한 가슴 통증, 호흡 곤란, 의식 저하처럼 즉시 확인이 필요한 증상을 선택했습니다.",
-    action: "지체하지 말고 119 또는 가까운 응급의료기관에 연락하세요.",
-    primaryLabel: "안내 확인하고 종료",
+    code: "E03", title: "즉시 도움이 필요합니다",
+    message: "지금은 당뇨 위험도 예측보다 즉시 도움을 받는 것이 우선입니다.",
+    reasonTitle: "즉시 도움이 필요한 증상",
+    reason: "한 가지 이상의 즉시 도움이 필요한 증상을 선택했습니다.",
+    action: "직접 운전하거나 병원을 검색하며 기다리지 말고 119에 연락해 현재 위치와 증상을 알려주세요.",
+    primaryLabel: "119 안내 확인하기",
+    primaryStep: null,
+  },
+  SAME_DAY_MEDICAL_ATTENTION: {
+    code: "E04", title: "오늘 의료기관에 확인해 주세요",
+    message: "현재 증상은 온라인 위험도 예측만으로 판단하기 어렵습니다.",
+    reasonTitle: "당일 의료기관 확인이 필요한 증상",
+    reason: "한 가지 이상의 당일 확인이 필요한 증상을 선택했습니다.",
+    action: "예측과 챌린지를 중단하고 의료기관에 문의하거나 진료를 받아주세요. 증상이 심해지거나 이동하기 어려우면 119에 연락하세요.",
+    primaryLabel: "의료기관 안내 확인하기",
     primaryStep: null,
   },
   DIAGNOSED_DIABETES: {
@@ -290,15 +307,9 @@ function getRiskCategoryLabel(prediction) {
   return prediction?.risk_category_label || riskCategoryLabels[prediction?.risk_category] || "확인 필요";
 }
 
-function isHighRiskPrediction(prediction) {
-  return prediction?.risk_category === "high"
-    || prediction?.risk_category === "diabetes_screening_advised"
-    || prediction?.risk_category_label === "높음";
-}
-
 function showEligibilityGuidance(reasonCodes) {
   const priority = [
-    "URGENT_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
+    "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
   ];
   const reason = priority.find((code) => reasonCodes.includes(code));
@@ -323,6 +334,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-reason").textContent = guidance.reason;
   $("#eligibility-guidance-action").textContent = guidance.action;
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
+  const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
+  const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  $("#urgent-guidance-actions").hidden = !isUrgent;
+  $("#same-day-guidance-actions").hidden = !isSameDay;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -415,7 +431,12 @@ function showStep(step, { recordHistory = true } = {}) {
       updateLifestyleSummary();
     }
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const activeScreen = $(`.screen[data-step="${state.step}"]`);
+  const activeHeading = activeScreen?.querySelector("h1, h2, h3");
+  if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  window.requestAnimationFrame(() => activeHeading?.focus({ preventScroll: true }));
 }
 
 async function goStepFromNav(step) {
@@ -650,15 +671,94 @@ function getAgeFromBirth(birth) {
   return Number.isFinite(age) ? age : null;
 }
 
+function questionnaireAnswer(name) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value || null;
+}
+
+function hasUrgentSymptoms() {
+  return questionnaireAnswer("urgent-summary") === "yes";
+}
+
+function isUrgentAnswerUncertain() {
+  return questionnaireAnswer("urgent-summary") === "unsure";
+}
+
+function hasSameDaySymptoms() {
+  return questionnaireAnswer("same-day-summary") === "yes";
+}
+
+function isSameDayAnswerUncertain() {
+  return questionnaireAnswer("same-day-summary") === "unsure";
+}
+
+function clearQuestionnaireAnswers(name) {
+  $$(`input[name="${name}"]`).forEach((input) => { input.checked = false; });
+}
+
+function syncEmergencyQuestionnaire() {
+  const canContinueToSameDay = questionnaireAnswer("urgent-summary") === "none";
+  $("#same-day-stage").hidden = !canContinueToSameDay;
+  if (!canContinueToSameDay) clearQuestionnaireAnswers("same-day-summary");
+}
+
+function emergencyScreeningSummary() {
+  if (hasUrgentSymptoms() || isUrgentAnswerUncertain()) return "즉시 도움 안내 대상";
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) return "당일 의료기관 확인 안내 대상";
+  if ($("#urgent-warning-yes").checked) return "긴급 증상 있음";
+  return "해당 증상 없음";
+}
+
+function openEmergencyQuestionnaire() {
+  $("#emergency-questionnaire-modal-message").hidden = true;
+  $("#emergency-questionnaire-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("#emergency-questionnaire-title").focus?.();
+}
+
+function closeEmergencyQuestionnaire() {
+  $("#emergency-questionnaire-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  $("#open-emergency-questionnaire").focus();
+}
+
+function applyEmergencyQuestionnaire() {
+  const modalMessage = $("#emergency-questionnaire-modal-message");
+  const summary = $("#emergency-questionnaire-summary");
+  modalMessage.hidden = true;
+
+  if (hasUrgentSymptoms() || isUrgentAnswerUncertain()) {
+    $("#urgent-warning-yes").checked = true;
+    summary.textContent = "문진 결과: 즉시 도움 안내가 필요한 증상을 확인했습니다.";
+  } else if (questionnaireAnswer("urgent-summary") !== "none") {
+    modalMessage.textContent = "1단계 문항을 읽고 증상 여부를 선택해 주세요.";
+    modalMessage.hidden = false;
+    return;
+  } else if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) {
+    $("#urgent-warning-no").checked = true;
+    summary.textContent = "문진 결과: 오늘 의료기관 확인이 필요한 증상을 확인했습니다.";
+  } else if (questionnaireAnswer("same-day-summary") === "none") {
+    $("#urgent-warning-no").checked = true;
+    summary.textContent = "문진 결과: 해당 증상이 없습니다.";
+  } else {
+    modalMessage.textContent = "2단계 문항을 읽고 증상 여부를 선택해 주세요.";
+    modalMessage.hidden = false;
+    return;
+  }
+
+  summary.hidden = false;
+  closeEmergencyQuestionnaire();
+}
+
 function getLocalEligibilityResult() {
   const age = getAgeFromBirth($("#eligibility-birth-date").value);
   const reasonCodes = [];
-  if ($("#urgent-warning-yes").checked) reasonCodes.push("URGENT_MEDICAL_ATTENTION");
+  if ($("#urgent-warning-yes").checked || hasUrgentSymptoms() || isUrgentAnswerUncertain()) reasonCodes.push("URGENT_MEDICAL_ATTENTION");
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) reasonCodes.push("SAME_DAY_MEDICAL_ATTENTION");
   if (Number.isFinite(age) && age < 14) reasonCodes.push("UNDER_MINIMUM_SERVICE_AGE");
   if (Number.isFinite(age) && age >= 14 && age < 19) reasonCodes.push("CHALLENGE_ONLY_AGE");
   if ($("#diagnosed-diabetes-yes").checked) reasonCodes.push("DIAGNOSED_DIABETES");
   if (Number.isFinite(age) && age >= 19 && age < 45) reasonCodes.push("MODEL_AGE_OUT_OF_RANGE");
-  const safetyBlocked = reasonCodes.some((code) => code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES");
+  const safetyBlocked = reasonCodes.some((code) => ["URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES"].includes(code));
   return {
     age,
     service_eligible: Number.isFinite(age) && age >= 19,
@@ -686,7 +786,7 @@ function renderHealthReview() {
     ["생년월일", $("#eligibility-birth-date").value || "-"],
     ["현재 만 나이", currentAgeLabel()],
     ["당뇨병 진단 여부", $("#diagnosed-diabetes-yes").checked ? "진단받음" : "진단받지 않음"],
-    ["긴급 경고 증상", $("#urgent-warning-yes").checked ? "있음" : "없음"],
+    ["응급상황 사전 문진", emergencyScreeningSummary()],
   ]);
   $("#review-health").innerHTML = dlRows([
     ["공복혈당", $("#fasting-glucose").value ? `${$("#fasting-glucose").value} mg/dL` : "입력 안 함"],
@@ -873,23 +973,24 @@ function normalizeRiskKey(prediction = state.prediction) {
   return "low";
 }
 
-function getCurrentHealthSignal(checkup = state.healthCheckupResult) {
-  const prediction = state.currentScreeningPrediction;
-  if (prediction) {
-    const approved = prediction.result_status === "approved" && prediction.screening_result_label;
-    return approved
-      ? {
-        category_label: prediction.screening_result_label,
-        message: prediction.disclaimer,
-        risk_key: prediction.screening_result_label === "검사 권고" ? "high" : "low",
-      }
-      : {
-        category_label: "오늘이 연결을 완료했습니다",
-        message: "현재 위험 신호 모델은 연결되었지만 운영 승인 전이라 개인 판정 결과는 표시하지 않습니다.",
-        risk_key: null,
-      };
+function getCurrentHealthSignal(checkup = state.currentScreeningPrediction || state.healthCheckupResult) {
+  const nestedSignal = checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal;
+  if (nestedSignal) return nestedSignal;
+  if (checkup?.model_key !== "diabetes_current_screening") return null;
+  const isApproved = checkup.result_status === "approved"
+    && checkup.promotion_status === "approved"
+    && Boolean(checkup.risk_category || checkup.risk_category_label);
+  if (isApproved) {
+    return {
+      category_label: checkup.risk_category_label || normalizeRiskKey(checkup),
+      risk_key: normalizeRiskKey(checkup),
+      summary: checkup.summary || checkup.guidance || "현재 위험 신호 선별 결과를 확인해 주세요.",
+    };
   }
-  return checkup?.current_health_signal || checkup?.current_health_assessment || checkup?.health_signal || null;
+  return {
+    title: "현재 위험 신호 분석을 완료했습니다",
+    summary: "검증과 공개 승인이 끝나기 전에는 위험 범주나 숫자 결과를 표시하지 않습니다.",
+  };
 }
 
 function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standalone = state.currentHealthOnly } = {}) {
@@ -940,13 +1041,12 @@ function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "예측 결과";
   $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
-  $("#result-confirmation-lead").textContent = "오늘이의 현재 위험 신호와 내일이의 미래 발병 위험은 서로 다른 결과로 표시합니다.";
-  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.healthCheckupResult, { standalone: false });
+  $("#result-confirmation-lead").textContent = "현재 위험 신호 선별 결과를 먼저 확인한 뒤, 미래 신규 발병 위험을 별도 영역에서 확인합니다.";
+  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: false });
   else $("#current-health-result").hidden = true;
 }
 
 function updateResultConfirmation(prediction = state.prediction || {}, approvedOverride = null) {
-  showFuturePredictionResult();
   const card = $("#risk-confirm-card");
   if (!card) return;
   const isApprovedRisk = approvedOverride ?? (
@@ -988,21 +1088,429 @@ function updateResultConfirmation(prediction = state.prediction || {}, approvedO
   const trafficLight = $("#risk-traffic-light");
   if (trafficLight) trafficLight.setAttribute(
     "aria-label",
-    risk === "pending" ? "미래 발병 위험 신호 결과 준비 중" : `미래 발병 위험 신호 ${content.label}`,
+    risk === "pending" ? "현재 위험 신호 결과 준비 중" : `현재 위험 신호 ${content.label}`,
   );
   const riskMascot = $("#risk-hyeoldangi");
   if (riskMascot) {
     riskMascot.src = content.mascot;
     riskMascot.alt = content.mascotAlt;
   }
-  $("#medical-guidance-detail").hidden = risk !== "high";
+  $("#medical-guidance-detail").hidden = true;
   const challengeButton = $("#to-challenges");
   if (challengeButton) challengeButton.textContent = content.next;
 }
 
+function setMedicalFacilityStatus(status, title, message) {
+  const box = $("#medical-facility-status");
+  if (!box) return;
+  box.dataset.state = status;
+  box.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>`;
+}
+
+const facilityMapInstances = {};
+const facilityMapMarkers = { medical: [], emergency: [] };
+
+function ensureKakaoMapsLoaded() {
+  return new Promise((resolve, reject) => {
+    if (!window.kakao?.maps?.load) {
+      reject(new Error("지도 서비스를 불러오지 못했습니다."));
+      return;
+    }
+    window.kakao.maps.load(() => resolve(window.kakao));
+  });
+}
+
+function clearFacilityMapMarkers(target) {
+  (facilityMapMarkers[target] || []).forEach((marker) => marker.setMap(null));
+  facilityMapMarkers[target] = [];
+}
+
+function resetFacilitySearchUi(target) {
+  const prefix = target === "emergency" ? "emergency" : "medical";
+  const results = $(`#${prefix}-facility-results`);
+  const meta = $(`#${prefix}-facility-meta`);
+  const map = $(`#${prefix}-facility-map`);
+  if (results) {
+    results.innerHTML = "";
+    results.hidden = true;
+  }
+  if (meta) {
+    meta.innerHTML = "";
+    meta.hidden = true;
+  }
+  clearFacilityMapMarkers(target);
+  if (map) map.hidden = true;
+}
+
+const USER_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="3"/></svg>',
+  );
+const FACILITY_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="9" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>',
+  );
+
+async function renderFacilityMap(latitude, longitude, facilities, target, referenceLabel) {
+  const container = $(`#${target}-facility-map`);
+  if (!container) return;
+  try {
+    const kakao = await ensureKakaoMapsLoaded();
+    const center = new kakao.maps.LatLng(latitude, longitude);
+    container.hidden = false;
+    if (!facilityMapInstances[target]) {
+      facilityMapInstances[target] = new kakao.maps.Map(container, { center, level: 4 });
+    } else {
+      facilityMapInstances[target].setCenter(center);
+    }
+    const map = facilityMapInstances[target];
+    clearFacilityMapMarkers(target);
+    const bounds = new kakao.maps.LatLngBounds();
+    bounds.extend(center);
+    const userMarker = new kakao.maps.Marker({
+      map,
+      position: center,
+      title: referenceLabel,
+      image: new kakao.maps.MarkerImage(USER_MARKER_IMAGE_SRC, new kakao.maps.Size(28, 28), {
+        offset: new kakao.maps.Point(14, 14),
+      }),
+      zIndex: 10,
+    });
+    facilityMapMarkers[target].push(userMarker);
+    const facilityMarkerImage = new kakao.maps.MarkerImage(
+      FACILITY_MARKER_IMAGE_SRC,
+      new kakao.maps.Size(26, 26),
+      { offset: new kakao.maps.Point(13, 13) },
+    );
+    facilities.forEach((facility) => {
+      if (facility.latitude == null || facility.longitude == null) return;
+      const position = new kakao.maps.LatLng(facility.latitude, facility.longitude);
+      bounds.extend(position);
+      const marker = new kakao.maps.Marker({
+        map,
+        position,
+        title: facility.name,
+        image: facilityMarkerImage,
+      });
+      const infoWindow = new kakao.maps.InfoWindow({
+        content: `<div class="facility-map-label">${escapeHtml(facility.name || "의료기관")}</div>`,
+      });
+      kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
+      facilityMapMarkers[target].push(marker);
+    });
+    map.setBounds(bounds);
+    map.setCenter(center);
+  } catch (_error) {
+    container.hidden = true;
+  }
+}
+
+async function coordinatesForAddress(address) {
+  const kakao = await ensureKakaoMapsLoaded();
+  return new Promise((resolve, reject) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (results, status) => {
+      if (status !== kakao.maps.services.Status.OK || !results.length) {
+        reject(new Error("주소를 찾지 못했습니다. 도로명과 건물 번호까지 입력해 주세요."));
+        return;
+      }
+      resolve({ lat: Number(results[0].y), lon: Number(results[0].x) });
+    });
+  });
+}
+
+function medicalFacilityDistance(value) {
+  const meters = Number(value);
+  if (!Number.isFinite(meters) || meters < 0) return "거리 정보 없음";
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)}km`;
+}
+
+function medicalFacilityCheckedAt(value) {
+  const checkedAt = value ? new Date(value) : new Date();
+  const date = Number.isNaN(checkedAt.getTime()) ? new Date() : checkedAt;
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function renderMedicalFacilities(payload = {}) {
+  const facilities = Array.isArray(payload.facilities) ? payload.facilities : [];
+  const results = $("#medical-facility-results");
+  const meta = $("#medical-facility-meta");
+  if (!results || !meta) return;
+  results.hidden = facilities.length === 0;
+  meta.hidden = false;
+  const radius = Number(payload.retrieved_radius_meters);
+  const provider = payload.provider_kind === "kakao_local_api" ? "카카오 로컬 API" : "의료기관 정보 API";
+  const checkedAt = medicalFacilityCheckedAt(payload.retrieved_at || payload.checked_at);
+  const area = String(payload.search_area_label || "").trim();
+  meta.innerHTML = `<p><strong>정보 출처</strong> ${escapeHtml(provider)}${Number.isFinite(radius) ? ` · 반경 ${escapeHtml(medicalFacilityDistance(radius))}` : ""}</p><p><strong>정보 확인일</strong> ${escapeHtml(checkedAt)}${area ? ` · ${escapeHtml(area)} 중심` : ""}</p>${payload.disclaimer ? `<p>${escapeHtml(payload.disclaimer)}</p>` : ""}`;
+  if (!facilities.length) {
+    setMedicalFacilityStatus("empty", "근처 의료기관을 찾지 못했어요", "검색 반경을 넓혀서 다시 확인해 주세요.");
+    return;
+  }
+  results.innerHTML = facilities.map((facility) => {
+    const address = facility.road_address || facility.address || "주소 정보 없음";
+    const phone = String(facility.phone || "").trim();
+    const phoneHref = phone.replace(/[^0-9+]/g, "");
+    const mapUrl = safeExternalUrl(facility.map_url);
+    return `<article class="medical-facility-card">
+      <div class="medical-facility-card-heading"><strong>${escapeHtml(facility.name || "의료기관")}</strong><span>${escapeHtml(medicalFacilityDistance(facility.distance_meters))}</span></div>
+      <p class="medical-facility-address">${escapeHtml(address)}</p>
+      <div class="facility-actions">
+        ${phone && phoneHref ? `<a class="secondary" href="tel:${escapeHtml(phoneHref)}">전화 ${escapeHtml(phone)}</a>` : `<span class="facility-action-unavailable">전화번호 없음</span>`}
+        ${mapUrl ? `<a class="secondary" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">주소·지도 보기</a>` : `<span class="facility-action-unavailable">지도 링크 없음</span>`}
+      </div>
+    </article>`;
+  }).join("");
+  setMedicalFacilityStatus("done", `가까운 의료기관 ${facilities.length}곳을 찾았어요`, "거리순 안내이며 특정 의료기관을 추천하거나 보증하지 않습니다.");
+}
+
+async function requestMedicalFacilities({ lat, lon, areaLabel = "", referenceLabel = "현재 위치" }, button) {
+  resetFacilitySearchUi("medical");
+  const releaseBusy = setButtonBusy(button, "검색 중…");
+  setMedicalFacilityStatus("loading", "근처 의료기관을 찾고 있어요", "거리순으로 정보를 불러오는 중입니다.");
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "5000" });
+    const payload = await api(`/medical-facilities/nearby?${params.toString()}`);
+    renderMedicalFacilities({ ...payload, search_area_label: areaLabel });
+    await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "medical", referenceLabel);
+  } catch (error) {
+    resetFacilitySearchUi("medical");
+    setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
+function geolocationFailureCopy(error) {
+  if (error?.code === 1) return ["위치 권한이 허용되지 않았어요", "위치를 허용하면 근처 의료기관을 보여드려요. 다른 기능은 계속 이용할 수 있습니다."];
+  if (error?.code === 3) return ["위치 확인 시간이 오래 걸렸어요", "잠시 후 다시 시도하거나 브라우저의 위치 설정을 확인해 주세요."];
+  return ["현재 위치를 확인하지 못했어요", "브라우저의 위치 설정을 확인한 뒤 다시 시도해 주세요."];
+}
+
+async function findNearbyMedicalFacilities() {
+  const button = $("#find-nearby-medical-facilities");
+  if (!button) return;
+  resetFacilitySearchUi("medical");
+  if (!navigator.geolocation) {
+    resetFacilitySearchUi("medical");
+    setMedicalFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "위치 기능을 지원하는 브라우저에서 다시 확인해 주세요.");
+    $("#facility-address-form").hidden = false;
+    return;
+  }
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  setMedicalFacilityStatus("loading", "현재 위치를 확인하고 있어요", "위치는 근처 의료기관을 찾는 요청에만 사용합니다.");
+  let position;
+  try {
+    position = await getCurrentPositionWithRetry();
+  } catch (error) {
+    resetFacilitySearchUi("medical");
+    if (typeof error?.code === "number" && error.code >= 1 && error.code <= 3) {
+      const [title, message] = geolocationFailureCopy(error);
+      setMedicalFacilityStatus("permission", title, message);
+    } else {
+      setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
+    }
+    $("#facility-address-form").hidden = false;
+  } finally {
+    releaseBusy();
+  }
+  if (position) {
+    await requestMedicalFacilities({ lat: position.coords.latitude, lon: position.coords.longitude }, button);
+  }
+}
+
+async function findMedicalFacilitiesByAddress(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#facility-address");
+  const submit = form.querySelector('button[type="submit"]');
+  const address = input?.value.trim();
+  if (!address || !submit) return;
+  resetFacilitySearchUi("medical");
+  const releaseBusy = setButtonBusy(submit, "주소 확인 중…");
+  setMedicalFacilityStatus("loading", "입력한 주소를 확인하고 있어요", "도로명 주소를 검색 기준 위치로 변환하는 중입니다.");
+  try {
+    const coordinates = await coordinatesForAddress(address);
+    input.value = "";
+    releaseBusy();
+    await requestMedicalFacilities(
+      { ...coordinates, areaLabel: address, referenceLabel: "검색 기준 위치" },
+      submit,
+    );
+  } catch (error) {
+    resetFacilitySearchUi("medical");
+    setMedicalFacilityStatus("failed", "주소로 의료기관을 찾지 못했어요", error.message || "주소를 다시 확인해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
+function setEmergencyFacilityStatus(status, title, message) {
+  const box = $("#emergency-facility-status");
+  if (!box) return;
+  box.dataset.state = status;
+  box.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>`;
+}
+
+function renderEmergencyFacilities(payload = {}) {
+  const facilities = Array.isArray(payload.facilities) ? payload.facilities : [];
+  const results = $("#emergency-facility-results");
+  const meta = $("#emergency-facility-meta");
+  if (!results || !meta) return;
+  results.hidden = facilities.length === 0;
+  meta.hidden = false;
+  const radius = Number(payload.retrieved_radius_meters);
+  const checkedAt = medicalFacilityCheckedAt(payload.retrieved_at || payload.checked_at);
+  const area = String(payload.search_area_label || "").trim();
+  meta.innerHTML = `<p><strong>정보 출처</strong> 국립중앙의료원 응급의료기관 정보</p><p><strong>정보 확인일</strong> ${escapeHtml(checkedAt)}${area ? ` · ${escapeHtml(area)} 중심` : ""}</p>${payload.disclaimer ? `<p>${escapeHtml(payload.disclaimer)}</p>` : ""}${Number.isFinite(radius) ? `<p><strong>검색 반경</strong> ${escapeHtml(medicalFacilityDistance(radius))}</p>` : ""}`;
+  if (!facilities.length) {
+    setEmergencyFacilityStatus("empty", "검색 범위에서 응급의료기관을 찾지 못했어요", "위급하면 검색을 계속하지 말고 119에 연락해 주세요.");
+    return;
+  }
+  results.innerHTML = facilities.map((facility) => {
+    const address = facility.road_address || facility.address || "주소 정보 없음";
+    const phone = String(facility.phone || "").trim();
+    const phoneHref = phone.replace(/[^0-9+]/g, "");
+    const mapUrl = safeExternalUrl(facility.map_url);
+    return `<article class="medical-facility-card emergency-facility-card">
+      <div class="medical-facility-card-heading"><strong>${escapeHtml(facility.name || "응급의료기관")}</strong><span>${escapeHtml(medicalFacilityDistance(facility.distance_meters))}</span></div>
+      <p class="medical-facility-address">${escapeHtml(address)}</p>
+      <div class="facility-actions">
+        ${phone && phoneHref ? `<a class="secondary" href="tel:${escapeHtml(phoneHref)}">전화 ${escapeHtml(phone)}</a>` : `<span class="facility-action-unavailable">전화번호 없음</span>`}
+        ${mapUrl ? `<a class="secondary" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">주소·지도 보기</a>` : `<span class="facility-action-unavailable">지도 링크 없음</span>`}
+      </div>
+    </article>`;
+  }).join("");
+  setEmergencyFacilityStatus("done", `가까운 응급의료기관 ${facilities.length}곳을 찾았어요`, "기관 정보와 수용 가능 여부는 이동 전에 119 또는 해당 기관에 확인해 주세요.");
+}
+
+async function requestEmergencyFacilities({ lat, lon, areaLabel = "", referenceLabel = "현재 위치" }, button) {
+  resetFacilitySearchUi("emergency");
+  const releaseBusy = setButtonBusy(button, "검색 중…");
+  setEmergencyFacilityStatus("loading", "가까운 응급의료기관을 찾고 있어요", "위급하면 결과를 기다리지 말고 119에 연락해 주세요.");
+  try {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "10000" });
+    const payload = await api(`/emergency-facilities/nearby?${params.toString()}`);
+    renderEmergencyFacilities({ ...payload, search_area_label: areaLabel });
+    await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "emergency", referenceLabel);
+  } catch (error) {
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("failed", "응급의료기관 정보를 불러오지 못했어요", "위급하면 검색을 다시 시도하지 말고 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
+function getCurrentPosition(options) {
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
+}
+
+async function getCurrentPositionWithRetry() {
+  try {
+    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  } catch (firstError) {
+    if (![2, 3].includes(firstError.code)) throw firstError;
+    return await getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }
+}
+
+function currentBrowserPosition() {
+  return getCurrentPositionWithRetry();
+}
+
+async function confirmEmergencyLocation() {
+  const button = $("#confirm-current-location");
+  state.lastKnownLocation = null;
+  if (!navigator.geolocation) {
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
+    return;
+  }
+  resetFacilitySearchUi("emergency");
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  try {
+    const position = await currentBrowserPosition();
+    state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+    setEmergencyFacilityStatus("permission", "현재 위치를 확인했어요", "주변 응급실 보기를 누르면 이 위치를 기준으로 검색합니다.");
+  } catch (error) {
+    resetFacilitySearchUi("emergency");
+    const [title] = geolocationFailureCopy(error);
+    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
+  } finally {
+    releaseBusy();
+  }
+}
+
+async function findNearbyEmergencyFacilities() {
+  const button = $("#find-nearby-emergency");
+  if (!button) return;
+  if (state.lastKnownLocation) {
+    await requestEmergencyFacilities(state.lastKnownLocation, button);
+    return;
+  }
+  if (!navigator.geolocation) {
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
+    return;
+  }
+  resetFacilitySearchUi("emergency");
+  const releaseBusy = setButtonBusy(button, "위치 확인 중…");
+  let position;
+  try {
+    position = await currentBrowserPosition();
+    state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
+  } catch (error) {
+    resetFacilitySearchUi("emergency");
+    const [title] = geolocationFailureCopy(error);
+    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
+  } finally {
+    releaseBusy();
+  }
+  if (position) await requestEmergencyFacilities(state.lastKnownLocation, button);
+}
+
+async function findEmergencyFacilitiesByAddress(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#emergency-address");
+  const submit = form.querySelector('button[type="submit"]');
+  const address = input?.value.trim();
+  if (!address || !submit) return;
+  resetFacilitySearchUi("emergency");
+  const releaseBusy = setButtonBusy(submit, "주소 확인 중…");
+  setEmergencyFacilityStatus("loading", "입력한 주소를 확인하고 있어요", "위급하면 결과를 기다리지 말고 119에 연락해 주세요.");
+  try {
+    const coordinates = await coordinatesForAddress(address);
+    input.value = "";
+    releaseBusy();
+    await requestEmergencyFacilities(
+      { ...coordinates, areaLabel: address, referenceLabel: "검색 기준 위치" },
+      submit,
+    );
+  } catch (error) {
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("failed", "주소로 응급의료기관을 찾지 못했어요", error.message || "위급하면 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
+  }
+}
+
 function setForecastRiskPreview(risk) {
   const controls = $("#risk-preview-controls");
-  if (!controls || controls.hidden || !isLocalPreview()) return;
+  if (!controls || controls.hidden || !isDemoEnvironment()) return;
   updateResultConfirmation({ risk_category: risk }, true);
   $$('[data-risk-preview]').forEach((button) => {
     const selected = button.dataset.riskPreview === risk;
@@ -1018,19 +1526,31 @@ function updateLifestyleSummary() {
   const exercise = boolLabel(selectedRadioValue("regular-exercise"));
   if (!$("#summary-meals")) return;
   $("#summary-meals").textContent = mealCount
-    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요. 규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요.`
-    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요. 다음 입력 때 함께 점검해요.";
+    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요.`
+    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요.";
+  $("#summary-meals-action").textContent = mealCount
+    ? "규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요."
+    : "다음 입력 때 식사 리듬을 함께 점검해요.";
   $("#summary-activity").textContent = exercise === "예"
-    ? "규칙적인 운동을 하고 있어요. 지금의 활동 습관을 무리 없이 유지하는 방향이 좋아요."
-    : "규칙적인 운동을 하지 않는다고 기록했어요. 짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
+    ? "규칙적인 운동을 하고 있다고 기록했어요."
+    : "규칙적인 운동을 하지 않는다고 기록했어요.";
+  $("#summary-activity-action").textContent = exercise === "예"
+    ? "지금의 활동 습관을 무리 없이 유지해 보세요."
+    : "짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
   $("#summary-metabolic").textContent = smokingStatus === "current" || drinker === "예"
-    ? "흡연·음주 같은 생활습관과 신체 입력값을 함께 보며 점검할 수 있어요."
+    ? "흡연·음주와 관련된 생활습관 기록이 있어요."
     : smokingStatus === "former"
-    ? "과거 흡연 이력과 신체·검진 입력값을 함께 참고해 생활습관을 점검해요."
-    : "신체·검진 입력값은 위험 판정이 아니라 생활습관을 점검하는 참고 신호로 확인해요.";
+    ? "과거 흡연 이력이 기록되어 있어요."
+    : "입력한 생활습관과 신체·검진 정보를 확인했어요.";
+  $("#summary-metabolic-action").textContent = smokingStatus === "current" || drinker === "예"
+    ? "현재 기록을 바탕으로 바꾸기 쉬운 생활습관부터 점검해요."
+    : "이 정보는 위험 판정이 아니라 생활습관 점검을 위한 참고 신호예요.";
   $("#summary-checkup").textContent = normalizeRiskKey() === "high"
-    ? "높음 범주에서는 생활습관 실천보다 검사·의료기관 상담 안내를 먼저 확인해요."
-    : "위험 범주가 낮거나 주의여도 정기 검진과 기록을 이어가는 것이 중요해요.";
+    ? "현재 위험 신호가 높음으로 확인되었어요."
+    : "현재 위험 신호와 관계없이 정기적인 확인이 필요해요.";
+  $("#summary-checkup-action").textContent = normalizeRiskKey() === "high"
+    ? "챌린지보다 검사·의료기관 상담 안내를 먼저 확인해 주세요."
+    : "정기 검진과 생활습관 기록을 이어가 주세요.";
 }
 
 function syncLifestyleAvatar() {
@@ -1160,6 +1680,7 @@ async function pollPrediction(jobId) {
 }
 
 function approvedDisplayPercent(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 && number <= 100 ? number : null;
 }
@@ -1247,7 +1768,7 @@ function renderAgeRiskForecast(prediction, approvedPrediction) {
   const displayForecast = approvedForecast || previewForecast;
   const points = displayForecast && Array.isArray(forecast.points)
     ? forecast.points.map((point) => ({
-      label: String(point.display_label || point.age_label || "").trim(),
+      label: String(point.display_label || point.horizon_label || point.age_label || "").trim(),
       value: approvedDisplayPercent(point.display_percent),
       level: normalizeForecastSignal(point.signal_level || point.risk_category),
     })).filter((point) => point.label && (point.level || point.value !== null))
@@ -1323,9 +1844,6 @@ function renderPrediction(prediction, factors) {
     ? normalizeForecastSignal(state.developmentPreviewRiskCategory)
     : null;
   const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk);
-  const displayPrediction = developmentPreviewRisk
-    ? { ...prediction, risk_category: developmentPreviewRisk, risk_category_label: riskCategoryLabels[developmentPreviewRisk] }
-    : prediction;
   const hasApprovedExplanation = isApprovedRisk
     && factors?.status === "approved"
     && factors?.shap_claimed === true;
@@ -1354,11 +1872,15 @@ function renderPrediction(prediction, factors) {
     }).join("")
     : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   $("#risk-confirm-card").hidden = false;
+  $("#risk-preview-controls").hidden = !isDemoEnvironment();
   $("#result-unavailable").hidden = canDisplayRisk;
   $("#development-preview-notice").hidden = !developmentPreviewRisk;
-  const isHighRisk = canDisplayRisk && isHighRiskPrediction(displayPrediction);
-  $("#medical-guidance-detail").hidden = !isHighRisk;
-  updateResultConfirmation(displayPrediction, canDisplayRisk);
+  $("#medical-guidance-detail").hidden = true;
+  showFuturePredictionResult();
+  updateResultConfirmation(state.currentScreeningPrediction || {});
+  $("#future-risk-category").textContent = isApprovedRisk
+    ? `내일이 · 약 2년 후 신규 당뇨 발병 위험: ${prediction.risk_category_label || forecastSignalLabel(normalizeRiskKey(prediction))}`
+    : "내일이 · 미래 발병 위험 결과 준비 중";
   renderAgeRiskForecast(prediction, isApprovedRisk);
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
@@ -1413,6 +1935,7 @@ async function runPrediction() {
         state.currentScreeningPredictionId = current.predictionId;
         state.currentScreeningPrediction = current.prediction;
       } catch (error) {
+        state.currentScreeningPredictionId = null;
         state.currentScreeningPrediction = null;
         if (state.currentHealthOnly) throw error;
       }
@@ -1420,21 +1943,25 @@ async function runPrediction() {
     if (state.currentHealthOnly) {
       state.predictionId = state.currentScreeningPredictionId;
       state.prediction = state.currentScreeningPrediction;
-      renderCurrentHealthResult(state.healthCheckupResult, { standalone: true });
-      renderPredictionStatus("succeeded", { resultAvailable: true });
+      renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: true });
+      updateResultConfirmation(state.currentScreeningPrediction || {});
+      renderPredictionStatus("succeeded", { resultAvailable: true, showResult: true });
       $("#result-next").hidden = false;
       $("#result-next").disabled = false;
+      showStep(6);
       return;
     }
     const future = await requestPredictionModel("diabetes_incidence");
     state.predictionId = future.predictionId;
     state.prediction = future.prediction;
-    const [prediction, factors] = await Promise.all([
+    const [, factors] = await Promise.all([
       Promise.resolve(future.prediction),
       api(`/predictions/${state.predictionId}/risk-factors`),
     ]);
-    state.prediction = prediction;
-    renderPrediction(prediction, factors);
+    renderPrediction(future.prediction, factors);
+    if (state.currentScreeningPrediction) {
+      renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
+    }
   } catch (error) {
     const isTimeout = error.code === "TIMEOUT";
     const isModelNotReady = error.code === "MODEL_NOT_READY";
@@ -1515,44 +2042,103 @@ async function loadChallenges() {
 
 function customChallengeSlot() {
   if (!state.customChallenge) {
-    return `<button class="challenge-add-card" id="open-custom-challenge" type="button">
-      <b aria-hidden="true">+</b><strong>나만의 챌린지 추가</strong><small>내 생활에 맞는 목표를 직접 적어보세요.</small>
+    return `<button class="challenge-add-card" id="open-rag-challenge" type="button" aria-controls="rag-challenge-generator" aria-expanded="false">
+      <b aria-hidden="true">+</b><strong>맞춤 챌린지 추가</strong><small>생활습관 자료를 바탕으로 맞춤 후보를 받아보세요.</small>
     </button>`;
   }
   return `<article class="challenge-card custom-challenge-slot">
     <label>
       <input id="custom-challenge-choice" type="checkbox" name="custom-challenge" ${state.customChallengeSelected ? "checked" : ""}>
-      <span><span class="custom-challenge-icon" aria-hidden="true">+</span><div class="challenge-card-copy"><strong>${escapeHtml(state.customChallenge.title)}</strong><small>목표: ${escapeHtml(state.customChallenge.goal)}</small><em>직접 추가 · ${escapeHtml(state.customChallenge.recordLabel)}</em></div></span>
+      <span><span class="custom-challenge-icon" aria-hidden="true">+</span><div class="challenge-card-copy"><strong>${escapeHtml(state.customChallenge.title)}</strong><small>목표: ${escapeHtml(state.customChallenge.goal)}</small><em>맞춤 챌린지 · ${escapeHtml(state.customChallenge.recordLabel)}</em></div></span>
     </label>
-    <button class="text-button edit-custom-challenge" type="button">수정</button>
+    <button class="text-button edit-rag-challenge" type="button" aria-controls="rag-challenge-generator" aria-expanded="false">다시 선택</button>
   </article>`;
 }
 
-function localRagChallengeDraft(preference) {
-  const drafts = {
-    activity: {
-      title: "식후 10분 천천히 걷기",
-      goal: "하루 한 번 식사 후 편한 속도로 10분 걷기",
-      recordType: "simple",
-      source: "질병관리청 신체활동·걷기 건강정보 기반",
-    },
-    diet: {
-      title: "단 음료 대신 물 고르기",
-      goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기",
-      recordType: "simple",
-      source: "국가건강정보포털 당뇨병 생활습관 자료 기반",
-    },
-    tracking: {
-      title: "오늘 건강수치 한 가지 기록하기",
-      goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기",
-      recordType: "simple",
-      source: "정기 건강 점검 안내 자료 기반",
-    },
+const ragChallengeSources = {
+  kdcaDiabetes: {
+    title: "질병관리청 국가건강정보포털 · 당뇨병",
+    url: "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5292",
+  },
+  whoActivity: {
+    title: "WHO · 신체활동 및 좌식 행동 지침",
+    url: "https://www.who.int/publications/i/item/9789240015128",
+  },
+  cdcPreventT2: {
+    title: "CDC · PreventT2 생활습관 교육과정",
+    url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+  },
+  kdcaHypertension: {
+    title: "질병관리청 국가건강정보포털 · 고혈압",
+    url: "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5300",
+  },
+};
+
+function localRagChallengeCandidates(preference) {
+  const candidates = {
+    activity: [
+      { id: "activity-walk", title: "식후 10분 천천히 걷기", goal: "하루 한 번 식사 후 편한 속도로 10분 걷기", reason: "짧고 구체적인 활동부터 시작하는 후보예요.", recordType: "simple", caution: "통증·어지럼·심한 호흡곤란이 생기면 즉시 중단해 주세요.", citations: [ragChallengeSources.whoActivity, ragChallengeSources.kdcaDiabetes] },
+      { id: "activity-sit-less", title: "한 시간마다 가볍게 움직이기", goal: "오래 앉아 있었다면 한 시간마다 3분 동안 일어나 움직이기", reason: "앉아 있는 시간을 나누어 줄이는 후보예요.", recordType: "count", caution: "균형 잡기가 어렵다면 의자나 벽을 잡고 안전하게 움직여 주세요.", citations: [ragChallengeSources.whoActivity] },
+      { id: "activity-stretch", title: "아침·저녁 5분 스트레칭", goal: "아침 또는 저녁에 무리 없는 범위에서 5분 스트레칭하기", reason: "실내에서도 부담 없이 시작할 수 있는 후보예요.", recordType: "time", caution: "반동을 주거나 통증을 참으며 자세를 유지하지 마세요.", citations: [ragChallengeSources.whoActivity, ragChallengeSources.cdcPreventT2] },
+    ],
+    diet: [
+      { id: "diet-water", title: "단 음료 대신 물 고르기", goal: "오늘 마실 음료 중 한 번은 물이나 무가당 음료 선택하기", reason: "기존 선택 한 가지를 가볍게 바꾸는 후보예요.", recordType: "simple", caution: "의료진에게 수분 섭취 제한을 안내받았다면 그 지침을 우선해 주세요.", citations: [ragChallengeSources.kdcaDiabetes] },
+      { id: "diet-vegetable", title: "한 끼에 채소 반찬 더하기", goal: "하루 한 끼에 평소 먹던 채소 반찬 한 가지 더하기", reason: "식사량을 갑자기 제한하지 않고 구성을 살피는 후보예요.", recordType: "simple", caution: "알레르기나 별도 식이 지침이 있다면 해당 식품은 선택하지 마세요.", citations: [ragChallengeSources.kdcaDiabetes, ragChallengeSources.cdcPreventT2] },
+      { id: "diet-meal-log", title: "한 끼 식사 간단히 기록하기", goal: "오늘 한 끼의 음식과 식사 시간을 짧게 기록하기", reason: "평가보다 관찰을 먼저 시작하는 후보예요.", recordType: "simple", caution: "끼니를 거르거나 음식량을 과도하게 줄이는 목표로 사용하지 마세요.", citations: [ragChallengeSources.cdcPreventT2, ragChallengeSources.kdcaDiabetes] },
+    ],
+    tracking: [
+      { id: "tracking-health", title: "오늘 건강수치 한 가지 기록하기", goal: "혈압·혈당·체중 중 확인 가능한 수치 하나 적어두기", reason: "가능한 항목 한 가지만 골라 기록하는 후보예요.", recordType: "simple", caution: "한 번의 수치만으로 상태를 진단하거나 약을 변경하지 마세요.", citations: [ragChallengeSources.kdcaHypertension, ragChallengeSources.kdcaDiabetes] },
+      { id: "tracking-habit", title: "오늘 실천 한 줄 남기기", goal: "오늘 지킨 생활습관과 어려웠던 점을 한 줄로 기록하기", reason: "성공과 방해 요인을 함께 살펴보는 후보예요.", recordType: "simple", caution: "실천하지 못한 날도 실패로 단정하지 말고 다음 목표를 작게 조정해 보세요.", citations: [ragChallengeSources.cdcPreventT2] },
+      { id: "tracking-pressure", title: "같은 시간에 혈압 기록하기", goal: "안정된 상태에서 안내받은 방법으로 혈압을 재고 기록하기", reason: "측정 조건을 일정하게 유지하는 후보예요.", recordType: "simple", caution: "높은 수치가 반복되거나 증상이 있으면 기록만 하지 말고 의료진과 상담해 주세요.", citations: [ragChallengeSources.kdcaHypertension] },
+    ],
   };
-  return drafts[preference] || drafts.activity;
+  return candidates[preference] || candidates.activity;
 }
 
-function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
+function ragChallengeCandidateMarkup(candidate, index) {
+  const citations = candidate.citations.map((citation) => {
+    const url = safeExternalUrl(citation.url);
+    return `<li>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(citation.title)}</a>` : escapeHtml(citation.title)}</li>`;
+  }).join("");
+  return `<article class="rag-challenge-candidate">
+    <label class="rag-challenge-candidate-choice">
+      <input type="radio" name="rag-challenge-candidate" value="${escapeHtml(candidate.id)}">
+      <span class="rag-challenge-candidate-number">후보 ${index + 1}</span>
+      <span class="rag-challenge-candidate-card">
+        <strong class="rag-challenge-candidate-title">${escapeHtml(candidate.title)}</strong>
+        <span class="rag-challenge-candidate-goal"><strong>일일 목표</strong><br>${escapeHtml(candidate.goal)}</span>
+        <span class="rag-challenge-candidate-reason">${escapeHtml(candidate.reason)}</span>
+        <span class="rag-challenge-meta">
+          <strong>주의사항</strong>
+          <span class="rag-challenge-caution">${escapeHtml(candidate.caution)}</span>
+        </span>
+      </span>
+    </label>
+    <div class="rag-challenge-source-panel"><strong>근거 및 출처</strong><ul class="rag-challenge-sources">${citations}</ul></div>
+  </article>`;
+}
+
+function renderRagChallengeSelection() {
+  const selected = state.ragChallengeCandidates.find((candidate) => candidate.id === state.selectedRagChallengeId) || null;
+  state.ragChallengeDraft = selected;
+  const summary = $("#rag-challenge-selection-summary");
+  const applyButton = $("#apply-rag-challenge");
+  if (!summary || !applyButton) return;
+  summary.textContent = selected ? `선택됨: ${selected.title}` : "후보를 선택하면 적용할 수 있어요.";
+  applyButton.disabled = !selected;
+}
+
+function closeRagChallengeGenerator({ moveFocus = false } = {}) {
+  const generator = $("#rag-challenge-generator");
+  if (!generator) return;
+  generator.hidden = true;
+  $$("#open-rag-challenge, .edit-rag-challenge").forEach((trigger) => {
+    trigger.setAttribute("aria-expanded", "false");
+  });
+  if (moveFocus) $("#open-rag-challenge, .edit-rag-challenge")?.focus();
+}
+
+function renderRagChallengeState(status, candidates = state.ragChallengeCandidates) {
   state.ragChallengeStatus = status;
   const box = $("#rag-challenge-state");
   const card = $("#rag-challenge-draft");
@@ -1560,19 +2146,18 @@ function renderRagChallengeState(status, draft = state.ragChallengeDraft) {
   box.dataset.state = status;
   const copy = {
     idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
-    loading: ["챌린지 초안을 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
-    done: ["챌린지 초안을 확인해 주세요", "마음에 들면 나만의 챌린지로 사용할 수 있어요."],
-    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성하거나 직접 나만의 챌린지를 추가해 주세요."],
+    loading: ["챌린지 후보를 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
+    done: ["맞춤 챌린지 후보 3개가 준비됐어요", "목표·주의사항·출처를 비교한 뒤 한 가지를 선택해 주세요."],
+    failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성해 주세요."],
   }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
   $("#rag-challenge-state-title").textContent = copy[0];
   $("#rag-challenge-state-message").textContent = copy[1];
   $("#generate-rag-challenge").hidden = status === "done";
   $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "failed";
-  card.hidden = status !== "done" || !draft;
-  if (status === "done" && draft) {
-    $("#rag-challenge-draft-title").textContent = draft.title;
-    $("#rag-challenge-draft-goal").textContent = draft.goal;
-    $("#rag-challenge-draft-source").textContent = draft.source;
+  card.hidden = status !== "done" || !candidates.length;
+  if (status === "done" && candidates.length) {
+    $("#rag-challenge-candidate-grid").innerHTML = candidates.map(ragChallengeCandidateMarkup).join("");
+    renderRagChallengeSelection();
   }
 }
 
@@ -1582,8 +2167,10 @@ async function generateRagChallengeDraft() {
   renderRagChallengeState("loading");
   try {
     await sleep(500);
-    state.ragChallengeDraft = localRagChallengeDraft($("#rag-challenge-preference").value);
-    renderRagChallengeState("done", state.ragChallengeDraft);
+    state.ragChallengeCandidates = localRagChallengeCandidates($("#rag-challenge-preference").value);
+    state.selectedRagChallengeId = null;
+    state.ragChallengeDraft = null;
+    renderRagChallengeState("done", state.ragChallengeCandidates);
   } catch (error) {
     renderRagChallengeState("failed");
     showMessage(error.message || "맞춤 챌린지 초안을 만들지 못했습니다.");
@@ -1595,7 +2182,7 @@ async function generateRagChallengeDraft() {
 
 function renderChallengeChoices() {
   const challengeList = $("#challenge-list");
-  const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 나만의 챌린지를 직접 추가할 수 있어요.</p>';
+  const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 맞춤 챌린지 후보를 생성해 선택할 수 있어요.</p>';
   challengeList.innerHTML = emptyMessage + Object.entries(challengeCategories).map(([key, category]) => {
     const count = state.challengeCatalog.filter((item) => item.category === key).length;
     return `<button class="challenge-category-card ${state.activeChallengeCategory === key ? "active" : ""}" type="button" data-challenge-category="${key}" aria-pressed="${state.activeChallengeCategory === key}">
@@ -1721,7 +2308,10 @@ function renderLocalDemoDashboard() {
     completed: state.dailyCompleted.has(String(item.user_challenge_id)) ? 1 : 0,
     planned: 1,
   })));
-  $("#education-list").innerHTML = `<article class="challenge-card"><span><strong>생활습관 교육 준비 중</strong><small>검증된 공공기관 자료만 연결해 제공할 예정입니다.</small></span></article>`;
+  const education = localEducationContents();
+  state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
+  renderEducationList();
+  $("#education-learning-flow").hidden = true;
   $("#connection-list").innerHTML = renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
 }
 function updateDailyRecordSummary() {
@@ -1866,20 +2456,114 @@ async function loadWeeklyReport() {
     renderWeeklyReportMessage("주간 기록을 확인할 수 없어요", "잠시 후 다시 시도해 주세요.");
   }
 }
+function localEducationContents() {
+  const source = { title: "CDC PreventT2 Curriculum", url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html" };
+  return {
+    medical_notice: "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.",
+    items: [
+      { content_id: "preview-1", week_number: 1, title: "위험 선별 결과 이해하기", summary: "예측 결과는 향후 위험을 살펴보는 건강교육 정보이며 당뇨병 진단이 아닙니다.", quiz_question: "이 서비스의 예측 결과는 당뇨병 진단인가요?", source },
+      { content_id: "preview-2", week_number: 2, title: "일상에서 활동 늘리기", summary: "실천 가능한 작은 활동 목표를 정하고 기록하면서 자신에게 맞는 습관을 찾습니다.", quiz_question: "목표가 너무 어렵다면 작은 목표로 조정해도 되나요?", source },
+      { content_id: "preview-3", week_number: 3, title: "식사 습관 기록하기", summary: "식사 기록을 통해 자신의 패턴을 확인하되 특정 식품을 치료법처럼 표현하지 않습니다.", quiz_question: "식사 기록만으로 당뇨병 치료 효과를 판단할 수 있나요?", source },
+      { content_id: "preview-4", week_number: 4, title: "중단해도 다시 시작하기", summary: "실천하지 못한 이유를 확인하고 목표·시간·챌린지를 조정해 다시 시작합니다.", quiz_question: "하루 실패하면 4주 챌린지를 모두 포기해야 하나요?", source },
+    ],
+  };
+}
+
+function inferredEducationAnswer(question = "") {
+  return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
+}
+
+function educationQuestions(item) {
+  const questions = Array.isArray(item.quiz_questions) && item.quiz_questions.length
+    ? item.quiz_questions
+    : [{ prompt: item.quiz_question, correct_answer: inferredEducationAnswer(item.quiz_question), explanation: item.summary }];
+  return questions.filter((question) => question?.prompt).slice(0, 3).map((question) => ({
+    prompt: question.prompt,
+    correctAnswer: question.correct_answer || question.correctAnswer || inferredEducationAnswer(question.prompt),
+    explanation: question.explanation || item.summary,
+  }));
+}
+
+function renderEducationList() {
+  const list = $("#education-list");
+  if (!state.educationContents.length) {
+    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    return;
+  }
+  list.innerHTML = state.educationContents.map((item) => {
+    const completed = Boolean(item.completed && item.is_correct !== false);
+    const questionCount = educationQuestions(item).length;
+    return `<article class="education-overview-card" data-completed="${completed}">
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
+      <p>${escapeHtml(item.summary)}</p>
+      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
+    </article>`;
+  }).join("");
+}
+
+function activeEducationContent() {
+  return state.educationContents.find((item) => String(item.content_id) === String(state.activeEducationId)) || null;
+}
+
+function openEducationFlow(contentId) {
+  const item = state.educationContents.find((entry) => String(entry.content_id) === String(contentId));
+  if (!item) return;
+  state.activeEducationId = item.content_id;
+  state.educationQuizIndex = 0;
+  state.educationQuizCorrectCount = 0;
+  $("#education-flow-week").textContent = `${item.week_number}주차 건강교육`;
+  $("#education-flow-title").textContent = item.title;
+  $("#education-flow-summary").textContent = item.summary;
+  $("#education-flow-notice").textContent = item.medical_notice || "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.";
+  const sourceUrl = safeExternalUrl(item.source?.url);
+  const sourceLink = $("#education-flow-source");
+  sourceLink.textContent = item.source?.title ? `근거: ${item.source.title}` : "근거 자료 확인";
+  sourceLink.hidden = !sourceUrl;
+  if (sourceUrl) sourceLink.href = sourceUrl;
+  $("#education-reading-card").hidden = false;
+  $("#education-quiz-form").hidden = true;
+  $("#education-feedback-card").hidden = true;
+  const flow = $("#education-learning-flow");
+  flow.hidden = false;
+  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  $("#education-flow-title").setAttribute("tabindex", "-1");
+  $("#education-flow-title").focus({ preventScroll: true });
+}
+
+function renderEducationQuizQuestion() {
+  const item = activeEducationContent();
+  const questions = item ? educationQuestions(item) : [];
+  const question = questions[state.educationQuizIndex];
+  if (!question) return;
+  $("#education-reading-card").hidden = true;
+  $("#education-feedback-card").hidden = true;
+  const form = $("#education-quiz-form");
+  form.hidden = false;
+  form.reset();
+  $("#education-quiz-question").textContent = question.prompt;
+  $("#education-quiz-progress-text").textContent = `${state.educationQuizIndex + 1}/${questions.length} 문항`;
+  $("#education-quiz-progress").max = questions.length;
+  $("#education-quiz-progress").value = state.educationQuizIndex + 1;
+  $("#education-quiz-question").setAttribute("tabindex", "-1");
+  $("#education-quiz-question").focus();
+}
+
+function closeEducationFlow() {
+  $("#education-learning-flow").hidden = true;
+  const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
+  state.activeEducationId = null;
+  button?.focus();
+}
+
 async function loadEducation() {
   const list = $("#education-list");
   list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
-    const contents = await api("/education-contents");
-    if (!contents.items?.length) {
-      list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
-      return;
-    }
-    list.innerHTML = contents.items.map((item) => {
-      const noAnswer = item.quiz_question.includes("진단") || item.quiz_question.includes("치료") || item.quiz_question.includes("포기");
-      return `<article class="challenge-card"><span><strong>${item.week_number}주차 · ${escapeHtml(item.title)}</strong><small>${escapeHtml(item.summary)}</small><small>${escapeHtml(item.quiz_question)}</small><button class="secondary education-complete" type="button" data-id="${item.content_id}" data-answer="${noAnswer ? "아니요" : "네"}">${item.completed ? "다시 확인" : "퀴즈 답변·완료"}</button><small><a href="${escapeHtml(item.source.url)}" target="_blank" rel="noopener">근거: ${escapeHtml(item.source.title)}</a></small></span></article>`;
-    }).join("");
+    const contents = isLocalPreview() ? localEducationContents() : await api("/education-contents");
+    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
+    renderEducationList();
   } catch (error) {
+    state.educationContents = [];
     list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오지 못했어요</strong><p>잠시 후 다시 시도해 주세요.</p></article>`;
   }
 }
@@ -2161,14 +2845,10 @@ $("#signup-form").addEventListener("submit", async (event) => {
     const birthDate = $("#signup-birth-date").value;
     const gender = $("#signup-gender").value;
     await api("/auth/signup", { method: "POST", body: JSON.stringify({
-      email, password, terms_agreed: $("#personal-consent").checked,
+      email, password, gender, birth_date: birthDate,
     }) });
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
     state.token = login.access_token;
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
-      birthday: birthDate,
-      gender,
-    }) });
     await api("/consents", { method: "POST", body: JSON.stringify({ consent_item: "health_data", version: "1.0", is_agreed: $("#health-consent").checked }) });
     $("#eligibility-birth-date").value = birthDate;
     $("#gender").value = gender;
@@ -2184,15 +2864,33 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#eligibility-guidance").hidden = true;
   const urgentAnswer = document.querySelector("input[name='urgent-warning']:checked");
+  if (!urgentAnswer) {
+    showMessage("긴급 증상 여부를 선택해 주세요. 판단하기 어렵다면 ‘증상 자세히 확인하기’를 이용할 수 있습니다.");
+    return;
+  }
+  if (urgentAnswer.value === "yes" || hasUrgentSymptoms() || isUrgentAnswerUncertain()) {
+    showEligibilityGuidance(["URGENT_MEDICAL_ATTENTION"]);
+    $("#eligibility-guidance-reason").textContent = isUrgentAnswerUncertain()
+      ? "증상 여부를 확실히 판단하기 어렵다고 답했습니다."
+      : "긴급한 증상이 있다고 답했습니다.";
+    return;
+  }
+  if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) {
+    showEligibilityGuidance(["SAME_DAY_MEDICAL_ATTENTION"]);
+    $("#eligibility-guidance-reason").textContent = isSameDayAnswerUncertain()
+      ? "당일 확인이 필요한 증상인지 판단하기 어렵다고 답했습니다."
+      : "당일 확인이 필요한 증상이 있다고 답했습니다.";
+    return;
+  }
   const diagnosisAnswer = document.querySelector("input[name='diabetes-diagnosis']:checked");
-  if (!urgentAnswer || !diagnosisAnswer) {
-    showMessage("긴급 증상 여부와 당뇨병 진단 여부를 모두 선택해 주세요.");
+  if (!diagnosisAnswer) {
+    showMessage("당뇨병 진단 여부를 선택해 주세요.");
     return;
   }
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
   try {
     if (!isLocalPreview()) {
-      await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      await api("/users/me", { method: "PATCH", body: JSON.stringify({
         birthday: $("#eligibility-birth-date").value,
         gender: $("#gender").value,
       }) });
@@ -2202,7 +2900,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
       : await api("/eligibility-checks", { method: "POST", body: JSON.stringify({
         birth_date: $("#eligibility-birth-date").value,
         has_diabetes_diagnosis: diagnosisAnswer.value === "yes",
-        has_urgent_warning_sign: urgentAnswer.value === "yes",
+        has_urgent_warning_sign: false,
         population_in_scope: true,
       }) });
     syncReturningEligibilityState(result);
@@ -2227,6 +2925,26 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
 });
 $("#eligibility-form").addEventListener("change", () => {
   $("#eligibility-guidance").hidden = true;
+});
+$$('input[name="urgent-summary"], input[name="same-day-summary"]').forEach((input) => {
+  input.addEventListener("change", syncEmergencyQuestionnaire);
+});
+$$('input[name="urgent-warning"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    clearQuestionnaireAnswers("urgent-summary");
+    clearQuestionnaireAnswers("same-day-summary");
+    $("#emergency-questionnaire-summary").hidden = true;
+    syncEmergencyQuestionnaire();
+  });
+});
+$("#open-emergency-questionnaire").addEventListener("click", openEmergencyQuestionnaire);
+$$('.emergency-questionnaire-close').forEach((button) => button.addEventListener("click", closeEmergencyQuestionnaire));
+$("#apply-emergency-questionnaire").addEventListener("click", applyEmergencyQuestionnaire);
+$("#emergency-questionnaire-modal").addEventListener("click", (event) => {
+  if (event.target.id === "emergency-questionnaire-modal") closeEmergencyQuestionnaire();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
 });
 $("#diagnosis-help-toggle").addEventListener("click", (event) => {
   const help = $("#diagnosis-help");
@@ -2253,6 +2971,15 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     $("#submit-analysis").textContent = "저장하고 현재 건강 신호 확인";
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
+});
+$("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
+$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
+$("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
+$("#find-same-day-medical")?.addEventListener("click", () => {
+  showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
+});
+$("#find-phone-consultation")?.addEventListener("click", () => {
+  showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
 });
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
@@ -2316,10 +3043,11 @@ $("#health-form").addEventListener("submit", async (event) => {
         diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
         self_rated_health: $("#self-health").value, meal_count_yesterday: Number($("#meal-count").value),
         regular_exercise: selectedRadioValue("regular-exercise") === "true",
+        current_smoker: smokingStatus === "current",
         smoking_status: smokingStatus,
         exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
         exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
-        current_drinker: selectedRadioValue("current-drinker") === "true", feature_schema_version: "klosa_stage3_25features_v1",
+        current_drinker: selectedRadioValue("current-drinker") === "true",
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
@@ -2362,24 +3090,26 @@ $$("[data-demo-status]").forEach((button) => button.addEventListener("click", ()
 $("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
-$("#feedback-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!state.predictionId) return showMessage("피드백을 연결할 분석 결과가 없습니다.");
-  try {
-    await api("/feedback", { method: "POST", body: JSON.stringify({
-      context_type: "prediction",
-      prediction_id: state.predictionId,
-      rating: Number($("#feedback-rating").value),
-      comment: $("#feedback-comment").value || null,
-    }) });
-    showMessage("의견을 저장했습니다.", "success");
-  } catch (error) { showMessage(error.message); }
+$("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
+$("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
+$("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".lifestyle-summary-toggle");
+  if (!toggle) return;
+  const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
+  $$(".lifestyle-summary-toggle").forEach((button) => {
+    const panel = $(`#${button.getAttribute("aria-controls")}`);
+    const expanded = button === toggle && shouldOpen;
+    button.setAttribute("aria-expanded", String(expanded));
+    if (panel) panel.hidden = !expanded;
+  });
 });
 $("#to-challenges").addEventListener("click", async () => {
-  if (!state.currentHealthOnly && normalizeRiskKey() === "high") {
+  const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();
+  const futureHigh = !state.currentHealthOnly && state.prediction?.result_status === "approved"
+    && state.prediction?.promotion_status === "approved" && state.prediction?.risk_category === "high";
+  if (displayedRisk === "high" || futureHigh) {
     $("#medical-guidance-detail").hidden = false;
     $("#medical-guidance-detail").scrollIntoView({ behavior: "smooth", block: "center" });
-    showMessage("높음 범주에서는 검사·의료기관 상담 안내를 먼저 확인해 주세요.", "success");
     return;
   }
   try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }
@@ -2387,22 +3117,25 @@ $("#to-challenges").addEventListener("click", async () => {
 $("#challenge-list").addEventListener("click", (event) => {
   const categoryButton = event.target.closest("[data-challenge-category]");
   if (categoryButton) {
+    closeRagChallengeGenerator();
     state.activeChallengeCategory = categoryButton.dataset.challengeCategory;
-    renderChallengeChoices();
+    $$("[data-challenge-category]").forEach((button) => {
+      const active = button.dataset.challengeCategory === state.activeChallengeCategory;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    renderChallengeDetails();
+    updateChallengeSelectionCount();
     $("#challenge-category-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
     return;
   }
-  if (!event.target.closest("#open-custom-challenge, .edit-custom-challenge")) return;
-  const editor = $("#custom-challenge-editor");
-  editor.hidden = false;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = false;
-  });
-  $("#custom-challenge-title").value = state.customChallenge?.title || "";
-  $("#custom-challenge-goal").value = state.customChallenge?.goal || "";
-  $("#custom-challenge-record-type").value = state.customChallenge?.recordType || "simple";
-  editor.scrollIntoView({ behavior: "smooth", block: "center" });
-  $("#custom-challenge-title").focus({ preventScroll: true });
+  const trigger = event.target.closest("#open-rag-challenge, .edit-rag-challenge");
+  if (!trigger) return;
+  const generator = $("#rag-challenge-generator");
+  generator.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  generator.scrollIntoView({ behavior: "smooth", block: "center" });
+  generator.focus({ preventScroll: true });
 });
 $("#challenge-list").addEventListener("change", (event) => {
   if (!event.target.matches("#custom-challenge-choice")) return;
@@ -2416,6 +3149,7 @@ $("#challenge-list").addEventListener("change", (event) => {
 });
 $("#challenge-detail-list").addEventListener("change", (event) => {
   if (!event.target.matches("input[name='challenge']")) return;
+  closeRagChallengeGenerator();
   const challengeId = Number(event.target.value);
   if (event.target.checked && state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0) >= 3) {
     event.target.checked = false;
@@ -2428,51 +3162,16 @@ $("#challenge-detail-list").addEventListener("change", (event) => {
   syncWalkingLevelPicker();
   if (!$("#walking-level-picker").hidden) $("#walking-level-picker").scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
-$("#cancel-custom-challenge").addEventListener("click", () => {
-  $("#custom-challenge-editor").hidden = true;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = true;
-  });
-  $("#open-custom-challenge, .edit-custom-challenge")?.focus();
-});
-$("#save-custom-challenge").addEventListener("click", () => {
-  const titleInput = $("#custom-challenge-title");
-  const goalInput = $("#custom-challenge-goal");
-  if (!titleInput.value.trim()) {
-    titleInput.setCustomValidity("챌린지 이름을 입력해 주세요.");
-    titleInput.reportValidity();
-    titleInput.setCustomValidity("");
-    return;
-  }
-  if (!goalInput.value.trim()) {
-    goalInput.setCustomValidity("실천 목표를 입력해 주세요.");
-    goalInput.reportValidity();
-    goalInput.setCustomValidity("");
-    return;
-  }
-  const recordType = $("#custom-challenge-record-type").value;
-  state.customChallenge = {
-    title: titleInput.value.trim(),
-    goal: goalInput.value.trim(),
-    recordType,
-    recordLabel: { simple: "간편 체크", time: "시간 입력", count: "횟수 입력" }[recordType],
-  };
-  if (state.selectedChallengeIds.size >= 3 && !state.customChallengeSelected) {
-    showMessage("챌린지는 최대 3개까지 선택할 수 있어요. 기존 선택을 하나 해제한 뒤 추가해 주세요.");
-    return;
-  }
-  state.customChallengeSelected = true;
-  renderChallengeChoices();
-  $("#custom-challenge-editor").hidden = true;
-  ["#custom-challenge-title", "#custom-challenge-goal", "#custom-challenge-record-type"].forEach((selector) => {
-    $(selector).disabled = true;
-  });
-  syncWalkingLevelPicker();
-  $("#custom-challenge-choice").focus();
-  showMessage("나만의 챌린지를 추가했어요.", "success");
+$("#close-rag-challenge")?.addEventListener("click", () => {
+  closeRagChallengeGenerator({ moveFocus: true });
 });
 $("#generate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
 $("#regenerate-rag-challenge")?.addEventListener("click", generateRagChallengeDraft);
+$("#rag-challenge-candidate-grid")?.addEventListener("change", (event) => {
+  if (event.target.name !== "rag-challenge-candidate") return;
+  state.selectedRagChallengeId = event.target.value;
+  renderRagChallengeSelection();
+});
 $("#apply-rag-challenge")?.addEventListener("click", () => {
   if (!state.ragChallengeDraft) {
     renderRagChallengeState("failed");
@@ -2490,7 +3189,10 @@ $("#apply-rag-challenge")?.addEventListener("click", () => {
   };
   state.customChallengeSelected = true;
   renderChallengeChoices();
-  showMessage("RAG 초안을 나만의 챌린지로 추가했어요.", "success");
+  closeRagChallengeGenerator();
+  syncWalkingLevelPicker();
+  $("#custom-challenge-choice")?.focus();
+  showMessage("맞춤 챌린지를 추가했어요.", "success");
 });
 $("#walking-level-picker").addEventListener("change", (event) => {
   if (event.target.name === "walking-level") state.walkingLevel = event.target.value;
@@ -2515,7 +3217,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     if (customSelected) {
-      showMessage("나만의 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요. 작성한 내용은 현재 화면에 유지됩니다.");
+      showMessage("맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요. 선택한 내용은 현재 화면에 유지됩니다.");
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
@@ -2648,16 +3350,73 @@ $("#barrier-form").addEventListener("submit", async (event) => {
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
-$("#education-list").addEventListener("click", async (event) => {
-  const button = event.target.closest(".education-complete");
-  if (!button) return;
-  const releaseBusy = setButtonBusy(button, "완료 처리 중…");
+$("#education-list").addEventListener("click", (event) => {
+  const button = event.target.closest(".education-open");
+  if (button) openEducationFlow(button.dataset.id);
+});
+$("#close-education-flow")?.addEventListener("click", closeEducationFlow);
+$("#start-education-quiz")?.addEventListener("click", renderEducationQuizQuestion);
+$("#education-quiz-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const item = activeEducationContent();
+  const questions = item ? educationQuestions(item) : [];
+  const question = questions[state.educationQuizIndex];
+  const answer = new FormData(event.currentTarget).get("education-answer");
+  if (!item || !question || !answer) return;
+  const submitButton = event.submitter;
+  const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
-    const result = await api(`/education-contents/${button.dataset.id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: button.dataset.answer }) });
-    if (!result.is_correct) showMessage("내용을 다시 확인해 주세요.", "error");
-    await loadEducation();
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+    const result = isLocalPreview()
+      ? { is_correct: answer === question.correctAnswer }
+      : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
+    const isCorrect = Boolean(result.is_correct);
+    if (isCorrect) state.educationQuizCorrectCount += 1;
+    $("#education-quiz-form").hidden = true;
+    const feedback = $("#education-feedback-card");
+    feedback.hidden = false;
+    feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    $("#education-feedback-title").textContent = isCorrect
+      ? `정답입니다 · 정답: ${question.correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
+    $("#education-feedback-explanation").textContent = question.explanation;
+    $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
+    const action = $("#education-feedback-action");
+    if (!isCorrect) {
+      action.dataset.action = "review";
+      action.textContent = "교육 내용 다시 보기";
+    } else if (state.educationQuizIndex < questions.length - 1) {
+      action.dataset.action = "next";
+      action.textContent = "다음 문항";
+    } else {
+      item.completed = true;
+      item.is_correct = true;
+      renderEducationList();
+      action.dataset.action = "close";
+      action.textContent = "교육 목록으로";
+    }
+    $("#education-feedback-title").setAttribute("tabindex", "-1");
+    $("#education-feedback-title").focus();
+  } catch (error) {
+    showMessage(error.message || "퀴즈 답변을 저장하지 못했습니다.");
+  } finally {
+    releaseBusy();
+  }
+});
+$("#education-feedback-action")?.addEventListener("click", (event) => {
+  const action = event.currentTarget.dataset.action;
+  if (action === "review") {
+    $("#education-feedback-card").hidden = true;
+    $("#education-reading-card").hidden = false;
+    $("#education-reading-card").scrollIntoView({ block: "start" });
+    $("#start-education-quiz").focus();
+    return;
+  }
+  if (action === "next") {
+    state.educationQuizIndex += 1;
+    renderEducationQuizQuestion();
+    return;
+  }
+  closeEducationFlow();
 });
 $("#invite-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -2844,11 +3603,31 @@ $("#wearable-form")?.addEventListener("submit", async (event) => {
 });
 $("#rag-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
+  const releaseBusy = setFormBusy(form, event.submitter, "근거 자료 검색 중…");
+  const box = $("#rag-result");
+  box.hidden = false;
+  box.dataset.state = "loading";
+  box.innerHTML = "<div><strong>승인된 건강자료에서 근거를 찾고 있어요.</strong><p>잠시만 기다려 주세요.</p></div>";
   try {
     const result = await api("/health-education/questions", { method: "POST", body: JSON.stringify({ question: $("#rag-question").value }) });
-    const citations = result.citations.map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a></li>`).join("");
-    const box = $("#rag-result"); box.hidden = false; box.innerHTML = `<div><strong>${escapeHtml(result.answer)}</strong>${citations ? `<ul>${citations}</ul>` : ""}<small>${escapeHtml(result.medical_notice)}</small></div>`;
-  } catch (error) { showMessage(error.message); }
+    const citations = (Array.isArray(result.citations) ? result.citations : []).map((item) => {
+      const url = safeExternalUrl(item.url);
+      return url ? `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(item.title || "근거 자료")}</a></li>` : "";
+    }).filter(Boolean).join("");
+    const statusCopy = {
+      grounded: ["근거 자료에서 답변을 찾았어요", "done"],
+      insufficient_evidence: ["근거를 충분히 찾지 못했어요", "insufficient"],
+      medical_safety_refusal: ["의료진 확인이 필요한 질문입니다", "refused"],
+    }[result.answer_status] || ["건강교육 정보를 확인했어요", "done"];
+    box.dataset.state = statusCopy[1];
+    box.innerHTML = `<div><strong>${escapeHtml(statusCopy[0])}</strong><p>${escapeHtml(result.answer || "표시할 답변이 없습니다.")}</p>${citations ? `<p class="rag-citation-title">근거 및 출처</p><ul>${citations}</ul>` : ""}${result.medical_notice ? `<small>${escapeHtml(result.medical_notice)}</small>` : ""}</div>`;
+  } catch (error) {
+    box.dataset.state = "failed";
+    box.innerHTML = `<div><strong>건강교육 정보를 불러오지 못했어요</strong><p>${escapeHtml(error?.retryable ? "잠시 후 다시 시도해 주세요." : error.message)}</p></div>`;
+  } finally {
+    releaseBusy();
+  }
 });
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
 $("#checkup-image-input")?.addEventListener("change", (event) => {
@@ -3029,302 +3808,28 @@ function resumeForecastPreview() {
   setForecastRiskPreview("caution");
 }
 
-let kakaoMapsLoadPromise = null;
-const facilityMapInstances = {};
-const facilityMapMarkers = {};
+function resumeEmergencyQuestionnairePreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "emergency-questionnaire") return;
+  if (!isDemoEnvironment()) return;
 
-function ensureKakaoMapsLoaded() {
-  if (kakaoMapsLoadPromise) return kakaoMapsLoadPromise;
-  kakaoMapsLoadPromise = new Promise((resolve, reject) => {
-    if (!window.kakao || !window.kakao.maps) {
-      reject(new Error("카카오 지도 SDK를 불러오지 못했습니다."));
-      return;
-    }
-    window.kakao.maps.load(() => resolve());
-  });
-  return kakaoMapsLoadPromise;
+  state.token = "local-demo-token";
+  state.navigationHistory = [1, 2, 3];
+  [1, 2, 3].forEach((step) => state.visitedSteps.add(step));
+  $("#eligibility-birth-date").value = "1960-05-12";
+  $("#gender").value = "FEMALE";
+  $("#diagnosed-diabetes-no").checked = true;
+  syncEmergencyQuestionnaire();
+  showStep(3, { recordHistory: false });
 }
-
-function clearFacilityMapMarkers(target) {
-  (facilityMapMarkers[target] || []).forEach((marker) => marker.setMap(null));
-  facilityMapMarkers[target] = [];
-}
-
-// 새 검색을 시작하거나 검색이 실패했을 때, 이전 검색의 지도 마커·목록이 그대로 남아있지 않도록
-// 결과 목록과 지도를 함께 초기화합니다. (2026-09-02 PR 리뷰 반영)
-function resetFacilitySearchUi(target) {
-  const items = $(`#${target}-facility-items`);
-  if (items) items.innerHTML = "";
-  clearFacilityMapMarkers(target);
-  const mapContainer = $(`#${target}-facility-map`);
-  if (mapContainer) mapContainer.hidden = true;
-}
-
-// 카카오 기본 마커 이미지는 광고 차단 확장 프로그램 등에 의해 막히는 경우가 있어,
-// 외부 리소스에 의존하지 않는 인라인 SVG로 직접 마커 아이콘을 그립니다.
-const USER_MARKER_IMAGE_SRC =
-  "data:image/svg+xml;charset=UTF-8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="3"/></svg>'
-  );
-const FACILITY_MARKER_IMAGE_SRC =
-  "data:image/svg+xml;charset=UTF-8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="9" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>'
-  );
-
-async function renderFacilityMap(userLatitude, userLongitude, facilities, target = "medical", referenceLabel = "현재 위치") {
-  const container = $(`#${target}-facility-map`);
-  if (!container) return;
-  try {
-    await ensureKakaoMapsLoaded();
-    const kakao = window.kakao;
-    const center = new kakao.maps.LatLng(userLatitude, userLongitude);
-    container.hidden = false;
-    if (!facilityMapInstances[target]) {
-      facilityMapInstances[target] = new kakao.maps.Map(container, { center, level: 4 });
-    } else {
-      facilityMapInstances[target].setCenter(center);
-    }
-    const map = facilityMapInstances[target];
-    clearFacilityMapMarkers(target);
-    const bounds = new kakao.maps.LatLngBounds();
-    bounds.extend(center);
-    // 사용자 현재 위치는 병원과 구분되도록 파란색 마커로 표시합니다.
-    const userMarkerImage = new kakao.maps.MarkerImage(USER_MARKER_IMAGE_SRC, new kakao.maps.Size(28, 28), {
-      offset: new kakao.maps.Point(14, 14),
-    });
-    const userMarker = new kakao.maps.Marker({
-      map,
-      position: center,
-      title: referenceLabel,
-      image: userMarkerImage,
-      zIndex: 10,
-    });
-    facilityMapMarkers[target].push(userMarker);
-    const facilityMarkerImage = new kakao.maps.MarkerImage(FACILITY_MARKER_IMAGE_SRC, new kakao.maps.Size(26, 26), {
-      offset: new kakao.maps.Point(13, 13),
-    });
-    facilities.forEach((facility) => {
-      if (facility.latitude == null || facility.longitude == null) return;
-      const position = new kakao.maps.LatLng(facility.latitude, facility.longitude);
-      bounds.extend(position);
-      const marker = new kakao.maps.Marker({
-        map,
-        position,
-        title: facility.name,
-        image: facilityMarkerImage,
-      });
-      const infoWindow = new kakao.maps.InfoWindow({
-        content: `<div style="padding:6px 10px;font-size:13px;white-space:nowrap;">${escapeHtml(facility.name)}</div>`,
-      });
-      kakao.maps.event.addListener(marker, "click", () => {
-        infoWindow.open(map, marker);
-      });
-      facilityMapMarkers[target].push(marker);
-    });
-    // 현재 위치와 검색된 병원들이 모두 한 화면에 들어오도록 확대 수준을 맞춘 뒤,
-    // setBounds()가 병원 좌표 쪽으로 옮긴 중심을 사용자 현재 위치로 되돌립니다.
-    map.setBounds(bounds);
-    map.setCenter(center);
-  } catch (error) {
-    // 지도 SDK 로딩에 실패해도(키/도메인 설정 문제 등) 목록 검색 자체는 계속 동작해야 하므로 지도만 숨깁니다.
-    container.hidden = true;
-  }
-}
-
-function renderNearbyFacilities(result, target = "medical") {
-  const container = $(`#${target}-facility-items`);
-  if (!container) return;
-  const facilities = Array.isArray(result?.facilities) ? result.facilities : [];
-  if (!facilities.length) {
-    container.innerHTML = "<p>근처에서 확인 가능한 의료기관을 찾지 못했습니다.</p>";
-    return;
-  }
-  // department_hint(진료과 추정값)는 부정확할 수 있는 값이라 화면에는 표시하지 않기로 결정했습니다(2026-09-02 팀 회의).
-  const items = facilities.map((facility) => {
-    const addressLine = facility.road_address || facility.address || "";
-    const distanceLabel = facility.distance_meters != null ? `${facility.distance_meters}m` : "";
-    const metaLine = [addressLine, distanceLabel].filter(Boolean).join(" · ");
-    const phoneAction = facility.phone
-      ? `<a class="secondary" href="tel:${escapeHtml(facility.phone)}">전화</a>`
-      : "";
-    const mapAction = facility.map_url
-      ? `<a class="secondary" href="${escapeHtml(facility.map_url)}" target="_blank" rel="noopener">지도 보기</a>`
-      : "";
-    return `<article>
-      <strong>${escapeHtml(facility.name)}</strong>
-      <p>${escapeHtml(metaLine)}</p>
-      <div class="facility-actions">${phoneAction}${mapAction}</div>
-    </article>`;
-  });
-  const disclaimer = result?.disclaimer ? `<p class="facility-disclaimer">${escapeHtml(result.disclaimer)}</p>` : "";
-  container.innerHTML = items.join("") + disclaimer;
-}
-
-function getCurrentPosition(options) {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, options);
-  });
-}
-
-async function getCurrentPositionWithRetry() {
-  try {
-    // 데스크톱은 Wi-Fi 기반 위치가 잠시 불안정할 수 있으므로 최근 좌표도 허용합니다.
-    return await getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
-  } catch (firstError) {
-    if (![2, 3].includes(firstError.code)) throw firstError;
-    // 위치를 찾지 못했거나 시간이 초과되면 정확도 높은 요청으로 한 번 더 시도합니다.
-    return getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-  }
-}
-
-async function searchFacilitiesAt(latitude, longitude, target = "medical", referenceLabel = "현재 위치") {
-  const path = target === "emergency" ? "/emergency-facilities/nearby" : "/medical-facilities/nearby";
-  const radius = target === "emergency" ? 10000 : 5000;
-  const result = await api(`${path}?lat=${latitude}&lon=${longitude}&radius=${radius}`);
-  renderNearbyFacilities(result, target);
-  await renderFacilityMap(
-    latitude,
-    longitude,
-    Array.isArray(result?.facilities) ? result.facilities : [],
-    target,
-    referenceLabel,
-  );
-}
-
-async function coordinatesForAddress(address) {
-  await ensureKakaoMapsLoaded();
-  return new Promise((resolve, reject) => {
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    geocoder.addressSearch(address, (results, status) => {
-      if (status !== window.kakao.maps.services.Status.OK || !results.length) {
-        reject(new Error("주소를 찾지 못했습니다. 도로명과 건물 번호까지 입력해주세요."));
-        return;
-      }
-      resolve({ latitude: Number(results[0].y), longitude: Number(results[0].x) });
-    });
-  });
-}
-
-$("#find-nearby-facilities")?.addEventListener("click", async () => {
-  const button = $("#find-nearby-facilities");
-  const status = $("#medical-facility-status");
-  const items = $("#medical-facility-items");
-  if (!button || !status || !items) return;
-  button.disabled = true;
-  status.hidden = false;
-  status.textContent = "위치 확인 중…";
-  resetFacilitySearchUi("medical");
-  try {
-    if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
-    const position = await getCurrentPositionWithRetry();
-    const { latitude, longitude } = position.coords;
-    await searchFacilitiesAt(latitude, longitude);
-    status.hidden = true;
-  } catch (error) {
-    const messages = {
-      1: "위치 권한이 거부되었습니다. 브라우저(또는 macOS 시스템 설정)의 위치 권한을 허용한 뒤 다시 시도해주세요.",
-      2: "Chrome이 현재 좌표를 계산하지 못했습니다. 잠시 후 다시 누르거나 Chrome을 완전히 재시작해주세요.",
-      3: "위치 확인이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.",
-    };
-    resetFacilitySearchUi("medical");
-    status.textContent = messages[error.code] || error.message || "위치 정보를 불러오지 못했습니다.";
-    $("#facility-address-form").hidden = false;
-  } finally {
-    button.disabled = false;
-  }
-});
-
-$("#facility-address-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const input = $("#facility-address");
-  const status = $("#medical-facility-status");
-  const submit = form.querySelector('button[type="submit"]');
-  let address = input?.value.trim();
-  if (!address || !status || !submit) return;
-  submit.disabled = true;
-  status.hidden = false;
-  status.textContent = "입력한 주소를 확인하고 있어요…";
-  resetFacilitySearchUi("medical");
-  try {
-    const { latitude, longitude } = await coordinatesForAddress(address);
-    input.value = "";
-    address = null;
-    await searchFacilitiesAt(latitude, longitude, "medical", "검색 기준 위치");
-    status.hidden = true;
-  } catch (error) {
-    resetFacilitySearchUi("medical");
-    status.textContent = error.message || "주소로 의료기관을 찾지 못했습니다.";
-  } finally {
-    input.value = "";
-    address = null;
-    submit.disabled = false;
-  }
-});
-
-$("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
-  const button = $("#find-nearby-emergency-facilities");
-  const status = $("#emergency-facility-status");
-  const items = $("#emergency-facility-items");
-  if (!button || !status || !items) return;
-  button.disabled = true;
-  status.hidden = false;
-  status.textContent = "현재 위치와 가까운 응급실을 확인하고 있어요…";
-  resetFacilitySearchUi("emergency");
-  try {
-    if (!("geolocation" in navigator)) throw new Error("이 브라우저에서는 위치 정보를 사용할 수 없습니다.");
-    const position = await getCurrentPositionWithRetry();
-    await searchFacilitiesAt(position.coords.latitude, position.coords.longitude, "emergency");
-    status.hidden = true;
-  } catch (error) {
-    const messages = {
-      1: "위치 권한이 거부되었습니다. 위치 권한을 허용한 뒤 다시 시도해주세요.",
-      2: "Chrome이 현재 좌표를 계산하지 못했습니다. 아래에서 주소로 검색해주세요.",
-      3: "위치 확인이 시간 초과되었습니다. 아래에서 주소로 검색해주세요.",
-    };
-    resetFacilitySearchUi("emergency");
-    status.textContent = messages[error.code] || error.message || "응급실 정보를 불러오지 못했습니다.";
-    $("#emergency-address-form").hidden = false;
-  } finally {
-    button.disabled = false;
-  }
-});
-
-$("#emergency-address-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const input = $("#emergency-address");
-  const status = $("#emergency-facility-status");
-  const submit = form.querySelector('button[type="submit"]');
-  let address = input?.value.trim();
-  if (!address || !status || !submit) return;
-  submit.disabled = true;
-  status.hidden = false;
-  status.textContent = "입력한 주소에서 가까운 응급실을 확인하고 있어요…";
-  resetFacilitySearchUi("emergency");
-  try {
-    const { latitude, longitude } = await coordinatesForAddress(address);
-    input.value = "";
-    address = null;
-    await searchFacilitiesAt(latitude, longitude, "emergency", "검색 기준 위치");
-    status.hidden = true;
-  } catch (error) {
-    resetFacilitySearchUi("emergency");
-    status.textContent = error.message || "주소로 응급실을 찾지 못했습니다.";
-  } finally {
-    input.value = "";
-    address = null;
-    submit.disabled = false;
-  }
-});
 
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 syncExerciseDetails();
+syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 resumeFromForest();
 initializeRuleForecastPreview();
 resumeReturningPreview();
 resumeForecastPreview();
+resumeEmergencyQuestionnairePreview();
