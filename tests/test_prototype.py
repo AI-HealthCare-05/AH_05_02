@@ -299,6 +299,8 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert signup_flow.index('api("/auth/signup"') < signup_flow.index('api("/auth/login"')
     assert signup_flow.index('api("/auth/login"') < signup_flow.index('api("/users/me/profile"')
     assert signup_flow.index('api("/users/me/profile"') < signup_flow.index('api("/consents"')
+    assert "resetEligibilityAnswers()" in signup_flow
+    assert '["urgent-warning", "diabetes-diagnosis", "urgent-summary", "same-day-summary"]' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
     assert 'const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"]' in script
     assert "if (!isDemoEnvironment()) return;" in script

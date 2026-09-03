@@ -694,6 +694,14 @@ function clearQuestionnaireAnswers(name) {
   $$(`input[name="${name}"]`).forEach((input) => { input.checked = false; });
 }
 
+function resetEligibilityAnswers() {
+  ["urgent-warning", "diabetes-diagnosis", "urgent-summary", "same-day-summary"].forEach(clearQuestionnaireAnswers);
+  $("#emergency-questionnaire-summary").textContent = "";
+  $("#emergency-questionnaire-summary").hidden = true;
+  $("#eligibility-guidance").hidden = true;
+  syncEmergencyQuestionnaire();
+}
+
 function syncEmergencyQuestionnaire() {
   const canContinueToSameDay = questionnaireAnswer("urgent-summary") === "none";
   $("#same-day-stage").hidden = !canContinueToSameDay;
@@ -2782,6 +2790,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
     await api("/consents", { method: "POST", body: JSON.stringify({ consent_item: "health_data", version: "1.0", is_agreed: $("#health-consent").checked }) });
     $("#eligibility-birth-date").value = birthDate;
     $("#gender").value = gender;
+    resetEligibilityAnswers();
     syncLifestyleAvatar();
     showStep(3);
   } catch (error) {
