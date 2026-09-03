@@ -2,6 +2,11 @@
   "use strict";
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
+  const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
+  const BGM_VOLUME_KEY = "gandang-carrot-forest-bgm-volume-v1";
+  const BGM_MUTED_KEY = "gandang-carrot-forest-bgm-muted-v1";
+  const SFX_VOLUME_KEY = "gandang-carrot-forest-sfx-volume-v1";
+  const SFX_MUTED_KEY = "gandang-carrot-forest-sfx-muted-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
@@ -13,6 +18,12 @@
   let rewardSkipResolve = null;
   const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
   const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
+  const homeRecordCatalog = {
+    home: { name: "우리 집", audioKey: "homeRecordHome" },
+    warm: { name: "따뜻한 오후", audioKey: "homeRecordWarm" },
+    bright: { name: "밝은 샘", audioKey: "homeRecordBright" },
+    untitled: { name: "무제", audioKey: "homeRecordUntitled" },
+  };
 
   function generateNickname() {
     const random = new Uint32Array(3);
@@ -86,6 +97,15 @@
   ];
   const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const waterObjectCodes = new Set(["duck_float", "animated_fountain"]);
+  const interactiveObjectTypes = {
+    reward_cow: "cow",
+    campfire: "fire",
+    lantern: "light",
+    firefly_lantern: "light",
+    light_tent: "light",
+  };
+  const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"]);
   const rewardPool = ["reward_cow"];
   const avatarCategories = [
     { id: "bodyType", label: "체형", icon: "▸" },
@@ -488,6 +508,8 @@
       fishCaught: false,
       fishing: false,
       petFedCount: 0,
+      homeRecordPlaying: false,
+      homeRecordTrack: "home",
     };
   }
 
@@ -512,10 +534,12 @@
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
+      fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+      fallback.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
       applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
-      fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+      fallback.placed = normalizePlacedObjects(value.placed);
       if (!["male", "female", "muscular", "teen"].includes(fallback.avatar.cosmetics.bodyType)) {
         fallback.avatar.cosmetics.bodyType = "male";
         fallback.avatar.cosmetics.lpcHead = "human_male";
@@ -551,6 +575,8 @@
       .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
       .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
     state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
+    state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+    state.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
@@ -561,8 +587,21 @@
     applyRequestedDefaultOutfit(state, value.outfitDefaultVersion);
     // 보상 풀이 바뀌기 전에 상자를 연 데모 사용자도 희귀 꾸미기 보상을 잃지 않도록 보정한다.
     if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
-    state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+    state.placed = normalizePlacedObjects(value.placed);
     return state;
+  }
+
+  function normalizePlacedObjects(placed) {
+    if (!Array.isArray(placed)) return [];
+    return placed
+      .filter((item) => itemCatalog[item?.code] && Number.isFinite(Number(item.x)) && Number.isFinite(Number(item.y)))
+      .map((item) => ({
+        ...item,
+        x: Number(item.x),
+        y: Number(item.y),
+        rotation: Number(item.rotation) || 0,
+        ...(interactiveObjectTypes[item.code] ? { active: Boolean(item.active) } : {}),
+      }));
   }
 
   function resetTodayProgress(current) {
@@ -637,6 +676,7 @@
   let placementDraft = null;
   let running = false;
   let musicEngine = null;
+  let sfxEngine = null;
   const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
   rewardChestSound.preload = "auto";
   rewardChestSound.volume = .42;
@@ -698,6 +738,7 @@
   });
   window.addEventListener("lpc-avatar-assets-updated", () => {
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
@@ -705,18 +746,40 @@
   class CozyForestMusic {
     constructor() {
       this.tracks = {
-        forest: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
-        home: new Audio("/static/assets/forest-canopy-original.wav"),
-        garden: new Audio("/static/assets/carrot-forest-original.wav"),
-        avatar: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
+        forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
+        night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
+        home: new Audio("/static/assets/home-small-fire-cc0.wav"),
+        homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3"),
+        homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3"),
+        homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3"),
+        homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3"),
+        garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
+        avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
       };
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
+      this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
       Object.values(this.tracks).forEach((track) => {
         track.loop = true;
         track.preload = "auto";
-        track.volume = .24;
       });
+      this.applyVolume();
       this.current = "forest";
       this.enabled = false;
+    }
+    applyVolume(multiplier = 1) {
+      const volume = this.muted ? 0 : this.volume * multiplier;
+      Object.values(this.tracks).forEach((track) => { track.volume = volume; });
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(BGM_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+      else this.applyVolume();
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(BGM_MUTED_KEY, String(this.muted));
+      this.applyVolume();
     }
     async switchTo(name, { restart = false } = {}) {
       if (!this.enabled || !this.tracks[name]) return;
@@ -738,10 +801,71 @@
     }
   }
 
+  class ForestSfx {
+    constructor() {
+      const root = "/static/assets/sfx";
+      this.tracks = Object.fromEntries([
+        "step-grass", "run-grass", "door-open", "sit-cloth", "mount", "harvest", "water",
+        "fishing-cast", "fishing-catch", "attack-sword", "attack-bow", "attack-magic",
+        "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off", "cow-toggle",
+      ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
+      Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(SFX_VOLUME_KEY) ?? 1)));
+      this.muted = localStorage.getItem(SFX_MUTED_KEY) === "true";
+      this.lastPlayed = new Map();
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(SFX_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(SFX_MUTED_KEY, String(this.muted));
+    }
+    effectiveVolume(volume) {
+      return this.muted ? 0 : Math.max(0, Math.min(1, volume * this.volume));
+    }
+    play(name, { volume = 0.32, rate = 1, minInterval = 0 } = {}) {
+      const source = this.tracks[name];
+      if (!source) return;
+      const now = performance.now();
+      if (now - (this.lastPlayed.get(name) || 0) < minInterval) return;
+      this.lastPlayed.set(name, now);
+      const player = source.cloneNode();
+      player.volume = this.effectiveVolume(volume);
+      player.playbackRate = Math.max(0.5, Math.min(2, rate));
+      player.play().catch(() => {});
+    }
+  }
+
+  function playSfx(name, options) {
+    sfxEngine ||= new ForestSfx();
+    sfxEngine.play(name, options);
+  }
+
+  function weaponSfxName(weapon = state.avatar.cosmetics?.lpcWeapon) {
+    if (weapon === "bow") return "attack-bow";
+    if (["wand", "cane"].includes(weapon)) return "attack-magic";
+    return "attack-sword";
+  }
+
+  window.addEventListener("forest-sfx", (event) => {
+    const detail = typeof event.detail === "string" ? { name: event.detail } : (event.detail || {});
+    if (detail.name) playSfx(detail.name, detail);
+  });
+
   function setStatus(message) { $("#game-status").textContent = message; }
+  function currentLocalHour() {
+    const rawHour = new URLSearchParams(window.location.search).get("hour");
+    const forced = rawHour == null ? Number.NaN : Number(rawHour);
+    return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+  }
   function sceneMusicName(scene = currentScene) {
-    if (scene === "home") return "home";
+    if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome" : "home";
     if (scene === "garden") return "garden";
+    const hour = currentLocalHour();
+    if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
     return "forest";
   }
   function activeQuestIds() {
@@ -757,7 +881,7 @@
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
     if (message) setStatus(message);
   }
 
@@ -893,6 +1017,7 @@
         drawVehicle();
         drawPlacedObjects();
       }
+      if (currentScene === "home") drawHomeRecordPlayer();
       return;
     }
     fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
@@ -922,6 +1047,31 @@
     drawPlacedObjects();
   }
 
+  function drawHomeRecordPlayer() {
+    const x = 610;
+    const y = 324;
+    fillPixelRect(x - 39, y + 30, 78, 8, "rgba(37,31,25,.22)");
+    fillPixelRect(x - 36, y - 14, 72, 45, "#5a321f");
+    fillPixelRect(x - 31, y - 10, 62, 34, "#b66e3e");
+    fillPixelRect(x - 28, y - 35, 56, 24, "#633924");
+    fillPixelRect(x - 24, y - 31, 48, 17, "#2b2425");
+    fillPixelRect(x - 27, y - 7, 54, 25, "#e6c58f");
+    context.fillStyle = "#252735";
+    context.beginPath();
+    context.arc(x - 9, y + 5, 13, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = state.homeRecordPlaying ? "#ef9540" : "#d9b064";
+    context.beginPath();
+    context.arc(x - 9, y + 5, 4, 0, Math.PI * 2);
+    context.fill();
+    fillPixelRect(x + 11, y - 2, 4, 20, "#695847");
+    fillPixelRect(x + 11, y + 15, 13, 3, "#695847");
+    fillPixelRect(x + 23, y - 8, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
+    for (let stripe = -21; stripe <= 19; stripe += 8) fillPixelRect(x + stripe, y + 23, 4, 4, "#3f2b24");
+    fillPixelRect(x - 29, y + 30, 7, 7, "#4b2a1c");
+    fillPixelRect(x + 22, y + 30, 7, 7, "#4b2a1c");
+  }
+
   function drawPlacedObject(item, preview = false) {
       const x = 0;
       const y = 0;
@@ -929,9 +1079,21 @@
       context.translate(item.x, item.y);
       context.rotate((Number(item.rotation) || 0) * Math.PI / 180);
       context.globalAlpha = preview ? .72 : 1;
+      const interactionType = interactiveObjectTypes[item.code];
+      const interactionActive = interactionType && Boolean(item.active);
+      if (interactionType && !interactionActive) context.globalAlpha *= .58;
+      if (interactionActive && interactionType === "cow") {
+        context.rotate(Math.sin(performance.now() / 170) * .045);
+        context.translate(0, -Math.abs(Math.sin(performance.now() / 190)) * 3);
+      }
+      if (interactionActive && ["fire", "light"].includes(interactionType)) {
+        const pulse = 1 + Math.sin(performance.now() / 150) * .025;
+        context.scale(pulse, pulse);
+        context.globalAlpha *= .9 + Math.sin(performance.now() / 130) * .1;
+      }
       const animatedRow = animatedObjectRows[item.code];
       if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
-        const frame = Math.floor(performance.now() / 220) % 4;
+        const frame = interactionType && !interactionActive ? 0 : Math.floor(performance.now() / 220) % 4;
         const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
         context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
         context.restore();
@@ -1264,6 +1426,15 @@
     updateInteractionPrompt();
   }
 
+  function reactToCow(index, reaction = "body") {
+    const item = state.placed[index];
+    if (item?.code !== "reward_cow") return;
+    const headTouch = reaction === "head";
+    playSfx("cow-toggle", { volume: .3, rate: headTouch ? 1.12 : .92 });
+    window.dispatchEvent(new CustomEvent("forest-cow-react", { detail: { index, reaction } }));
+    setStatus(headTouch ? "행운의 젖소 머리를 쓰다듬었어요. 기분 좋게 고개를 흔듭니다." : "행운의 젖소 몸을 토닥였어요. 신나게 몸을 흔듭니다.");
+  }
+
   let lastAnimationAt = 0;
   let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
@@ -1296,10 +1467,41 @@
     return Math.hypot(state.avatar.x - x, state.avatar.y - y);
   }
 
+  function nearbyPlacedObject(x = state.avatar.x, y = state.avatar.y, maxDistance = 72) {
+    if (currentScene !== "world") return null;
+    return state.placed
+      .map((item, index) => ({ item, index, distance: Math.hypot(x - item.x, y - item.y) }))
+      .filter(({ item, distance }) => (interactiveObjectTypes[item.code] || seatObjectCodes.has(item.code)) && distance <= maxDistance)
+      .sort((left, right) => left.distance - right.distance)[0] || null;
+  }
+
+  function objectInteractionLabel(item) {
+    if (seatObjectCodes.has(item.code)) return `${itemCatalog[item.code].name}에 앉기`;
+    const type = interactiveObjectTypes[item.code];
+    if (type === "cow") return item.active ? "젖소 쉬게 하기" : "젖소 움직이기";
+    if (type === "fire") return item.active ? "모닥불 끄기" : "모닥불 피우기";
+    return item.active ? `${itemCatalog[item.code].name} 끄기` : `${itemCatalog[item.code].name} 켜기`;
+  }
+
+  async function togglePlacedObject(index) {
+    const item = state.placed[index];
+    const type = interactiveObjectTypes[item?.code];
+    if (!item || !type) return;
+    item.active = !item.active;
+    item.activatedAt = item.active ? Date.now() : null;
+    if (type === "cow") playSfx("cow-toggle", { volume: .34, rate: item.active ? 1 : .88 });
+    else playSfx(item.active ? "object-on" : "object-off", { volume: .3 });
+    renderPlaced();
+    emitPlacementUpdate();
+    await persist(`${itemCatalog[item.code].name}${type === "cow" ? (item.active ? "가 신나게 움직이기 시작했습니다." : "가 편안히 쉬고 있습니다.") : (item.active ? "을 켰습니다." : "을 껐습니다.")}`);
+    updateInteractionPrompt();
+  }
+
   function nearbyInteraction() {
     if (currentScene === "home") {
       if (distanceTo(292, 246) < 95) return "sofa";
       if (distanceTo(558, 205) < 100) return "wardrobe";
+      if (distanceTo(610, 324) < 82) return "record_player";
       if (distanceTo(384, 438) < 78) return "exit_home";
       return null;
     }
@@ -1308,6 +1510,8 @@
       if (distanceTo(384, 430) < 78) return "exit_garden";
       return null;
     }
+    const placed = nearbyPlacedObject();
+    if (placed) return `object:${placed.index}`;
     if (distanceTo(200, 270) < 95) return "home";
     if (distanceTo(600, 255) < 110) return "garden";
     if (distanceTo(285, 405) < 105) return "pond";
@@ -1318,21 +1522,27 @@
     const target = nearbyInteraction();
     const prompt = $("#interaction-prompt");
     prompt.hidden = !target;
-    if (target) prompt.querySelector("span").textContent = {
+    if (target?.startsWith("object:")) {
+      const item = state.placed[Number(target.split(":")[1])];
+      prompt.querySelector("span").textContent = item ? objectInteractionLabel(item) : "오브젝트 사용하기";
+    } else if (target) prompt.querySelector("span").textContent = {
       home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
+      record_player: state.homeRecordPlaying ? `${homeRecordCatalog[state.homeRecordTrack]?.name || "LP"} 재생 중` : "LP 음악 고르기",
       crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
   }
 
   function openWorldDialog(target) {
     const dialog = $("#world-dialog");
+    const recordActions = Object.entries(homeRecordCatalog).map(([id, record]) => `<button type="button" data-world-action="record_music" data-record-track="${id}" aria-pressed="${state.homeRecordPlaying && state.homeRecordTrack === id}"><strong>${record.name}</strong></button>`).join("");
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
       garden: { icon: "🥕", title: "당근 밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
       pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
       sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
       wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
+      record_player: { icon: "💿", title: "숲속 LP 재생기", copy: "집 안에서 듣고 싶은 레코드를 골라 보세요.", actions: `<div class="record-music-list">${recordActions}</div><button class="record-stop" type="button" data-world-action="record_off" ${state.homeRecordPlaying ? "" : "disabled"}>LP 끄기 · 집 음악으로</button>` },
       exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
       crops: { icon: "🥕", title: "챌린지 당근 수확", copy: pendingChallengeCarrots() ? `완료한 챌린지 보상 당근 ${pendingChallengeCarrots()}개를 수확할 수 있어요.` : "오늘 완료한 챌린지 보상은 모두 수확했어요.", actions: `<button type="button" data-world-action="harvest_challenge" ${pendingChallengeCarrots() ? "" : "disabled"}>${pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확하기` : "수확 완료"}</button><button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button>` },
       exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "당근 밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
@@ -1345,14 +1555,40 @@
     dialog.showModal();
   }
 
-  function interact(target = nearbyInteraction()) {
+  async function interact(target = nearbyInteraction()) {
     if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
+    if (target.startsWith("object:")) {
+      const index = Number(target.split(":")[1]);
+      if (seatObjectCodes.has(state.placed[index]?.code)) await sitAtPlacedObject(index);
+      else await togglePlacedObject(index);
+      return;
+    }
+    if (target === "record_player") {
+      openWorldDialog(target);
+      return;
+    }
     const pose = {
       crops: "harvest", pond: "fishing", home: "door", garden: "door",
       exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
     }[target];
     if (pose) window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose, duration: pose === "fishing" ? 1800 : 1100 } }));
     openWorldDialog(target);
+  }
+
+  async function selectHomeRecordTrack(trackId = null) {
+    if (currentScene !== "home") return;
+    state.homeRecordPlaying = Boolean(trackId && homeRecordCatalog[trackId]);
+    if (state.homeRecordPlaying) state.homeRecordTrack = trackId;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
+    renderCanvas();
+    try {
+      await musicEngine?.switchTo(sceneMusicName("home"), { restart: true });
+    } catch {
+      setStatus("LP 음악을 전환하지 못했지만 다른 기능은 계속 이용할 수 있어요.");
+    }
+    await persist(state.homeRecordPlaying
+      ? `LP 재생기에서 ${homeRecordCatalog[state.homeRecordTrack].name} 음악을 재생합니다.`
+      : "LP 재생기를 껐습니다. 집 안 음악으로 돌아갑니다.");
   }
 
   function switchScene(scene) {
@@ -1388,7 +1624,11 @@
   }
 
   function placementCellValid(x, y) {
-    if (currentScene !== "world" || blocked(x, y)) return false;
+    if (currentScene !== "world") return false;
+    const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
+    if (waterObjectCodes.has(placementCode)) {
+      if (!inPond) return false;
+    } else if (blocked(x, y) || inPond) return false;
     return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 44);
   }
 
@@ -1446,8 +1686,13 @@
     if (!placementCode || !placementDraft) { setStatus("먼저 초록 격자에서 배치 위치를 선택해 주세요."); return; }
     if (!placementCellValid(placementDraft.x, placementDraft.y)) { setStatus("현재 위치에는 오브젝트를 놓을 수 없습니다."); return; }
     const existing = state.placed.findIndex((item) => item.code === placementCode);
+    const previousActive = existing >= 0 ? Boolean(state.placed[existing].active) : false;
     if (existing >= 0) state.placed.splice(existing, 1);
-    const placed = { ...placementDraft, rotation: Number(placementDraft.rotation) || 0 };
+    const placed = {
+      ...placementDraft,
+      rotation: Number(placementDraft.rotation) || 0,
+      ...(interactiveObjectTypes[placementCode] ? { active: previousActive } : {}),
+    };
     const name = itemCatalog[placementCode].name;
     state.placed.push(placed);
     placementCode = null;
@@ -1455,6 +1700,7 @@
     renderInventory();
     renderPlaced();
     emitPlacementUpdate();
+    playSfx("place-object", { volume: 0.3 });
     await persist(`${name} 배치를 확정했습니다.`);
   }
 
@@ -1472,7 +1718,11 @@
     walkingUntil = performance.now() + (state.avatar.mounted ? 260 : 220);
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
-    if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
+    if (!blocked(nextX, nextY)) {
+      state.avatar.x = nextX; state.avatar.y = nextY;
+      playSfx(running ? "run-grass" : "step-grass", { volume: 0.18, minInterval: running ? 170 : 260 });
+      renderCanvas(); await persist();
+    }
     else { renderCanvas(); setStatus("그쪽에는 집·나무·당근밭이 있어요. 다른 방향으로 움직여 주세요."); }
   }
 
@@ -1522,6 +1772,7 @@
     state.carrots += pending;
     const panel = $("#garden-harvest-panel");
     panel?.classList.add("is-harvesting");
+    playSfx("harvest", { volume: 0.38 });
     window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1500 } }));
     window.setTimeout(() => panel?.classList.remove("is-harvesting"), 1500);
     renderAll();
@@ -1533,8 +1784,9 @@
     const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
     const safeId = escapeMarkup(look.id);
     const safeLabel = escapeMarkup(look.label);
+    const presetLabel = look.presetRole === "female" ? "프리셋1" : "프리셋2";
     const nameControl = look.presetRole
-      ? `<div class="outfit-name-form fixed-preset-name"><strong>${safeLabel}</strong><small>기본 프리셋</small></div>`
+      ? `<div class="outfit-name-form fixed-preset-name"><small>${presetLabel}</small></div>`
       : `<form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form>`;
     return `<article class="recent-outfit-entry${compact ? " is-compact" : ""}"><button class="recent-outfit-card" type="button" data-outfit-look="${safeId}" aria-label="${safeLabel}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${safeId}" aria-hidden="true"></canvas><small>${timestamp}</small></button>${nameControl}</article>`;
   }
@@ -1572,7 +1824,6 @@
     state.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
     state.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
     state.avatar.equipped = null;
-    $("#avatar-gender").value = state.avatar.gender;
     renderInventory();
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
@@ -1581,6 +1832,7 @@
 
   function renderInventoryDialog(view = "storage") {
     document.querySelectorAll("[data-inventory-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.inventoryView === view));
+    $("#inventory-dialog-grid").classList.toggle("is-wardrobe", view === "wardrobe");
     if (view === "wardrobe") {
       $("#inventory-dialog-grid").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look, true)).join("");
       $("#inventory-dialog").dataset.view = view;
@@ -1651,7 +1903,10 @@
   function renderPlaced() {
     $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
-      ? state.placed.map((item, index) => `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`).join("")
+      ? state.placed.map((item, index) => {
+        const stateLabel = interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
+        return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><div class="placed-object-copy"><strong>${itemCatalog[item.code].name}</strong>${stateLabel}</div><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
+      }).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
 
@@ -2139,7 +2394,6 @@
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
-    $("#avatar-gender").value = state.avatar.gender;
     syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
   }
 
@@ -2178,7 +2432,7 @@
     $("#reward-skip").focus();
 
     const activeBackgroundTrack = musicEngine?.enabled ? musicEngine.tracks[musicEngine.current] : null;
-    if (activeBackgroundTrack) activeBackgroundTrack.volume = .08;
+    if (activeBackgroundTrack) musicEngine.applyVolume(.34);
     rewardChestSound.pause();
     rewardChestSound.currentTime = 0;
     rewardChestSound.play().catch(() => setStatus("보물상자 효과음을 재생하지 못했지만 보상은 정상 지급됩니다."));
@@ -2191,7 +2445,7 @@
     rewardSkipResolve = null;
     rewardChestSound.pause();
     rewardChestSound.currentTime = 0;
-    if (activeBackgroundTrack) activeBackgroundTrack.volume = .24;
+    if (activeBackgroundTrack) musicEngine.applyVolume();
     overlay.hidden = true;
     if (!item) return;
 
@@ -2273,18 +2527,11 @@
   $("#avatar-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const nextName = $("#avatar-name").value.trim();
-    const selectedGender = $("#avatar-gender").value;
-    const applied = applyGenderDefaultOutfit(state, selectedGender);
+    if (!nextName) { setStatus("닉네임을 입력해 주세요."); return; }
     state.avatar.name = nextName;
-    renderInventory();
-    renderCanvas(); await persist(`${state.avatar.name} 아바타에 ${applied?.label || "기본 코디"}를 적용했습니다.`);
-  });
-  $("#avatar-gender").addEventListener("change", async (event) => {
-    const applied = applyGenderDefaultOutfit(state, event.currentTarget.value);
-    renderInventory();
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    await persist(`${applied?.label || "기본 코디"} 코디로 전환했습니다.`);
+    await persist(`${state.avatar.name} 닉네임을 저장했습니다.`);
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
@@ -2449,7 +2696,14 @@
     event.preventDefault();
     await renameOutfit(form.dataset.outfitNameForm, new FormData(form).get("outfit-name"));
   });
-
+  [$("#wardrobe-list"), $("#storage-list")].forEach((carousel) => {
+    carousel.addEventListener("wheel", (event) => {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      event.preventDefault();
+      carousel.scrollLeft += delta;
+    }, { passive: false });
+  });
   $("#cancel-placement").addEventListener("click", () => cancelPlacement());
   $("#rotate-placement").addEventListener("click", rotatePlacement);
   $("#confirm-placement").addEventListener("click", confirmPlacement);
@@ -2469,16 +2723,24 @@
       if (currentScene === "home") {
         if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
+        else if (x >= 560 && x <= 670 && y >= 270 && y <= 375) await interact("record_player");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
-        else setStatus("소파·옷장·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else setStatus("소파·옷장·LP 재생기·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
       } else if (currentScene === "garden") {
         if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
         else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
-      } else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) interact("home");
-      else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) interact("garden");
-      else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) interact("pond");
-      else setStatus("집·당근밭·연못을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      } else {
+        const placedTarget = nearbyPlacedObject(x, y, 58);
+        if (placedTarget?.item.code === "reward_cow") {
+          const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
+          reactToCow(placedTarget.index, reaction);
+        } else if (placedTarget) await interact(`object:${placedTarget.index}`);
+        else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
+        else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
+        else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");
+        else setStatus("집·당근밭·연못·상호작용 오브젝트를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      }
       return;
     }
     if (currentScene !== "world") { setStatus("숲 오브젝트는 월드 장면에서만 배치할 수 있어요."); return; }
@@ -2499,6 +2761,19 @@
     const detail = event.detail || {};
     if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
     await handleWorldPointer(detail.x, detail.y);
+  });
+  window.addEventListener("forest-placed-object-pointer", async (event) => {
+    const detail = event.detail || {};
+    const index = Number(detail.index);
+    const item = state.placed[index];
+    if (!Number.isInteger(index) || !item || currentScene !== "world" || placementCode) return;
+    canvas.focus();
+    if (item.code === "reward_cow") {
+      const reaction = Number(detail.y) < item.y - 28 ? "head" : "body";
+      reactToCow(index, reaction);
+      return;
+    }
+    await interact(`object:${index}`);
   });
 
   $("#reward-button").addEventListener("click", async () => {
@@ -2532,19 +2807,32 @@
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
     if (!state.avatar.sitting && currentScene === "world") {
       const chair = state.placed
-        .filter((placed) => ["chair_green", "chair_red", "bench"].includes(placed.code))
-        .map((placed) => ({ ...placed, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .map((placed, index) => ({ ...placed, index, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .filter((placed) => seatObjectCodes.has(placed.code))
         .filter((placed) => placed.distance < 64)
         .sort((left, right) => left.distance - right.distance)[0];
       if (chair) {
-        state.avatar.x = chair.x;
-        state.avatar.y = chair.y + 4;
-        state.avatar.direction = "down";
+        await sitAtPlacedObject(chair.index);
+        return;
       }
     }
     state.avatar.sitting = !state.avatar.sitting;
+    playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
     await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
+  }
+
+  async function sitAtPlacedObject(index) {
+    const seat = state.placed[index];
+    if (!seat || !seatObjectCodes.has(seat.code)) return;
+    if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 자리에 앉을 수 있어요."); return; }
+    state.avatar.x = seat.x;
+    state.avatar.y = seat.y + 4;
+    state.avatar.direction = "down";
+    state.avatar.sitting = true;
+    playSfx("sit-cloth", { volume: 0.24 });
+    renderCanvas();
+    await persist(`${itemCatalog[seat.code].name}에 앉았습니다. X를 누르면 일어납니다.`);
   }
 
   async function feedPet() {
@@ -2553,6 +2841,7 @@
     if (state.carrots < 1) { setStatus("펫에게 줄 당근이 없어요. 챌린지를 완료하고 당근밭에서 수확해 보세요."); return; }
     state.carrots -= 1;
     state.petFedCount = (state.petFedCount || 0) + 1;
+    playSfx("pet-feed", { volume: 0.34 });
     window.dispatchEvent(new CustomEvent("forest-pet-fed", { detail: { pet, amount: 1 } }));
     renderAll();
     await persist("펫에게 당근 1개를 주었어요. 펫이 아주 좋아합니다! 💚");
@@ -2566,6 +2855,7 @@
       return;
     }
     state.avatar.mounted = !state.avatar.mounted;
+    playSfx("mount", { volume: 0.3 });
     state.avatar.sitting = false;
     walkingUntil = 0;
     walkAnimationFrame = 0;
@@ -2585,6 +2875,7 @@
   }
 
   function attackWithEquippedWeapon() {
+    if (!window.carrotForestPhaserActive) playSfx(weaponSfxName(), { volume: 0.34, minInterval: 280 });
     window.dispatchEvent(new CustomEvent("forest-avatar-action", {
       detail: { pose: "attack", duration: equippedWeaponDuration() },
     }));
@@ -2603,6 +2894,7 @@
     phaserPersistTimer = window.setTimeout(() => adapter.save(state), 240);
   });
   window.addEventListener("forest-phaser-interact", () => interact());
+  window.addEventListener("forest-pet-clicked", async () => feedPet());
   window.addEventListener("forest-phaser-action", async (event) => {
     if (event.detail === "chat") toggleChat();
     if (event.detail === "sit") await toggleSit();
@@ -2617,6 +2909,7 @@
   window.addEventListener("forest-rat-caught", async (event) => {
     const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
     state.carrots += amount;
+    playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
     $("#profile-carrots").textContent = String(state.carrots);
@@ -2629,7 +2922,7 @@
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "v", "V", "0"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "j", "J", "v", "V", "0"].includes(event.key)) event.preventDefault();
     if (event.key === "v" || event.key === "V") { confirmPlacement(); return; }
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
@@ -2638,6 +2931,7 @@
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
     if (event.key === "z" || event.key === "Z") { attackWithEquippedWeapon(); return; }
     if (event.key === "f" || event.key === "F") { feedPet(); return; }
+    if (event.key === "j" || event.key === "J") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } })); return; }
     if (event.key === "0") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } })); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
@@ -2651,6 +2945,7 @@
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
     const action = button.dataset.action;
     if (action === "interact") interact();
+    if (action === "jump") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } }));
     if (action === "run") { running = !running; button.setAttribute("aria-pressed", String(running)); setStatus(running ? "달리기 모드가 켜졌습니다." : "달리기 모드를 껐습니다."); }
     if (action === "chat") toggleChat();
     if (action === "sit") await toggleSit();
@@ -2666,6 +2961,25 @@
     const enabled = document.body.classList.toggle("large-text");
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
     event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
+  });
+
+  const atmosphereButton = $("#atmosphere-toggle");
+  const updateAtmosphereButton = (enabled) => {
+    atmosphereButton.setAttribute("aria-pressed", String(enabled));
+    atmosphereButton.setAttribute("aria-label", `날씨·시간 효과 ${enabled ? "켜짐" : "꺼짐"}`);
+    atmosphereButton.title = enabled ? "날씨·시간 효과 켜짐" : "날씨·시간 효과 꺼짐";
+    atmosphereButton.textContent = "날씨·시간";
+  };
+  updateAtmosphereButton(localStorage.getItem(ATMOSPHERE_KEY) !== "off");
+  atmosphereButton.addEventListener("click", () => {
+    const enabled = atmosphereButton.getAttribute("aria-pressed") !== "true";
+    localStorage.setItem(ATMOSPHERE_KEY, enabled ? "on" : "off");
+    updateAtmosphereButton(enabled);
+    window.dispatchEvent(new CustomEvent("forest-atmosphere-updated", { detail: { enabled } }));
+    if (musicEngine?.enabled && currentScene === "world" && !$("#avatar-studio").open) {
+      musicEngine.switchTo(sceneMusicName()).catch(() => {});
+    }
+    setStatus(enabled ? "현재 시간에 맞춰 숲의 밝기를 적용합니다." : "날씨·시간 효과를 끄고 주간 밝기로 표시합니다.");
   });
 
   document.querySelectorAll("[data-workspace-target]").forEach((button) => {
@@ -2730,15 +3044,28 @@
 
   $("#world-dialog-close").addEventListener("click", () => $("#world-dialog").close());
   $("#world-dialog-actions").addEventListener("click", async (event) => {
-    const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
+    const actionButton = event.target.closest("[data-world-action]");
+    const action = actionButton?.dataset.worldAction;
     if (!action) return;
+    if (action === "record_music") {
+      await selectHomeRecordTrack(actionButton.dataset.recordTrack);
+      $("#world-dialog").close();
+      return;
+    }
+    if (action === "record_off") {
+      await selectHomeRecordTrack(null);
+      $("#world-dialog").close();
+      return;
+    }
     if (action === "enter_home") {
+      playSfx("door-open", { volume: 0.36 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("home");
       await persist("우리 집 안으로 들어왔습니다. 소파와 옷장을 이용해 보세요.");
     }
     if (action === "enter_garden") {
+      playSfx("door-open", { volume: 0.32, rate: 1.08 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("garden");
@@ -2747,6 +3074,7 @@
         : "당근 밭에 들어왔습니다. 챌린지를 완료하면 이곳에 당근이 자라요.");
     }
     if (action === "exit_scene") {
+      playSfx("door-open", { volume: 0.3, rate: 0.94 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("world");
@@ -2768,6 +3096,7 @@
       openAvatarStudio();
     }
     if (action === "water" && !state.gardenWatered) {
+      playSfx("water", { volume: 0.3 });
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1400 } }));
       state.gardenWatered = true;
       state.carrots += 10;
@@ -2789,6 +3118,8 @@
       await toggleRide(false);
     }
     if (action === "fish") {
+      playSfx("fishing-cast", { volume: 0.32 });
+      window.setTimeout(() => playSfx("fishing-catch", { volume: 0.38 }), 900);
       window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "fishing", duration: 2200 } }));
       const firstCatch = !state.fishCaught;
       currentScene = "world";
@@ -2808,6 +3139,7 @@
 
   $("#scene-exit").addEventListener("click", async () => {
     if (currentScene === "world") return;
+    playSfx("door-open", { volume: 0.3, rate: 0.94 });
     switchScene("world");
     await persist("우리의 작은 숲으로 돌아왔습니다.");
   });
@@ -2839,8 +3171,58 @@
       return;
     }
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
-    event.currentTarget.textContent = enabled ? "Ⅱ 음악 끄기" : "♪ 숲 음악 켜기";
+    event.currentTarget.setAttribute("aria-label", `BGM ${enabled ? "켜짐" : "꺼짐"}`);
+    event.currentTarget.title = enabled ? "BGM 끄기" : "BGM 켜기";
+    event.currentTarget.textContent = "BGM";
     setStatus(enabled ? "숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
+  });
+
+  const volumeToggle = $("#volume-toggle");
+  const volumePanel = $("#volume-panel");
+  const volumeSlider = $("#music-volume");
+  const volumeValue = $("#music-volume-value");
+  const muteButton = $("#music-mute");
+  const sfxVolumeSlider = $("#sfx-volume");
+  const sfxVolumeValue = $("#sfx-volume-value");
+  const sfxMuteButton = $("#sfx-mute");
+  const syncVolumeControls = () => {
+    musicEngine ||= new CozyForestMusic();
+    sfxEngine ||= new ForestSfx();
+    const percentage = Math.round(musicEngine.volume * 100);
+    const sfxPercentage = Math.round(sfxEngine.volume * 100);
+    volumeSlider.value = String(percentage);
+    volumeValue.value = `${percentage}%`;
+    muteButton.setAttribute("aria-pressed", String(musicEngine.muted));
+    muteButton.textContent = musicEngine.muted ? "배경음악 음소거 해제" : "배경음악 음소거";
+    sfxVolumeSlider.value = String(sfxPercentage);
+    sfxVolumeValue.value = `${sfxPercentage}%`;
+    sfxMuteButton.setAttribute("aria-pressed", String(sfxEngine.muted));
+    sfxMuteButton.textContent = sfxEngine.muted ? "효과음 음소거 해제" : "효과음 음소거";
+    rewardChestSound.volume = sfxEngine.effectiveVolume(.42);
+    volumeToggle.setAttribute("aria-label", `음량 설정, 배경음악 ${musicEngine.muted ? "음소거" : `${percentage}%`}, 효과음 ${sfxEngine.muted ? "음소거" : `${sfxPercentage}%`}`);
+  };
+  syncVolumeControls();
+  volumeToggle.addEventListener("click", () => {
+    const expanded = volumeToggle.getAttribute("aria-expanded") !== "true";
+    volumeToggle.setAttribute("aria-expanded", String(expanded));
+    volumePanel.hidden = !expanded;
+    if (expanded) volumeSlider.focus();
+  });
+  volumeSlider.addEventListener("input", () => {
+    musicEngine.setVolume(Number(volumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  muteButton.addEventListener("click", () => {
+    musicEngine.setMuted(!musicEngine.muted);
+    syncVolumeControls();
+  });
+  sfxVolumeSlider.addEventListener("input", () => {
+    sfxEngine.setVolume(Number(sfxVolumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  sfxMuteButton.addEventListener("click", () => {
+    sfxEngine.setMuted(!sfxEngine.muted);
+    syncVolumeControls();
   });
 
   const installButton = $("#install-pwa");
@@ -2884,6 +3266,7 @@
     const params = new URLSearchParams(window.location.search);
     const localReset = localDemoOrigin && params.get("resetToday") === "1";
     state = localReset ? resetTodayProgress(loaded) : loaded;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
     if (localReset) {
       adapter.save(state);
       params.delete("resetToday");

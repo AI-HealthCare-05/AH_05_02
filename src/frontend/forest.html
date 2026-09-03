@@ -42,12 +42,12 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260901-16" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260902-34" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/lpc-avatar-engine.js?v=20260901-24" defer></script>
+  <script src="/static/lpc-avatar-engine.js?v=20260901-25" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-phaser.js?v=20260901-14" defer></script>
-  <script src="/static/forest-game.js?v=20260901-49" defer></script>
+  <script src="/static/forest-phaser.js?v=20260902-29" defer></script>
+  <script src="/static/forest-game.js?v=20260902-71" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
@@ -60,7 +60,23 @@
       <span class="sync-state"><i aria-hidden="true"></i> 오늘 기록 연결됨</span>
       <div class="carrot-balance" aria-label="보유 당근"><span aria-hidden="true">🥕</span><strong id="carrot-balance">100</strong></div>
       <button id="install-pwa" class="install-button" type="button" hidden>앱으로 설치</button>
-      <button id="music-toggle" class="icon-button" type="button" aria-pressed="false">♪ 숲 음악 켜기</button>
+      <button id="music-toggle" class="icon-button" type="button" aria-pressed="false" aria-label="BGM 꺼짐">BGM</button>
+      <div class="volume-control">
+        <button id="volume-toggle" class="icon-button" type="button" aria-expanded="false" aria-controls="volume-panel">음량</button>
+        <div id="volume-panel" class="volume-panel" hidden>
+          <section class="volume-channel" aria-labelledby="bgm-volume-title">
+            <label for="music-volume"><span id="bgm-volume-title">배경음악 음량</span><output id="music-volume-value">24%</output></label>
+            <input id="music-volume" type="range" min="0" max="100" step="1" value="24">
+            <button id="music-mute" class="plain-button" type="button" aria-pressed="false">배경음악 음소거</button>
+          </section>
+          <section class="volume-channel" aria-labelledby="sfx-volume-title">
+            <label for="sfx-volume"><span id="sfx-volume-title">효과음 음량</span><output id="sfx-volume-value">100%</output></label>
+            <input id="sfx-volume" type="range" min="0" max="100" step="1" value="100">
+            <button id="sfx-mute" class="plain-button" type="button" aria-pressed="false">효과음 음소거</button>
+          </section>
+        </div>
+      </div>
+      <button id="atmosphere-toggle" class="icon-button" type="button" aria-pressed="true" aria-label="날씨·시간 효과 켜짐">날씨·시간</button>
       <button id="large-text-toggle" class="icon-button" type="button" aria-pressed="false">글자 크게</button>
       <button id="open-profile" class="profile-button" type="button"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
     </div>
@@ -94,13 +110,26 @@
 
         <section id="avatar-editor" class="rail-editor" aria-labelledby="avatar-title">
           <div class="section-kicker">AVATAR EDITOR</div>
-          <h2 id="avatar-title">내 픽셀 아바타</h2>
+          <h2 id="avatar-title">아바타</h2>
           <form id="avatar-form" class="avatar-form">
-            <label>표시 이름<input id="avatar-name" maxlength="12" value="세준" required></label>
-            <label>성별 표현<select id="avatar-gender"><option value="female">여성형</option><option value="male">남성형</option><option value="neutral">중립형</option></select></label>
-            <button class="primary-button" type="submit">기본 정보 저장</button>
+            <label>닉네임<input id="avatar-name" maxlength="12" value="세준" required></label>
+            <button class="primary-button" type="submit">닉네임 저장</button>
             <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
           </form>
+        </section>
+        <section id="asset-dock" class="asset-dock rail-assets" aria-labelledby="inventory-title">
+          <h2 id="inventory-title" class="sr-only">옷장과 창고</h2>
+          <span id="placement-mode" class="sr-only" aria-live="polite">배치할 아이템 없음</span>
+          <div class="asset-library-grid">
+            <section class="asset-group" aria-labelledby="wardrobe-title">
+              <div class="asset-group-title"><span aria-hidden="true">👕</span><div><h3 id="wardrobe-title">옷장</h3><p>최근 착용한 코디</p></div></div>
+              <div id="wardrobe-list" class="inventory-list"></div>
+            </section>
+            <section class="asset-group" aria-labelledby="storage-title">
+              <div class="asset-group-title"><span aria-hidden="true">📦</span><div><h3 id="storage-title">창고</h3><p>숲에 배치하는 오브젝트</p></div><button id="cancel-placement" class="plain-button" type="button" hidden>배치 취소</button></div>
+              <div id="storage-list" class="inventory-list"></div>
+            </section>
+          </div>
         </section>
       </aside>
 
@@ -137,26 +166,23 @@
         </div>
 
         <div class="stage-footer arcade-deck">
-          <div class="arcade-marquee"><span aria-hidden="true">●</span><div><small>FOREST ARCADE CONTROL</small><strong>숲 조작 패널</strong></div><span class="arcade-status">READY!</span></div>
           <div class="control-cluster">
             <div class="touch-controls" aria-label="아바타 이동 버튼">
-              <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
+              <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
               <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
-              <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
+              <button class="arcade-action action-run" type="button" data-action="run" aria-label="달리기, 단축키 R"><span>달리기 (R)</span></button>
+              <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
+              <button class="arcade-action action-interact" type="button" data-action="interact" aria-label="상호작용, 단축키 Q"><span>상호작용 (Q)</span></button>
               <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
-            </div>
-            <div class="action-controls" aria-label="아바타 행동 버튼">
-              <button type="button" data-action="interact"><kbd>Q</kbd><span>상호작용</span></button>
-              <button type="button" data-action="run"><kbd>R</kbd><span>달리기</span></button>
-              <button type="button" data-action="chat"><kbd>C</kbd><span>채팅</span></button>
-              <button type="button" data-action="sit"><kbd>X</kbd><span>앉기</span></button>
-              <button type="button" data-action="ride"><kbd>E</kbd><span>탈것</span></button>
-              <button type="button" data-action="attack"><kbd>Z</kbd><span>공격</span></button>
-              <button type="button" data-action="dance"><kbd>0</kbd><span>댄스</span></button>
-              <button type="button" data-action="feed"><kbd>F</kbd><span>펫 먹이</span></button>
+              <button class="arcade-action action-ride" type="button" data-action="ride" aria-label="탈것, 단축키 E"><span>탈것 (E)</span></button>
+              <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
+              <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span>공격 (Z)</span></button>
             </div>
           </div>
-          <p id="movement-help" class="help-text"><kbd>WASD</kbd> 이동 · 행동 버튼을 눌러 플레이하세요. <kbd>X</kbd>는 다시 누르면 일어납니다.</p>
+          <section class="object-inspector footer-objects" aria-labelledby="placed-title">
+            <div class="panel-title"><div><p class="eyebrow">SCENE OBJECTS</p><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span></div>
+            <div id="placed-list" class="placed-list"></div>
+          </section>
         </div>
       </section>
 
@@ -173,7 +199,7 @@
           <div id="quest-list" class="quest-list"></div>
           <section class="rag-guide" aria-labelledby="rag-guide-title">
             <div class="rag-guide-heading"><span aria-hidden="true">🧭</span><h3 id="rag-guide-title">내 생활습관 지도</h3></div>
-            <form id="forest-rag-form"><label class="sr-only" for="forest-rag-question">생활습관 질문</label><input id="forest-rag-question" maxlength="80" placeholder="예: 식사 습관은 어떻게 기록할까요?" required><button type="submit">근거 찾기</button></form>
+            <form id="forest-rag-form"><label class="sr-only" for="forest-rag-question">생활습관 질문</label><input id="forest-rag-question" maxlength="80" placeholder="예: 식사 습관은 어떻게 기록할까요?" required><button type="submit">검색</button></form>
             <div id="forest-rag-result" class="rag-result" aria-live="polite"><p>운동·식사·수면 중 궁금한 내용을 물어보세요.</p></div>
           </section>
         </section>
@@ -190,27 +216,6 @@
         </section>
       </aside>
 
-      <section id="asset-dock" class="asset-dock" aria-labelledby="inventory-title">
-        <div class="dock-heading">
-          <div><p class="eyebrow">ASSET LIBRARY</p><h2 id="inventory-title">옷장 · 창고</h2></div>
-          <div class="dock-actions"><span id="placement-mode">배치할 아이템 없음</span><button id="cancel-placement" class="plain-button" type="button" hidden>배치 취소</button></div>
-        </div>
-        <div class="asset-library-grid">
-          <section class="asset-group" aria-labelledby="wardrobe-title">
-            <div class="asset-group-title"><span aria-hidden="true">👕</span><div><h3 id="wardrobe-title">옷장</h3><p>최근 착용한 코디</p></div></div>
-            <div id="wardrobe-list" class="inventory-list"></div>
-          </section>
-          <section class="asset-group" aria-labelledby="storage-title">
-            <div class="asset-group-title"><span aria-hidden="true">📦</span><div><h3 id="storage-title">창고</h3><p>숲에 배치하는 오브젝트</p></div></div>
-            <div id="storage-list" class="inventory-list"></div>
-          </section>
-        </div>
-      </section>
-
-      <section class="object-inspector" aria-labelledby="placed-title">
-        <div class="panel-title"><div><p class="eyebrow">SCENE OBJECTS</p><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span></div>
-        <div id="placed-list" class="placed-list"></div>
-      </section>
     </div>
 
     <details class="adapter-details">
