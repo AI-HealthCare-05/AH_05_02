@@ -293,7 +293,9 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert "birthday: birthDate" in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'id="health-consent" type="checkbox"' in html
-    signup_flow = script.split('$("#signup-form").addEventListener("submit"', 1)[1].split('$("#eligibility-form")', 1)[0]
+    signup_flow = script.split('$("#signup-form").addEventListener("submit"', 1)[1].split('$("#eligibility-form")', 1)[
+        0
+    ]
     assert signup_flow.index('api("/auth/signup"') < signup_flow.index('api("/auth/login"')
     assert signup_flow.index('api("/auth/login"') < signup_flow.index('api("/users/me/profile"')
     assert signup_flow.index('api("/users/me/profile"') < signup_flow.index('api("/consents"')
