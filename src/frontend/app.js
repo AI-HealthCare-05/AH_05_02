@@ -1280,6 +1280,12 @@ function geolocationFailureCopy(error) {
   return ["현재 위치를 확인하지 못했어요", "브라우저의 위치 설정을 확인한 뒤 다시 시도해 주세요."];
 }
 
+function geolocationFailureState(error) {
+  if (error?.code === 1) return "permission";
+  if (error?.code === 3) return "timeout";
+  return "unavailable";
+}
+
 async function findNearbyMedicalFacilities() {
   const button = $("#find-nearby-medical-facilities");
   if (!button) return;
@@ -1302,7 +1308,7 @@ async function findNearbyMedicalFacilities() {
     resetFacilitySearchUi("medical");
     if (typeof error?.code === "number" && error.code >= 1 && error.code <= 3) {
       const [title, message] = geolocationFailureCopy(error);
-      setMedicalFacilityStatus("permission", title, message);
+      setMedicalFacilityStatus(geolocationFailureState(error), title, message);
     } else {
       setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
     }
@@ -1422,7 +1428,7 @@ async function confirmEmergencyLocation() {
   } catch (error) {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
-    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
     $("#emergency-address-form").hidden = false;
   } finally {
     releaseBusy();
@@ -1451,7 +1457,7 @@ async function findNearbyEmergencyFacilities() {
   } catch (error) {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
-    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
     $("#emergency-address-form").hidden = false;
   } finally {
     releaseBusy();
@@ -2052,17 +2058,30 @@ function renderRagChallengeState(status, candidates = state.ragChallengeCandidat
     idle: ["생성할 준비가 되었어요", "관심 방향을 고른 뒤 초안을 생성해 주세요."],
     loading: ["챌린지 후보를 만들고 있어요", "사용자 조건과 검증된 생활습관 자료를 바탕으로 생성 중입니다."],
     done: ["맞춤 챌린지 후보 3개가 준비됐어요", "목표·주의사항·출처를 비교한 뒤 한 가지를 선택해 주세요."],
+    insufficient: ["추천 근거가 충분하지 않아요", "근거 없는 챌린지는 표시하지 않습니다. 관심 방향을 바꿔 다시 생성해 주세요."],
     failed: ["초안을 만들지 못했어요", "잠시 후 다시 생성해 주세요."],
   }[status] || ["생성 상태를 확인해 주세요", "다시 시도할 수 있습니다."];
   $("#rag-challenge-state-title").textContent = copy[0];
   $("#rag-challenge-state-message").textContent = copy[1];
   $("#generate-rag-challenge").hidden = status === "done";
-  $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "failed";
+  $("#regenerate-rag-challenge").hidden = status !== "done" && status !== "insufficient" && status !== "failed";
   card.hidden = status !== "done" || !candidates.length;
   if (status === "done" && candidates.length) {
     $("#rag-challenge-candidate-grid").innerHTML = candidates.map(ragChallengeCandidateMarkup).join("");
     renderRagChallengeSelection();
   }
+}
+
+function hasGroundedRagChallengeCandidates(candidates) {
+  return Array.isArray(candidates)
+    && candidates.length > 0
+    && candidates.every((candidate) => (
+      candidate?.id
+      && candidate?.title
+      && candidate?.goal
+      && Array.isArray(candidate.citations)
+      && candidate.citations.length > 0
+    ));
 }
 
 async function generateRagChallengeDraft() {
@@ -2074,7 +2093,10 @@ async function generateRagChallengeDraft() {
     state.ragChallengeCandidates = localRagChallengeCandidates($("#rag-challenge-preference").value);
     state.selectedRagChallengeId = null;
     state.ragChallengeDraft = null;
-    renderRagChallengeState("done", state.ragChallengeCandidates);
+    renderRagChallengeState(
+      hasGroundedRagChallengeCandidates(state.ragChallengeCandidates) ? "done" : "insufficient",
+      state.ragChallengeCandidates,
+    );
   } catch (error) {
     renderRagChallengeState("failed");
     showMessage(error.message || "맞춤 챌린지 초안을 만들지 못했습니다.");
@@ -3010,8 +3032,10 @@ $("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
 $("#to-challenges").addEventListener("click", async () => {
   const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();
   if (!state.currentHealthOnly && displayedRisk === "high") {
-    $("#medical-guidance-detail").hidden = false;
-    $("#medical-guidance-detail").scrollIntoView({ behavior: "smooth", block: "center" });
+    const guidance = $("#medical-guidance-detail");
+    guidance.hidden = false;
+    guidance.focus({ preventScroll: true });
+    guidance.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
   try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }

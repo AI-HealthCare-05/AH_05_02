@@ -35,6 +35,16 @@ def test_location_failure_offers_address_search_without_fixed_fallback() -> None
     assert '$("#emergency-address-form").hidden = false' in script
 
 
+def test_location_statuses_distinguish_denied_timeout_and_unavailable() -> None:
+    _, script = _frontend_sources()
+
+    assert 'if (error?.code === 1) return "permission"' in script
+    assert 'if (error?.code === 3) return "timeout"' in script
+    assert 'return "unavailable"' in script
+    assert "setMedicalFacilityStatus(geolocationFailureState(error), title, message)" in script
+    assert "setEmergencyFacilityStatus(geolocationFailureState(error), title" in script
+
+
 def test_new_or_failed_search_clears_previous_results_and_map() -> None:
     html, script = _frontend_sources()
 
@@ -58,3 +68,16 @@ def test_existing_frontend_contracts_remain_visible() -> None:
     assert "hyeoldangi-face-high.png" in html
     assert 'id="rag-challenge-generator"' in html
     assert "email, password, gender, birth_date: birthDate" in script
+    assert 'id="medical-guidance-detail"' in html
+    assert 'tabindex="-1"' in html
+
+
+def test_rag_challenge_states_include_grounding_failure() -> None:
+    _, script = _frontend_sources()
+
+    assert 'loading: ["챌린지 후보를 만들고 있어요"' in script
+    assert 'done: ["맞춤 챌린지 후보 3개가 준비됐어요"' in script
+    assert 'insufficient: ["추천 근거가 충분하지 않아요"' in script
+    assert 'failed: ["초안을 만들지 못했어요"' in script
+    assert "function hasGroundedRagChallengeCandidates(candidates)" in script
+    assert 'hasGroundedRagChallengeCandidates(state.ragChallengeCandidates) ? "done" : "insufficient"' in script
