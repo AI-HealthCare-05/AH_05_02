@@ -2867,7 +2867,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
     const birthDate = $("#signup-birth-date").value;
     const gender = $("#signup-gender").value;
     await api("/auth/signup", { method: "POST", body: JSON.stringify({
-      email, password, gender, birth_date: birthDate,
+      email, password, gender, birth_date: birthDate, terms_agreed: $("#personal-consent").checked,
     }) });
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
     state.token = login.access_token;
@@ -2912,7 +2912,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
   try {
     if (!isLocalPreview()) {
-      await api("/users/me", { method: "PATCH", body: JSON.stringify({
+      await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
         birthday: $("#eligibility-birth-date").value,
         gender: $("#gender").value,
       }) });
