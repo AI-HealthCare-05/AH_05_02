@@ -285,12 +285,18 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'name: $("#display-name").value' not in script
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
-    assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
-    assert "email, password, gender, birth_date: birthDate" in script
-    assert 'api("/users/me/profile", { method: "PATCH"' not in script
-    assert 'api("/users/me", { method: "PATCH"' in script
+    assert 'email, password, terms_agreed: $("#personal-consent").checked' in script
+    assert "email, password, gender, birth_date: birthDate" not in script
+    assert 'api("/users/me/profile", { method: "PATCH"' in script
+    assert 'api("/users/me", { method: "PATCH"' not in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
+    assert "birthday: birthDate" in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
+    assert 'id="health-consent" type="checkbox"' in html
+    signup_flow = script.split('$("#signup-form").addEventListener("submit"', 1)[1].split('$("#eligibility-form")', 1)[0]
+    assert signup_flow.index('api("/auth/signup"') < signup_flow.index('api("/auth/login"')
+    assert signup_flow.index('api("/auth/login"') < signup_flow.index('api("/users/me/profile"')
+    assert signup_flow.index('api("/users/me/profile"') < signup_flow.index('api("/consents"')
     assert 'state.token = state.token || "local-demo-token"' not in script
     assert 'const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"]' in script
     assert "if (!isDemoEnvironment()) return;" in script

@@ -67,7 +67,7 @@ def test_existing_frontend_contracts_remain_visible() -> None:
     assert 'id="risk-hyeoldangi"' in html
     assert "hyeoldangi-face-high.png" in html
     assert 'id="rag-challenge-generator"' in html
-    assert "email, password, gender, birth_date: birthDate" in script
+    assert 'email, password, terms_agreed: $("#personal-consent").checked' in script
     assert 'id="medical-guidance-detail"' in html
     assert 'tabindex="-1"' in html
 
