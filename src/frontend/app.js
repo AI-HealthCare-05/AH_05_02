@@ -3073,13 +3073,6 @@ const FACILITY_MARKER_IMAGE_SRC =
     '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="9" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>'
   );
 
-// G278+RR 서울특별시(복구된 전체 Plus Code: 8Q99G278+RR)의 중심 좌표입니다.
-const DEFAULT_FACILITY_LOCATION = {
-  latitude: 37.5144375,
-  longitude: 127.0169375,
-  label: "G278+RR 서울특별시",
-};
-
 async function renderFacilityMap(userLatitude, userLongitude, facilities, target = "medical", referenceLabel = "현재 위치") {
   const container = $(`#${target}-facility-map`);
   if (!container) return;
@@ -3238,20 +3231,6 @@ $("#find-nearby-facilities")?.addEventListener("click", async () => {
     resetFacilitySearchUi("medical");
     status.textContent = messages[error.code] || error.message || "위치 정보를 불러오지 못했습니다.";
     $("#facility-address-form").hidden = false;
-    if (error.code || !("geolocation" in navigator)) {
-      try {
-        await searchFacilitiesAt(
-          DEFAULT_FACILITY_LOCATION.latitude,
-          DEFAULT_FACILITY_LOCATION.longitude,
-          "medical",
-          "검색 기준 위치",
-        );
-        status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변을 표시합니다.`;
-      } catch (fallbackError) {
-        resetFacilitySearchUi("medical");
-        status.textContent = fallbackError.message || "기본 위치 주변 의료기관을 불러오지 못했습니다.";
-      }
-    }
   } finally {
     button.disabled = false;
   }
@@ -3308,20 +3287,6 @@ $("#find-nearby-emergency-facilities")?.addEventListener("click", async () => {
     resetFacilitySearchUi("emergency");
     status.textContent = messages[error.code] || error.message || "응급실 정보를 불러오지 못했습니다.";
     $("#emergency-address-form").hidden = false;
-    if (error.code || !("geolocation" in navigator)) {
-      try {
-        await searchFacilitiesAt(
-          DEFAULT_FACILITY_LOCATION.latitude,
-          DEFAULT_FACILITY_LOCATION.longitude,
-          "emergency",
-          "검색 기준 위치",
-        );
-        status.textContent = `현재 위치 대신 기본 위치(${DEFAULT_FACILITY_LOCATION.label}) 주변 응급실을 표시합니다.`;
-      } catch (fallbackError) {
-        resetFacilitySearchUi("emergency");
-        status.textContent = fallbackError.message || "기본 위치 주변 응급실을 불러오지 못했습니다.";
-      }
-    }
   } finally {
     button.disabled = false;
   }

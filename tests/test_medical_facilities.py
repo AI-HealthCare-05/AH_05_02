@@ -45,12 +45,25 @@ def test_address_search_is_available_when_browser_location_fails() -> None:
     assert 'id="facility-address-form"' in html
     assert "coordinatesForAddress" in script
     assert "geocoder.addressSearch" in script
-    assert "DEFAULT_FACILITY_LOCATION" in script
-    assert "G278+RR 서울특별시" in script
+    assert "DEFAULT_FACILITY_LOCATION" not in script
+    assert "기본 위치" not in script
     assert 'autocomplete="off"' in html
     assert 'input.value = ""' in script
-    assert "37.5144375" in script
-    assert "127.0169375" in script
+    assert '$("#facility-address-form").hidden = false' in script
+    assert '$("#emergency-address-form").hidden = false' in script
+
+
+def test_new_or_failed_search_clears_old_map_and_uses_search_reference_label() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert "function resetFacilitySearchUi(target)" in script
+    assert "clearFacilityMapMarkers(target)" in script
+    assert "mapContainer.hidden = true" in script
+    assert script.count('resetFacilitySearchUi("medical")') >= 4
+    assert script.count('resetFacilitySearchUi("emergency")') >= 4
+    assert script.count('"검색 기준 위치"') >= 2
+    assert "119에 연락하세요" in html
 
 
 def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:

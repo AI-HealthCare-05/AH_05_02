@@ -222,6 +222,7 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
         output_status="uncalibrated_research_probability_only",
         model_population="baseline_undiagnosed_age_45_plus",
         predicted_at=datetime.now(UTC),
+        age_risk_forecast=None,
     )
     public = prediction_payload(item)
     assert public["risk_category"] is None
@@ -253,6 +254,7 @@ def test_approved_caution_prediction_exposes_a_korean_risk_label() -> None:
         output_status="approved",
         model_population="undiagnosed_klosa_age_45_105",
         predicted_at=datetime.now(UTC),
+        age_risk_forecast=None,
     )
     public = prediction_payload(item)
     assert public["risk_category"] == "caution"

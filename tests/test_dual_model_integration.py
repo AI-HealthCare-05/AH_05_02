@@ -142,7 +142,7 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
                 },
             )
             eligibility_data = eligibility.json()["data"]
-            assert eligibility_data["current_screening_eligible"] is True
+            assert eligibility_data["current_health_check_eligible"] is True
             assert eligibility_data["future_prediction_eligible"] is False
 
             checkup = await client.post(
