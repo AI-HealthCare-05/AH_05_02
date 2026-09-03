@@ -32,6 +32,13 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
+            nearby_facilities = await client.get(
+                "/api/v1/medical-facilities/nearby?lat=37.5665&lon=126.9780&radius=5000",
+                headers=headers,
+            )
+            assert nearby_facilities.status_code == status.HTTP_200_OK
+            assert len(nearby_facilities.json()["data"]["facilities"]) == 3
+
             consent = await client.post(
                 "/api/v1/consents",
                 headers=headers,
@@ -109,8 +116,19 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             dashboard = await client.get("/api/v1/dashboard/summary", headers=headers)
             assert dashboard.status_code == status.HTTP_200_OK
             weekly = await client.get("/api/v1/weekly-reports/current", headers=headers)
-            assert weekly.json()["data"]["status"] == "ready"
-            assert weekly.json()["data"]["summary_method"] == "deterministic_template_v1"
+            weekly_data = weekly.json()["data"]
+            assert weekly_data["status"] == "ready"
+            assert weekly_data["summary_method"] == "deterministic_template_v1"
+            assert weekly_data["cycle"] == {"cycle_number": 1, "week_number": 1}
+            assert weekly_data["completion"]["streak_days"] == 1
+            assert weekly_data["challenge_details"][0]["daily_records"][-1]["is_completed"] is True
+            assert weekly_data["recent_risk_category"] is None
+
+            pdf = await client.get("/api/v1/weekly-reports/current/pdf", headers=headers)
+            assert pdf.status_code == status.HTTP_200_OK
+            assert pdf.headers["content-type"] == "application/pdf"
+            assert pdf.content.startswith(b"%PDF")
+            assert len(pdf.content) > 3500
     finally:
         config.DEMO_MODE = previous_demo_mode
         await Tortoise.close_connections()

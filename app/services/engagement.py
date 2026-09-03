@@ -69,6 +69,15 @@ BARRIER_SUGGESTIONS = {
     "other": ("restart_tomorrow", "이유를 기록하고 다음 날 다시 시작해 보세요."),
 }
 
+BARRIER_LABELS = {
+    "no_time": "시간이 없었음",
+    "forgot": "잊어버림",
+    "physical_discomfort": "몸이 불편했음",
+    "goal_too_hard": "목표가 어려웠음",
+    "environment": "환경이 적합하지 않았음",
+    "other": "기타",
+}
+
 ENCOURAGEMENT_TEXT = {
     "cheer": "오늘도 함께 천천히 실천해요!",
     "great_job": "오늘 실천 정말 잘했어요!",
@@ -115,18 +124,34 @@ class EngagementService:
         start = max(cycle.start_date, today - timedelta(days=6))
         selected = await self.health_repo.list_user_challenges(cycle.id, user.id)
         catalog = await self.health_repo.challenge_map([item.challenge_id for item in selected])
+        report_days = [start + timedelta(days=offset) for offset in range((today - start).days + 1)]
         rows = []
+        completed_dates: set[date] = set()
+        challenge_titles: dict[int, str] = {}
         for item in selected:
             logs = await self.health_repo.logs_for_user_challenge(item.id, user.id, start, today)
+            log_by_date = {log.log_date: log for log in logs}
             completed = sum(1 for log in logs if log.is_completed)
+            completed_dates.update(log.log_date for log in logs if log.is_completed)
             planned = max(0, (today - start).days + 1)
+            title = catalog[item.challenge_id].title
+            challenge_titles[item.id] = title
             rows.append(
                 {
                     "user_challenge_id": item.id,
-                    "title": catalog[item.challenge_id].title,
+                    "title": title,
                     "completed": completed,
                     "planned": planned,
                     "completion_rate": round(completed / planned * 100, 1) if planned else 0.0,
+                    "daily_records": [
+                        {
+                            "date": report_date,
+                            "is_completed": log_by_date[report_date].is_completed
+                            if report_date in log_by_date
+                            else None,
+                        }
+                        for report_date in report_days
+                    ],
                 }
             )
         barriers = await self.repo.list_barriers(user.id, start)
@@ -139,6 +164,19 @@ class EngagementService:
         total_completed = sum(row["completed"] for row in rows)
         total_planned = sum(row["planned"] for row in rows)
         rate = round(total_completed / total_planned * 100, 1) if total_planned else 0.0
+        streak_days = 0
+        streak_cursor = today
+        while streak_cursor in completed_dates:
+            streak_days += 1
+            streak_cursor -= timedelta(days=1)
+        latest_prediction = await self.health_repo.latest_prediction(user.id)
+        recent_risk_category = None
+        if (
+            latest_prediction is not None
+            and latest_prediction.result_status == "approved"
+            and latest_prediction.risk_category in {"low", "caution", "high"}
+        ):
+            recent_risk_category = latest_prediction.risk_category
         if total_planned == 0:
             record_summary = "이번 주에는 아직 평가할 수 있는 챌린지 기록이 없습니다."
         elif rate >= 80:
@@ -152,16 +190,32 @@ class EngagementService:
         return {
             "status": "ready",
             "period": {"start_date": start, "end_date": today},
+            "cycle": {
+                "cycle_number": cycle.cycle_number,
+                "week_number": min(4, max(1, (today - cycle.start_date).days // 7 + 1)),
+            },
             "completion": {
                 "completed": total_completed,
                 "planned": total_planned,
                 "rate": rate,
+                "streak_days": streak_days,
             },
             "best_habit": max(rows, key=lambda row: row["completion_rate"], default=None),
             "needs_support": min(rows, key=lambda row: row["completion_rate"], default=None),
             "challenge_details": rows,
             "barrier_summary": dict(Counter(item.reason_code for item in barriers)),
+            "barrier_details": [
+                {
+                    "date": item.log_date,
+                    "challenge_title": challenge_titles.get(item.user_challenge_id, "선택한 챌린지"),
+                    "reason_code": item.reason_code,
+                    "reason_label": BARRIER_LABELS.get(item.reason_code, "기타"),
+                    "note": item.note,
+                }
+                for item in barriers
+            ],
             "next_adjustment": {"code": suggested_code, "message": suggestion},
+            "recent_risk_category": recent_risk_category,
             "record_summary": record_summary,
             "summary_method": "deterministic_template_v1",
             "disclaimer": "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.",
