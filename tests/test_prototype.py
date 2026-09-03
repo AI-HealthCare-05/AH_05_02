@@ -379,7 +379,9 @@ def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
     assert html.index('id="medical-guidance-detail"') > html.index('id="risk-forecast-panel"')
     assert 'next: "검사·상담 안내 보기"' in script
     assert '$("#medical-guidance-detail").hidden = true;' in script
-    assert '$("#medical-guidance-detail").hidden = false;' in script
+    assert 'const guidance = $("#medical-guidance-detail");' in script
+    assert "guidance.hidden = false;" in script
+    assert "guidance.focus({ preventScroll: true });" in script
     assert 'const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();' in script
     assert 'displayedRisk === "high"' in script
     assert ".notice.safety.medical-guidance-alert" in styles
