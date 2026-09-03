@@ -77,8 +77,9 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "현재 위치 확인하기" in html
     assert "주변 응급실 보기" in html
     assert 'id="emergency-facility-search"' in html
-    assert 'id="emergency-region"' in html
-    assert 'id="find-emergency-facilities-by-region"' in html
+    assert 'id="emergency-address-form"' in html
+    assert 'id="emergency-address"' in html
+    assert 'id="emergency-facility-map"' in html
     assert "api(`/emergency-facilities/nearby?" in script
     assert "renderEmergencyFacilities" in script
     assert "국립중앙의료원 응급의료기관 정보" in script
@@ -122,9 +123,10 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
-    assert 'id="medical-region"' in html
-    assert 'id="find-medical-facilities-by-region"' in html
-    assert "medicalRegionCenters" in script
+    assert 'id="facility-address-form"' in html
+    assert 'id="facility-address"' in html
+    assert 'id="medical-facility-map"' in html
+    assert "coordinatesForAddress" in script
     assert "정보 확인일" in script
     assert 'id="model-version"' not in html
     assert "prediction.model_version" not in script
@@ -466,8 +468,11 @@ def test_medical_facility_ui_has_safe_empty_permission_and_failure_states() -> N
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="medical-region"' in html
-    assert 'id="find-medical-facilities-by-region"' in html
+    assert 'id="facility-address-form"' in html
+    assert 'id="facility-address"' in html
+    assert 'id="medical-facility-map"' in html
+    assert "coordinatesForAddress" in script
+    assert "resetFacilitySearchUi" in script
     assert "위치 권한이 허용되지 않았어요" in script
     assert "근처 의료기관을 찾지 못했어요" in script
     assert "의료기관 정보를 불러오지 못했어요" in script

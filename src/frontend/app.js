@@ -1091,6 +1091,120 @@ function setMedicalFacilityStatus(status, title, message) {
   box.innerHTML = `<strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>`;
 }
 
+const facilityMapInstances = {};
+const facilityMapMarkers = { medical: [], emergency: [] };
+
+function ensureKakaoMapsLoaded() {
+  return new Promise((resolve, reject) => {
+    if (!window.kakao?.maps?.load) {
+      reject(new Error("지도 서비스를 불러오지 못했습니다."));
+      return;
+    }
+    window.kakao.maps.load(() => resolve(window.kakao));
+  });
+}
+
+function clearFacilityMapMarkers(target) {
+  (facilityMapMarkers[target] || []).forEach((marker) => marker.setMap(null));
+  facilityMapMarkers[target] = [];
+}
+
+function resetFacilitySearchUi(target) {
+  const prefix = target === "emergency" ? "emergency" : "medical";
+  const results = $(`#${prefix}-facility-results`);
+  const meta = $(`#${prefix}-facility-meta`);
+  const map = $(`#${prefix}-facility-map`);
+  if (results) {
+    results.innerHTML = "";
+    results.hidden = true;
+  }
+  if (meta) {
+    meta.innerHTML = "";
+    meta.hidden = true;
+  }
+  clearFacilityMapMarkers(target);
+  if (map) map.hidden = true;
+}
+
+const USER_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="10" fill="#2563eb" stroke="#ffffff" stroke-width="3"/></svg>',
+  );
+const FACILITY_MARKER_IMAGE_SRC =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><circle cx="13" cy="13" r="9" fill="#dc2626" stroke="#ffffff" stroke-width="3"/></svg>',
+  );
+
+async function renderFacilityMap(latitude, longitude, facilities, target, referenceLabel) {
+  const container = $(`#${target}-facility-map`);
+  if (!container) return;
+  try {
+    const kakao = await ensureKakaoMapsLoaded();
+    const center = new kakao.maps.LatLng(latitude, longitude);
+    container.hidden = false;
+    if (!facilityMapInstances[target]) {
+      facilityMapInstances[target] = new kakao.maps.Map(container, { center, level: 4 });
+    } else {
+      facilityMapInstances[target].setCenter(center);
+    }
+    const map = facilityMapInstances[target];
+    clearFacilityMapMarkers(target);
+    const bounds = new kakao.maps.LatLngBounds();
+    bounds.extend(center);
+    const userMarker = new kakao.maps.Marker({
+      map,
+      position: center,
+      title: referenceLabel,
+      image: new kakao.maps.MarkerImage(USER_MARKER_IMAGE_SRC, new kakao.maps.Size(28, 28), {
+        offset: new kakao.maps.Point(14, 14),
+      }),
+      zIndex: 10,
+    });
+    facilityMapMarkers[target].push(userMarker);
+    const facilityMarkerImage = new kakao.maps.MarkerImage(
+      FACILITY_MARKER_IMAGE_SRC,
+      new kakao.maps.Size(26, 26),
+      { offset: new kakao.maps.Point(13, 13) },
+    );
+    facilities.forEach((facility) => {
+      if (facility.latitude == null || facility.longitude == null) return;
+      const position = new kakao.maps.LatLng(facility.latitude, facility.longitude);
+      bounds.extend(position);
+      const marker = new kakao.maps.Marker({
+        map,
+        position,
+        title: facility.name,
+        image: facilityMarkerImage,
+      });
+      const infoWindow = new kakao.maps.InfoWindow({
+        content: `<div class="facility-map-label">${escapeHtml(facility.name || "의료기관")}</div>`,
+      });
+      kakao.maps.event.addListener(marker, "click", () => infoWindow.open(map, marker));
+      facilityMapMarkers[target].push(marker);
+    });
+    map.setBounds(bounds);
+    map.setCenter(center);
+  } catch (_error) {
+    container.hidden = true;
+  }
+}
+
+async function coordinatesForAddress(address) {
+  const kakao = await ensureKakaoMapsLoaded();
+  return new Promise((resolve, reject) => {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, (results, status) => {
+      if (status !== kakao.maps.services.Status.OK || !results.length) {
+        reject(new Error("주소를 찾지 못했습니다. 도로명과 건물 번호까지 입력해 주세요."));
+        return;
+      }
+      resolve({ lat: Number(results[0].y), lon: Number(results[0].x) });
+    });
+  });
+}
+
 function medicalFacilityDistance(value) {
   const meters = Number(value);
   if (!Number.isFinite(meters) || meters < 0) return "거리 정보 없음";
@@ -1143,38 +1257,17 @@ function renderMedicalFacilities(payload = {}) {
   setMedicalFacilityStatus("done", `가까운 의료기관 ${facilities.length}곳을 찾았어요`, "거리순 안내이며 특정 의료기관을 추천하거나 보증하지 않습니다.");
 }
 
-const medicalRegionCenters = {
-  seoul: { label: "서울", lat: 37.5665, lon: 126.9780 },
-  busan: { label: "부산", lat: 35.1796, lon: 129.0756 },
-  daegu: { label: "대구", lat: 35.8714, lon: 128.6014 },
-  incheon: { label: "인천", lat: 37.4563, lon: 126.7052 },
-  gwangju: { label: "광주", lat: 35.1595, lon: 126.8526 },
-  daejeon: { label: "대전", lat: 36.3504, lon: 127.3845 },
-  ulsan: { label: "울산", lat: 35.5384, lon: 129.3114 },
-  sejong: { label: "세종", lat: 36.4800, lon: 127.2890 },
-  gyeonggi: { label: "경기", lat: 37.2636, lon: 127.0286 },
-  gangwon: { label: "강원", lat: 37.8813, lon: 127.7298 },
-  chungbuk: { label: "충북", lat: 36.6424, lon: 127.4890 },
-  chungnam: { label: "충남", lat: 36.6588, lon: 126.6728 },
-  jeonbuk: { label: "전북", lat: 35.8203, lon: 127.1088 },
-  jeonnam: { label: "전남", lat: 34.8161, lon: 126.4629 },
-  gyeongbuk: { label: "경북", lat: 36.5760, lon: 128.5056 },
-  gyeongnam: { label: "경남", lat: 35.2383, lon: 128.6924 },
-  jeju: { label: "제주", lat: 33.4996, lon: 126.5312 },
-};
-
-async function requestMedicalFacilities({ lat, lon, areaLabel = "" }, button) {
-  const results = $("#medical-facility-results");
-  const meta = $("#medical-facility-meta");
-  if (results) results.hidden = true;
-  if (meta) meta.hidden = true;
+async function requestMedicalFacilities({ lat, lon, areaLabel = "", referenceLabel = "현재 위치" }, button) {
+  resetFacilitySearchUi("medical");
   const releaseBusy = setButtonBusy(button, "검색 중…");
   setMedicalFacilityStatus("loading", "근처 의료기관을 찾고 있어요", "거리순으로 정보를 불러오는 중입니다.");
   try {
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "5000" });
     const payload = await api(`/medical-facilities/nearby?${params.toString()}`);
     renderMedicalFacilities({ ...payload, search_area_label: areaLabel });
+    await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "medical", referenceLabel);
   } catch (error) {
+    resetFacilitySearchUi("medical");
     setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
   } finally {
     releaseBusy();
@@ -1191,7 +1284,9 @@ async function findNearbyMedicalFacilities() {
   const button = $("#find-nearby-medical-facilities");
   if (!button) return;
   if (!navigator.geolocation) {
+    resetFacilitySearchUi("medical");
     setMedicalFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "위치 기능을 지원하는 브라우저에서 다시 확인해 주세요.");
+    $("#facility-address-form").hidden = false;
     return;
   }
   const releaseBusy = setButtonBusy(button, "위치 확인 중…");
@@ -1204,12 +1299,14 @@ async function findNearbyMedicalFacilities() {
       maximumAge: 300000,
     }));
   } catch (error) {
+    resetFacilitySearchUi("medical");
     if (typeof error?.code === "number" && error.code >= 1 && error.code <= 3) {
       const [title, message] = geolocationFailureCopy(error);
       setMedicalFacilityStatus("permission", title, message);
     } else {
       setMedicalFacilityStatus("failed", "의료기관 정보를 불러오지 못했어요", error?.retryable ? "잠시 후 다시 시도해 주세요." : "의료기관 연결이 준비된 뒤 다시 확인해 주세요.");
     }
+    $("#facility-address-form").hidden = false;
   } finally {
     releaseBusy();
   }
@@ -1218,16 +1315,30 @@ async function findNearbyMedicalFacilities() {
   }
 }
 
-async function findMedicalFacilitiesByRegion() {
-  const button = $("#find-medical-facilities-by-region");
-  const region = medicalRegionCenters[$("#medical-region")?.value];
-  if (!button) return;
-  if (!region) {
-    setMedicalFacilityStatus("empty", "지역을 선택해 주세요", "목록에서 찾고 싶은 지역을 먼저 선택해 주세요.");
-    $("#medical-region")?.focus();
-    return;
+async function findMedicalFacilitiesByAddress(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#facility-address");
+  const submit = form.querySelector('button[type="submit"]');
+  const address = input?.value.trim();
+  if (!address || !submit) return;
+  resetFacilitySearchUi("medical");
+  const releaseBusy = setButtonBusy(submit, "주소 확인 중…");
+  setMedicalFacilityStatus("loading", "입력한 주소를 확인하고 있어요", "도로명 주소를 검색 기준 위치로 변환하는 중입니다.");
+  try {
+    const coordinates = await coordinatesForAddress(address);
+    input.value = "";
+    releaseBusy();
+    await requestMedicalFacilities(
+      { ...coordinates, areaLabel: address, referenceLabel: "검색 기준 위치" },
+      submit,
+    );
+  } catch (error) {
+    resetFacilitySearchUi("medical");
+    setMedicalFacilityStatus("failed", "주소로 의료기관을 찾지 못했어요", error.message || "주소를 다시 확인해 주세요.");
+  } finally {
+    releaseBusy();
   }
-  await requestMedicalFacilities({ lat: region.lat, lon: region.lon, areaLabel: region.label }, button);
 }
 
 function setEmergencyFacilityStatus(status, title, message) {
@@ -1269,18 +1380,17 @@ function renderEmergencyFacilities(payload = {}) {
   setEmergencyFacilityStatus("done", `가까운 응급의료기관 ${facilities.length}곳을 찾았어요`, "기관 정보와 수용 가능 여부는 이동 전에 119 또는 해당 기관에 확인해 주세요.");
 }
 
-async function requestEmergencyFacilities({ lat, lon, areaLabel = "" }, button) {
-  const results = $("#emergency-facility-results");
-  const meta = $("#emergency-facility-meta");
-  if (results) results.hidden = true;
-  if (meta) meta.hidden = true;
+async function requestEmergencyFacilities({ lat, lon, areaLabel = "", referenceLabel = "현재 위치" }, button) {
+  resetFacilitySearchUi("emergency");
   const releaseBusy = setButtonBusy(button, "검색 중…");
   setEmergencyFacilityStatus("loading", "가까운 응급의료기관을 찾고 있어요", "위급하면 결과를 기다리지 말고 119에 연락해 주세요.");
   try {
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "10000" });
     const payload = await api(`/emergency-facilities/nearby?${params.toString()}`);
     renderEmergencyFacilities({ ...payload, search_area_label: areaLabel });
+    await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "emergency", referenceLabel);
   } catch (error) {
+    resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("failed", "응급의료기관 정보를 불러오지 못했어요", "위급하면 검색을 다시 시도하지 말고 119에 연락해 주세요.");
   } finally {
     releaseBusy();
@@ -1298,17 +1408,22 @@ function currentBrowserPosition() {
 async function confirmEmergencyLocation() {
   const button = $("#confirm-current-location");
   if (!navigator.geolocation) {
-    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
     return;
   }
+  resetFacilitySearchUi("emergency");
   const releaseBusy = setButtonBusy(button, "위치 확인 중…");
   try {
     const position = await currentBrowserPosition();
     state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
     setEmergencyFacilityStatus("permission", "현재 위치를 확인했어요", "주변 응급실 보기를 누르면 이 위치를 기준으로 검색합니다.");
   } catch (error) {
+    resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
-    setEmergencyFacilityStatus("permission", title, "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
   } finally {
     releaseBusy();
   }
@@ -1322,33 +1437,52 @@ async function findNearbyEmergencyFacilities() {
     return;
   }
   if (!navigator.geolocation) {
-    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
     return;
   }
+  resetFacilitySearchUi("emergency");
   const releaseBusy = setButtonBusy(button, "위치 확인 중…");
   let position;
   try {
     position = await currentBrowserPosition();
     state.lastKnownLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
   } catch (error) {
+    resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
-    setEmergencyFacilityStatus("permission", title, "지역을 직접 선택하거나 위급하면 119에 연락해 주세요.");
+    setEmergencyFacilityStatus("permission", title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
+    $("#emergency-address-form").hidden = false;
   } finally {
     releaseBusy();
   }
   if (position) await requestEmergencyFacilities(state.lastKnownLocation, button);
 }
 
-async function findEmergencyFacilitiesByRegion() {
-  const button = $("#find-emergency-facilities-by-region");
-  const region = medicalRegionCenters[$("#emergency-region")?.value];
-  if (!button) return;
-  if (!region) {
-    setEmergencyFacilityStatus("empty", "지역을 선택해 주세요", "목록에서 찾고 싶은 지역을 먼저 선택해 주세요.");
-    $("#emergency-region")?.focus();
-    return;
+async function findEmergencyFacilitiesByAddress(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const input = $("#emergency-address");
+  const submit = form.querySelector('button[type="submit"]');
+  const address = input?.value.trim();
+  if (!address || !submit) return;
+  resetFacilitySearchUi("emergency");
+  const releaseBusy = setButtonBusy(submit, "주소 확인 중…");
+  setEmergencyFacilityStatus("loading", "입력한 주소를 확인하고 있어요", "위급하면 결과를 기다리지 말고 119에 연락해 주세요.");
+  try {
+    const coordinates = await coordinatesForAddress(address);
+    input.value = "";
+    releaseBusy();
+    await requestEmergencyFacilities(
+      { ...coordinates, areaLabel: address, referenceLabel: "검색 기준 위치" },
+      submit,
+    );
+  } catch (error) {
+    resetFacilitySearchUi("emergency");
+    setEmergencyFacilityStatus("failed", "주소로 응급의료기관을 찾지 못했어요", error.message || "위급하면 119에 연락해 주세요.");
+  } finally {
+    releaseBusy();
   }
-  await requestEmergencyFacilities({ lat: region.lat, lon: region.lon, areaLabel: region.label }, button);
 }
 
 function setForecastRiskPreview(risk) {
@@ -2744,7 +2878,7 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
 });
 $("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
 $("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
-$("#find-emergency-facilities-by-region")?.addEventListener("click", findEmergencyFacilitiesByRegion);
+$("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
 $("#find-same-day-medical")?.addEventListener("click", () => {
   showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
 });
@@ -2861,7 +2995,7 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
-$("#find-medical-facilities-by-region")?.addEventListener("click", findMedicalFacilitiesByRegion);
+$("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
 $("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
   const toggle = event.target.closest(".lifestyle-summary-toggle");
   if (!toggle) return;
