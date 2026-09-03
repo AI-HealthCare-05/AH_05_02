@@ -3044,7 +3044,7 @@ $("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
 });
 $("#to-challenges").addEventListener("click", async () => {
   const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();
-  if (!state.currentHealthOnly && displayedRisk === "high") {
+  if (displayedRisk === "high") {
     const guidance = $("#medical-guidance-detail");
     guidance.hidden = false;
     guidance.focus({ preventScroll: true });

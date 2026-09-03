@@ -374,7 +374,8 @@ def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
     assert "guidance.hidden = false;" in script
     assert "guidance.focus({ preventScroll: true });" in script
     assert 'const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();' in script
-    assert 'displayedRisk === "high"' in script
+    assert 'if (displayedRisk === "high")' in script
+    assert '!state.currentHealthOnly && displayedRisk === "high"' not in script
     assert ".notice.safety.medical-guidance-alert" in styles
     assert "border-left:8px solid #b83f36" not in styles
     assert "border:2px solid #d35f55;border-radius:20px" in styles
