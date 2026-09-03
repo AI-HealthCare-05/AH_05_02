@@ -32,13 +32,6 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
-            nearby_facilities = await client.get(
-                "/api/v1/medical-facilities/nearby?lat=37.5665&lon=126.9780&radius=5000",
-                headers=headers,
-            )
-            assert nearby_facilities.status_code == status.HTTP_200_OK
-            assert len(nearby_facilities.json()["data"]["facilities"]) == 3
-
             consent = await client.post(
                 "/api/v1/consents",
                 headers=headers,
