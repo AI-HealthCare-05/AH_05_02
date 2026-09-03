@@ -12,6 +12,7 @@ TORTOISE_APP_MODELS = [
     "app.models.engagement",
     "app.models.wellness",
     "app.models.forest",
+    "app.models.challenge_v2",
 ]
 
 DEFAULT_CONNECTION = (

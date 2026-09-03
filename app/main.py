@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,13 +11,22 @@ from app.apis.v1 import v1_routers
 from app.core import config
 from app.core.db.databases import initialize_tortoise
 from app.core.redis import close_redis, redis_client
+from app.middleware.challenge_upload_limit import ChallengeUploadLimit
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if not config.DEMO_MODE:
         await redis_client.ping()
-    yield
+    from app.services.challenge_v2_retention import retention_loop
+
+    retention = asyncio.create_task(retention_loop())
+    try:
+        yield
+    finally:
+        retention.cancel()
+        with suppress(asyncio.CancelledError):
+            await retention
     if not config.DEMO_MODE:
         await close_redis()
 
@@ -29,6 +39,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 initialize_tortoise(app)
+app.add_middleware(ChallengeUploadLimit)
 
 app.include_router(v1_routers)
 

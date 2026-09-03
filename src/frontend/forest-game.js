@@ -1727,6 +1727,13 @@
   }
 
   function renderQuests() {
+    if (window.ForestChallengeV2?.enabled) {
+      const plan = window.ForestChallengeV2.plan;
+      const label = `${plan?.completed || 0}/${plan?.items?.length || 0}`;
+      $("#personal-progress").textContent = label;
+      $("#heading-personal-progress").textContent = label;
+      return;
+    }
     syncActiveQuests();
     const ready = Boolean(state.challengePlan?.onboarded);
     $("#start-prediction-flow").textContent = ready ? "당뇨 예방 챌린지 다시 만들기" : "당뇨 예방 챌린지";
@@ -1751,6 +1758,10 @@
     const rewardButton = $("#reward-button");
     rewardButton.disabled = completed < 15 || state.rewardClaimed;
     rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
+    if (window.ForestChallengeV2?.enabled) {
+      rewardButton.disabled = true;
+      rewardButton.textContent = "일일 보상은 챌린지 카드에서 확인";
+    }
     $("#group-goal-memo").value = state.groupGoalMemo || "";
   }
 
@@ -2476,6 +2487,7 @@
   }
 
   $("#quest-list").addEventListener("change", async (event) => {
+    if (window.ForestChallengeV2?.enabled) return;
     const checkbox = event.target.closest("[data-quest]");
     if (!checkbox) return;
     const wasChecked = Boolean(state.quests[checkbox.dataset.quest]);
@@ -2489,6 +2501,7 @@
   });
 
   $("#start-prediction-flow").addEventListener("click", startPredictionFlow);
+  window.addEventListener("challenge-v2-updated", () => { renderQuests(); renderGroup(); });
   $("#challenge-flow-close").addEventListener("click", () => $("#challenge-flow-dialog").close());
   $("#challenge-flow-back").addEventListener("click", () => showChallengeFlowStep(challengeFlowStep - 1));
   $("#challenge-flow-next").addEventListener("click", () => {
@@ -2777,6 +2790,7 @@
   });
 
   $("#reward-button").addEventListener("click", async () => {
+    if (window.ForestChallengeV2?.enabled) return;
     if (groupCompleted() < 15 || state.rewardClaimed) return;
     const reward = deterministicReward();
     state.rewardClaimed = true;

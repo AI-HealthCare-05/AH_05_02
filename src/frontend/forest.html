@@ -47,7 +47,9 @@
   <script src="/static/lpc-avatar-engine.js?v=20260901-25" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-phaser.js?v=20260902-29" defer></script>
-  <script src="/static/forest-game.js?v=20260902-71" defer></script>
+  <script src="/static/forest-game.js?v=20260903-88" defer></script>
+  <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.1">
+  <script src="/static/challenge-v2.js?v=2.1.1" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
@@ -197,6 +199,7 @@
           <button id="start-prediction-flow" class="prediction-flow-button" type="button">당뇨 예방 챌린지</button>
           <p id="quest-generation-status" class="quest-generation-status" role="status" aria-live="polite" hidden>오늘까지의 챌린지 결과를 토대로 챌린지 생성 중</p>
           <div id="quest-list" class="quest-list"></div>
+          <div data-challenge-v2 hidden></div>
           <section class="rag-guide" aria-labelledby="rag-guide-title">
             <div class="rag-guide-heading"><span aria-hidden="true">🧭</span><h3 id="rag-guide-title">내 생활습관 지도</h3></div>
             <form id="forest-rag-form"><label class="sr-only" for="forest-rag-question">생활습관 질문</label><input id="forest-rag-question" maxlength="80" placeholder="예: 식사 습관은 어떻게 기록할까요?" required><button type="submit">검색</button></form>
