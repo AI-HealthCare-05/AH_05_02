@@ -35,7 +35,7 @@
 
 - Node 실행 테스트: 위치 오류별 재시도, 지도 초기화, 모델 신호 분리, 미승인 결과 차단, 누락 퍼센트 처리 8건.
 - HTML 구조 테스트: 중복 ID·태그 균형 및 오늘이/의료기관 안내의 미래 영역 분리.
-- 로컬 pytest는 `--ignore=tests/backend`로 MySQL 전용 테스트를 제외하여 실행. MySQL 포함 전체 실행은 GitHub CI 결과로 별도 확인한다.
+- 로컬 pytest: **288 passed, 1 skipped**. `--ignore=tests/backend`로 MySQL 전용 테스트를 제외하여 실행. MySQL 포함 전체 실행은 GitHub CI 결과로 별도 확인한다. 기존 라이브러리 경고와 Windows 코어 수 조회 인코딩 경고는 남아 있다.
 - Ruff 검사 및 포맷 검사, app.js/forest-game.js/forest-phaser.js 문법 검사.
 - 브라우저 스킬로 로컬 미리보기의 신호등 → 상담 안내와 응급 문진 → 119/응급실 안내 전환 확인. 실제 GPS·외부 API·실모델 E2E 완료를 의미하지 않는다.
 
