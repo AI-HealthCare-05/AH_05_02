@@ -2,7 +2,7 @@
   "schema_version": 1,
   "model_key": "diabetes_incidence",
   "model_version": "rf25-tuned-spec40-v1",
-  "promotion_status": "candidate_only",
+  "promotion_status": "approved",
   "operational_model_activated": false,
   "experiment_id": "rf_25features_tuned_spec40_v001",
   "run_id": "20260831T093746972655Z",

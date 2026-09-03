@@ -8,6 +8,8 @@
   "dataset_path": "data/processed/official_v1/",
   "dataset_version": "official_v1",
   "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "model_version": "rf25-unweighted-v1",
+  "threshold_version": "validation-recall080-v1",
   "entrypoint": "pipeline.py:run_experiment",
   "primary_metric": "recall",
   "minimum_specificity": 0.3,

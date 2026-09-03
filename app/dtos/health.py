@@ -20,6 +20,15 @@ class EligibilityCreateRequest(BaseModel):
     has_urgent_warning_sign: bool = False
     population_in_scope: bool = True
 
+    @model_validator(mode="after")
+    def validate_birth_date(self) -> EligibilityCreateRequest:
+        if self.birth_date is not None:
+            if self.birth_date > date.today():
+                raise ValueError("생년월일은 오늘보다 미래일 수 없습니다.")
+            if self.birth_date < date(1900, 1, 1):
+                raise ValueError("생년월일이 올바르지 않습니다.")
+        return self
+
 
 class HealthCheckupCreateRequest(BaseModel):
     checkup_type: Literal["initial", "reassessment"] = "initial"
@@ -67,7 +76,9 @@ class HealthCheckupCreateRequest(BaseModel):
 
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
-    model_key: Literal["diabetes_incidence", "diabetes_lifetime_risk"] = "diabetes_incidence"
+    model_key: Literal["diabetes_current_screening", "diabetes_incidence", "diabetes_lifetime_risk"] = (
+        "diabetes_incidence"
+    )
     # diabetes_lifetime_risk에서만 쓰인다 (API-LIFE-002). 다른 값은 계약 위반으로 거부한다.
     prediction_type: Literal["survival_curve"] | None = None
 
@@ -77,6 +88,8 @@ class PredictionJobCreateRequest(BaseModel):
             raise ValueError("diabetes_lifetime_risk requires prediction_type=survival_curve")
         if self.model_key == "diabetes_incidence" and self.prediction_type is not None:
             raise ValueError("diabetes_incidence does not accept prediction_type")
+        if self.model_key == "diabetes_current_screening" and self.prediction_type is not None:
+            raise ValueError("diabetes_current_screening does not accept prediction_type")
         return self
 
 

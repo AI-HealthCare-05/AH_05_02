@@ -11,7 +11,7 @@ from app.dtos.health import PredictionJobCreateRequest
 from app.models.health import Prediction, PredictionRiskCurvePoint
 from app.models.model_registry import ModelRegistry
 from app.models.users import User
-from app.prediction.contracts import ACTIVE_MODEL
+from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL, CURRENT_SCREENING_MODEL_KEY
 from app.prediction.errors import ModelNotReadyError, classify_ml_input_error
 from app.repositories.health_repository import HealthRepository
 from app.services.ai_jobs import create_prediction_job, get_prediction_job
@@ -27,6 +27,21 @@ DEVELOPMENT_DISCLAIMER = (
 
 @prediction_router.get("/models/active")
 async def active_models(model_key: str | None = None) -> dict[str, object]:
+    if model_key == CURRENT_SCREENING_MODEL_KEY:
+        return envelope(
+            {
+                "items": [
+                    {
+                        **CURRENT_SCREENING_MODEL.model_dump(),
+                        "threshold_approved": CURRENT_SCREENING_MODEL.threshold_is_approved,
+                        "public_result_available": CURRENT_SCREENING_MODEL.threshold_is_approved,
+                        "artifact_status": (
+                            "configured" if CURRENT_SCREENING_MODEL.model_artifact_digest else "not_configured"
+                        ),
+                    }
+                ]
+            }
+        )
     if model_key is None or model_key == ACTIVE_MODEL.model_key:
         return envelope(
             {
@@ -127,16 +142,23 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
     )
     promotion_status = "approved" if public_result_available else "development_only"
     public_category = item.risk_category if public_result_available else None
+    is_current_screening = item.model_key == CURRENT_SCREENING_MODEL_KEY
+    screening_signal = public_category == "high" if is_current_screening and public_category else None
     return {
         "prediction_id": item.id,
         "checkup_id": item.health_checkup_id,
         "input_as_of_date": item.input_as_of_date,
         "model_key": item.model_key,
+        "prediction_type": "current_screening" if is_current_screening else "future_incidence",
         "outcome_definition": item.outcome_definition,
         "result_status": item.result_status,
         "promotion_status": promotion_status,
         "risk_category": public_category,
         "risk_category_label": RISK_LABELS.get(public_category) if public_category else None,
+        "screening_signal_detected": screening_signal,
+        "screening_result_label": ("검사 권고" if screening_signal else "현재 위험 신호 낮음")
+        if screening_signal is not None
+        else None,
         "model_version": item.model_version,
         "feature_schema_version": item.feature_schema_version,
         "input_schema_version": item.input_schema_version,
@@ -149,7 +171,14 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "output_status": item.output_status,
         "model_population": item.model_population,
         "predicted_at": item.predicted_at,
-        "disclaimer": PUBLIC_DISCLAIMER if public_category else DEVELOPMENT_DISCLAIMER,
+        "disclaimer": (
+            "현재 당뇨 관련 위험 신호를 선별하는 건강교육용 결과이며 진단이 아닙니다."
+            if is_current_screening and public_category
+            else PUBLIC_DISCLAIMER
+            if public_category
+            else DEVELOPMENT_DISCLAIMER
+        ),
+        "age_risk_forecast": item.age_risk_forecast if public_result_available else None,
         "raw_probability_exposed": False,
     }
 
@@ -267,7 +296,7 @@ async def read_risk_curve(
                 {"age": p.age, "cumulative_risk": p.cumulative_risk, "lower": p.lower, "upper": p.upper} for p in points
             ],
             "summary": _risk_curve_summary(points),
-            "disclaimer": "이 전망은 통계적 위험 추정치이며 개인의 확정된 미래를 의미하지 않습니다.",
+            "disclaimer": "이 전망은 별도의 생존모델이 아니라 동일 모델을 연령만 다르게 반복 계산한 근사 추정치이며, 개인의 확정된 미래를 의미하지 않습니다.",
         }
     )
 

@@ -1,20 +1,29 @@
 (() => {
   "use strict";
 
-  document.documentElement.classList.add("forest-script-ready");
-
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
+  const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
+  const BGM_VOLUME_KEY = "gandang-carrot-forest-bgm-volume-v1";
+  const BGM_MUTED_KEY = "gandang-carrot-forest-bgm-muted-v1";
+  const SFX_VOLUME_KEY = "gandang-carrot-forest-sfx-volume-v1";
+  const SFX_MUTED_KEY = "gandang-carrot-forest-sfx-muted-v1";
   const TILE = 32;
   const MAP_WIDTH = 24;
   const MAP_HEIGHT = 16;
   const WORLD_WIDTH = 768;
   const WORLD_HEIGHT = 512;
   const RENDER_SCALE = 2;
-  const TODAY = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }); // KST calendar date, matches server (Asia/Seoul) day boundary
+  const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
   let rewardSkipResolve = null;
   const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
   const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
+  const homeRecordCatalog = {
+    home: { name: "우리 집", audioKey: "homeRecordHome" },
+    warm: { name: "따뜻한 오후", audioKey: "homeRecordWarm" },
+    bright: { name: "밝은 샘", audioKey: "homeRecordBright" },
+    untitled: { name: "무제", audioKey: "homeRecordUntitled" },
+  };
 
   function generateNickname() {
     const random = new Uint32Array(3);
@@ -25,31 +34,21 @@
     return `${adjective} ${noun}${String(random[2] % 1000).padStart(3, "0")}`;
   }
 
-  const quests = [
-    { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
-    { id: "meal", icon: "🥗", category: "식사 돌아보기", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기", reward: 20 },
-    { id: "check", icon: "📝", category: "건강 기록", title: "건강 기록 확인하기", description: "입력한 생활습관 다시 보기", reward: 15 },
-  ];
-  const presets = {
-    custom: { label: "나만의 조합", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
-    sprout: { label: "새싹 정원사", hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" },
-    carrot: { label: "당근 탐험가", hair: "#7b3d20", outfit: "#f07b32", accent: "#ffe078" },
-    moon: { label: "달빛 산책가", hair: "#303c61", outfit: "#536eb5", accent: "#d9e3ff" },
-    berry: { label: "산딸기 수집가", hair: "#5d2949", outfit: "#b44f78", accent: "#ffd2df" },
-    red_bow: { label: "리본 정원사", hair: "#c8542c", outfit: "#26395f", accent: "#f7e7cc" },
-    cow_hood: { label: "음메 목장지기", hair: "#6e452f", outfit: "#c54f24", accent: "#f7ead2" },
-    midnight: { label: "한밤 숲지기", hair: "#17192e", outfit: "#29243f", accent: "#8d72c9" },
-    blue_cap: { label: "파란 모자 농부", hair: "#26313d", outfit: "#254c7e", accent: "#f2dfbd" },
-    teal_bob: { label: "미소 정원사", hair: "#8a5538", outfit: "#67623b", accent: "#2c9b92" },
+  const questCatalog = {
+    walk: { id: "walk", icon: "👟", category: "움직이기", title: "가볍게 걷기", description: "내가 정한 걷기 목표 확인", reward: 20 },
+    stretch: { id: "stretch", icon: "🙆", category: "몸 풀기", title: "편안하게 스트레칭하기", description: "무리하지 않고 몸 상태 확인", reward: 15 },
+    strength: { id: "strength", icon: "🪑", category: "근력 활동", title: "의자에서 천천히 일어나기", description: "가능한 범위에서 가볍게 실천", reward: 20 },
+    meal: { id: "meal", icon: "🥗", category: "식사 돌아보기", title: "규칙적으로 식사하기", description: "오늘 식사 기록 남기기", reward: 20 },
+    vegetable: { id: "vegetable", icon: "🥬", category: "식사 구성", title: "채소가 포함됐는지 확인하기", description: "먹은 내용을 있는 그대로 기록", reward: 15 },
+    water: { id: "water", icon: "💧", category: "수분 기록", title: "물 마신 횟수 기록하기", description: "특정 섭취량을 권하지 않고 횟수만 기록", reward: 15 },
+    check: { id: "check", icon: "📝", category: "생활습관 기록", title: "오늘 기록 돌아보기", description: "입력한 생활습관 다시 보기", reward: 15 },
   };
-  const presetBundles = {
-    sprout: { hair: "soft", outfit: "forest", bottom: "cream", shoes: "brown", face: "calm", accessory: "none", hat: "none", glasses: "none" },
-    red_bow: { hair: "red_wave", outfit: "navy_garden", bottom: "cream", shoes: "brown", face: "smile", accessory: "none", hat: "headband", glasses: "none" },
-    cow_hood: { hair: "cow_brown", outfit: "cow_vest", bottom: "charcoal", shoes: "brown", face: "smile", accessory: "none", hat: "cap", glasses: "none" },
-    midnight: { hair: "midnight", outfit: "violet", bottom: "charcoal", shoes: "black", face: "calm", accessory: "none", hat: "none", glasses: "none" },
-    blue_cap: { hair: "blue_short", outfit: "blue_overalls", bottom: "denim", shoes: "white", face: "calm", accessory: "none", hat: "cap", glasses: "none" },
-    teal_bob: { hair: "teal_bob", outfit: "teal_garden", bottom: "olive", shoes: "brown", face: "smile", accessory: "none", hat: "none", glasses: "none" },
+  const questPlans = {
+    exercise: ["walk", "stretch", "strength"],
+    diet: ["meal", "vegetable", "water"],
+    balanced: ["walk", "meal", "check"],
   };
+  let quests = questPlans.balanced.map((id) => questCatalog[id]);
   const itemCatalog = {
     red_scarf: { name: "빨간 목도리", kind: "accessory", icon: "🧣" },
     sprout_hat: { name: "새싹 모자", kind: "accessory", icon: "🌱" },
@@ -58,31 +57,75 @@
     lantern: { name: "숲 등불", kind: "object", icon: "🏮" },
     mushroom: { name: "버섯 장식", kind: "object", icon: "🍄" },
     bench: { name: "나무 벤치", kind: "object", icon: "🪵" },
-    sunflower: { name: "해바라기", kind: "object", icon: "🌻" },
-    rabbit: { name: "토끼 친구", kind: "object", icon: "🐇" },
-    sprout_beret: { name: "새싹 베레모", kind: "accessory", icon: "🌱" },
-    flower_pin: { name: "꽃 머리핀", kind: "accessory", icon: "🌸" },
-    blue_watering_can: { name: "파란 물뿌리개", kind: "accessory", icon: "💧" },
+    stone_path: { name: "돌길", kind: "object", icon: "🪨" },
+    bird_bath: { name: "새 물그릇", kind: "object", icon: "⛲" },
+    carrot_crate: { name: "당근 상자", kind: "object", icon: "🥕" },
+    picnic_table: { name: "피크닉 탁자", kind: "object", icon: "🧺" },
+    flower_pot: { name: "꽃 화분", kind: "object", icon: "🪴" },
+    signpost: { name: "숲 표지판", kind: "object", icon: "🪧" },
+    stump: { name: "나무 그루터기", kind: "object", icon: "🪵" },
+    watering_can: { name: "물뿌리개", kind: "object", icon: "🚿" },
+    campfire: { name: "모닥불", kind: "object", icon: "🔥" },
+    hammock: { name: "해먹", kind: "object", icon: "🏕️" },
+    mailbox: { name: "우편함", kind: "object", icon: "📫" },
+    scarecrow: { name: "허수아비", kind: "object", icon: "🌾" },
+    beehive: { name: "벌통", kind: "object", icon: "🍯" },
+    fountain: { name: "작은 분수", kind: "object", icon: "⛲" },
+    arch: { name: "꽃 아치", kind: "object", icon: "🌸" },
+    wheelbarrow: { name: "손수레", kind: "object", icon: "🛒" },
+    reward_cow: { name: "행운의 젖소", kind: "object", icon: "🐄", rarity: "rare" },
+    tent: { name: "캠핑 텐트", kind: "object", icon: "⛺" },
+    light_tent: { name: "전구 텐트", kind: "object", icon: "⛺" },
+    bbq_table: { name: "바비큐 탁자", kind: "object", icon: "🍖" },
+    chair_green: { name: "초록 캠핑 의자", kind: "object", icon: "🪑" },
+    chair_red: { name: "빨간 캠핑 의자", kind: "object", icon: "🪑" },
+    picnic_blanket: { name: "피크닉 매트", kind: "object", icon: "🧺" },
+    pond: { name: "돌 연못", kind: "object", icon: "💧" },
+    fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
+    flower_cart: { name: "꽃수레", kind: "object", icon: "🌼" },
+    duck_float: { name: "둥실 오리 튜브", kind: "object", icon: "🛟", animated: true },
+    animated_fountain: { name: "물결 분수", kind: "object", icon: "⛲", animated: true },
+    firefly_lantern: { name: "반딧불 랜턴", kind: "object", icon: "🏮", animated: true },
+    garden_pinwheel: { name: "정원 바람개비", kind: "object", icon: "🎡", animated: true },
   };
-  const rewardPool = ["sprout_hat", "carrot_bag", "lantern", "mushroom"];
+  const storageObjectCodes = [
+    "tent", "light_tent", "picnic_table", "bbq_table", "chair_green",
+    "chair_red", "picnic_blanket", "pond", "lantern", "fence",
+    "flower_cart", "flower_pot", "mushroom", "bench", "campfire",
+    "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow",
+    "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel",
+  ];
+  const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
+  const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const waterObjectCodes = new Set(["duck_float", "animated_fountain"]);
+  const interactiveObjectTypes = {
+    reward_cow: "cow",
+    campfire: "fire",
+    lantern: "light",
+    firefly_lantern: "light",
+    light_tent: "light",
+  };
+  const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"]);
+  const rewardPool = ["reward_cow"];
   const avatarCategories = [
-    { id: "preset", label: "완성형 코디", icon: "🧑‍🌾" },
-    { id: "hair", label: "헤어", icon: "💇" },
-    { id: "outfit", label: "의상", icon: "👕" },
-    { id: "accessory", label: "액세서리", icon: "👜" },
-    { id: "hat", label: "모자", icon: "🧢" },
-    { id: "glasses", label: "안경", icon: "👓" },
-    { id: "aura", label: "아우라", icon: "✨" },
-    { id: "effect", label: "이펙트", icon: "💫" },
-    { id: "vehicle", label: "탈것", icon: "🛴" },
-    { id: "pet", label: "펫", icon: "🐾" },
-    { id: "speech", label: "말풍선", icon: "💬" },
+    { id: "bodyType", label: "체형", icon: "▸" },
+    { id: "skin", label: "피부", icon: "▸" },
+    { id: "head", label: "얼굴", icon: "▸" },
+    { id: "hair", label: "헤어", icon: "▸" },
+    { id: "headwear", label: "모자", icon: "▸" },
+    { id: "arms", label: "팔", icon: "▸" },
+    { id: "torso", label: "상의", icon: "▸" },
+    { id: "legs", label: "하의", icon: "▸" },
+    { id: "feet", label: "신발", icon: "▸" },
+    { id: "tools", label: "도구", icon: "▸" },
+    { id: "weapons", label: "무기", icon: "▸" },
+    { id: "vehicle", label: "탈것", icon: "▸" },
+    { id: "pet", label: "펫", icon: "▸" },
   ];
   const avatarCatalog = {
-    preset: [
-      { id: "red_bow", name: "리본 정원사", isNew: true },
-      { id: "cow_hood", name: "음메 목장지기", isNew: true }, { id: "midnight", name: "한밤 숲지기", isNew: true },
-      { id: "blue_cap", name: "파란 모자 농부", isNew: true }, { id: "teal_bob", name: "미소 정원사", isNew: true },
+    bodyType: [
+      { id: "male", name: "성인 남성", visual: "🧑" }, { id: "female", name: "성인 여성", visual: "👩" },
+      { id: "muscular", name: "근육형", visual: "💪" }, { id: "teen", name: "슬림형", visual: "🧍" },
     ],
     skin: [
       { id: "peach", name: "복숭아빛", visual: "#f2bd92", color: "#f2bd92" },
@@ -91,44 +134,9 @@
       { id: "deep", name: "깊은 갈색", visual: "#89503e", color: "#89503e", isNew: true },
       { id: "olive", name: "올리브", visual: "#a87f63", color: "#a87f63" },
       { id: "porcelain", name: "밝은 도자기빛", visual: "#f5cbb4", color: "#f5cbb4" },
-    ],
-    outfit: [
-      { id: "forest", name: "숲지기 작업복", visual: "🧥" }, { id: "denim", name: "데님 산책복", visual: "👕" },
-      { id: "carrot", name: "당근 탐험복", visual: "🦺" }, { id: "moon", name: "달빛 정장", visual: "👔", isNew: true },
-      { id: "berry", name: "산딸기 후드", visual: "👚" }, { id: "yellow", name: "햇살 우비", visual: "🧶" },
-      { id: "violet", name: "보랏빛 재킷", visual: "🥋" }, { id: "black", name: "밤숲 코트", visual: "🕴️" },
-      { id: "navy_garden", name: "리본 네이비 원피스", visual: "👗" }, { id: "cow_vest", name: "목장 주황 조끼", visual: "🦺" },
-      { id: "blue_overalls", name: "파란 농부 멜빵", visual: "👖" }, { id: "teal_garden", name: "청록 리본 작업복", visual: "🥼" },
-    ],
-    bottom: [
-      { id: "cream", name: "크림 작업바지", visual: "🤍" }, { id: "denim", name: "데님 바지", visual: "💙" },
-      { id: "charcoal", name: "차콜 바지", visual: "🖤" }, { id: "olive", name: "올리브 바지", visual: "💚" },
-      { id: "plum", name: "플럼 바지", visual: "💜" },
-    ],
-    shoes: [
-      { id: "brown", name: "브라운 워커", visual: "🥾" }, { id: "white", name: "화이트 스니커즈", visual: "👟" },
-      { id: "black", name: "블랙 로퍼", visual: "👞" }, { id: "orange", name: "오렌지 러너", visual: "🟠" },
-    ],
-    hair: [
-      { id: "soft", name: "포근한 단발", visual: "💇" }, { id: "wave", name: "물결 장발", visual: "👩‍🦱", isNew: true },
-      { id: "crop", name: "산뜻한 숏컷", visual: "🧑" }, { id: "twin", name: "양갈래 머리", visual: "👧" },
-      { id: "silver", name: "은빛 웨이브", visual: "🧓" }, { id: "orange", name: "당근빛 웨이브", visual: "🧑‍🦰" },
-      { id: "red_wave", name: "리본빛 긴 머리", visual: "👩‍🦰" }, { id: "cow_brown", name: "목장 단발", visual: "💇" },
-      { id: "midnight", name: "한밤 레이어드", visual: "🧑" }, { id: "blue_short", name: "파란 모자 숏컷", visual: "🧑" },
-      { id: "teal_bob", name: "미소 갈색 단발", visual: "💇" },
-    ],
-    face: [
-      { id: "calm", name: "차분한 표정", visual: "🙂" }, { id: "smile", name: "환한 미소", visual: "😊" },
-      { id: "sparkle", name: "반짝이는 눈", visual: "🤩", isNew: true }, { id: "blush", name: "수줍은 볼", visual: "☺️" },
-      { id: "wink", name: "윙크", visual: "😉" }, { id: "cool", name: "도도한 표정", visual: "😌" },
-    ],
-    hat: [
-      { id: "none", name: "모자 없음", visual: "—" }, { id: "cap", name: "산책 캡", visual: "🧢" },
-      { id: "headband", name: "리본 헤드밴드", visual: "🎀" },
-    ],
-    glasses: [
-      { id: "none", name: "안경 없음", visual: "—" }, { id: "round", name: "둥근 안경", visual: "👓" },
-      { id: "sun", name: "선글라스", visual: "🕶️" },
+      { id: "sand", name: "샌드", color: "#d8a47f" }, { id: "golden", name: "골든", color: "#bb7a51" },
+      { id: "amber", name: "앰버", color: "#a96545" }, { id: "bronze", name: "브론즈", color: "#8d563c" },
+      { id: "espresso", name: "에스프레소", color: "#60392f" }, { id: "neutral", name: "뉴트럴", color: "#c68d71" },
     ],
     accessory: [
       { id: "none", name: "착용 안 함", visual: "—" }, { id: "red_scarf", name: "빨간 목도리", visual: "🧣" },
@@ -141,18 +149,12 @@
       { id: "hearts", name: "마음의 온기", visual: "💞" }, { id: "forest", name: "숲의 숨결", visual: "🍃", isNew: true },
     ],
     effect: [
-      { id: "none", name: "이펙트 없음", visual: "—" }, { id: "bubble", name: "비눗방울", visual: "🫧" },
-      { id: "spark", name: "별빛 반짝임", visual: "✨" }, { id: "heart", name: "마음 보내기", visual: "💗" },
-      { id: "carrot", name: "당근 팡", visual: "🥕" }, { id: "leaf", name: "나뭇잎 톡", visual: "🍂", isNew: true },
+      { id: "sword_arc", name: "검광", visual: "⚔️" }, { id: "magic_burst", name: "마법 파동", visual: "🔮" },
+      { id: "arrow_volley", name: "화살 연사", visual: "🏹" }, { id: "leaf_blade", name: "잎 칼날", visual: "🍃" },
     ],
-    vehicle: [
-      { id: "none", name: "걸어서 이동", visual: "👟" }, { id: "scooter", name: "숲 스쿠터", visual: "🛵" },
-      { id: "bicycle", name: "산책 자전거", visual: "🚲" }, { id: "balloon", name: "구름 열기구", visual: "🎈", isNew: true },
-    ],
+    vehicle: [],
     pet: [
       { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
-      { id: "brown_pup", name: "밤톨이", visual: "🐕" }, { id: "cat", name: "구름이", visual: "🐈" },
-      { id: "fox", name: "단풍이", visual: "🦊" },
       { id: "blue_eyes_white_cat", name: "설빛 고양이", visual: "🐈", isNew: true },
       { id: "gold_eyes_orange_cat", name: "호박눈 고양이", visual: "🐈", isNew: true },
     ],
@@ -160,36 +162,354 @@
       { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
       { id: "leaf", name: "네잎클로버", visual: "🍀" }, { id: "window", name: "파란 창문", visual: "🪟", isNew: true },
     ],
+    lpcHair: [
+      { id: "bob", name: "단정한 단발", visual: "💇" }, { id: "afro", name: "몽글 아프로", visual: "🧑‍🦱" },
+      { id: "long", name: "긴 생머리", visual: "👩" }, { id: "messy", name: "헝클어진 숏컷", visual: "🧑" },
+      { id: "page", name: "페이지 컷", visual: "🧒" },
+    ],
+    lpcOutfit: [
+      { id: "overalls", name: "정원사 멜빵", visual: "🧑‍🌾" }, { id: "tshirt", name: "편안한 티셔츠", visual: "👕" },
+      { id: "cardigan", name: "포근한 카디건", visual: "🧥" }, { id: "sleeveless", name: "산뜻한 민소매", visual: "🎽" },
+      { id: "short_cardigan", name: "반소매 카디건", visual: "👚" },
+    ],
+    lpcBottom: [
+      { id: "pants", name: "기본 바지", visual: "👖" }, { id: "long_pants", name: "긴 바지", visual: "👖" },
+      { id: "shorts", name: "산책 반바지", visual: "🩳" }, { id: "leggings", name: "활동 레깅스", visual: "🧘" },
+    ],
+    lpcShoes: [
+      { id: "shoes", name: "기본 운동화", visual: "👟" }, { id: "boots", name: "정원 워커", visual: "🥾" },
+      { id: "slippers", name: "폭신 슬리퍼", visual: "🥿" },
+    ],
+    lpcHat: [
+      { id: "none", name: "모자 없음", visual: "—" }, { id: "leather_cap", name: "가죽 산책 모자", visual: "🧢" },
+      { id: "bowler", name: "포멀 보울러", visual: "🎩" }, { id: "bandana", name: "숲 반다나", visual: "🧣" },
+    ],
+    lpcGlasses: [
+      { id: "none", name: "안경 없음", visual: "—" }, { id: "round", name: "동그란 안경", visual: "👓" },
+      { id: "halfmoon", name: "반달 안경", visual: "👓" }, { id: "sunglasses", name: "선글라스", visual: "🕶️" },
+    ],
+    expression: [
+      { id: "calm", name: "차분한 미소", visual: "🙂" }, { id: "bright", name: "환한 미소", visual: "😄" },
+      { id: "wink", name: "윙크", visual: "😉" }, { id: "delighted", name: "눈웃음", visual: "😊" },
+      { id: "worried", name: "살짝 걱정", visual: "😟" }, { id: "determined", name: "씩씩한 표정", visual: "😤" },
+    ],
+    face: [], head: [], hair: [], headwear: [], arms: [], torso: [], legs: [], feet: [], tools: [], weapons: [],
+    lpcHead: [], lpcExpression: [], lpcEyebrow: [], lpcNose: [], lpcEyes: [], lpcWrinkles: [],
+    lpcArms: [], lpcTool: [], lpcWeapon: [], lpcMobility: [],
+    pose: [
+      { id: "idle", name: "가만히", visual: "🧍" }, { id: "walk", name: "걷기", visual: "🚶" },
+      { id: "run", name: "달리기", visual: "🏃" }, { id: "sit", name: "앉기", visual: "🧘" },
+      { id: "jump", name: "점프", visual: "🙌" }, { id: "dance", name: "댄스", visual: "💃" },
+      { id: "harvest", name: "당근 수확", visual: "🥕" }, { id: "fishing", name: "낚시", visual: "🎣" },
+      { id: "door", name: "문 열기", visual: "🚪" }, { id: "attack", name: "공격", visual: "⚔️" },
+      { id: "spellcast", name: "반짝임 만들기", visual: "✨" }, { id: "hurt", name: "깜짝 놀라기", visual: "😲" },
+    ],
   };
+  const colorChoices = [
+    ["brown", "브라운", "#704229"], ["black", "블랙", "#282b31"], ["silver", "실버", "#aeb5bf"],
+    ["blue", "블루", "#4268a8"], ["teal", "청록", "#308b82"], ["red", "레드", "#a84335"],
+    ["orange", "오렌지", "#d4762f"], ["green", "그린", "#447849"], ["navy", "네이비", "#293c68"],
+    ["cream", "크림", "#ead9b5"], ["pink", "핑크", "#d9839f"], ["purple", "퍼플", "#765a9c"],
+    ["white", "화이트", "#eef0ed"], ["gray", "그레이", "#747a81"], ["yellow", "옐로", "#e2b845"],
+  ].map(([id, name, color]) => ({ id, name, color, visual: "" }));
+  avatarCatalog.hairColor = colorChoices;
+  avatarCatalog.outfitColor = colorChoices;
+  avatarCatalog.bottomColor = colorChoices;
+  avatarCatalog.shoeColor = colorChoices;
+  avatarCatalog.mobilityColor = colorChoices;
+  const lpcCatalogMap = {
+    lpcHead: "head", lpcHair: "hair", lpcOutfit: "outfit", lpcBottom: "bottom",
+    lpcShoes: "shoes", lpcHat: "hat", lpcGlasses: "eyewear",
+    lpcExpression: "expression", lpcEyebrow: "eyebrow", lpcNose: "nose",
+    lpcEyes: "eyes", lpcWrinkles: "wrinkles",
+    lpcArms: "arms", lpcTool: "tool", lpcWeapon: "weapon", lpcMobility: "mobility",
+  };
+  const optionalLpcCategories = new Set(["lpcHat", "lpcGlasses", "lpcNose", "lpcEyes", "lpcWrinkles", "lpcArms", "lpcTool", "lpcWeapon", "lpcMobility"]);
+
+  function syncLpcCatalog() {
+    if (!window.LpcAvatarEngine?.isReady()) return;
+    Object.entries(lpcCatalogMap).forEach(([uiCategory, engineCategory]) => {
+      const records = window.LpcAvatarEngine.catalog(engineCategory);
+      avatarCatalog[uiCategory] = records.map((record) => ({
+        id: record.id, name: record.label || record.id, definition: record.definition || "",
+        sources: record.sources || {}, visual: "",
+      }));
+      if (optionalLpcCategories.has(uiCategory)) avatarCatalog[uiCategory].unshift({ id: "none", name: "사용 안 함", sources: {} });
+    });
+    avatarCatalog.vehicle = avatarCatalog.lpcMobility.map((record) => ({
+      ...record, id: record.id, itemId: record.id, slot: "vehicle", group: "공식 LPC 이동 보조",
+    })).concat(avatarCatalog.mobilityColor.map((record) => ({
+      ...record, id: `mobilityColor:${record.id}`, itemId: record.id, slot: "mobilityColor", group: "색상",
+    })));
+    const groupBlueprints = {
+      head: [["얼굴형", "lpcHead"], ["표정", "lpcExpression"], ["눈썹", "lpcEyebrow"], ["코", "lpcNose"], ["특수 눈", "lpcEyes"], ["주름", "lpcWrinkles"]],
+      hair: [["헤어", "lpcHair"], ["색상", "hairColor"]],
+      headwear: [["모자", "lpcHat"], ["안경", "lpcGlasses"]],
+      arms: [["팔 장식", "lpcArms"]],
+      torso: [["상의", "lpcOutfit"], ["색상", "outfitColor"]],
+      legs: [["하의", "lpcBottom"], ["색상", "bottomColor"]],
+      feet: [["신발", "lpcShoes"], ["색상", "shoeColor"]],
+      tools: [["도구", "lpcTool"]],
+      weapons: [["무기", "lpcWeapon"]],
+    };
+    Object.entries(groupBlueprints).forEach(([category, groups]) => {
+      avatarCatalog[category] = groups.flatMap(([group, slot]) => avatarCatalog[slot].map((record) => ({
+        ...record, id: `${slot}:${record.id}`, itemId: record.id, slot, group,
+      })));
+    });
+    avatarCatalog.face = avatarCatalog.head;
+  }
+
+  function avatarItemsForCategory(categoryId) {
+    const choices = avatarCatalog[categoryId] || [];
+    if (["head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons"].includes(categoryId)) {
+      const bodyType = avatarDraft.bodyType || state.avatar.gender || "male";
+      return choices.filter((choice) => (
+        (!lpcCatalogMap[choice.slot] || choice.itemId === "none" || lpcChoiceSupportsBody(choice, choice.slot, bodyType))
+        && (choice.slot !== "lpcShoes" || isCompleteFootwear(choice))
+      ));
+    }
+    if (!lpcCatalogMap[categoryId]) return choices;
+    const bodyType = avatarDraft.bodyType || state.avatar.gender || "male";
+    return choices.filter((choice) => (
+      (choice.id === "none" || lpcChoiceSupportsBody(choice, categoryId, bodyType))
+      && (categoryId !== "lpcShoes" || isCompleteFootwear(choice))
+    ));
+  }
+
+  function isCompleteFootwear(choice) {
+    if (choice.id === "none") return true;
+    const definition = String(choice.definition || "").toLowerCase();
+    return definition.includes("/shoes/") || definition.includes("/boots/") || definition.endsWith("feet_armour.json");
+  }
+
+  // The renderer safely reuses the matching adult garment for LPC body types
+  // that do not ship a dedicated clothing sheet (notably muscular). Keep the
+  // editor's availability rules identical so changing body type never erases
+  // a selected shirt, trousers, or shoes.
+  const lpcWearableFallbackSlots = new Set([
+    "lpcHair", "lpcOutfit", "lpcBottom", "lpcShoes", "lpcHat", "lpcGlasses",
+    "lpcArms", "lpcTool", "lpcWeapon", "lpcMobility",
+  ]);
+
+  function lpcChoiceSupportsBody(choice, slot, bodyType) {
+    if (choice.sources?.[bodyType]) return true;
+    if (!lpcWearableFallbackSlots.has(slot)) return false;
+    const matchingAdult = bodyType === "female" ? "female" : "male";
+    return Boolean(choice.sources?.[matchingAdult] || choice.sources?.male || choice.sources?.female);
+  }
   const defaultCosmetics = {
-    skin: "peach", outfit: "forest", bottom: "cream", shoes: "brown", hair: "soft", face: "calm", hat: "none", glasses: "none", accessory: "none",
-    aura: "wings", effect: "none", vehicle: "scooter", pet: "none", speech: "none",
+    skin: "peach", accessory: "none",
+    aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none",
+    lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
+    lpcArms: "none", lpcTool: "none", lpcWeapon: "none",
+    bodyType: "male", lpcHead: "human_male", lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
+    hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
+    hatColor: "brown", glassesColor: "brown", mobilityColor: "black",
   };
-  const presetDecorationReset = { aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none" };
   const defaultAvatarTuning = { headOffsetY: -6, outfitOffsetY: 0, glassesOffsetY: 0, worldScale: 0.43 };
+  const OUTFIT_DEFAULT_VERSION = 5;
+  const genderDefaultOutfits = {
+    female: {
+      label: "농부",
+      sourceLabel: "나만의 코디 10",
+      cosmetics: {
+        bodyType: "female", skin: "porcelain", lpcHead: "human_female",
+        lpcExpression: "angry", lpcEyebrow: "thin", lpcNose: "button",
+        lpcEyes: "none", lpcWrinkles: "none", lpcHair: "long",
+        lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+        lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara",
+        lpcBottom: "official_legs_skirts_legs_skirt_straight", lpcShoes: "shoes",
+        lpcTool: "none", lpcWeapon: "wand",
+        vehicle: "wings_monarch_wings_monarch_edge", pet: "blue_eyes_white_cat",
+        hairColor: "brown", outfitColor: "blue", bottomColor: "blue", shoeColor: "brown",
+      },
+    },
+    male: {
+      label: "사냥꾼",
+      sourceLabel: "나만의 코디 8",
+      cosmetics: {
+        bodyType: "male", skin: "peach", lpcHead: "human_male",
+        lpcExpression: "blush", lpcEyebrow: "thin", lpcNose: "button",
+        lpcEyes: "none", lpcWrinkles: "none", lpcHair: "curtains",
+        lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+        lpcOutfit: "official_torso_jacket_torso_jacket_santa",
+        lpcBottom: "official_legs_pants_legs_formal_striped", lpcShoes: "shoe_revised",
+        lpcTool: "none", lpcWeapon: "bow", vehicle: "none", pet: "white_pup",
+        hairColor: "black", outfitColor: "navy", bottomColor: "black", shoeColor: "brown",
+      },
+    },
+  };
+
+  function outfitSignature(avatar) {
+    return JSON.stringify({ gender: avatar.gender, cosmetics: avatar.cosmetics, tuning: avatar.tuning });
+  }
+
+  function escapeMarkup(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[character]);
+  }
+
+  function createOutfitSnapshot(avatar, savedAt = Date.now(), label = "나만의 코디 1") {
+    return {
+      id: `look-${savedAt}-${Math.random().toString(36).slice(2, 7)}`,
+      savedAt,
+      label,
+      gender: avatar.gender,
+      cosmetics: { ...defaultCosmetics, ...(avatar.cosmetics || {}) },
+      tuning: { ...defaultAvatarTuning, ...(avatar.tuning || {}) },
+      signature: outfitSignature(avatar),
+    };
+  }
+
+  function createGenderDefaultAvatar(gender) {
+    const preset = genderDefaultOutfits[gender] || genderDefaultOutfits.female;
+    return {
+      gender,
+      cosmetics: { ...defaultCosmetics, ...preset.cosmetics },
+      tuning: { ...defaultAvatarTuning },
+    };
+  }
+
+  function normalizeGenderDefaultOutfit(look, gender, savedAt = Date.now()) {
+    const preset = genderDefaultOutfits[gender];
+    const avatar = createGenderDefaultAvatar(gender);
+    const cosmetics = {
+      ...avatar.cosmetics,
+      ...(look?.cosmetics || {}),
+      bodyType: gender,
+      lpcHead: gender === "female" ? "human_female" : "human_male",
+    };
+    const normalizedAvatar = {
+      gender,
+      cosmetics,
+      tuning: { ...defaultAvatarTuning, ...(look?.tuning || {}) },
+    };
+    return {
+      ...(look || createOutfitSnapshot(normalizedAvatar, savedAt, preset.label)),
+      id: look?.id || `look-gender-default-${gender}`,
+      savedAt: Number(look?.savedAt || savedAt),
+      label: preset.label,
+      presetRole: gender,
+      gender,
+      cosmetics,
+      tuning: normalizedAvatar.tuning,
+      signature: outfitSignature(normalizedAvatar),
+    };
+  }
+
+  function ensureGenderDefaultOutfits(target, forceCanonical = false) {
+    const history = Array.isArray(target.outfitHistory) ? target.outfitHistory : [];
+    const defaults = ["female", "male"].map((gender, index) => {
+      const preset = genderDefaultOutfits[gender];
+      const roleLook = history.find((look) => look.presetRole === gender);
+      const namedLook = history.find((look) => look.label === preset.label);
+      // 고정 프리셋 버전이 바뀌면 브라우저의 오래된 복사본보다 코드에
+      // 검증해 둔 농부·사냥꾼 구성을 우선해 캐시 초기화 후에도 풀리지 않게 한다.
+      const existing = forceCanonical ? null : roleLook || namedLook;
+      return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
+    });
+    const defaultIds = new Set(defaults.map((look) => look.id));
+    const remainder = history.filter((look) => !defaultIds.has(look.id) && !look.presetRole
+      && !Object.values(genderDefaultOutfits).some((preset) => look.label === preset.label));
+    target.outfitHistory = [
+      ...defaults,
+      ...remainder.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)),
+    ].slice(0, 8);
+  }
+
+  function applyGenderDefaultOutfit(target, gender) {
+    ensureGenderDefaultOutfits(target);
+    const selectedGender = gender === "male" ? "male" : "female";
+    const look = target.outfitHistory.find((item) => item.presetRole === selectedGender);
+    if (!look) return null;
+    target.avatar.gender = selectedGender;
+    target.avatar.engine = "lpc";
+    target.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
+    target.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
+    target.avatar.equipped = null;
+    return look;
+  }
+
+  function normalizeOutfitHistory(history, avatar) {
+    const byOldest = (Array.isArray(history) ? history : []).filter((look) => look?.id && look?.cosmetics)
+      .sort((left, right) => Number(left.savedAt || 0) - Number(right.savedAt || 0));
+    let nextLegacyNumber = 1;
+    const normalized = byOldest.map((look) => ({
+      ...look,
+      label: look.label && look.label !== "LPC 커스텀 코디" ? String(look.label).slice(0, 24) : `나만의 코디 ${nextLegacyNumber++}`,
+      gender: look.gender || avatar.gender,
+      cosmetics: {
+        ...defaultCosmetics,
+        ...look.cosmetics,
+        ...(!["male", "female", "muscular", "teen"].includes(look.cosmetics.bodyType)
+          ? { bodyType: "male", lpcHead: "human_male" }
+          : {}),
+      },
+      tuning: { ...defaultAvatarTuning, ...(look.tuning || {}) },
+      signature: look.signature || outfitSignature(look),
+    }));
+    if (!normalized.length) normalized.push(createOutfitSnapshot(avatar));
+    return normalized.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)).slice(0, 8);
+  }
+
+  function nextOutfitNumber(history) {
+    return (Array.isArray(history) ? history : []).reduce((maximum, look) => {
+      const matched = String(look.label || "").match(/^나만의 코디\s+(\d+)$/);
+      return Math.max(maximum, matched ? Number(matched[1]) : 0);
+    }, 0) + 1;
+  }
+
+  function rememberCurrentOutfit() {
+    const previous = Array.isArray(state.outfitHistory) ? state.outfitHistory : [];
+    const snapshot = createOutfitSnapshot(state.avatar, Date.now(), `나만의 코디 ${nextOutfitNumber(previous)}`);
+    state.outfitHistory = [snapshot, ...previous.filter((look) => look.presetRole || look.signature !== snapshot.signature)].slice(0, 8);
+    ensureGenderDefaultOutfits(state);
+  }
+
+  function applyRequestedDefaultOutfit(target, sourceVersion = 0) {
+    const shouldMigrate = Number(sourceVersion) < OUTFIT_DEFAULT_VERSION;
+    ensureGenderDefaultOutfits(target, shouldMigrate);
+    if (shouldMigrate) applyGenderDefaultOutfit(target, "female");
+    target.outfitDefaultVersion = OUTFIT_DEFAULT_VERSION;
+  }
 
   function defaultState() {
     const generatedNickname = generateNickname();
+    const femaleDefault = createGenderDefaultAvatar("female");
+    const avatar = { name: generatedNickname, gender: "female", engine: "lpc", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...femaleDefault.cosmetics }, tuning: { ...femaleDefault.tuning }, sitting: false, mounted: false };
     return {
       dateKey: TODAY,
       profileVersion: 1,
-      cosmeticSchemaVersion: 2,
-      avatar: { name: generatedNickname, gender: "male", preset: "blue_cap", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...defaultCosmetics }, tuning: { ...defaultAvatarTuning }, sitting: false, mounted: false },
+      cosmeticSchemaVersion: 8,
+      outfitDefaultVersion: OUTFIT_DEFAULT_VERSION,
+      avatar,
       quests: { walk: false, meal: false, check: false },
+      challengeCarrotClaims: {},
+      challengePlan: { onboarded: false, style: null, questIds: [], lastGeneratedAt: null },
+      groupGoalMemo: "",
       members: [
         { id: "me", name: "나", completed: 0, me: true },
         { id: "m2", name: "빛샘", completed: 3 },
         { id: "m3", name: "준혁", completed: 3 },
         { id: "m4", name: "수인", completed: 3 },
-        { id: "m5", name: "숲지기", completed: 3 },
+        { id: "m5", name: "세준", completed: 3 },
       ],
       carrots: 100,
-      inventory: ["red_scarf", "flower_patch", "bench"],
+      inventory: [...storageObjectCodes],
+      outfitHistory: [
+        normalizeGenderDefaultOutfit(null, "female", Date.now()),
+        normalizeGenderDefaultOutfit(null, "male", Date.now() - 1),
+      ],
       placed: [],
       rewardClaimed: false,
       gardenWatered: false,
       fishCaught: false,
       fishing: false,
+      petFedCount: 0,
+      homeRecordPlaying: false,
+      homeRecordTrack: "home",
     };
   }
 
@@ -198,8 +518,10 @@
     if (!value) return fallback;
     if (value.dateKey !== TODAY) {
       const previousAvatar = value.avatar || {};
-      const previousCosmetics = { ...defaultCosmetics, ...(previousAvatar.cosmetics || {}) };
-      if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(previousCosmetics, presetDecorationReset, { glasses: "none" });
+      const oldCosmetics = previousAvatar.cosmetics || {};
+      const previousCosmetics = (value.cosmeticSchemaVersion || 0) < 5
+        ? { ...defaultCosmetics, aura: oldCosmetics.aura || defaultCosmetics.aura, effect: oldCosmetics.effect || defaultCosmetics.effect, vehicle: oldCosmetics.vehicle || defaultCosmetics.vehicle, pet: oldCosmetics.pet || defaultCosmetics.pet, speech: oldCosmetics.speech || defaultCosmetics.speech }
+        : { ...defaultCosmetics, ...oldCosmetics };
       fallback.profileVersion = 1;
       fallback.avatar = {
         ...fallback.avatar,
@@ -210,8 +532,23 @@
       };
       fallback.avatar.tuning = { ...defaultAvatarTuning, ...(previousAvatar.tuning || {}) };
       fallback.carrots = Number.isFinite(value.carrots) ? value.carrots : fallback.carrots;
-      fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]) : fallback.inventory;
-      fallback.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+      fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
+      fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
+      fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+      fallback.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
+      fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
+      fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
+      applyRequestedDefaultOutfit(fallback, value.outfitDefaultVersion);
+      fallback.placed = normalizePlacedObjects(value.placed);
+      if (!["male", "female", "muscular", "teen"].includes(fallback.avatar.cosmetics.bodyType)) {
+        fallback.avatar.cosmetics.bodyType = "male";
+        fallback.avatar.cosmetics.lpcHead = "human_male";
+        fallback.avatar.gender = "male";
+      }
+      fallback.avatar.cosmetics.aura = "none";
+      fallback.avatar.cosmetics.effect = "none";
+      if ((value.cosmeticSchemaVersion || 0) < 8) fallback.avatar.cosmetics.vehicle = "none";
+      fallback.cosmeticSchemaVersion = 8;
       return fallback;
     }
     const state = { ...fallback, ...value };
@@ -219,16 +556,79 @@
     state.avatar.tuning = { ...defaultAvatarTuning, ...((value.avatar || {}).tuning || {}) };
     if (!value.profileVersion || !state.avatar.name || state.avatar.name === "세준") state.avatar.name = generateNickname();
     state.profileVersion = 1;
-    if (!presetBundles[state.avatar.preset]) state.avatar.preset = "blue_cap";
     state.avatar.cosmetics = { ...defaultCosmetics, ...((value.avatar || {}).cosmetics || {}) };
-    if ((value.cosmeticSchemaVersion || 0) < 2) Object.assign(state.avatar.cosmetics, presetDecorationReset, { glasses: "none" });
-    state.cosmeticSchemaVersion = 2;
+    if ((value.cosmeticSchemaVersion || 0) < 5) {
+      const old = state.avatar.cosmetics;
+      state.avatar.cosmetics = { ...defaultCosmetics, aura: old.aura, effect: old.effect, vehicle: old.vehicle, pet: old.pet, speech: old.speech };
+    }
+    if (!["male", "female", "muscular", "teen"].includes(state.avatar.cosmetics.bodyType)) {
+      state.avatar.cosmetics.bodyType = "male";
+      state.avatar.cosmetics.lpcHead = "human_male";
+      state.avatar.gender = "male";
+    }
+    state.avatar.cosmetics.aura = "none";
+    state.avatar.cosmetics.effect = "none";
+    if ((value.cosmeticSchemaVersion || 0) < 8) state.avatar.cosmetics.vehicle = "none";
+    state.cosmeticSchemaVersion = 8;
     state.quests = { ...fallback.quests, ...(value.quests || {}) };
-    state.members = Array.isArray(value.members) && value.members.length > 0 ? value.members : fallback.members;
-    state.inventory = [...new Set(Array.isArray(value.inventory) ? value.inventory : fallback.inventory)]
-      .filter((code) => itemCatalog[code]);
-    state.placed = Array.isArray(value.placed) ? value.placed.filter((item) => itemCatalog[item.code]) : [];
+    state.challengeCarrotClaims = Object.fromEntries(Object.entries(value.challengeCarrotClaims || {})
+      .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
+      .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
+    state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
+    state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+    state.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
+    state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
+    state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
+    state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
+    state.members = state.members.map((member) => member.id === "m5" && member.name === "숲지기" ? { ...member, name: "세준" } : member);
+    state.inventory = [...new Set([...(Array.isArray(value.inventory) ? value.inventory : fallback.inventory), ...storageObjectCodes])]
+      .filter((code) => itemCatalog[code]?.kind === "object");
+    state.outfitHistory = normalizeOutfitHistory(value.outfitHistory, state.avatar);
+    applyRequestedDefaultOutfit(state, value.outfitDefaultVersion);
+    // 보상 풀이 바뀌기 전에 상자를 연 데모 사용자도 희귀 꾸미기 보상을 잃지 않도록 보정한다.
+    if (state.rewardClaimed && !state.inventory.includes("reward_cow")) state.inventory.push("reward_cow");
+    state.placed = normalizePlacedObjects(value.placed);
     return state;
+  }
+
+  function normalizePlacedObjects(placed) {
+    if (!Array.isArray(placed)) return [];
+    return placed
+      .filter((item) => itemCatalog[item?.code] && Number.isFinite(Number(item.x)) && Number.isFinite(Number(item.y)))
+      .map((item) => ({
+        ...item,
+        x: Number(item.x),
+        y: Number(item.y),
+        rotation: Number(item.rotation) || 0,
+        ...(interactiveObjectTypes[item.code] ? { active: Boolean(item.active) } : {}),
+      }));
+  }
+
+  function resetTodayProgress(current) {
+    const next = normalizeState(current);
+    next.quests = { walk: false, meal: false, check: false };
+    next.challengeCarrotClaims = {};
+    next.members = next.members.map((member) => ({ ...member, completed: member.me ? 0 : 3 }));
+    next.rewardClaimed = false;
+    next.gardenWatered = false;
+    next.fishCaught = false;
+    next.fishing = false;
+    next.petFedCount = 0;
+    next.avatar = { ...next.avatar, sitting: false, mounted: false, x: 384, y: 352, direction: "down" };
+    return next;
+  }
+
+  function pendingChallengeCarrots() {
+    return Object.values(state.challengeCarrotClaims || {}).reduce((total, claim) => total + (claim.harvested ? 0 : claim.amount), 0);
+  }
+
+  function accrueChallengeCarrots(questId) {
+    if (state.challengeCarrotClaims?.[questId]) return 0;
+    const quest = questCatalog[questId];
+    if (!quest) return 0;
+    state.challengeCarrotClaims ||= {};
+    state.challengeCarrotClaims[questId] = { amount: quest.reward, harvested: false };
+    return quest.reward;
   }
 
   class DemoForestAdapter {
@@ -247,7 +647,7 @@
   }
 
   class ApiForestAdapter {
-    constructor(token) { this.mode = "api"; this.token = token; this.groupId = null; }
+    constructor(token) { this.mode = "api"; this.token = token; }
     async request(path, options = {}) {
       const response = await fetch(`/api/v1${path}`, {
         ...options,
@@ -258,77 +658,36 @@
       return payload.data ?? payload;
     }
     loadForest(groupId) { return this.request(`/forest/spaces/${groupId}`); }
-    async load() {
-      const groups = await this.request("/shared-challenge-groups");
-      const group = groups.items.find((item) => item.members.some((member) => member.is_me && member.status === "active"));
-      if (!group) throw new Error("함께하기에서 공동 챌린지를 먼저 만들어 주세요.");
-      this.groupId = group.group_id;
-      let home;
-      try { home = await this.loadForest(this.groupId); }
-      catch (error) {
-        if (!String(error.message).includes("아직 열리지")) throw error;
-        home = await this.request("/forest/spaces", {
-          method: "POST", body: JSON.stringify({ group_id: this.groupId, name: "당근의 숲" }),
-        });
-      }
-      const cycle = await this.request("/challenge-cycles/current");
-      const selected = cycle.user_challenges.slice(0, 3);
-      const logRows = await Promise.all(selected.map((item) => this.request(`/user-challenges/${item.user_challenge_id}/logs?start_date=${TODAY}&end_date=${TODAY}`)));
-      const next = defaultState();
-      next.questIds = {};
-      quests.forEach((quest, index) => {
-        const selectedQuest = selected[index];
-        if (!selectedQuest) return;
-        quest.title = selectedQuest.title;
-        quest.description = selectedQuest.daily_goal;
-        next.questIds[quest.id] = selectedQuest.user_challenge_id;
-        next.quests[quest.id] = Boolean(logRows[index].items[0]?.is_completed);
-      });
-      next.avatar.name = home.me.display_name;
-      next.avatar.equipped = home.me.accessory_code === "none" ? null : home.me.accessory_code;
-      next.avatar.cosmetics.accessory = next.avatar.equipped || "none";
-      next.carrots = home.me.carrot_balance;
-      next.inventory = [...new Set([...home.inventory, "sunflower", "bench", "mushroom", "rabbit"])].filter((code) => itemCatalog[code]);
-      let meMarked = false;
-      next.members = home.members.map((member) => {
-        const me = !meMarked && member.display_name === home.me.display_name;
-        if (me) meMarked = true;
-        return { id: String(member.user_id), name: member.display_name, completed: member.today_completed, target: member.today_target, me };
-      });
-      next.placed = home.objects.filter((item) => itemCatalog[item.object_code]).map((item) => ({
-        objectId: item.object_id, code: item.object_code, x: item.position_x / 100 * WORLD_WIDTH, y: item.position_y / 100 * WORLD_HEIGHT,
-      }));
-      next.rewardClaimed = home.today.group_reward_claimed;
-      return next;
-    }
-    async save(state) { return state; }
     updateAvatar(body) { return this.request("/forest/avatar", { method: "PATCH", body: JSON.stringify(body) }); }
     updateQuest(userChallengeId, logDate, completed) {
       return this.request(`/user-challenges/${userChallengeId}/logs/${logDate}`, {
-        method: "PUT", body: JSON.stringify({ is_completed: completed, value: completed ? 1 : 0, source: "self_report", note: null }),
+        method: "PUT", body: JSON.stringify({ is_completed: completed, input_source: "manual" }),
       });
     }
     claimReward(groupId) { return this.request(`/forest/spaces/${groupId}/rewards/group-daily`, { method: "POST" }); }
-    claimDailyReward(rewardDate) { return this.request(`/daily-challenge-rewards/${rewardDate}/claim`, { method: "POST" }); }
     placeObject(groupId, body) {
       return this.request(`/forest/spaces/${groupId}/objects`, { method: "POST", body: JSON.stringify(body) });
     }
-    removeObject(groupId, objectId) {
-      return this.request(`/forest/spaces/${groupId}/objects/${objectId}`, { method: "DELETE" });
-    }
   }
 
-  const apiToken = sessionStorage.getItem("gandang-access-token") || localStorage.getItem("gandang-access-token");
-  let adapter = apiToken ? new ApiForestAdapter(apiToken) : new DemoForestAdapter();
+  const adapter = new DemoForestAdapter();
   let state = defaultState();
   let placementCode = null;
+  let placementDraft = null;
   let running = false;
   let musicEngine = null;
+  let sfxEngine = null;
+  const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
+  rewardChestSound.preload = "auto";
+  rewardChestSound.volume = .42;
   let animationFrame = 0;
   let walkingUntil = 0;
   let walkAnimationFrame = 0;
   let currentScene = "world";
-  let activeAvatarCategory = "preset";
+  let activeAvatarCategory = "bodyType";
+  let avatarPreviewPose = "idle";
+  let avatarPreviewFrame = 0;
+  let lastAvatarPreviewAt = 0;
   let avatarDraft = { ...defaultCosmetics };
   let avatarTuningDraft = { ...defaultAvatarTuning };
   let avatarDraftHistory = [];
@@ -339,8 +698,9 @@
   const cosmeticSpriteAtlas = new Image();
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
+  const animatedObjectAtlas = new Image();
+  const rewardCowImage = new Image();
   const basicWalkAtlas = new Image();
-  const basicScooterAtlas = new Image();
   const modularAvatarAtlas = new Image();
   const presetSpriteAtlases = {
     red_bow: { image: new Image(), rows: 6, file: "carrot-forest-avatar-red_bow-normalized-v2.png" },
@@ -350,86 +710,178 @@
     teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-avatar-teal_bob-normalized-v2.png" },
   };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
-  avatarSpriteAtlas.src = "/static/assets/carrot-forest-avatar-atlas-v1.png";
-  cosmeticSpriteAtlas.src = "/static/assets/carrot-forest-cosmetics-atlas-v1.png";
-  catPetAtlas.src = "/static/assets/carrot-forest-cat-pets-v1.png";
-  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v1.png";
-  basicWalkAtlas.src = "/static/assets/carrot-forest-basic-walk-atlas-v1.png";
-  basicScooterAtlas.src = "/static/assets/carrot-forest-basic-scooter-atlas-v1.png";
-  modularAvatarAtlas.src = "/static/assets/carrot-forest-modular-avatar-atlas-v3.png";
-  Object.values(presetSpriteAtlases).forEach((atlas) => { atlas.image.src = `/static/assets/${atlas.file}`; });
-  sceneImages.world.src = "/static/assets/carrot-forest-world-v2.png";
+  catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
+  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1";
+  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1";
+  rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1";
+  sceneImages.world.src = "/static/assets/carrot-forest-world-v3.png?v=20260831-1";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v1.png";
-  avatarSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
-  cosmeticSpriteAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
-  basicWalkAtlas.addEventListener("load", renderCanvas);
-  basicScooterAtlas.addEventListener("load", renderCanvas);
-  modularAvatarAtlas.addEventListener("load", () => {
+  animatedObjectAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  rewardCowImage.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
+  window.addEventListener("lpc-avatar-ready", () => {
+    syncLpcCatalog();
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
     if ($("#profile-dialog").open) renderProfileAvatar();
   });
-  Object.values(presetSpriteAtlases).forEach((atlas) => atlas.image.addEventListener("load", () => {
+  window.LpcAvatarEngine?.ready().then(() => {
+    syncLpcCatalog();
     renderCanvas();
+    drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
-  }));
-  Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
+  window.addEventListener("lpc-avatar-assets-updated", () => {
+    renderCanvas();
+    drawWardrobeLookThumbnails();
+    if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
+    if ($("#profile-dialog").open) renderProfileAvatar();
+  });
 
   class CozyForestMusic {
     constructor() {
-      this.audioContext = null;
-      this.timer = null;
-      this.step = 0;
-      this.notes = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 349.23];
-    }
-    playNote(frequency, when) {
-      const oscillator = this.audioContext.createOscillator();
-      const gain = this.audioContext.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
-      gain.gain.setValueAtTime(.0001, when);
-      gain.gain.exponentialRampToValueAtTime(.055, when + .04);
-      gain.gain.exponentialRampToValueAtTime(.0001, when + .7);
-      oscillator.connect(gain).connect(this.audioContext.destination);
-      oscillator.start(when);
-      oscillator.stop(when + .75);
-    }
-    async start() {
-      this.audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-      await this.audioContext.resume();
-      const playStep = () => {
-        const now = this.audioContext.currentTime;
-        this.playNote(this.notes[this.step % this.notes.length], now);
-        if (this.step % 2 === 0) this.playNote(this.notes[(this.step + 2) % this.notes.length] / 2, now);
-        this.step += 1;
+      this.tracks = {
+        forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
+        night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
+        home: new Audio("/static/assets/home-small-fire-cc0.wav"),
+        homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3"),
+        homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3"),
+        homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3"),
+        homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3"),
+        garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
+        avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
       };
-      playStep();
-      this.timer = window.setInterval(playStep, 760);
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
+      this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
+      Object.values(this.tracks).forEach((track) => {
+        track.loop = true;
+        track.preload = "auto";
+      });
+      this.applyVolume();
+      this.current = "forest";
+      this.enabled = false;
+    }
+    applyVolume(multiplier = 1) {
+      const volume = this.muted ? 0 : this.volume * multiplier;
+      Object.values(this.tracks).forEach((track) => { track.volume = volume; });
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(BGM_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+      else this.applyVolume();
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(BGM_MUTED_KEY, String(this.muted));
+      this.applyVolume();
+    }
+    async switchTo(name, { restart = false } = {}) {
+      if (!this.enabled || !this.tracks[name]) return;
+      Object.entries(this.tracks).forEach(([trackName, track]) => {
+        if (trackName !== name) track.pause();
+      });
+      const next = this.tracks[name];
+      if (restart) next.currentTime = 0;
+      this.current = name;
+      await next.play();
+    }
+    async start(name = "forest") {
+      this.enabled = true;
+      await this.switchTo(name);
     }
     stop() {
-      window.clearInterval(this.timer);
-      this.timer = null;
-      this.audioContext?.suspend();
+      this.enabled = false;
+      Object.values(this.tracks).forEach((track) => track.pause());
     }
   }
 
+  class ForestSfx {
+    constructor() {
+      const root = "/static/assets/sfx";
+      this.tracks = Object.fromEntries([
+        "step-grass", "run-grass", "door-open", "sit-cloth", "mount", "harvest", "water",
+        "fishing-cast", "fishing-catch", "attack-sword", "attack-bow", "attack-magic",
+        "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off", "cow-toggle",
+      ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
+      Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
+      this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(SFX_VOLUME_KEY) ?? 1)));
+      this.muted = localStorage.getItem(SFX_MUTED_KEY) === "true";
+      this.lastPlayed = new Map();
+    }
+    setVolume(value) {
+      this.volume = Math.max(0, Math.min(1, Number(value)));
+      localStorage.setItem(SFX_VOLUME_KEY, String(this.volume));
+      if (this.volume > 0 && this.muted) this.setMuted(false);
+    }
+    setMuted(muted) {
+      this.muted = Boolean(muted);
+      localStorage.setItem(SFX_MUTED_KEY, String(this.muted));
+    }
+    effectiveVolume(volume) {
+      return this.muted ? 0 : Math.max(0, Math.min(1, volume * this.volume));
+    }
+    play(name, { volume = 0.32, rate = 1, minInterval = 0 } = {}) {
+      const source = this.tracks[name];
+      if (!source) return;
+      const now = performance.now();
+      if (now - (this.lastPlayed.get(name) || 0) < minInterval) return;
+      this.lastPlayed.set(name, now);
+      const player = source.cloneNode();
+      player.volume = this.effectiveVolume(volume);
+      player.playbackRate = Math.max(0.5, Math.min(2, rate));
+      player.play().catch(() => {});
+    }
+  }
+
+  function playSfx(name, options) {
+    sfxEngine ||= new ForestSfx();
+    sfxEngine.play(name, options);
+  }
+
+  function weaponSfxName(weapon = state.avatar.cosmetics?.lpcWeapon) {
+    if (weapon === "bow") return "attack-bow";
+    if (["wand", "cane"].includes(weapon)) return "attack-magic";
+    return "attack-sword";
+  }
+
+  window.addEventListener("forest-sfx", (event) => {
+    const detail = typeof event.detail === "string" ? { name: event.detail } : (event.detail || {});
+    if (detail.name) playSfx(detail.name, detail);
+  });
+
   function setStatus(message) { $("#game-status").textContent = message; }
-  // In API mode, not every account has exactly 3 daily challenges selected (the selection
-  // flow only requires "1 or more"), so a "quest" slot with no state.questIds entry is a
-  // fixed-3-slot UI placeholder with nothing real behind it, not an actual daily challenge.
-  function activeQuests() { return adapter.mode === "api" ? quests.filter((quest) => state.questIds?.[quest.id]) : quests; }
-  function personalCompleted() { return activeQuests().filter((quest) => state.quests[quest.id]).length; }
-  function personalTarget() { return activeQuests().length || 3; }
-  function personalAllComplete() { const active = activeQuests(); return active.length > 0 && active.every((quest) => state.quests[quest.id]); }
+  function currentLocalHour() {
+    const rawHour = new URLSearchParams(window.location.search).get("hour");
+    const forced = rawHour == null ? Number.NaN : Number(rawHour);
+    return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+  }
+  function sceneMusicName(scene = currentScene) {
+    if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome" : "home";
+    if (scene === "garden") return "garden";
+    const hour = currentLocalHour();
+    if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
+    return "forest";
+  }
+  function activeQuestIds() {
+    const selected = state.challengePlan?.questIds;
+    return Array.isArray(selected) && selected.length === 3 ? selected : questPlans.balanced;
+  }
+  function syncActiveQuests() {
+    quests = activeQuestIds().map((id) => questCatalog[id]).filter(Boolean).slice(0, 3);
+    if (quests.length !== 3) quests = questPlans.balanced.map((id) => questCatalog[id]);
+  }
+  function personalCompleted() { return state.challengePlan?.onboarded ? activeQuestIds().filter((id) => state.quests[id]).length : 0; }
   function groupCompleted() { return state.members.reduce((total, member) => total + member.completed, 0); }
-  function groupTarget() { return state.members.reduce((total, member) => total + (member.target ?? 3), 0); }
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
     if (message) setStatus(message);
   }
 
@@ -565,6 +1017,7 @@
         drawVehicle();
         drawPlacedObjects();
       }
+      if (currentScene === "home") drawHomeRecordPlayer();
       return;
     }
     fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
@@ -594,12 +1047,63 @@
     drawPlacedObjects();
   }
 
-  function drawPlacedObjects() {
-    state.placed.forEach((item) => {
-      const x = item.x;
-      const y = item.y;
-      const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[item.code];
-      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 4, 1, x - 28, y - 34, 56, 56)) return;
+  function drawHomeRecordPlayer() {
+    const x = 610;
+    const y = 324;
+    fillPixelRect(x - 39, y + 30, 78, 8, "rgba(37,31,25,.22)");
+    fillPixelRect(x - 36, y - 14, 72, 45, "#5a321f");
+    fillPixelRect(x - 31, y - 10, 62, 34, "#b66e3e");
+    fillPixelRect(x - 28, y - 35, 56, 24, "#633924");
+    fillPixelRect(x - 24, y - 31, 48, 17, "#2b2425");
+    fillPixelRect(x - 27, y - 7, 54, 25, "#e6c58f");
+    context.fillStyle = "#252735";
+    context.beginPath();
+    context.arc(x - 9, y + 5, 13, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = state.homeRecordPlaying ? "#ef9540" : "#d9b064";
+    context.beginPath();
+    context.arc(x - 9, y + 5, 4, 0, Math.PI * 2);
+    context.fill();
+    fillPixelRect(x + 11, y - 2, 4, 20, "#695847");
+    fillPixelRect(x + 11, y + 15, 13, 3, "#695847");
+    fillPixelRect(x + 23, y - 8, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
+    for (let stripe = -21; stripe <= 19; stripe += 8) fillPixelRect(x + stripe, y + 23, 4, 4, "#3f2b24");
+    fillPixelRect(x - 29, y + 30, 7, 7, "#4b2a1c");
+    fillPixelRect(x + 22, y + 30, 7, 7, "#4b2a1c");
+  }
+
+  function drawPlacedObject(item, preview = false) {
+      const x = 0;
+      const y = 0;
+      context.save();
+      context.translate(item.x, item.y);
+      context.rotate((Number(item.rotation) || 0) * Math.PI / 180);
+      context.globalAlpha = preview ? .72 : 1;
+      const interactionType = interactiveObjectTypes[item.code];
+      const interactionActive = interactionType && Boolean(item.active);
+      if (interactionType && !interactionActive) context.globalAlpha *= .58;
+      if (interactionActive && interactionType === "cow") {
+        context.rotate(Math.sin(performance.now() / 170) * .045);
+        context.translate(0, -Math.abs(Math.sin(performance.now() / 190)) * 3);
+      }
+      if (interactionActive && ["fire", "light"].includes(interactionType)) {
+        const pulse = 1 + Math.sin(performance.now() / 150) * .025;
+        context.scale(pulse, pulse);
+        context.globalAlpha *= .9 + Math.sin(performance.now() / 130) * .1;
+      }
+      const animatedRow = animatedObjectRows[item.code];
+      if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
+        const frame = interactionType && !interactionActive ? 0 : Math.floor(performance.now() / 220) % 4;
+        const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
+        context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
+        context.restore();
+        return;
+      }
+      if (item.code === "reward_cow" && rewardCowImage.complete) {
+        context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); context.restore(); return;
+      }
+      const storageIndex = storageObjectIndex[item.code];
+      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 5, 4, x - 32, y - 48, 64, 64)) { context.restore(); return; }
       if (item.code === "flower_patch") {
         fillPixelRect(x - 15, y - 7, 30, 14, "#4b8e3f");
         [[-10, -8, "#ffcf43"], [0, -12, "#f16d77"], [10, -7, "#fff2a8"]].forEach(([dx, dy, color]) => fillPixelRect(x + dx, y + dy, 7, 7, color));
@@ -615,7 +1119,23 @@
         fillPixelRect(x - 7, y - 12, 4, 4, "#fff2d1");
         fillPixelRect(x + 4, y - 9, 4, 4, "#fff2d1");
       }
+      context.restore();
+  }
+
+  function drawPlacementGrid() {
+    if (!placementCode || currentScene !== "world") return;
+    placementGridCells().forEach((cell) => {
+      context.fillStyle = cell.valid ? "rgba(69,201,113,.16)" : "rgba(197,75,65,.06)";
+      context.fillRect(cell.x - 15, cell.y - 15, 30, 30);
+      context.strokeStyle = cell.valid ? "rgba(28,128,68,.72)" : "rgba(154,65,58,.20)";
+      context.lineWidth = 1;
+      context.strokeRect(cell.x - 15.5, cell.y - 15.5, 31, 31);
     });
+    if (placementDraft) drawPlacedObject(placementDraft, true);
+  }
+
+  function drawPlacedObjects() {
+    state.placed.forEach((item) => drawPlacedObject(item));
   }
 
   function avatarSpriteIndex(cosmetics) {
@@ -635,9 +1155,6 @@
 
   function cosmeticSpriteIndex(category, itemId) {
     const indexes = {
-      aura: { wings: 0, halo: 1, rainbow: 2, forest: 3, hearts: 4 },
-      effect: { bubble: 5, spark: 6, heart: 7, carrot: 8, leaf: 9 },
-      vehicle: { scooter: 10, bicycle: 11, balloon: 12 },
       pet: { white_pup: 15, brown_pup: 16, cat: 17, fox: 18 },
       speech: { cat: 19, leaf: 19, window: 19 },
     };
@@ -645,7 +1162,7 @@
   }
 
   function catPetSpriteIndex(itemId) {
-    return { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 1 }[itemId] ?? null;
+    return { blue_eyes_white_cat: 1, gold_eyes_orange_cat: 4, white_pup: 7 }[itemId] ?? null;
   }
 
   function drawAtlasCell(target, image, index, columns, rows, x, y, width, height) {
@@ -695,28 +1212,12 @@
     const presetAtlas = presetSpriteAtlases[avatar.preset];
     const direction = avatar.direction || "down";
     const moving = performance.now() < walkingUntil;
-    if (!avatar.mounted) {
-      const auraIndex = cosmeticSpriteIndex("aura", cosmetics.aura);
-      drawAtlasCell(context, cosmeticSpriteAtlas, auraIndex, 5, 4, x - 45, y - 51, 90, 90);
-    }
-
     if (presetAtlas) {
       if (!presetAtlas.image.complete || !presetAtlas.image.naturalWidth) return false;
       const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
-      if (avatar.mounted) {
-        const motionRow = moving && presetAtlas.rows === 6 ? 5 : 4;
-        const rideBob = moving && presetAtlas.rows === 5 ? walkAnimationFrame % 2 : 0;
-        drawAtlasCell(context, presetAtlas.image, motionRow * 4 + directionColumn, 4, presetAtlas.rows, x - 48, y - 57 - rideBob, 96, 96);
-      } else {
-        const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
-        const frame = moving ? walkAnimationFrame % 4 : 0;
-        drawAtlasCell(context, presetAtlas.image, directionRow * 4 + frame, 4, presetAtlas.rows, x - 36, y - 56, 72, 88);
-      }
-    } else if (avatar.mounted) {
-      if (!basicScooterAtlas.complete || !basicScooterAtlas.naturalWidth) return false;
-      const directionColumn = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
-      const motionRow = moving ? walkAnimationFrame % 2 : 0;
-      drawAtlasCell(context, basicScooterAtlas, motionRow * 4 + directionColumn, 4, 2, x - 52, y - 62, 104, 104);
+      const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
+      const frame = moving ? walkAnimationFrame % 4 : 0;
+      drawAtlasCell(context, presetAtlas.image, directionRow * 4 + frame, 4, presetAtlas.rows, x - 36, y - 56, 72, 88);
     } else {
       if (!basicWalkAtlas.complete || !basicWalkAtlas.naturalWidth) return false;
       const directionRow = { down: 0, up: 1, left: 2, right: 3 }[direction] ?? 0;
@@ -726,11 +1227,9 @@
 
     drawAnimatedAccessoryOverlay(avatar, cosmetics, x, y);
 
-    const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
-    drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
     const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
     const catIndex = catPetSpriteIndex(cosmetics.pet);
-    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
       drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
     }
     if (cosmetics.speech !== "none") {
@@ -747,20 +1246,12 @@
 
   function drawGeneratedWorldAvatar(avatar, cosmetics, x, y) {
     if (!avatarSpriteAtlas.complete || !avatarSpriteAtlas.naturalWidth) return false;
-    const auraIndex = cosmeticSpriteIndex("aura", cosmetics.aura);
-    drawAtlasCell(context, cosmeticSpriteAtlas, auraIndex, 5, 4, x - 45, y - 49, 90, 90);
     const spriteIndex = avatarSpriteIndex(cosmetics);
     drawAtlasCell(context, avatarSpriteAtlas, spriteIndex, 4, 3, x - 31, y - 48, 62, 78);
-    const effectIndex = cosmeticSpriteIndex("effect", cosmetics.effect);
-    drawAtlasCell(context, cosmeticSpriteAtlas, effectIndex, 5, 4, x - 42, y - 43, 42, 42);
     const petIndex = cosmeticSpriteIndex("pet", cosmetics.pet);
     const catIndex = catPetSpriteIndex(cosmetics.pet);
-    if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+    if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
       drawAtlasCell(context, cosmeticSpriteAtlas, petIndex, 5, 4, x + 20, y + 5, 35, 35);
-    }
-    if (avatar.mounted) {
-      const vehicleIndex = cosmeticSpriteIndex("vehicle", cosmetics.vehicle === "none" ? "scooter" : cosmetics.vehicle);
-      drawAtlasCell(context, cosmeticSpriteAtlas, vehicleIndex, 5, 4, x - 38, y + 14, 76, 52);
     }
     if (cosmetics.speech !== "none") {
       const speechIndex = cosmeticSpriteIndex("speech", cosmetics.speech);
@@ -776,7 +1267,7 @@
 
   function drawAvatar() {
     const avatar = state.avatar;
-    const style = presets[avatar.preset] || presets.sprout;
+    const style = { hair: "#4b2f24", outfit: "#4f9e63", accent: "#c8f06a" };
     const cosmetics = { ...defaultCosmetics, ...(avatar.cosmetics || {}) };
     const skin = avatarCatalog.skin.find((item) => item.id === cosmetics.skin)?.color || "#f2bd92";
     const skinShadow = cosmetics.skin === "deep" ? "#6d392f" : cosmetics.skin === "warm" ? "#a7654f" : "#d99978";
@@ -791,29 +1282,19 @@
     const x = Math.round(avatar.x / 4) * 4;
     const bob = avatar.sitting || avatar.mounted ? 0 : animationFrame;
     const y = Math.round(avatar.y / 4) * 4 - bob;
+    if (window.LpcAvatarEngine?.isReady()) {
+      window.LpcAvatarEngine.draw(context, { ...avatar, engine: "lpc", cosmetics }, {
+        direction: avatar.direction || "down",
+        moving: performance.now() < walkingUntil,
+        running: avatar.running,
+        frame: walkAnimationFrame,
+      }, { x: x - 48, y: y - 68, width: 96, height: 96 });
+    }
+    // Never expose the retired hand-drawn or preset-atlas avatar while the
+    // official LPC manifest or individual layers are still loading.
+    return;
     if (drawAnimatedBasicWorldAvatar(avatar, cosmetics, x, y)) return;
-    if (cosmetics.aura === "wings") {
-      [[-27, -13], [-34, -6], [24, -13], [31, -6]].forEach(([dx, dy], index) => fillPixelRect(x + dx, y + dy, index % 2 ? 9 : 12, 18, index % 2 ? "#bff8ff" : "#65ddea"));
-    } else if (cosmetics.aura === "halo") {
-      fillPixelRect(x - 13, y - 40, 26, 4, "#ffd951"); fillPixelRect(x - 9, y - 43, 18, 3, "#fff2a4");
-    } else if (cosmetics.aura === "rainbow") {
-      ["#e95a62", "#f4a542", "#f1d75a", "#5cc176", "#5b8ee7"].forEach((color, index) => { context.strokeStyle = color; context.lineWidth = 3; context.beginPath(); context.arc(x, y - 2, 29 + index * 3, Math.PI, Math.PI * 2); context.stroke(); });
-    } else if (cosmetics.aura === "hearts") {
-      context.fillStyle = "#f56f9b"; context.font = "16px sans-serif"; context.fillText("♥", x - 25, y - 14); context.fillText("♥", x + 22, y - 2);
-    } else if (cosmetics.aura === "forest") {
-      context.fillStyle = "#69bd5a"; context.font = "15px sans-serif"; context.fillText("❧", x - 27, y - 8); context.fillText("❧", x + 25, y - 18);
-    }
-    fillPixelRect(x - (avatar.mounted ? 25 : 17), y + 31, avatar.mounted ? 50 : 34, 7, "rgba(24,55,37,.26)");
-    if (avatar.mounted) {
-      fillPixelRect(x - 23, y + 15, 17, 17, "#1d3030");
-      fillPixelRect(x + 10, y + 15, 17, 17, "#1d3030");
-      fillPixelRect(x - 18, y + 20, 8, 8, "#a8c7c1");
-      fillPixelRect(x + 14, y + 20, 8, 8, "#a8c7c1");
-      fillPixelRect(x - 16, y + 7, 35, 12, "#bd472c");
-      fillPixelRect(x - 6, y, 23, 10, "#ee8235");
-      fillPixelRect(x + 15, y - 8, 4, 18, "#314845");
-      fillPixelRect(x + 11, y - 10, 16, 4, "#314845");
-    }
+    fillPixelRect(x - 17, y + 31, 34, 7, "rgba(24,55,37,.26)");
     fillPixelRect(x - 12, y - 22, 24, 24, skinShadow);
     fillPixelRect(x - 10, y - 21, 20, 21, skin);
     fillPixelRect(x - 13, y - 14, 3, 8, skinShadow);
@@ -872,15 +1353,10 @@
       const glassColor = equipped === "star_glasses" ? "#e75e99" : "#354751";
       context.strokeStyle = glassColor; context.lineWidth = 2; context.strokeRect(x - 10, y - 15, 8, 7); context.strokeRect(x + 2, y - 15, 8, 7); fillPixelRect(x - 2, y - 13, 4, 2, glassColor);
     }
-    if (cosmetics.effect !== "none") {
-      const effects = { bubble: ["○", "#7edcf2"], spark: ["✦", "#ffd85a"], heart: ["♥", "#f15f8b"], carrot: ["◆", "#ed7a31"], leaf: ["❧", "#64ac4b"] };
-      const [glyph, color] = effects[cosmetics.effect] || effects.spark;
-      context.fillStyle = color; context.font = "bold 13px sans-serif"; context.fillText(glyph, x - 25, y - 28); context.fillText(glyph, x + 25, y + 2);
-    }
     if (cosmetics.pet !== "none") {
       const petGlyphs = { white_pup: "🐶", brown_pup: "🐕", cat: "🐈", fox: "🦊" };
       const catIndex = catPetSpriteIndex(cosmetics.pet);
-      if (!drawAtlasCell(context, catPetAtlas, catIndex, 2, 1, x + 18, y - 2, 46, 46)) {
+      if (!drawAtlasCell(context, catPetAtlas, catIndex, 9, 4, x + 18, y - 2, 46, 46)) {
         context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet] || "🐾", x + 34, y + 34);
       }
     }
@@ -927,7 +1403,7 @@
     const sceneCopy = {
       world: { title: "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
       home: { title: "나의 홈피 · 포근한 거실", aria: "소파와 옷장이 있는 집 내부 장면" },
-      garden: { title: "공동 당근밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
+      garden: { title: "당근 밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
     }[currentScene];
     $("#map-title").textContent = sceneCopy.title;
     canvas.setAttribute("aria-label", `${sceneCopy.aria}. 방향키나 WASD로 이동하고 Q키로 상호작용할 수 있습니다.`);
@@ -942,6 +1418,7 @@
     context.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
     context.imageSmoothingEnabled = false;
     drawMap();
+    drawPlacementGrid();
     drawAvatar();
     drawSceneEffects();
     renderSceneChrome();
@@ -949,16 +1426,31 @@
     updateInteractionPrompt();
   }
 
+  function reactToCow(index, reaction = "body") {
+    const item = state.placed[index];
+    if (item?.code !== "reward_cow") return;
+    const headTouch = reaction === "head";
+    playSfx("cow-toggle", { volume: .3, rate: headTouch ? 1.12 : .92 });
+    window.dispatchEvent(new CustomEvent("forest-cow-react", { detail: { index, reaction } }));
+    setStatus(headTouch ? "행운의 젖소 머리를 쓰다듬었어요. 기분 좋게 고개를 흔듭니다." : "행운의 젖소 몸을 토닥였어요. 신나게 몸을 흔듭니다.");
+  }
+
   let lastAnimationAt = 0;
   let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
     let needsRender = false;
     if (!document.hidden && timestamp - lastAnimationAt > 420) {
-      animationFrame = (animationFrame + 1) % 2;
+      animationFrame = (animationFrame + 1) % 4;
       lastAnimationAt = timestamp;
       needsRender = true;
     }
     const moving = timestamp < walkingUntil;
+    if ($("#avatar-studio").open && timestamp - lastAvatarPreviewAt > 120) {
+      avatarPreviewFrame += 1;
+      lastAvatarPreviewAt = timestamp;
+      renderCatalogThumbnailCanvases();
+      renderAvatarPreview();
+    }
     if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : 95)) {
       walkAnimationFrame = (walkAnimationFrame + 1) % 4;
       lastWalkAnimationAt = timestamp;
@@ -975,10 +1467,41 @@
     return Math.hypot(state.avatar.x - x, state.avatar.y - y);
   }
 
+  function nearbyPlacedObject(x = state.avatar.x, y = state.avatar.y, maxDistance = 72) {
+    if (currentScene !== "world") return null;
+    return state.placed
+      .map((item, index) => ({ item, index, distance: Math.hypot(x - item.x, y - item.y) }))
+      .filter(({ item, distance }) => (interactiveObjectTypes[item.code] || seatObjectCodes.has(item.code)) && distance <= maxDistance)
+      .sort((left, right) => left.distance - right.distance)[0] || null;
+  }
+
+  function objectInteractionLabel(item) {
+    if (seatObjectCodes.has(item.code)) return `${itemCatalog[item.code].name}에 앉기`;
+    const type = interactiveObjectTypes[item.code];
+    if (type === "cow") return item.active ? "젖소 쉬게 하기" : "젖소 움직이기";
+    if (type === "fire") return item.active ? "모닥불 끄기" : "모닥불 피우기";
+    return item.active ? `${itemCatalog[item.code].name} 끄기` : `${itemCatalog[item.code].name} 켜기`;
+  }
+
+  async function togglePlacedObject(index) {
+    const item = state.placed[index];
+    const type = interactiveObjectTypes[item?.code];
+    if (!item || !type) return;
+    item.active = !item.active;
+    item.activatedAt = item.active ? Date.now() : null;
+    if (type === "cow") playSfx("cow-toggle", { volume: .34, rate: item.active ? 1 : .88 });
+    else playSfx(item.active ? "object-on" : "object-off", { volume: .3 });
+    renderPlaced();
+    emitPlacementUpdate();
+    await persist(`${itemCatalog[item.code].name}${type === "cow" ? (item.active ? "가 신나게 움직이기 시작했습니다." : "가 편안히 쉬고 있습니다.") : (item.active ? "을 켰습니다." : "을 껐습니다.")}`);
+    updateInteractionPrompt();
+  }
+
   function nearbyInteraction() {
     if (currentScene === "home") {
       if (distanceTo(292, 246) < 95) return "sofa";
       if (distanceTo(558, 205) < 100) return "wardrobe";
+      if (distanceTo(610, 324) < 82) return "record_player";
       if (distanceTo(384, 438) < 78) return "exit_home";
       return null;
     }
@@ -987,10 +1510,11 @@
       if (distanceTo(384, 430) < 78) return "exit_garden";
       return null;
     }
+    const placed = nearbyPlacedObject();
+    if (placed) return `object:${placed.index}`;
     if (distanceTo(200, 270) < 95) return "home";
     if (distanceTo(600, 255) < 110) return "garden";
     if (distanceTo(285, 405) < 105) return "pond";
-    if (distanceTo(470, 376) < 72) return "vehicle";
     return null;
   }
 
@@ -998,25 +1522,30 @@
     const target = nearbyInteraction();
     const prompt = $("#interaction-prompt");
     prompt.hidden = !target;
-    if (target) prompt.querySelector("span").textContent = {
-      home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기", vehicle: "숲 스쿠터",
+    if (target?.startsWith("object:")) {
+      const item = state.placed[Number(target.split(":")[1])];
+      prompt.querySelector("span").textContent = item ? objectInteractionLabel(item) : "오브젝트 사용하기";
+    } else if (target) prompt.querySelector("span").textContent = {
+      home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
-      crops: "당근 돌보기", exit_garden: "숲으로 돌아가기",
+      record_player: state.homeRecordPlaying ? `${homeRecordCatalog[state.homeRecordTrack]?.name || "LP"} 재생 중` : "LP 음악 고르기",
+      crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
   }
 
   function openWorldDialog(target) {
     const dialog = $("#world-dialog");
+    const recordActions = Object.entries(homeRecordCatalog).map(([id, record]) => `<button type="button" data-world-action="record_music" data-record-track="${id}" aria-pressed="${state.homeRecordPlaying && state.homeRecordTrack === id}"><strong>${record.name}</strong></button>`).join("");
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
-      garden: { icon: "🥕", title: "공동 당근밭", copy: `우리 모임은 오늘 ${groupCompleted()}/${groupTarget()}개의 퀘스트를 완료했어요. 밭 안으로 들어가 당근을 돌봐요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
+      garden: { icon: "🥕", title: "당근 밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
       pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
-      vehicle: { icon: "🛵", title: "숲 스쿠터", copy: "스쿠터를 타면 숲길을 더 빠르게 이동할 수 있어요.", actions: `<button type="button" data-world-action="ride">${state.avatar.mounted ? "스쿠터에서 내리기" : "스쿠터 타기"}</button>` },
       sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
       wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
+      record_player: { icon: "💿", title: "숲속 LP 재생기", copy: "집 안에서 듣고 싶은 레코드를 골라 보세요.", actions: `<div class="record-music-list">${recordActions}</div><button class="record-stop" type="button" data-world-action="record_off" ${state.homeRecordPlaying ? "" : "disabled"}>LP 끄기 · 집 음악으로</button>` },
       exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
-      crops: { icon: "🥕", title: "공동 당근", copy: "오늘의 실천이 모일수록 공동 당근이 튼튼하게 자라요.", actions: `<button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button><button type="button" data-world-action="team">공동 진행 보기</button>` },
-      exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "공동 당근밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
+      crops: { icon: "🥕", title: "챌린지 당근 수확", copy: pendingChallengeCarrots() ? `완료한 챌린지 보상 당근 ${pendingChallengeCarrots()}개를 수확할 수 있어요.` : "오늘 완료한 챌린지 보상은 모두 수확했어요.", actions: `<button type="button" data-world-action="harvest_challenge" ${pendingChallengeCarrots() ? "" : "disabled"}>${pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확하기` : "수확 완료"}</button><button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button>` },
+      exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "당근 밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
     }[target];
     if (!content) { setStatus("상호작용할 대상 가까이 이동해 주세요."); return; }
     $("#world-dialog-icon").textContent = content.icon;
@@ -1026,9 +1555,40 @@
     dialog.showModal();
   }
 
-  function interact(target = nearbyInteraction()) {
+  async function interact(target = nearbyInteraction()) {
     if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
+    if (target.startsWith("object:")) {
+      const index = Number(target.split(":")[1]);
+      if (seatObjectCodes.has(state.placed[index]?.code)) await sitAtPlacedObject(index);
+      else await togglePlacedObject(index);
+      return;
+    }
+    if (target === "record_player") {
+      openWorldDialog(target);
+      return;
+    }
+    const pose = {
+      crops: "harvest", pond: "fishing", home: "door", garden: "door",
+      exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
+    }[target];
+    if (pose) window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose, duration: pose === "fishing" ? 1800 : 1100 } }));
     openWorldDialog(target);
+  }
+
+  async function selectHomeRecordTrack(trackId = null) {
+    if (currentScene !== "home") return;
+    state.homeRecordPlaying = Boolean(trackId && homeRecordCatalog[trackId]);
+    if (state.homeRecordPlaying) state.homeRecordTrack = trackId;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
+    renderCanvas();
+    try {
+      await musicEngine?.switchTo(sceneMusicName("home"), { restart: true });
+    } catch {
+      setStatus("LP 음악을 전환하지 못했지만 다른 기능은 계속 이용할 수 있어요.");
+    }
+    await persist(state.homeRecordPlaying
+      ? `LP 재생기에서 ${homeRecordCatalog[state.homeRecordTrack].name} 음악을 재생합니다.`
+      : "LP 재생기를 껐습니다. 집 안 음악으로 돌아갑니다.");
   }
 
   function switchScene(scene) {
@@ -1039,8 +1599,11 @@
     const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
     [state.avatar.x, state.avatar.y] = positions[scene];
     placementCode = null;
+    placementDraft = null;
     renderInventory();
-    renderCanvas();
+    emitPlacementUpdate();
+    renderGardenHarvest();
+    musicEngine?.switchTo(sceneMusicName(scene)).catch(() => setStatus("장면 음악을 전환하지 못했지만 계속 이용할 수 있어요."));
     canvas.focus();
   }
 
@@ -1060,6 +1623,87 @@
     return false;
   }
 
+  function placementCellValid(x, y) {
+    if (currentScene !== "world") return false;
+    const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
+    if (waterObjectCodes.has(placementCode)) {
+      if (!inPond) return false;
+    } else if (blocked(x, y) || inPond) return false;
+    return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 44);
+  }
+
+  function placementGridCells() {
+    const cells = [];
+    for (let y = 64; y <= WORLD_HEIGHT - 32; y += 32) {
+      for (let x = 32; x <= WORLD_WIDTH - 32; x += 32) cells.push({ x, y, valid: placementCellValid(x, y) });
+    }
+    return cells;
+  }
+
+  function placementEventDetail() {
+    return {
+      active: Boolean(placementCode) && currentScene === "world",
+      code: placementCode,
+      draft: placementDraft ? { ...placementDraft } : null,
+      cells: placementCode && currentScene === "world" ? placementGridCells() : [],
+    };
+  }
+
+  function emitPlacementUpdate() {
+    window.dispatchEvent(new CustomEvent("forest-placement-updated", { detail: placementEventDetail() }));
+    renderCanvas();
+  }
+
+  function renderPlacementUI() {
+    const active = Boolean(placementCode);
+    const positioned = Boolean(placementDraft);
+    $("#placement-controls").hidden = !active;
+    $("#rotate-placement").disabled = !positioned;
+    $("#confirm-placement").disabled = !positioned;
+    $("#cancel-placement").hidden = !active;
+    if (!active) $("#placement-mode").textContent = "배치할 아이템 없음";
+    else if (!positioned) $("#placement-mode").textContent = `${itemCatalog[placementCode].name} · 초록 격자에서 위치를 선택하세요`;
+    else $("#placement-mode").textContent = `${itemCatalog[placementCode].name} · 회전 후 V로 확정하세요`;
+  }
+
+  function cancelPlacement(message = "오브젝트 배치를 취소했습니다.") {
+    placementCode = null;
+    placementDraft = null;
+    renderInventory();
+    emitPlacementUpdate();
+    setStatus(message);
+  }
+
+  function rotatePlacement() {
+    if (!placementDraft) return;
+    placementDraft.rotation = ((Number(placementDraft.rotation) || 0) + 90) % 360;
+    renderPlacementUI();
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[placementDraft.code].name}을 ${placementDraft.rotation}도로 회전했습니다.`);
+  }
+
+  async function confirmPlacement() {
+    if (!placementCode || !placementDraft) { setStatus("먼저 초록 격자에서 배치 위치를 선택해 주세요."); return; }
+    if (!placementCellValid(placementDraft.x, placementDraft.y)) { setStatus("현재 위치에는 오브젝트를 놓을 수 없습니다."); return; }
+    const existing = state.placed.findIndex((item) => item.code === placementCode);
+    const previousActive = existing >= 0 ? Boolean(state.placed[existing].active) : false;
+    if (existing >= 0) state.placed.splice(existing, 1);
+    const placed = {
+      ...placementDraft,
+      rotation: Number(placementDraft.rotation) || 0,
+      ...(interactiveObjectTypes[placementCode] ? { active: previousActive } : {}),
+    };
+    const name = itemCatalog[placementCode].name;
+    state.placed.push(placed);
+    placementCode = null;
+    placementDraft = null;
+    renderInventory();
+    renderPlaced();
+    emitPlacementUpdate();
+    playSfx("place-object", { volume: 0.3 });
+    await persist(`${name} 배치를 확정했습니다.`);
+  }
+
   async function moveAvatar(direction) {
     if (window.carrotForestPhaserActive && window.carrotForestPhaserMove) {
       window.carrotForestPhaserMove(direction);
@@ -1074,39 +1718,161 @@
     walkingUntil = performance.now() + (state.avatar.mounted ? 260 : 220);
     const nextX = state.avatar.x + delta[0];
     const nextY = state.avatar.y + delta[1];
-    if (!blocked(nextX, nextY)) { state.avatar.x = nextX; state.avatar.y = nextY; renderCanvas(); await persist(); }
+    if (!blocked(nextX, nextY)) {
+      state.avatar.x = nextX; state.avatar.y = nextY;
+      playSfx(running ? "run-grass" : "step-grass", { volume: 0.18, minInterval: running ? 170 : 260 });
+      renderCanvas(); await persist();
+    }
     else { renderCanvas(); setStatus("그쪽에는 집·나무·당근밭이 있어요. 다른 방향으로 움직여 주세요."); }
   }
 
   function renderQuests() {
-    $("#quest-list").innerHTML = activeQuests().map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("");
+    syncActiveQuests();
+    const ready = Boolean(state.challengePlan?.onboarded);
+    $("#start-prediction-flow").textContent = ready ? "당뇨 예방 챌린지 다시 만들기" : "당뇨 예방 챌린지";
+    $("#quest-list").innerHTML = ready
+      ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")
+      : '<div class="quest-empty"><span aria-hidden="true">🌱</span><strong>첫 챌린지를 준비해 주세요</strong><p>이동 가능 확인부터 챌린지 방식 선택까지 마치면 오늘의 퀘스트 3개가 생성됩니다.</p></div>';
     const completed = personalCompleted();
-    const target = personalTarget();
-    const me = state.members.find((member) => member.me);
-    if (me) me.completed = completed;
-    $("#personal-progress").textContent = `${completed}/${target}`;
-    $("#heading-personal-progress").textContent = `${completed} / ${target}`;
+    state.members.find((member) => member.me).completed = completed;
+    $("#personal-progress").textContent = `${completed}/3`;
+    $("#heading-personal-progress").textContent = `${completed} / 3`;
   }
 
   function renderGroup() {
     const completed = groupCompleted();
-    const target = groupTarget();
-    const memberCount = state.members.length;
-    $("#group-title").textContent = `${memberCount}명 공동 목표`;
-    $("#group-mission-title").textContent = `${memberCount}명이 오늘 목표를 함께 채우기`;
-    $("#profile-members").textContent = `${memberCount}명`;
-    $("#group-progress").textContent = `${completed}/${target}`;
-    $("#heading-group-progress").textContent = `${completed} / ${target}`;
+    $("#group-progress").textContent = `${completed}/15`;
+    $("#heading-group-progress").textContent = `${completed} / 15`;
     const progressbar = $(".progress-track[role='progressbar']");
     progressbar.setAttribute("aria-valuenow", String(completed));
-    progressbar.setAttribute("aria-valuemax", String(target));
-    $("#group-progress-bar").style.width = `${target > 0 ? (completed / target * 100) : 0}%`;
-    $("#group-remaining").textContent = completed >= target ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${target - completed}개 남았어요.`;
-    $("#group-reward-help").textContent = `모두 합쳐 ${target}개를 완료하면 옷장 또는 창고 아이템 1개를 받아요.`;
-    $("#member-list").innerHTML = state.members.map((member) => { const memberTarget = member.target ?? 3; return `<li><span aria-hidden="true">${member.completed >= memberTarget ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/${memberTarget}</span></li>`; }).join("");
+    $("#group-progress-bar").style.width = `${completed / 15 * 100}%`;
+    $("#group-remaining").textContent = completed >= 15 ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
+    $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed === 3 ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/3</span></li>`).join("");
     const rewardButton = $("#reward-button");
-    rewardButton.disabled = completed < target || state.rewardClaimed;
-    rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= target ? "무료 보물상자 열기" : `${target - completed}개 더 완료하면 보물상자 열기`;
+    rewardButton.disabled = completed < 15 || state.rewardClaimed;
+    rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
+    $("#group-goal-memo").value = state.groupGoalMemo || "";
+  }
+
+  function renderGardenHarvest() {
+    const panel = $("#garden-harvest-panel");
+    if (!panel) return;
+    const pending = pendingChallengeCarrots();
+    panel.hidden = currentScene !== "garden";
+    $("#pending-harvest-carrots").textContent = String(pending);
+    const button = $("#harvest-challenge-carrots");
+    button.disabled = pending === 0;
+    button.textContent = pending ? `Q · 당근 ${pending}개 수확` : "수확할 당근을 키우는 중";
+  }
+
+  async function harvestChallengeCarrots() {
+    const pending = pendingChallengeCarrots();
+    if (!pending) { setStatus("완료한 챌린지 보상이 생기면 이 밭에서 수확할 수 있어요."); return; }
+    Object.values(state.challengeCarrotClaims).forEach((claim) => { if (!claim.harvested) claim.harvested = true; });
+    state.carrots += pending;
+    const panel = $("#garden-harvest-panel");
+    panel?.classList.add("is-harvesting");
+    playSfx("harvest", { volume: 0.38 });
+    window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1500 } }));
+    window.setTimeout(() => panel?.classList.remove("is-harvesting"), 1500);
+    renderAll();
+    await persist(`챌린지로 자란 당근 ${pending}개를 수확했습니다!`);
+  }
+
+  function outfitCardMarkup(look, compact = false) {
+    const savedDate = new Date(Number(look.savedAt || Date.now()));
+    const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
+    const safeId = escapeMarkup(look.id);
+    const safeLabel = escapeMarkup(look.label);
+    const presetLabel = look.presetRole === "female" ? "프리셋1" : "프리셋2";
+    const nameControl = look.presetRole
+      ? `<div class="outfit-name-form fixed-preset-name"><small>${presetLabel}</small></div>`
+      : `<form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form>`;
+    return `<article class="recent-outfit-entry${compact ? " is-compact" : ""}"><button class="recent-outfit-card" type="button" data-outfit-look="${safeId}" aria-label="${safeLabel}, ${timestamp}에 저장한 코디 적용"><canvas width="96" height="96" data-outfit-canvas="${safeId}" aria-hidden="true"></canvas><small>${timestamp}</small></button>${nameControl}</article>`;
+  }
+
+  async function renameOutfit(lookId, nextLabel) {
+    const look = state.outfitHistory.find((item) => item.id === lookId);
+    const label = String(nextLabel || "").trim().slice(0, 24);
+    if (!look || !label) { setStatus("코디 이름을 입력해 주세요."); return; }
+    if (look.presetRole) { setStatus("기본 프리셋 이름은 변경할 수 없습니다."); return; }
+    look.label = label;
+    renderInventory();
+    if ($("#inventory-dialog").open && $("#inventory-dialog").dataset.view === "wardrobe") renderInventoryDialog("wardrobe");
+    await persist(`${label}(으)로 코디 이름을 변경했습니다.`);
+  }
+
+  function drawWardrobeLookThumbnails() {
+    if (!window.LpcAvatarEngine?.isReady()) return;
+    document.querySelectorAll("canvas[data-outfit-canvas]").forEach((thumbnail) => {
+      const look = state.outfitHistory.find((item) => item.id === thumbnail.dataset.outfitCanvas);
+      if (!look) return;
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      window.LpcAvatarEngine.draw(target, { gender: look.gender, engine: "lpc", cosmetics: look.cosmetics }, {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: 5, y: 4, width: 86, height: 88 });
+    });
+  }
+
+  async function applyOutfitLook(lookId) {
+    const look = state.outfitHistory.find((item) => item.id === lookId);
+    if (!look) return;
+    state.avatar.gender = look.gender;
+    state.avatar.engine = "lpc";
+    state.avatar.cosmetics = { ...defaultCosmetics, ...look.cosmetics };
+    state.avatar.tuning = { ...defaultAvatarTuning, ...look.tuning };
+    state.avatar.equipped = null;
+    renderInventory();
+    renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
+    await persist(`${look.label} 코디를 다시 착용했습니다.`);
+  }
+
+  function renderInventoryDialog(view = "storage") {
+    document.querySelectorAll("[data-inventory-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.inventoryView === view));
+    $("#inventory-dialog-grid").classList.toggle("is-wardrobe", view === "wardrobe");
+    if (view === "wardrobe") {
+      $("#inventory-dialog-grid").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look, true)).join("");
+      $("#inventory-dialog").dataset.view = view;
+      drawWardrobeLookThumbnails();
+      return;
+    }
+    const kind = view === "wardrobe" ? "accessory" : "object";
+    const codes = state.inventory.filter((code) => itemCatalog[code]?.kind === kind);
+    $("#inventory-dialog-grid").innerHTML = codes.map((code) => {
+      const item = itemCatalog[code];
+      const animatedRow = animatedObjectRows[code];
+      let visual;
+      if (code === "reward_cow") visual = '<span class="storage-reward-cow" aria-hidden="true"></span>';
+      else if (animatedRow != null) visual = `<canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas>`;
+      else {
+        const storageIndex = storageObjectIndex[code];
+        if (storageIndex == null) visual = `<span aria-hidden="true">${item.icon || "📦"}</span>`;
+        else {
+          const column = storageIndex % 5;
+          const row = Math.floor(storageIndex / 5);
+          visual = `<span class="storage-sprite-thumb" style="background-position:${column * 25}% ${row * 100 / 3}%" aria-hidden="true"></span>`;
+        }
+      }
+      return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}">${visual}${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
+    }).join("") || "<p>아직 보관 중인 아이템이 없습니다.</p>";
+    $("#inventory-dialog").dataset.view = view;
+    drawAnimatedObjectThumbnails($("#inventory-dialog-grid"));
+  }
+
+  function drawAnimatedObjectThumbnails(root = document) {
+    const thumbnails = root.querySelectorAll("canvas[data-animated-object-row]");
+    const draw = () => thumbnails.forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      const row = Number(thumbnail.dataset.animatedObjectRow);
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      target.drawImage(animatedObjectAtlas, 0, row * 128, 128, 128, 0, 0, thumbnail.width, thumbnail.height);
+    });
+    if (animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) draw();
+    else animatedObjectAtlas.addEventListener("load", draw, { once: true });
   }
 
   function renderInventory(highlightCode = null) {
@@ -1115,28 +1881,38 @@
       const equipped = item.kind === "accessory" && state.avatar.equipped === code;
       const selected = item.kind === "object" && placementCode === code;
       if (item.kind === "object") {
-        const storageIndex = { flower_patch: 0, lantern: 1, mushroom: 2, bench: 3 }[code];
-        const backgroundPosition = `${storageIndex * 100 / 3}% 0%`;
         const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
+        if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><span class="storage-reward-cow" aria-hidden="true"></span></button>`;
+        const animatedRow = animatedObjectRows[code];
+        if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas></button>`;
+        const storageIndex = storageObjectIndex[code];
+        const column = storageIndex % 5;
+        const row = Math.floor(storageIndex / 5);
+        const backgroundPosition = `${column * 25}% ${row * 100 / 3}%`;
         return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
-    $("#wardrobe-list").innerHTML = renderItems("accessory") || "<p class=\"empty-assets\">획득한 의상이 없습니다.</p>";
+    $("#wardrobe-list").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look)).join("") || "<p class=\"empty-assets\">최근 저장한 코디가 없습니다.</p>";
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
-    $("#cancel-placement").hidden = !placementCode;
-    $("#placement-mode").textContent = placementCode ? `${itemCatalog[placementCode].name} 배치 위치를 맵에서 선택하세요` : "배치할 아이템 없음";
+    drawWardrobeLookThumbnails();
+    drawAnimatedObjectThumbnails($("#storage-list"));
+    renderPlacementUI();
   }
 
   function renderPlaced() {
     $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
-      ? state.placed.map((item, index) => `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><strong>${itemCatalog[item.code].name}</strong><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`).join("")
+      ? state.placed.map((item, index) => {
+        const stateLabel = interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
+        return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><div class="placed-object-copy"><strong>${itemCatalog[item.code].name}</strong>${stateLabel}</div><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
+      }).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
   }
 
-  function selectedAvatarItem(category, id = avatarDraft[category]) {
-    return avatarCatalog[category].find((item) => item.id === id) || avatarCatalog[category][0];
+  function selectedAvatarItem(category, id = category === "pose" ? avatarPreviewPose : avatarDraft[category]) {
+    const choices = avatarItemsForCategory(category);
+    return choices.find((item) => item.id === id) || choices[0] || { id: "none", name: "" };
   }
 
   const avatarThumbnailIndexes = {
@@ -1153,6 +1929,121 @@
   const modularOutfitRows = { red_bow: 6, cow_hood: 7, midnight: 8, blue_cap: 9, teal_bob: 10 };
 
   function renderCatalogThumbnailCanvases() {
+    document.querySelectorAll("canvas[data-lpc-body-type], canvas[data-lpc-skin]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const cosmetics = {
+        ...avatarDraft,
+        bodyType: thumbnail.dataset.lpcBodyType || avatarDraft.bodyType,
+        skin: thumbnail.dataset.lpcSkin || avatarDraft.skin,
+        lpcHair: "none", lpcHat: "none", lpcGlasses: "none",
+        aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none",
+      };
+      const previewGender = cosmetics.bodyType === "female" ? "female" : "male";
+      cosmetics.lpcHead = previewGender === "female" ? "human_female" : "human_male";
+      window.LpcAvatarEngine.draw(target, { gender: previewGender, engine: "lpc", cosmetics }, {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: 3, y: 2, width: 90, height: 90 });
+    });
+    document.querySelectorAll("canvas[data-lpc-category]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const category = thumbnail.dataset.lpcCategory;
+      const id = thumbnail.dataset.lpcItem;
+      const cosmetics = category === "lpcMobility"
+        ? { ...avatarDraft, vehicle: id }
+        : { ...avatarDraft, [category]: id };
+      if (category === "lpcOutfit") Object.assign(cosmetics, {
+        outfitColor: "blue", lpcHead: "none", lpcExpression: "none", lpcNose: "none",
+        lpcEyebrow: "none", lpcEyes: "none", lpcWrinkles: "none", lpcHair: "none",
+        lpcGlasses: "none", lpcHat: "none", lpcBottom: "none", lpcShoes: "none",
+      });
+      if (category === "lpcTool") cosmetics.lpcWeapon = "none";
+      if (category === "lpcWeapon") cosmetics.lpcTool = "none";
+      const pose = category === "lpcTool" ? "harvest" : category === "lpcWeapon" ? "attack" : category === "lpcExpression" ? "idle" : avatarPreviewPose;
+      const faceCategory = ["lpcHead", "lpcExpression", "lpcEyes", "lpcEyebrow", "lpcNose", "lpcWrinkles"].includes(category);
+      window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics, mounted: category === "lpcMobility" }, {
+        direction: "down", pose, frame: avatarPreviewFrame, previewMobility: category === "lpcMobility",
+      }, category === "lpcOutfit"
+        ? { x: -18, y: -22, width: 132, height: 132 }
+        : faceCategory
+        ? { x: -7, y: -10, width: 110, height: 110 }
+        : { x: 3, y: 3, width: 90, height: 90 });
+    });
+    document.querySelectorAll("canvas[data-lpc-color-category]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      const category = thumbnail.dataset.lpcColorCategory;
+      const cosmetics = { ...avatarDraft, [category]: thumbnail.dataset.lpcColorValue };
+      const headOnly = category === "hairColor";
+      const mobilityPreview = category === "mobilityColor";
+      window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics, mounted: mobilityPreview }, {
+        direction: "down", pose: "idle", frame: 0, previewMobility: mobilityPreview,
+      }, headOnly
+        ? { x: -7, y: -10, width: 110, height: 110 }
+        : { x: 3, y: 3, width: 90, height: 90 });
+    });
+    document.querySelectorAll("canvas[data-lpc-pose]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      if (!window.LpcAvatarEngine?.isReady()) return;
+      window.LpcAvatarEngine.draw(target, {
+        ...state.avatar, engine: "lpc", cosmetics: avatarDraft,
+      }, { direction: "down", pose: thumbnail.dataset.lpcPose, frame: 1 }, {
+        x: 3, y: 3, width: 90, height: 90,
+      });
+    });
+    document.querySelectorAll("canvas[data-speech-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      const speech = thumbnail.dataset.speechThumb;
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      target.lineWidth = 3;
+      target.strokeStyle = "#38445a";
+      target.fillStyle = "#ffffff";
+      if (speech === "none") {
+        target.setLineDash([5, 4]);
+        target.strokeRect(18, 25, 60, 44);
+        target.setLineDash([]);
+        target.beginPath(); target.moveTo(25, 72); target.lineTo(71, 22); target.stroke();
+        return;
+      }
+      if (speech === "leaf") {
+        target.fillStyle = "#47ad68";
+        [[42, 34], [54, 34], [42, 46], [54, 46]].forEach(([x, y]) => {
+          target.beginPath(); target.arc(x, y, 12, 0, Math.PI * 2); target.fill();
+        });
+        target.strokeStyle = "#287c48"; target.beginPath(); target.moveTo(49, 48); target.lineTo(59, 70); target.stroke();
+        return;
+      }
+      if (speech === "window") {
+        target.fillStyle = "#dff3ff"; target.fillRect(16, 18, 64, 58); target.strokeRect(16, 18, 64, 58);
+        target.beginPath(); target.moveTo(48, 18); target.lineTo(48, 76); target.moveTo(16, 47); target.lineTo(80, 47); target.stroke();
+        target.fillStyle = "#87ccef"; target.fillRect(21, 23, 22, 19); target.fillRect(53, 23, 22, 19);
+        return;
+      }
+      target.beginPath(); target.roundRect(12, 18, 72, 54, 14); target.fill(); target.stroke();
+      target.beginPath(); target.moveTo(31, 70); target.lineTo(24, 84); target.lineTo(46, 71); target.fill(); target.stroke();
+      target.fillStyle = "#f39aaa"; target.beginPath(); target.moveTo(34, 43); target.arc(29, 43, 5, 0, Math.PI * 2); target.moveTo(72, 43); target.arc(67, 43, 5, 0, Math.PI * 2); target.fill();
+      target.strokeStyle = "#38445a"; target.beginPath(); target.arc(48, 48, 12, 0.15, Math.PI - 0.15); target.stroke();
+    });
+    document.querySelectorAll("canvas[data-empty-preview]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.strokeStyle = "#9ca5b5";
+      target.lineWidth = 4;
+      target.setLineDash([7, 5]);
+      target.beginPath(); target.arc(48, 48, 28, 0, Math.PI * 2); target.stroke();
+      target.setLineDash([]);
+      target.beginPath(); target.moveTo(27, 69); target.lineTo(69, 27); target.stroke();
+    });
     document.querySelectorAll("canvas[data-preset-thumb]").forEach((thumbnail) => {
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
@@ -1220,7 +2111,7 @@
       const target = thumbnail.getContext("2d");
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       target.imageSmoothingEnabled = true;
-      drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 2, 1, 7, 7, 82, 82);
+      drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 9, 4, 7, 7, 82, 82);
     });
   }
 
@@ -1278,42 +2169,18 @@
     const previewContext = preview.getContext("2d");
     previewContext.setTransform(1, 0, 0, 1, 0, 0);
     previewContext.clearRect(0, 0, preview.width, preview.height);
-    previewContext.setTransform(2, 0, 0, 2, 0, 0);
     previewContext.imageSmoothingEnabled = false;
-    const auraIndex = cosmeticSpriteIndex("aura", avatarDraft.aura);
-    drawAtlasCell(previewContext, cosmeticSpriteAtlas, auraIndex, 5, 4, 46, 55, 188, 188);
-    const previewPreset = avatarDraft.preset || "blue_cap";
-    const previewAtlas = presetSpriteAtlases[previewPreset];
-    const presetSources = Object.fromEntries(Object.entries(presetSpriteAtlases).map(([preset, atlas]) => [preset, atlas]));
-    if (modularAvatarAtlas.complete && modularAvatarAtlas.naturalWidth) presetSources.modular = { image: modularAvatarAtlas, rows: 11 };
-    if (previewAtlas?.image.complete && previewAtlas.image.naturalWidth && window.CarrotAvatarCompositor) {
-      window.CarrotAvatarCompositor.drawFrame(previewContext, presetSources, {
-        preset: previewPreset,
-        hairPreset: stylePresetByItem[avatarDraft.hair] || previewPreset,
-        outfitPreset: stylePresetByItem[avatarDraft.outfit] || previewPreset,
-        direction: "down", mounted: false, moving: false, frame: 0,
-        accessory: avatarDraft.accessory, hat: avatarDraft.hat, glasses: avatarDraft.glasses,
-        ...avatarTuningDraft,
-      }, { x: 65, y: 30, width: 150, height: 210 });
-    } else if (basicWalkAtlas.complete && basicWalkAtlas.naturalWidth) {
-      drawAtlasCell(previewContext, basicWalkAtlas, 0, 4, 4, 66, 42, 148, 205);
-    } else {
-      drawLayeredAvatarPreview(previewContext, avatarDraft);
+    if (window.LpcAvatarEngine?.isReady()) {
+      window.LpcAvatarEngine.draw(previewContext, {
+        ...state.avatar, engine: "lpc", cosmetics: avatarDraft, sitting: false, mounted: false,
+      }, { direction: "down", pose: avatarPreviewPose, frame: avatarPreviewFrame, previewMobility: true }, { x: 90, y: 82, width: 380, height: 380 });
     }
-    const effectIndex = cosmeticSpriteIndex("effect", avatarDraft.effect);
-    drawAtlasCell(previewContext, cosmeticSpriteAtlas, effectIndex, 5, 4, 16, 50, 80, 80);
-    const vehicleIndex = cosmeticSpriteIndex("vehicle", avatarDraft.vehicle);
-    drawAtlasCell(previewContext, cosmeticSpriteAtlas, vehicleIndex, 5, 4, 18, 213, 82, 65);
+    // Pet preview remains separate; all retired avatar and speech overlays
+    // are intentionally excluded from the official LPC studio.
+    previewContext.setTransform(2, 0, 0, 2, 0, 0);
     const petIndex = cosmeticSpriteIndex("pet", avatarDraft.pet);
     const catIndex = catPetSpriteIndex(avatarDraft.pet);
-    if (!drawAtlasCell(previewContext, catPetAtlas, catIndex, 2, 1, 178, 188, 100, 100)) {
-      drawAtlasCell(previewContext, cosmeticSpriteAtlas, petIndex, 5, 4, 190, 205, 72, 72);
-    }
-    const speechIndex = cosmeticSpriteIndex("speech", avatarDraft.speech);
-    if (drawAtlasCell(previewContext, cosmeticSpriteAtlas, speechIndex, 5, 4, 175, 8, 96, 70)) {
-      previewContext.textAlign = "center"; previewContext.font = "bold 9px sans-serif"; previewContext.fillStyle = "#30323b";
-      previewContext.fillText(avatarDraft.speech === "cat" ? "안녕하세요!" : avatarDraft.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요", 223, 42);
-    }
+    drawAtlasCell(previewContext, catPetAtlas, catIndex, 9, 4, 178, 188, 100, 100);
   }
 
   function drawPreviewAccessoryOverlay(target, accessory) {
@@ -1335,29 +2202,45 @@
   }
 
   function renderAvatarStudio() {
-    $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}"><span aria-hidden="true">${category.icon}</span>${category.label}</button>`).join("");
+    $("#avatar-category-nav").innerHTML = avatarCategories.map((category) => `<button class="avatar-category-button" type="button" data-avatar-category="${category.id}" aria-pressed="${activeAvatarCategory === category.id}">${category.icon ? `<span aria-hidden="true">${category.icon}</span>` : ""}${category.label}</button>`).join("");
+    const effectiveCategory = activeAvatarCategory;
     const category = avatarCategories.find((entry) => entry.id === activeAvatarCategory);
-    const items = ["hair", "outfit"].includes(activeAvatarCategory)
-      ? avatarCatalog[activeAvatarCategory].filter((item) => stylePresetByItem[item.id])
-      : avatarCatalog[activeAvatarCategory];
+    const items = avatarItemsForCategory(effectiveCategory);
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
+    let previousGroup = null;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
-      const cosmeticIndex = cosmeticSpriteIndex(activeAvatarCategory, item.id);
-      const catIndex = activeAvatarCategory === "pet" ? catPetSpriteIndex(item.id) : null;
+      const itemSlot = item.slot || effectiveCategory;
+      const itemId = item.itemId || item.id;
+      const cosmeticIndex = cosmeticSpriteIndex(itemSlot, itemId);
+      const catIndex = itemSlot === "pet" ? catPetSpriteIndex(itemId) : null;
       let visual;
-      if (activeAvatarCategory === "preset") {
-        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (["hair", "outfit"].includes(activeAvatarCategory)) {
-        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${stylePresetByItem[item.id]}" data-preset-crop="${activeAvatarCategory === "hair" ? "head" : "body"}" aria-hidden="true"></canvas>`;
-      } else if (["face", "accessory"].includes(activeAvatarCategory)) {
+      if (effectiveCategory === "bodyType") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-body-type="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "skin") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-skin="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (Object.hasOwn(lpcCatalogMap, itemSlot)) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="${itemSlot}" data-lpc-item="${itemId}" aria-hidden="true"></canvas>`;
+      } else if (["hairColor", "outfitColor", "bottomColor", "shoeColor", "mobilityColor"].includes(itemSlot) && item.color) {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-color-category="${itemSlot}" data-lpc-color-value="${itemId}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "accessory") {
         const itemPreset = stylePresetByItem[item.id];
-        const index = avatarThumbnailIndexes[activeAvatarCategory][item.id];
+        const index = avatarThumbnailIndexes[effectiveCategory][item.id];
         visual = itemPreset
           ? `<canvas class="item-visual catalog-thumb" width="96" height="96" data-preset-thumb="${itemPreset}" aria-hidden="true"></canvas>`
           : index == null
             ? '<span class="item-visual empty-sprite-thumb" aria-hidden="true">없음</span>'
             : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-avatar-thumb="${index}" data-avatar-crop="${["hair", "face", "accessory"].includes(activeAvatarCategory) ? "head" : "body"}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "speech") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-speech-thumb="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "pose") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-pose="${item.id}" aria-hidden="true"></canvas>`;
+      } else if (item.id === "none" && ["aura", "pet"].includes(effectiveCategory)) {
+        visual = '<canvas class="item-visual catalog-thumb" width="96" height="96" data-empty-preview="true" aria-hidden="true"></canvas>';
+      } else if (effectiveCategory === "vehicle" && item.id === "none") {
+        visual = '<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-pose="walk" aria-hidden="true"></canvas>';
+      } else if (effectiveCategory === "vehicle") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="lpcMobility" data-lpc-item="${itemId}" aria-hidden="true"></canvas>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
       } else if (cosmeticIndex != null) {
@@ -1365,31 +2248,33 @@
       } else {
         visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
-      const selected = avatarDraft[activeAvatarCategory] === item.id;
-      return `<button class="avatar-item-card" type="button" data-avatar-item="${item.id}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}<span class="item-name">${item.name}</span><small>${selected ? "선택됨" : "보유 아이템"}</small></button>`;
+      const selected = (effectiveCategory === "pose" ? avatarPreviewPose : avatarDraft[itemSlot]) === itemId;
+      const shortcuts = { idle: "대기", walk: "WASD", run: "R", sit: "X", attack: "Z", dance: "0", harvest: "Q", fishing: "Q", door: "Q" };
+      const actionViewOnly = effectiveCategory === "pose";
+      const groupHeading = item.group && item.group !== previousGroup
+        ? `<h4 class="avatar-item-group-title">${item.group}</h4>`
+        : "";
+      previousGroup = item.group || previousGroup;
+      return `${groupHeading}<button class="avatar-item-card${actionViewOnly ? " action-view-only" : ""}" type="button" ${actionViewOnly ? "disabled" : `data-avatar-item="${item.id}"`} aria-label="${item.name}${selected ? ", 현재 선택" : ", 보유"}" aria-pressed="${selected}">${item.isNew ? '<span class="new-badge">N</span>' : ""}${visual}${actionViewOnly ? `<span class="shortcut-badge">${shortcuts[item.id] || "자동"}</span>` : ""}${selected ? '<span class="selected-check" aria-hidden="true">✓</span>' : ""}</button>`;
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
     $("#avatar-preview-name").textContent = state.avatar.name;
-    $("#avatar-selection-name").textContent = selectedAvatarItem(activeAvatarCategory).name;
+    $("#avatar-selection-name").textContent = "아이템을 선택해주세요";
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
-    for (const [key, value] of Object.entries(avatarTuningDraft)) {
-      const input = document.querySelector(`[data-avatar-tuning="${key}"]`);
-      const output = document.querySelector(`[data-avatar-tuning-output="${key}"]`);
-      if (input) input.value = String(value);
-      if (output) output.textContent = key === "worldScale" ? `${Math.round(value * 100)}%` : `${value > 0 ? "+" : ""}${value}px`;
-    }
     renderCatalogThumbnailCanvases();
     renderAvatarPreview();
     window.dispatchEvent(new CustomEvent("forest-avatar-draft", { detail: avatarDraft }));
   }
 
   function openAvatarStudio() {
-    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}), preset: state.avatar.preset || "blue_cap" };
+    avatarDraft = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
     avatarTuningDraft = { ...defaultAvatarTuning, ...(state.avatar.tuning || {}) };
     avatarDraftHistory = [];
-    activeAvatarCategory = "preset";
+    activeAvatarCategory = "bodyType";
+    avatarPreviewPose = "idle";
     renderAvatarStudio();
     $("#avatar-studio").showModal();
+    musicEngine?.switchTo("avatar", { restart: true }).catch(() => setStatus("아바타 음악을 재생하지 못했지만 꾸미기는 계속할 수 있어요."));
   }
 
   function renderProfileAvatar() {
@@ -1399,8 +2284,15 @@
     target.clearRect(0, 0, canvas.width, canvas.height);
     target.setTransform(2, 0, 0, 2, 0, 0);
     target.imageSmoothingEnabled = false;
-    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
     const cosmetics = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
+    if (window.LpcAvatarEngine?.isReady()) {
+      window.LpcAvatarEngine.draw(target, { ...state.avatar, engine: "lpc", cosmetics, sitting: false, mounted: false }, {
+        direction: "down", pose: "idle", frame: avatarPreviewFrame,
+      }, { x: 24, y: 32, width: 176, height: 176 });
+      target.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
+    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
     window.CarrotAvatarCompositor.drawFrame(target, { modular: { image: modularAvatarAtlas, rows: 11 } }, {
       preset: state.avatar.preset,
       hairPreset: stylePresetByItem[cosmetics.hair] || state.avatar.preset,
@@ -1426,33 +2318,89 @@
     $("#profile-dialog").showModal();
   }
 
+  let challengeFlowStep = 1;
+  function showChallengeFlowStep(step) {
+    challengeFlowStep = Math.max(1, Math.min(4, step));
+    document.querySelectorAll("[data-flow-step]").forEach((section) => {
+      const active = Number(section.dataset.flowStep) === challengeFlowStep;
+      section.hidden = !active;
+      section.classList.toggle("is-active", active);
+    });
+    document.querySelectorAll("[data-flow-indicator]").forEach((indicator) => {
+      const number = Number(indicator.dataset.flowIndicator);
+      indicator.classList.toggle("is-active", number === challengeFlowStep);
+      indicator.classList.toggle("is-complete", number < challengeFlowStep);
+    });
+    $("#challenge-flow-back").hidden = challengeFlowStep === 1;
+    $("#challenge-flow-next").hidden = challengeFlowStep === 4;
+    $("#challenge-flow-generate").hidden = challengeFlowStep !== 4;
+  }
+
+  function openChallengeFlow() {
+    const form = $("#challenge-flow-form");
+    form.reset();
+    $("#custom-quest-picker").hidden = true;
+    showChallengeFlowStep(1);
+    $("#challenge-flow-dialog").showModal();
+  }
+
+  async function startPredictionFlow() {
+    if (!state.challengePlan?.onboarded) { openChallengeFlow(); return; }
+    const style = state.challengePlan.style || "balanced";
+    const customIds = style === "custom" ? activeQuestIds() : [];
+    await generateChallengeQuests(style, customIds);
+  }
+
+  function validateChallengeFlowStep() {
+    const section = document.querySelector(`[data-flow-step="${challengeFlowStep}"]`);
+    const control = section?.querySelector("input:required, select:required");
+    if (control && !control.checkValidity()) { control.reportValidity(); return false; }
+    return true;
+  }
+
+  async function generateChallengeQuests(style, customIds = []) {
+    const status = $("#quest-generation-status");
+    status.hidden = false;
+    $("#quest-list").innerHTML = '<div class="quest-loading" aria-hidden="true"><i></i><i></i><i></i></div>';
+    activateInspectorPanel("quests-panel");
+    await animationDelay(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 120 : 1050);
+    const questIds = style === "custom" ? customIds : (questPlans[style] || questPlans.balanced);
+    state.challengePlan = { onboarded: true, style, questIds: questIds.slice(0, 3), lastGeneratedAt: new Date().toISOString() };
+    for (const id of questIds) if (!(id in state.quests)) state.quests[id] = false;
+    syncActiveQuests();
+    status.hidden = true;
+    renderQuests();
+    renderGroup();
+    await persist("오늘까지의 기록과 선택한 방식으로 퀘스트 3개를 만들었습니다.");
+  }
+
+  function ragGuideFor(question) {
+    const normalized = question.toLowerCase();
+    if (/식사|채소|음식|식단/.test(normalized)) return {
+      answer: "완벽한 식단을 요구하기보다 오늘 먹은 시간과 구성을 먼저 기록해 보세요. 기록은 다음 챌린지를 조정하는 자료로 사용됩니다.",
+      source: "CDC PreventT2 생활습관 변화 교육과정", url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html",
+    };
+    if (/수면|잠|피곤/.test(normalized)) return {
+      answer: "취침·기상 시각과 다음 날의 컨디션을 함께 기록하면 생활 리듬을 돌아보는 데 도움이 됩니다.",
+      source: "WHO 신체활동 및 좌식행동 지침", url: "https://www.who.int/publications/i/item/9789240015128",
+    };
+    return {
+      answer: "몸 상태에 맞는 작은 활동부터 시작하고, 수행 여부를 꾸준히 기록해 보세요. 통증이나 불편이 있으면 중단하고 의료진의 안내를 우선하세요.",
+      source: "WHO 신체활동 및 좌식행동 지침", url: "https://www.who.int/publications/i/item/9789240015128",
+    };
+  }
+
   function renderAll() {
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
-    $("#avatar-gender").value = state.avatar.gender;
-    $("#avatar-preset").value = state.avatar.preset;
-    renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); updateProfileUI();
+    syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
   }
 
   function deterministicReward() {
     const seed = [...TODAY].reduce((total, character) => total + character.charCodeAt(0), state.inventory.length);
     const candidates = rewardPool.filter((code) => !state.inventory.includes(code));
     return candidates.length ? candidates[seed % candidates.length] : null;
-  }
-
-  function forestAvatarPayload() {
-    const silverPresets = new Set(["moon", "midnight"]);
-    const carrotPresets = new Set(["carrot", "red_bow", "cow_hood", "teal_bob"]);
-    const gardenPresets = new Set(["sprout", "teal_bob"]);
-    const greenPresets = new Set(["moon", "midnight"]);
-    const serverAccessories = new Set(["sprout_beret", "flower_pin", "carrot_bag", "blue_watering_can"]);
-    return {
-      display_name: state.avatar.name,
-      hair_code: silverPresets.has(state.avatar.preset) ? "silver_bob" : carrotPresets.has(state.avatar.preset) ? "carrot_bob" : "midnight_short",
-      outfit_code: gardenPresets.has(state.avatar.preset) ? "garden_overall" : greenPresets.has(state.avatar.preset) ? "green_knit" : "orange_hoodie",
-      accessory_code: serverAccessories.has(state.avatar.equipped) ? state.avatar.equipped : "none",
-    };
   }
 
   function activateInspectorPanel(panelId, shouldScroll = false) {
@@ -1483,12 +2431,21 @@
     overlay.hidden = false;
     $("#reward-skip").focus();
 
+    const activeBackgroundTrack = musicEngine?.enabled ? musicEngine.tracks[musicEngine.current] : null;
+    if (activeBackgroundTrack) musicEngine.applyVolume(.34);
+    rewardChestSound.pause();
+    rewardChestSound.currentTime = 0;
+    rewardChestSound.play().catch(() => setStatus("보물상자 효과음을 재생하지 못했지만 보상은 정상 지급됩니다."));
+
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     await Promise.race([
-      animationDelay(reducedMotion ? 250 : 2300),
+      animationDelay(reducedMotion ? 250 : 1900),
       new Promise((resolve) => { rewardSkipResolve = resolve; }),
     ]);
     rewardSkipResolve = null;
+    rewardChestSound.pause();
+    rewardChestSound.currentTime = 0;
+    if (activeBackgroundTrack) musicEngine.applyVolume();
     overlay.hidden = true;
     if (!item) return;
 
@@ -1518,47 +2475,63 @@
     window.setTimeout(() => flight.remove(), 250);
   }
 
-  async function maybeClaimDailyReward() {
-    if (adapter.mode !== "api") return;
-    if (!personalAllComplete()) return;
-    try {
-      const result = await adapter.claimDailyReward(TODAY);
-      // Only trust carrot_balance when this call actually credited something: a repeat
-      // claim (already_claimed) replays the ORIGINAL transaction's balance_after, which is
-      // stale once later actions (watering, buying) have changed the wallet since then.
-      if (result.credited) {
-        state.carrots = result.carrot_balance;
-        renderAll();
-        setStatus(`오늘의 챌린지 보상으로 당근 ${result.carrot_amount}개를 받았습니다.`);
-      }
-    } catch (error) {
-      // Not eligible yet on the server side — ignore quietly.
-    }
-  }
-
   $("#quest-list").addEventListener("change", async (event) => {
     const checkbox = event.target.closest("[data-quest]");
     if (!checkbox) return;
+    const wasChecked = Boolean(state.quests[checkbox.dataset.quest]);
     state.quests[checkbox.dataset.quest] = checkbox.checked;
+    const grown = checkbox.checked && !wasChecked ? accrueChallengeCarrots(checkbox.dataset.quest) : 0;
     renderQuests(); renderGroup();
-    if (adapter.mode === "api" && state.questIds?.[checkbox.dataset.quest]) {
-      await adapter.updateQuest(state.questIds[checkbox.dataset.quest], TODAY, checkbox.checked);
-    }
-    await maybeClaimDailyReward();
-    await persist(`${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 퀘스트를 ${checkbox.checked ? "완료" : "미완료"}로 기록했습니다.`);
+    renderGardenHarvest();
+    await persist(grown
+      ? `${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 완료! 당근밭에 당근 ${grown}개가 자랐습니다.`
+      : `${quests.find((quest) => quest.id === checkbox.dataset.quest).title} 퀘스트를 ${checkbox.checked ? "완료" : "미완료"}로 기록했습니다.`);
+  });
+
+  $("#start-prediction-flow").addEventListener("click", startPredictionFlow);
+  $("#challenge-flow-close").addEventListener("click", () => $("#challenge-flow-dialog").close());
+  $("#challenge-flow-back").addEventListener("click", () => showChallengeFlowStep(challengeFlowStep - 1));
+  $("#challenge-flow-next").addEventListener("click", () => {
+    if (validateChallengeFlowStep()) showChallengeFlowStep(challengeFlowStep + 1);
+  });
+  document.querySelectorAll('input[name="challenge-style"]').forEach((input) => input.addEventListener("change", () => {
+    $("#custom-quest-picker").hidden = input.value !== "custom" || !input.checked;
+  }));
+  $("#custom-quest-picker").addEventListener("change", (event) => {
+    const checked = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')];
+    if (checked.length > 3) { event.target.checked = false; setStatus("커스터마이징 챌린지는 3개까지만 선택할 수 있어요."); }
+  });
+  $("#challenge-flow-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const style = new FormData(event.currentTarget).get("challenge-style");
+    if (!style) return;
+    const customIds = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
+    if (style === "custom" && customIds.length !== 3) { setStatus("내가 조합하기는 챌린지 3개를 선택해 주세요."); return; }
+    $("#challenge-flow-dialog").close();
+    await generateChallengeQuests(style, customIds);
+  });
+
+  $("#forest-rag-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const question = $("#forest-rag-question").value.trim();
+    const guide = ragGuideFor(question);
+    $("#forest-rag-result").innerHTML = `<strong>${guide.answer}</strong><a href="${guide.url}" target="_blank" rel="noopener">검색 근거 · ${guide.source}</a><small>일반적인 건강교육 정보이며 진단·처방이 아닙니다.</small>`;
+  });
+
+  $("#group-goal-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 80);
+    await persist("오늘의 슬로건을 저장했습니다.");
   });
 
   $("#avatar-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.avatar.name = $("#avatar-name").value.trim();
-    state.avatar.gender = $("#avatar-gender").value;
-    state.avatar.preset = $("#avatar-preset").value;
-    if (presetBundles[state.avatar.preset]) {
-      state.avatar.cosmetics = { ...state.avatar.cosmetics, ...presetBundles[state.avatar.preset] };
-      state.avatar.equipped = null;
-    }
-    if (adapter.mode === "api") await adapter.updateAvatar(forestAvatarPayload());
-    renderCanvas(); await persist(`${state.avatar.name} 아바타를 저장했습니다.`);
+    const nextName = $("#avatar-name").value.trim();
+    if (!nextName) { setStatus("닉네임을 입력해 주세요."); return; }
+    state.avatar.name = nextName;
+    renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
+    await persist(`${state.avatar.name} 닉네임을 저장했습니다.`);
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
@@ -1566,7 +2539,10 @@
   $("#avatar-studio").addEventListener("click", (event) => {
     if (event.target === $("#avatar-studio")) $("#avatar-studio").close();
   });
-  $("#open-profile").addEventListener("click", openProfile);
+  $("#avatar-studio").addEventListener("close", () => {
+    musicEngine?.switchTo(sceneMusicName()).catch(() => setStatus("장면 음악을 다시 재생하지 못했습니다."));
+  });
+  $("#open-profile").addEventListener("click", () => { window.location.href = "/?step=2"; });
   $("#profile-close").addEventListener("click", () => $("#profile-dialog").close());
   $("#profile-dialog").addEventListener("click", (event) => {
     if (event.target === $("#profile-dialog")) $("#profile-dialog").close();
@@ -1587,14 +2563,6 @@
     state.avatar.name = nickname;
     $("#avatar-name").value = nickname;
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    if (adapter.mode === "api") {
-      try {
-        await adapter.updateAvatar(forestAvatarPayload());
-      } catch (error) {
-        setStatus(error.message || "닉네임 변경에 실패했습니다.");
-        return;
-      }
-    }
     await persist(`${nickname}(으)로 닉네임을 변경했습니다.`);
     $("#profile-dialog").close();
   });
@@ -1602,17 +2570,44 @@
     const button = event.target.closest("[data-avatar-category]");
     if (!button) return;
     activeAvatarCategory = button.dataset.avatarCategory;
+    if (activeAvatarCategory === "tools") avatarPreviewPose = "harvest";
+    else if (activeAvatarCategory === "weapons") avatarPreviewPose = "attack";
+    else if (!["tools", "weapons"].includes(activeAvatarCategory)) avatarPreviewPose = "idle";
+    avatarPreviewFrame = 0;
     renderAvatarStudio();
   });
   $("#avatar-item-grid").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-item]");
     if (!button) return;
-    if (activeAvatarCategory !== "preset" && avatarDraft[activeAvatarCategory] === button.dataset.avatarItem) return;
+    const categoryId = activeAvatarCategory;
+    if (categoryId === "pose") return;
+    const groupedCategories = ["head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle"];
+    const groupedItem = groupedCategories.includes(categoryId)
+      ? avatarCatalog[categoryId].find((item) => item.id === button.dataset.avatarItem)
+      : null;
+    const targetSlot = groupedItem?.slot || categoryId;
+    const targetItem = groupedItem?.itemId || button.dataset.avatarItem;
+    if (avatarDraft[targetSlot] === targetItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarDraft[activeAvatarCategory] = button.dataset.avatarItem;
-    const linkedPreset = activeAvatarCategory === "preset" ? button.dataset.avatarItem : null;
-    if (linkedPreset && presetBundles[linkedPreset]) {
-      avatarDraft = { ...avatarDraft, ...presetDecorationReset, preset: linkedPreset, ...presetBundles[linkedPreset] };
+    avatarDraft[targetSlot] = targetItem;
+    if (targetSlot === "lpcTool") {
+      avatarDraft.lpcWeapon = "none";
+      avatarPreviewPose = "harvest";
+    }
+    if (targetSlot === "lpcWeapon") {
+      avatarDraft.lpcTool = "none";
+      avatarPreviewPose = "attack";
+    }
+    avatarPreviewFrame = 0;
+    if (categoryId === "bodyType") {
+      if (["male", "muscular", "teen"].includes(avatarDraft.bodyType)) state.avatar.gender = "male";
+      if (avatarDraft.bodyType === "female") state.avatar.gender = "female";
+      if (avatarDraft.bodyType === "female") avatarDraft.lpcHead = "human_female";
+      else avatarDraft.lpcHead = "human_male";
+      Object.keys(lpcCatalogMap).forEach((categoryId) => {
+        const available = avatarItemsForCategory(categoryId);
+        if (!available.some((choice) => choice.id === avatarDraft[categoryId])) avatarDraft[categoryId] = available[0]?.id || "none";
+      });
     }
     renderAvatarStudio();
   });
@@ -1624,38 +2619,59 @@
   });
   $("#avatar-randomize").addEventListener("click", () => {
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarCategories.forEach(({ id }) => {
-      const choices = avatarCatalog[id];
-      avatarDraft[id] = choices[Math.floor(Math.random() * choices.length)].id;
+    const bodyChoices = avatarItemsForCategory("bodyType");
+    avatarDraft.bodyType = bodyChoices[Math.floor(Math.random() * bodyChoices.length)]?.id || "male";
+    state.avatar.gender = avatarDraft.bodyType === "female" ? "female" : "male";
+    avatarDraft.lpcHead = avatarDraft.bodyType === "female" ? "human_female" : "human_male";
+    [
+      "skin", "lpcHead", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles",
+      "lpcHair", "hairColor", "lpcHat", "lpcGlasses", "lpcArms", "lpcOutfit", "outfitColor",
+      "lpcBottom", "bottomColor", "lpcShoes", "shoeColor", "lpcTool", "lpcWeapon",
+      "aura", "effect", "vehicle", "pet", "speech",
+    ].forEach((slot) => {
+      const choices = avatarItemsForCategory(slot);
+      if (choices.length) avatarDraft[slot] = choices[Math.floor(Math.random() * choices.length)].id;
     });
     renderAvatarStudio();
   });
-  $("#avatar-tuning-controls").addEventListener("input", (event) => {
-    const input = event.target.closest("[data-avatar-tuning]");
-    if (!input) return;
-    avatarTuningDraft[input.dataset.avatarTuning] = Number(input.value);
+  $("#avatar-strip-basics").addEventListener("click", () => {
+    avatarDraftHistory.push({ ...avatarDraft });
+    avatarDraft = {
+      ...avatarDraft,
+      lpcHair: "none", lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+      lpcOutfit: "tshirt", outfitColor: "white", lpcBottom: "long_pants", bottomColor: "black",
+      lpcShoes: "none", lpcTool: "none", lpcWeapon: "none",
+      aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none",
+    };
     renderAvatarStudio();
   });
-  $("#avatar-tuning-reset").addEventListener("click", () => {
-    avatarTuningDraft = { ...defaultAvatarTuning };
+  $("#avatar-restore-outfit").addEventListener("click", () => {
+    const latest = state.outfitHistory[0];
+    if (!latest) { setStatus("저장된 내 코디가 없습니다."); return; }
+    avatarDraftHistory.push({ ...avatarDraft });
+    avatarDraft = { ...defaultCosmetics, ...latest.cosmetics };
+    avatarTuningDraft = { ...defaultAvatarTuning, ...latest.tuning };
     renderAvatarStudio();
   });
   $("#avatar-studio-save").addEventListener("click", async () => {
-    state.avatar.preset = avatarDraft.preset || state.avatar.preset;
-    const { preset: _preset, ...savedCosmetics } = avatarDraft;
-    state.avatar.cosmetics = { ...savedCosmetics };
+    state.avatar.engine = "lpc";
+    state.avatar.cosmetics = { ...avatarDraft };
     state.avatar.tuning = { ...avatarTuningDraft };
     state.avatar.equipped = avatarDraft.accessory === "none" ? null : avatarDraft.accessory;
-    $("#avatar-preset").value = state.avatar.preset;
+    rememberCurrentOutfit();
     renderInventory();
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    if (adapter.mode === "api") await adapter.updateAvatar(forestAvatarPayload());
     $("#avatar-studio").close();
     await persist(`${state.avatar.name}님의 새 코디를 저장했습니다.`);
   });
 
   $("#asset-dock").addEventListener("click", async (event) => {
+    const lookButton = event.target.closest("[data-outfit-look]");
+    if (lookButton) {
+      await applyOutfitLook(lookButton.dataset.outfitLook);
+      return;
+    }
     const button = event.target.closest("[data-item]");
     if (!button) return;
     const code = button.dataset.item;
@@ -1663,87 +2679,105 @@
       state.avatar.equipped = state.avatar.equipped === code ? null : code;
       state.avatar.cosmetics.accessory = state.avatar.equipped || "none";
       placementCode = null;
-      if (adapter.mode === "api") await adapter.updateAvatar(forestAvatarPayload());
-      renderInventory(); renderCanvas(); await persist(`${itemCatalog[code].name} ${state.avatar.equipped === code ? "장착" : "해제"} 완료.`);
+      placementDraft = null;
+      renderInventory(); emitPlacementUpdate(); await persist(`${itemCatalog[code].name} ${state.avatar.equipped === code ? "장착" : "해제"} 완료.`);
       return;
     }
-    placementCode = placementCode === code ? null : code;
+    if (placementCode === code) { cancelPlacement(); return; }
+    placementCode = code;
+    placementDraft = null;
     renderInventory();
-    setStatus(placementCode ? `${itemCatalog[code].name}을 놓을 위치를 맵에서 눌러 주세요.` : "오브젝트 배치를 취소했습니다.");
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[code].name}을 놓을 초록 격자를 선택해 주세요.`);
   });
-
-  $("#unequip-button").addEventListener("click", async () => {
-    state.avatar.equipped = null; state.avatar.cosmetics.accessory = "none";
-    if (adapter.mode === "api") await adapter.updateAvatar(forestAvatarPayload());
-    renderInventory(); renderCanvas(); await persist("액세서리를 해제했습니다.");
+  $("#wardrobe-list").addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-outfit-name-form]");
+    if (!form) return;
+    event.preventDefault();
+    await renameOutfit(form.dataset.outfitNameForm, new FormData(form).get("outfit-name"));
   });
-  $("#cancel-placement").addEventListener("click", () => { placementCode = null; renderInventory(); setStatus("오브젝트 배치를 취소했습니다."); });
+  [$("#wardrobe-list"), $("#storage-list")].forEach((carousel) => {
+    carousel.addEventListener("wheel", (event) => {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      event.preventDefault();
+      carousel.scrollLeft += delta;
+    }, { passive: false });
+  });
+  $("#cancel-placement").addEventListener("click", () => cancelPlacement());
+  $("#rotate-placement").addEventListener("click", rotatePlacement);
+  $("#confirm-placement").addEventListener("click", confirmPlacement);
 
   $("#placed-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-remove]");
     if (!button) return;
-    const removeIndex = Number(button.dataset.remove);
-    const removed = state.placed[removeIndex];
-    if (adapter.mode === "api") {
-      if (!removed.objectId) { setStatus("서버 오브젝트 ID를 확인할 수 없습니다."); return; }
-      await adapter.removeObject(adapter.groupId, removed.objectId);
-    }
-    state.placed.splice(removeIndex, 1);
+    const [removed] = state.placed.splice(Number(button.dataset.remove), 1);
     renderPlaced(); renderCanvas(); await persist(`${itemCatalog[removed.code].name}을 창고로 돌려놓았습니다.`);
   });
 
-  canvas.addEventListener("click", async (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    const x = Math.round((event.clientX - bounds.left) * WORLD_WIDTH / bounds.width / 4) * 4;
-    const y = Math.round((event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height / 4) * 4;
+  async function handleWorldPointer(pointerX, pointerY) {
+    const x = placementCode ? Math.round(pointerX / 32) * 32 : Math.round(pointerX / 4) * 4;
+    const y = placementCode ? Math.round(pointerY / 32) * 32 : Math.round(pointerY / 4) * 4;
     if (!placementCode) {
       canvas.focus();
       if (currentScene === "home") {
         if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
+        else if (x >= 560 && x <= 670 && y >= 270 && y <= 375) await interact("record_player");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
-        else setStatus("소파·옷장·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else setStatus("소파·옷장·LP 재생기·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
       } else if (currentScene === "garden") {
         if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
         else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
-      } else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) interact("home");
-      else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) interact("garden");
-      else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) interact("pond");
-      else if (x >= 440 && x <= 505 && y >= 345 && y <= 410) interact("vehicle");
-      else setStatus("집·당근밭·연못·스쿠터를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      } else {
+        const placedTarget = nearbyPlacedObject(x, y, 58);
+        if (placedTarget?.item.code === "reward_cow") {
+          const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
+          reactToCow(placedTarget.index, reaction);
+        } else if (placedTarget) await interact(`object:${placedTarget.index}`);
+        else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
+        else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
+        else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");
+        else setStatus("집·당근밭·연못·상호작용 오브젝트를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+      }
       return;
     }
     if (currentScene !== "world") { setStatus("숲 오브젝트는 월드 장면에서만 배치할 수 있어요."); return; }
-    if (blocked(x, y)) { setStatus("그 위치에는 오브젝트를 놓을 수 없습니다."); return; }
-    let placedResult = null;
-    if (adapter.mode === "api") {
-      placedResult = await adapter.placeObject(adapter.groupId, {
-        object_code: placementCode,
-        position_x: Math.round(x / WORLD_WIDTH * 100),
-        position_y: Math.round(y / WORLD_HEIGHT * 100),
-      });
-      state.carrots = placedResult.carrot_balance;
+    if (!placementCellValid(x, y)) { setStatus("빨간 격자나 다른 오브젝트와 겹치는 위치에는 놓을 수 없습니다."); return; }
+    placementDraft = { code: placementCode, x, y, rotation: Number(placementDraft?.rotation) || 0 };
+    renderPlacementUI();
+    emitPlacementUpdate();
+    setStatus(`${itemCatalog[placementCode].name} 위치를 선택했습니다. 회전하거나 V 버튼으로 확정하세요.`);
+  }
+
+  canvas.addEventListener("click", async (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) * WORLD_WIDTH / bounds.width;
+    const y = (event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height;
+    await handleWorldPointer(x, y);
+  });
+  window.addEventListener("forest-world-pointer", async (event) => {
+    const detail = event.detail || {};
+    if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
+    await handleWorldPointer(detail.x, detail.y);
+  });
+  window.addEventListener("forest-placed-object-pointer", async (event) => {
+    const detail = event.detail || {};
+    const index = Number(detail.index);
+    const item = state.placed[index];
+    if (!Number.isInteger(index) || !item || currentScene !== "world" || placementCode) return;
+    canvas.focus();
+    if (item.code === "reward_cow") {
+      const reaction = Number(detail.y) < item.y - 28 ? "head" : "body";
+      reactToCow(index, reaction);
+      return;
     }
-    const existing = state.placed.findIndex((item) => item.code === placementCode);
-    if (existing >= 0) state.placed.splice(existing, 1);
-    state.placed.push({ objectId: placedResult?.object_id || null, code: placementCode, x, y });
-    const name = itemCatalog[placementCode].name;
-    placementCode = null;
-    renderInventory(); renderPlaced(); renderCanvas(); await persist(`${name}을 숲에 배치했습니다.`);
+    await interact(`object:${index}`);
   });
 
   $("#reward-button").addEventListener("click", async () => {
-    if (groupCompleted() < groupTarget() || state.rewardClaimed) return;
-    if (adapter.mode === "api") {
-      const result = await adapter.claimReward(adapter.groupId);
-      state.rewardClaimed = true;
-      state.carrots = result.carrot_balance;
-      if (result.item_code && !state.inventory.includes(result.item_code)) state.inventory.push(result.item_code);
-      renderAll();
-      await persist(result.item_name ? `${result.item_name}과 당근 ${result.carrot_amount}개를 받았습니다!` : `당근 ${result.carrot_amount}개를 받았습니다!`);
-      return;
-    }
+    if (groupCompleted() < 15 || state.rewardClaimed) return;
     const reward = deterministicReward();
     state.rewardClaimed = true;
     state.carrots += 50;
@@ -1771,24 +2805,80 @@
 
   async function toggleSit() {
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
+    if (!state.avatar.sitting && currentScene === "world") {
+      const chair = state.placed
+        .map((placed, index) => ({ ...placed, index, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
+        .filter((placed) => seatObjectCodes.has(placed.code))
+        .filter((placed) => placed.distance < 64)
+        .sort((left, right) => left.distance - right.distance)[0];
+      if (chair) {
+        await sitAtPlacedObject(chair.index);
+        return;
+      }
+    }
     state.avatar.sitting = !state.avatar.sitting;
+    playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
-    await persist(state.avatar.sitting ? "풀밭에 앉아 잠시 쉬고 있어요." : "자리에서 일어났습니다.");
+    await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
   }
 
-  async function toggleRide(requireNearby = true) {
+  async function sitAtPlacedObject(index) {
+    const seat = state.placed[index];
+    if (!seat || !seatObjectCodes.has(seat.code)) return;
+    if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 자리에 앉을 수 있어요."); return; }
+    state.avatar.x = seat.x;
+    state.avatar.y = seat.y + 4;
+    state.avatar.direction = "down";
+    state.avatar.sitting = true;
+    playSfx("sit-cloth", { volume: 0.24 });
+    renderCanvas();
+    await persist(`${itemCatalog[seat.code].name}에 앉았습니다. X를 누르면 일어납니다.`);
+  }
+
+  async function feedPet() {
+    const pet = state.avatar.cosmetics?.pet;
+    if (!pet || pet === "none") { setStatus("아바타 꾸미기에서 함께 걸을 펫을 먼저 선택해 주세요."); return; }
+    if (state.carrots < 1) { setStatus("펫에게 줄 당근이 없어요. 챌린지를 완료하고 당근밭에서 수확해 보세요."); return; }
+    state.carrots -= 1;
+    state.petFedCount = (state.petFedCount || 0) + 1;
+    playSfx("pet-feed", { volume: 0.34 });
+    window.dispatchEvent(new CustomEvent("forest-pet-fed", { detail: { pet, amount: 1 } }));
+    renderAll();
+    await persist("펫에게 당근 1개를 주었어요. 펫이 아주 좋아합니다! 💚");
+  }
+
+  async function toggleRide() {
     if (currentScene !== "world") { setStatus("탈것은 숲 월드에서 이용할 수 있어요."); return; }
-    if (!state.avatar.mounted && requireNearby && distanceTo(470, 376) >= 72) {
-      setStatus("숲 스쿠터 가까이 이동한 뒤 E를 눌러 주세요.");
+    const mobility = state.avatar.cosmetics?.vehicle || "none";
+    if (!state.avatar.mounted && mobility === "none") {
+      setStatus("아바타 꾸미기에서 휠체어나 날개를 먼저 선택해 주세요.");
       return;
     }
     state.avatar.mounted = !state.avatar.mounted;
+    playSfx("mount", { volume: 0.3 });
     state.avatar.sitting = false;
     walkingUntil = 0;
     walkAnimationFrame = 0;
-    if (!state.avatar.mounted) { state.avatar.x = 470; state.avatar.y = 410; }
     renderCanvas();
-    await persist(state.avatar.mounted ? "숲 스쿠터에 탔습니다. 이동 속도가 빨라졌어요." : "숲 스쿠터에서 내렸습니다.");
+    const mobilityName = avatarCatalog.vehicle.find((item) => item.id === mobility)?.name || "이동 보조 아이템";
+    await persist(state.avatar.mounted ? `${mobilityName} 사용을 시작했습니다.` : `${mobilityName} 사용을 마쳤습니다.`);
+  }
+
+  function equippedWeaponDuration() {
+    return {
+      bow: 1280,
+      wand: 980,
+      cane: 860,
+      dagger: 680,
+      sword: 780,
+    }[state.avatar.cosmetics?.lpcWeapon] || 780;
+  }
+
+  function attackWithEquippedWeapon() {
+    if (!window.carrotForestPhaserActive) playSfx(weaponSfxName(), { volume: 0.34, minInterval: 280 });
+    window.dispatchEvent(new CustomEvent("forest-avatar-action", {
+      detail: { pose: "attack", duration: equippedWeaponDuration() },
+    }));
   }
 
   let phaserPersistTimer = null;
@@ -1804,21 +2894,45 @@
     phaserPersistTimer = window.setTimeout(() => adapter.save(state), 240);
   });
   window.addEventListener("forest-phaser-interact", () => interact());
+  window.addEventListener("forest-pet-clicked", async () => feedPet());
   window.addEventListener("forest-phaser-action", async (event) => {
     if (event.detail === "chat") toggleChat();
     if (event.detail === "sit") await toggleSit();
     if (event.detail === "ride") await toggleRide();
+    if (event.detail === "feed") await feedPet();
   });
+  window.addEventListener("forest-rat-appeared", () => {
+    setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"
+      ? "야생 쥐가 나타났어요. 가까이 가면 펫이 자동으로 달려가고, 직접 Z로도 잡을 수 있어요!"
+      : "숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
+  });
+  window.addEventListener("forest-rat-caught", async (event) => {
+    const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
+    state.carrots += amount;
+    playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
+    $("#carrot-balance").textContent = String(state.carrots);
+    $("#preview-carrot-balance").textContent = String(state.carrots);
+    $("#profile-carrots").textContent = String(state.carrots);
+    await persist(event.detail?.source === "pet"
+      ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
+      : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
+  });
+  window.addEventListener("forest-placement-confirm", confirmPlacement);
 
   document.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "j", "J", "v", "V", "0"].includes(event.key)) event.preventDefault();
+    if (event.key === "v" || event.key === "V") { confirmPlacement(); return; }
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
     if (event.key === "c" || event.key === "C") { toggleChat(); return; }
     if (event.key === "x" || event.key === "X") { toggleSit(); return; }
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
+    if (event.key === "z" || event.key === "Z") { attackWithEquippedWeapon(); return; }
+    if (event.key === "f" || event.key === "F") { feedPet(); return; }
+    if (event.key === "j" || event.key === "J") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } })); return; }
+    if (event.key === "0") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } })); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
     event.preventDefault(); moveAvatar(direction);
@@ -1831,16 +2945,41 @@
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
     const action = button.dataset.action;
     if (action === "interact") interact();
+    if (action === "jump") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } }));
     if (action === "run") { running = !running; button.setAttribute("aria-pressed", String(running)); setStatus(running ? "달리기 모드가 켜졌습니다." : "달리기 모드를 껐습니다."); }
     if (action === "chat") toggleChat();
     if (action === "sit") await toggleSit();
     if (action === "ride") await toggleRide();
+    if (action === "attack") attackWithEquippedWeapon();
+    if (action === "dance") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } }));
+    if (action === "feed") await feedPet();
   }));
+
+  $("#harvest-challenge-carrots").addEventListener("click", harvestChallengeCarrots);
 
   $("#large-text-toggle").addEventListener("click", (event) => {
     const enabled = document.body.classList.toggle("large-text");
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
     event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
+  });
+
+  const atmosphereButton = $("#atmosphere-toggle");
+  const updateAtmosphereButton = (enabled) => {
+    atmosphereButton.setAttribute("aria-pressed", String(enabled));
+    atmosphereButton.setAttribute("aria-label", `날씨·시간 효과 ${enabled ? "켜짐" : "꺼짐"}`);
+    atmosphereButton.title = enabled ? "날씨·시간 효과 켜짐" : "날씨·시간 효과 꺼짐";
+    atmosphereButton.textContent = "날씨·시간";
+  };
+  updateAtmosphereButton(localStorage.getItem(ATMOSPHERE_KEY) !== "off");
+  atmosphereButton.addEventListener("click", () => {
+    const enabled = atmosphereButton.getAttribute("aria-pressed") !== "true";
+    localStorage.setItem(ATMOSPHERE_KEY, enabled ? "on" : "off");
+    updateAtmosphereButton(enabled);
+    window.dispatchEvent(new CustomEvent("forest-atmosphere-updated", { detail: { enabled } }));
+    if (musicEngine?.enabled && currentScene === "world" && !$("#avatar-studio").open) {
+      musicEngine.switchTo(sceneMusicName()).catch(() => {});
+    }
+    setStatus(enabled ? "현재 시간에 맞춰 숲의 밝기를 적용합니다." : "날씨·시간 효과를 끄고 주간 밝기로 표시합니다.");
   });
 
   document.querySelectorAll("[data-workspace-target]").forEach((button) => {
@@ -1850,12 +2989,36 @@
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", String(active));
       });
-      if (button.dataset.workspaceTarget === "team-inspector") activateInspectorPanel("team-inspector");
+      if (button.dataset.workspaceTarget === "avatar-editor") { openAvatarStudio(); return; }
+      if (button.dataset.workspaceTarget === "asset-dock") { renderInventoryDialog("storage"); $("#inventory-dialog").showModal(); return; }
+      if (button.dataset.workspaceTarget === "team-inspector") activateInspectorPanel("team-inspector", true);
       const target = document.getElementById(button.dataset.workspaceTarget);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       target?.classList.add("workspace-focus");
       window.setTimeout(() => target?.classList.remove("workspace-focus"), 700);
     });
+  });
+
+  $("#inventory-dialog-close").addEventListener("click", () => $("#inventory-dialog").close());
+  document.querySelectorAll("[data-inventory-view]").forEach((button) => button.addEventListener("click", () => renderInventoryDialog(button.dataset.inventoryView)));
+  $("#inventory-dialog-grid").addEventListener("click", async (event) => {
+    const lookId = event.target.closest("[data-outfit-look]")?.dataset.outfitLook;
+    if (lookId) {
+      $("#inventory-dialog").close();
+      await applyOutfitLook(lookId);
+      return;
+    }
+    const code = event.target.closest("[data-inventory-dialog-item]")?.dataset.inventoryDialogItem;
+    if (!code) return;
+    $("#inventory-dialog").close();
+    document.querySelector(`#asset-dock [data-item="${code}"]`)?.click();
+    $("#asset-dock").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  $("#inventory-dialog-grid").addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-outfit-name-form]");
+    if (!form) return;
+    event.preventDefault();
+    await renameOutfit(form.dataset.outfitNameForm, new FormData(form).get("outfit-name"));
   });
 
   document.querySelectorAll("[data-inspector-tab]").forEach((button) => {
@@ -1881,19 +3044,38 @@
 
   $("#world-dialog-close").addEventListener("click", () => $("#world-dialog").close());
   $("#world-dialog-actions").addEventListener("click", async (event) => {
-    const action = event.target.closest("[data-world-action]")?.dataset.worldAction;
+    const actionButton = event.target.closest("[data-world-action]");
+    const action = actionButton?.dataset.worldAction;
     if (!action) return;
+    if (action === "record_music") {
+      await selectHomeRecordTrack(actionButton.dataset.recordTrack);
+      $("#world-dialog").close();
+      return;
+    }
+    if (action === "record_off") {
+      await selectHomeRecordTrack(null);
+      $("#world-dialog").close();
+      return;
+    }
     if (action === "enter_home") {
+      playSfx("door-open", { volume: 0.36 });
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("home");
       await persist("우리 집 안으로 들어왔습니다. 소파와 옷장을 이용해 보세요.");
     }
     if (action === "enter_garden") {
+      playSfx("door-open", { volume: 0.32, rate: 1.08 });
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("garden");
-      await persist("공동 당근밭 안으로 들어왔습니다. 당근 가까이에서 물을 줄 수 있어요.");
+      await persist(pendingChallengeCarrots()
+        ? `당근 밭에 들어왔습니다. 챌린지로 자란 당근 ${pendingChallengeCarrots()}개를 수확해 보세요.`
+        : "당근 밭에 들어왔습니다. 챌린지를 완료하면 이곳에 당근이 자라요.");
     }
     if (action === "exit_scene") {
+      playSfx("door-open", { volume: 0.3, rate: 0.94 });
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "door", duration: 850 } }));
       $("#world-dialog").close();
       switchScene("world");
       await persist("우리의 작은 숲으로 돌아왔습니다.");
@@ -1914,12 +3096,18 @@
       openAvatarStudio();
     }
     if (action === "water" && !state.gardenWatered) {
+      playSfx("water", { volume: 0.3 });
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 1400 } }));
       state.gardenWatered = true;
       state.carrots += 10;
       $("#carrot-balance").textContent = state.carrots;
       $("#world-dialog").close();
       renderCanvas();
-      await persist("공동 당근밭에 물을 주고 당근 10개를 받았습니다.");
+      await persist("당근 밭에 물을 주고 당근 10개를 받았습니다.");
+    }
+    if (action === "harvest_challenge") {
+      $("#world-dialog").close();
+      await harvestChallengeCarrots();
     }
     if (action === "team") {
       $("#world-dialog").close();
@@ -1930,6 +3118,9 @@
       await toggleRide(false);
     }
     if (action === "fish") {
+      playSfx("fishing-cast", { volume: 0.32 });
+      window.setTimeout(() => playSfx("fishing-catch", { volume: 0.38 }), 900);
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "fishing", duration: 2200 } }));
       const firstCatch = !state.fishCaught;
       currentScene = "world";
       state.avatar.x = 305;
@@ -1948,6 +3139,7 @@
 
   $("#scene-exit").addEventListener("click", async () => {
     if (currentScene === "world") return;
+    playSfx("door-open", { volume: 0.3, rate: 0.94 });
     switchScene("world");
     await persist("우리의 작은 숲으로 돌아왔습니다.");
   });
@@ -1973,14 +3165,64 @@
     musicEngine ||= new CozyForestMusic();
     const enabled = event.currentTarget.getAttribute("aria-pressed") !== "true";
     try {
-      if (enabled) await musicEngine.start(); else musicEngine.stop();
+      if (enabled) await musicEngine.start($("#avatar-studio").open ? "avatar" : sceneMusicName()); else musicEngine.stop();
     } catch {
       setStatus("이 브라우저에서는 배경음악을 재생할 수 없습니다. 다른 기능은 계속 이용할 수 있어요.");
       return;
     }
     event.currentTarget.setAttribute("aria-pressed", String(enabled));
-    event.currentTarget.textContent = enabled ? "Ⅱ 음악 끄기" : "♪ 숲 음악 켜기";
-    setStatus(enabled ? "오리지널 숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
+    event.currentTarget.setAttribute("aria-label", `BGM ${enabled ? "켜짐" : "꺼짐"}`);
+    event.currentTarget.title = enabled ? "BGM 끄기" : "BGM 켜기";
+    event.currentTarget.textContent = "BGM";
+    setStatus(enabled ? "숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
+  });
+
+  const volumeToggle = $("#volume-toggle");
+  const volumePanel = $("#volume-panel");
+  const volumeSlider = $("#music-volume");
+  const volumeValue = $("#music-volume-value");
+  const muteButton = $("#music-mute");
+  const sfxVolumeSlider = $("#sfx-volume");
+  const sfxVolumeValue = $("#sfx-volume-value");
+  const sfxMuteButton = $("#sfx-mute");
+  const syncVolumeControls = () => {
+    musicEngine ||= new CozyForestMusic();
+    sfxEngine ||= new ForestSfx();
+    const percentage = Math.round(musicEngine.volume * 100);
+    const sfxPercentage = Math.round(sfxEngine.volume * 100);
+    volumeSlider.value = String(percentage);
+    volumeValue.value = `${percentage}%`;
+    muteButton.setAttribute("aria-pressed", String(musicEngine.muted));
+    muteButton.textContent = musicEngine.muted ? "배경음악 음소거 해제" : "배경음악 음소거";
+    sfxVolumeSlider.value = String(sfxPercentage);
+    sfxVolumeValue.value = `${sfxPercentage}%`;
+    sfxMuteButton.setAttribute("aria-pressed", String(sfxEngine.muted));
+    sfxMuteButton.textContent = sfxEngine.muted ? "효과음 음소거 해제" : "효과음 음소거";
+    rewardChestSound.volume = sfxEngine.effectiveVolume(.42);
+    volumeToggle.setAttribute("aria-label", `음량 설정, 배경음악 ${musicEngine.muted ? "음소거" : `${percentage}%`}, 효과음 ${sfxEngine.muted ? "음소거" : `${sfxPercentage}%`}`);
+  };
+  syncVolumeControls();
+  volumeToggle.addEventListener("click", () => {
+    const expanded = volumeToggle.getAttribute("aria-expanded") !== "true";
+    volumeToggle.setAttribute("aria-expanded", String(expanded));
+    volumePanel.hidden = !expanded;
+    if (expanded) volumeSlider.focus();
+  });
+  volumeSlider.addEventListener("input", () => {
+    musicEngine.setVolume(Number(volumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  muteButton.addEventListener("click", () => {
+    musicEngine.setMuted(!musicEngine.muted);
+    syncVolumeControls();
+  });
+  sfxVolumeSlider.addEventListener("input", () => {
+    sfxEngine.setVolume(Number(sfxVolumeSlider.value) / 100);
+    syncVolumeControls();
+  });
+  sfxMuteButton.addEventListener("click", () => {
+    sfxEngine.setMuted(!sfxEngine.muted);
+    syncVolumeControls();
   });
 
   const installButton = $("#install-pwa");
@@ -2010,7 +3252,7 @@
   });
 
   const localDemoOrigin = ["127.0.0.1", "localhost"].includes(window.location.hostname);
-  if ("serviceWorker" in navigator && !localDemoOrigin) {
+  if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/forest-sw.js", { scope: "/forest" }).catch(() => {
         setStatus("오프라인 준비에 실패했습니다. 온라인 게임은 계속 이용할 수 있습니다.");
@@ -2019,19 +3261,24 @@
   }
 
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
-  async function initializeForest() {
-    try {
-      state = await adapter.load();
-      renderAll();
-      await maybeClaimDailyReward();
-      setStatus(adapter.mode === "api" ? "당근의 숲이 실제 API와 연결되었습니다." : "당근의 숲 데모가 준비되었습니다.");
-    } catch (error) {
-      adapter = new DemoForestAdapter();
-      state = await adapter.load();
-      renderAll();
-      setStatus(`실제 API에 연결하지 못해 데모로 시작합니다: ${error.message}`);
+  adapter.load().then(async (loaded) => {
+    await window.LpcAvatarEngine?.ready();
+    const params = new URLSearchParams(window.location.search);
+    const localReset = localDemoOrigin && params.get("resetToday") === "1";
+    state = localReset ? resetTodayProgress(loaded) : loaded;
+    window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
+    if (localReset) {
+      adapter.save(state);
+      params.delete("resetToday");
+      window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
     }
+    renderAll();
+    setStatus(localReset ? "오늘의 과업과 공동 진행, 보물상자 수령 상태를 초기화했습니다." : "당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
+    window.requestAnimationFrame(() => document.documentElement.classList.add("forest-script-ready"));
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);
-  }
-  initializeForest();
+  }).catch((error) => {
+    console.error(error);
+    document.documentElement.classList.add("forest-script-ready");
+    setStatus("일부 자산을 불러오지 못했습니다. 새로고침해 주세요.");
+  });
 })();

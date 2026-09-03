@@ -22,12 +22,24 @@ def age_on(reference_date: date, birth_date: date) -> int:
 
 
 def eligibility_payload(item: EligibilityCheck) -> dict[str, object]:
+    reason_codes = set(item.reason_codes)
+    if 14 <= item.age < 19 and "UNDER_MINIMUM_SERVICE_AGE" in reason_codes:
+        reason_codes.remove("UNDER_MINIMUM_SERVICE_AGE")
+        reason_codes.add("CHALLENGE_ONLY_AGE")
+    has_safety_blocker = bool({"URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES"} & reason_codes)
+    has_consent = "CONSENT_REQUIRED" not in reason_codes
+    challenge_eligible = item.age >= 14 and has_consent and not has_safety_blocker
+    current_health_check_eligible = item.age >= 19 and item.service_eligible and not has_safety_blocker
     return {
         "eligibility_check_id": item.id,
+        "age": item.age,
         "service_eligible": item.service_eligible,
+        "challenge_eligible": challenge_eligible,
+        "current_health_check_eligible": current_health_check_eligible,
+        "future_prediction_eligible": item.model_eligible,
         "target_segment": item.target_segment,
         "model_eligible": item.model_eligible,
-        "reason_codes": item.reason_codes,
+        "reason_codes": sorted(reason_codes),
         "next_action": item.next_action,
         "active_model": {
             "model_key": item.model_key,
@@ -51,7 +63,8 @@ def eligibility_reason_codes(
     population_in_scope: bool,
 ) -> list[str]:
     checks = (
-        (age < 19, "UNDER_MINIMUM_SERVICE_AGE"),
+        (age < 14, "UNDER_MINIMUM_SERVICE_AGE"),
+        (14 <= age < 19, "CHALLENGE_ONLY_AGE"),
         (not has_consent, "CONSENT_REQUIRED"),
         (has_diabetes_diagnosis, "DIAGNOSED_DIABETES"),
         (has_urgent_warning_sign, "URGENT_MEDICAL_ATTENTION"),
@@ -64,15 +77,23 @@ def eligibility_reason_codes(
     return [code for condition, code in checks if condition]
 
 
-def eligibility_next_action(request: EligibilityCreateRequest, *, model_eligible: bool, service_eligible: bool) -> str:
+def eligibility_next_action(
+    request: EligibilityCreateRequest,
+    *,
+    model_eligible: bool,
+    current_health_check_eligible: bool,
+    challenge_eligible: bool,
+) -> str:
     if request.has_urgent_warning_sign:
         return "urgent_medical_guidance"
     if request.has_diabetes_diagnosis:
         return "clinician_guidance"
     if model_eligible:
         return "health_checkup_input"
-    if service_eligible:
-        return "general_health_information"
+    if current_health_check_eligible:
+        return "current_health_checkup_input"
+    if challenge_eligible:
+        return "challenge_selection"
     return "public_information"
 
 
@@ -115,10 +136,20 @@ class HealthService:
             population_in_scope=request.population_in_scope,
         )
 
-        service_eligible = age >= 19 and active_consent is not None
-        target_segment = "primary_45_plus" if age >= 45 else "adult_19_44"
+        has_consent = active_consent is not None
+        service_eligible = age >= 19 and has_consent
+        challenge_eligible = (
+            age >= 14 and has_consent and not (request.has_diabetes_diagnosis or request.has_urgent_warning_sign)
+        )
+        current_health_check_eligible = service_eligible and not (
+            request.has_diabetes_diagnosis or request.has_urgent_warning_sign
+        )
+        target_segment = (
+            "full_prediction_45_plus" if age >= 45 else "current_signal_19_44" if age >= 19 else "challenge_only_14_18"
+        )
         model_blockers = {
             "UNDER_MINIMUM_SERVICE_AGE",
+            "CHALLENGE_ONLY_AGE",
             "CONSENT_REQUIRED",
             "DIAGNOSED_DIABETES",
             "URGENT_MEDICAL_ATTENTION",
@@ -129,7 +160,8 @@ class HealthService:
         next_action = eligibility_next_action(
             request,
             model_eligible=model_eligible,
-            service_eligible=service_eligible,
+            current_health_check_eligible=current_health_check_eligible,
+            challenge_eligible=challenge_eligible,
         )
 
         item = await self.repo.create_eligibility(
@@ -153,13 +185,18 @@ class HealthService:
             (code for code in ("URGENT_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES") if code in reason_codes), None
         )
         if priority_code is not None:
-            await FollowUpAction.create(
-                user_id=user.id,
-                trigger_source="eligibility_check",
-                trigger_entity_id=item.id,
-                reason_code=priority_code,
-                safety_copy_version=config.SAFETY_COPY_VERSION,
+            existing_actions = await self.repo.list_follow_ups(user.id)
+            has_same_open_action = any(
+                action.reason_code == priority_code and action.acknowledged_at is None for action in existing_actions
             )
+            if not has_same_open_action:
+                await FollowUpAction.create(
+                    user_id=user.id,
+                    trigger_source="eligibility_check",
+                    trigger_entity_id=item.id,
+                    reason_code=priority_code,
+                    safety_copy_version=config.SAFETY_COPY_VERSION,
+                )
             await self.repo.stop_active_cycles(user.id, priority_code)
         return item
 
@@ -168,10 +205,13 @@ class HealthService:
         eligibility = await self.repo.latest_eligibility(user.id)
         if consent is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="건강정보 처리 동의가 필요합니다.")
-        if eligibility is None or not eligibility.model_eligible:
+        if eligibility is None or not eligibility.service_eligible:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="예측 가능한 적합성 확인을 먼저 완료해 주세요."
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="현재 건강 신호를 확인할 수 있는 적합성 확인을 먼저 완료해 주세요.",
             )
+        if eligibility.has_diabetes_diagnosis or eligibility.has_urgent_warning_sign:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="의료기관 안내를 먼저 확인해 주세요.")
         if request.feature_schema_version != ACTIVE_MODEL.feature_schema_version:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -187,31 +227,32 @@ class HealthService:
             )
         bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
         sex = "female" if user.gender == Gender.FEMALE else "male"
-        PredictionFeatures(
-            age=eligibility.age,
-            bmi=bmi,
-            sex=sex,
-            log_household_income=(
-                log1p(request.annual_household_income_10k_krw)
-                if request.annual_household_income_10k_krw is not None
-                else None
-            ),
-            **request.model_dump(
-                exclude={
-                    "checkup_type",
-                    "checkup_date",
-                    "height_cm",
-                    "weight_kg",
-                    "waist_cm",
-                    "systolic_bp",
-                    "diastolic_bp",
-                    "self_rated_health",
-                    "meal_count_yesterday",
-                    "annual_household_income_10k_krw",
-                    "feature_schema_version",
-                }
-            ),
-        )
+        if eligibility.model_eligible:
+            PredictionFeatures(
+                age=eligibility.age,
+                bmi=bmi,
+                sex=sex,
+                log_household_income=(
+                    log1p(request.annual_household_income_10k_krw)
+                    if request.annual_household_income_10k_krw is not None
+                    else None
+                ),
+                **request.model_dump(
+                    exclude={
+                        "checkup_type",
+                        "checkup_date",
+                        "height_cm",
+                        "weight_kg",
+                        "waist_cm",
+                        "systolic_bp",
+                        "diastolic_bp",
+                        "self_rated_health",
+                        "meal_count_yesterday",
+                        "annual_household_income_10k_krw",
+                        "feature_schema_version",
+                    }
+                ),
+            )
         return await self.repo.create_checkup(
             user_id=user.id,
             eligibility_check_id=eligibility.id,
@@ -242,39 +283,37 @@ class HealthService:
                 },
             )
         bmi = round(request.weight_kg / ((request.height_cm / 100) ** 2), 2)
-        PredictionFeatures(
-            age=item.age,
-            bmi=bmi,
-            sex=item.sex,
-            log_household_income=(
-                log1p(request.annual_household_income_10k_krw)
-                if request.annual_household_income_10k_krw is not None
-                else None
-            ),
-            **request.model_dump(
-                exclude={
-                    "checkup_type",
-                    "checkup_date",
-                    "height_cm",
-                    "weight_kg",
-                    "waist_cm",
-                    "systolic_bp",
-                    "diastolic_bp",
-                    "self_rated_health",
-                    "meal_count_yesterday",
-                    "annual_household_income_10k_krw",
-                    "feature_schema_version",
-                }
-            ),
-        )
-        return await self.repo.create_checkup(
-            user_id=user.id,
-            eligibility_check_id=item.eligibility_check_id,
-            age=item.age,
-            sex=item.sex,
-            bmi=bmi,
-            **request.model_dump(),
-        )
+        if item.age >= ACTIVE_MODEL.min_age:
+            PredictionFeatures(
+                age=item.age,
+                bmi=bmi,
+                sex=item.sex,
+                log_household_income=(
+                    log1p(request.annual_household_income_10k_krw)
+                    if request.annual_household_income_10k_krw is not None
+                    else None
+                ),
+                **request.model_dump(
+                    exclude={
+                        "checkup_type",
+                        "checkup_date",
+                        "height_cm",
+                        "weight_kg",
+                        "waist_cm",
+                        "systolic_bp",
+                        "diastolic_bp",
+                        "self_rated_health",
+                        "meal_count_yesterday",
+                        "annual_household_income_10k_krw",
+                        "feature_schema_version",
+                    }
+                ),
+            )
+        for field, value in request.model_dump().items():
+            setattr(item, field, value)
+        item.bmi = bmi
+        await item.save()
+        return item
 
     @staticmethod
     def features_for(checkup: HealthCheckup) -> PredictionFeatures:
@@ -352,6 +391,39 @@ class HealthService:
             "household_structure": checkup.household_structure,
             "depressed_feeling_last_week": checkup.depressed_feeling_last_week,
             "sleep_difficulty_last_week": checkup.sleep_difficulty_last_week,
+        }
+
+    @staticmethod
+    def current_screening_payload(checkup: HealthCheckup) -> dict[str, object | None]:
+        """Map stored user inputs to the KNHANES screening contract.
+
+        Fields not collected by the MVP remain missing and are handled by the
+        fitted preprocessing pipeline. They are never guessed from unrelated
+        user attributes.
+        """
+        return {
+            "age": checkup.age,
+            "height_cm": checkup.height_cm,
+            "weight_kg": checkup.weight_kg,
+            "waist_cm": checkup.waist_cm,
+            "bmi": checkup.bmi,
+            "walking_days": checkup.exercise_days_per_week,
+            "energy_kcal": None,
+            "protein_g": None,
+            "fat_g": None,
+            "carbohydrate_g": None,
+            "sodium_mg": None,
+            "sex": checkup.sex,
+            "region": None,
+            "urban": None,
+            "education": checkup.education_level,
+            "income_quartile": None,
+            "household_income_quartile": None,
+            "hypertension_family_history": None,
+            "diabetes_family_history": None,
+            "current_smoker": checkup.current_smoker,
+            "alcohol_frequency": "current" if checkup.current_drinker else "none",
+            "aerobic_activity": checkup.regular_exercise,
         }
 
     @staticmethod

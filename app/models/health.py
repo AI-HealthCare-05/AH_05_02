@@ -116,6 +116,9 @@ class Prediction(Model):
     # v3.0 연령별 당뇨 위험 전망(생존곡선). 점추정(diabetes_incidence)에는 해당 없음.
     risk_curve_status = fields.CharField(max_length=20, default="not_applicable")
     output_definition_version = fields.CharField(max_length=100, null=True)
+    # 나이별 위험 전망(그래프)용 표시 데이터. scenarios/uncertainty는 REQ-PRED-012
+    # 검증 전까지 비워둔다 — is_active 없는 시나리오를 인과관계처럼 노출하지 않기 위함.
+    age_risk_forecast = fields.JSONField(null=True)
 
     class Meta:
         table = "predictions"

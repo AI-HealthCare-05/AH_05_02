@@ -6,11 +6,16 @@ from app.core import config
 from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
-from app.models.health import Prediction
+from app.models.health import EligibilityCheck, HealthCheckup, Prediction
 from app.models.model_registry import ModelRegistry
 from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
-from app.prediction.contracts import ACTIVE_MODEL, LIFETIME_RISK_MODEL_KEY
+from app.prediction.contracts import (
+    ACTIVE_MODEL,
+    CURRENT_SCREENING_MODEL,
+    CURRENT_SCREENING_MODEL_KEY,
+    LIFETIME_RISK_MODEL_KEY,
+)
 from app.prediction.errors import ModelNotReadyError
 from app.prediction.providers import get_prediction_provider
 from app.repositories.health_repository import HealthRepository
@@ -68,6 +73,22 @@ async def get_ai_job(job_id: str) -> PredictionJob | None:
     return await PredictionJob.get_or_none(job_id=job_id)
 
 
+def _ensure_prediction_eligibility(
+    eligibility: EligibilityCheck | None,
+    *,
+    model_key: str,
+    age: int,
+) -> None:
+    if eligibility is None or eligibility.has_diabetes_diagnosis or eligibility.has_urgent_warning_sign:
+        raise PermissionError("PREDICTION_NOT_ALLOWED")
+    if model_key == CURRENT_SCREENING_MODEL_KEY:
+        if not eligibility.service_eligible or age < CURRENT_SCREENING_MODEL.min_age:
+            raise PermissionError("PREDICTION_NOT_ALLOWED")
+        return
+    if not eligibility.model_eligible:
+        raise PermissionError("PREDICTION_NOT_ALLOWED")
+
+
 async def create_prediction_job(user: User, request: PredictionJobCreateRequest) -> PredictionJob:
     repo = HealthRepository()
     checkup = await repo.get_checkup(request.checkup_id, user.id)
@@ -76,8 +97,11 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     if await repo.active_consent(user.id) is None:
         raise PermissionError("CONSENT_REQUIRED")
     eligibility = await repo.latest_eligibility(user.id)
-    if eligibility is None or not eligibility.model_eligible:
-        raise PermissionError("PREDICTION_NOT_ALLOWED")
+    _ensure_prediction_eligibility(eligibility, model_key=request.model_key, age=checkup.age)
+    assert eligibility is not None
+
+    if request.model_key == CURRENT_SCREENING_MODEL_KEY:
+        return await _create_current_screening_job(user, checkup)
 
     if request.model_key == LIFETIME_RISK_MODEL_KEY:
         return await _create_lifetime_risk_job()
@@ -142,6 +166,71 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         await redis_client.hset(
             job_cache_key(job_id),
             mapping={"status": "queued", "task_type": "diabetes_incidence", "created_at": now.isoformat()},
+        )
+        await redis_client.expire(job_cache_key(job_id), config.REDIS_JOB_TTL_SECONDS)
+        await redis_client.xadd(config.REDIS_STREAM, message)
+        await publish_job_event(job_id, {"job_id": job_id, "status": "queued", "created_at": now.isoformat()})
+    except Exception as exc:
+        job.status = "failed"
+        job.error = "작업 큐 연결에 실패했습니다."
+        job.error_code = "QUEUE_UNAVAILABLE"
+        job.completed_at = datetime.now(UTC)
+        await job.save(update_fields=["status", "error", "error_code", "completed_at", "updated_at"])
+        raise RuntimeError("Redis 작업 큐에 연결할 수 없습니다.") from exc
+    return job
+
+
+async def _create_current_screening_job(user: User, checkup: HealthCheckup) -> PredictionJob:
+    """Queue the KNHANES current-signal model independently from KLoSA incidence."""
+    inference_payload = HealthService.current_screening_payload(checkup)
+    job_id = str(uuid4())
+    now = datetime.now(UTC)
+    job = await PredictionJob.create(
+        job_id=job_id,
+        task_type=CURRENT_SCREENING_MODEL_KEY,
+        status="queued",
+        request_payload={
+            "model_key": CURRENT_SCREENING_MODEL.model_key,
+            "feature_schema_version": CURRENT_SCREENING_MODEL.feature_schema_version,
+            "input_as_of_date": checkup.checkup_date.isoformat(),
+            "health_checkup_id": checkup.id,
+        },
+        model_key=CURRENT_SCREENING_MODEL.model_key,
+        model_version=CURRENT_SCREENING_MODEL.version,
+        feature_schema_version=CURRENT_SCREENING_MODEL.feature_schema_version,
+        input_schema_version=CURRENT_SCREENING_MODEL.input_schema_version,
+        preprocessing_version=CURRENT_SCREENING_MODEL.preprocessing_version,
+        target_definition_version=CURRENT_SCREENING_MODEL.target_definition_version,
+        calibration_version=CURRENT_SCREENING_MODEL.calibration_version,
+        model_artifact_digest=CURRENT_SCREENING_MODEL.model_artifact_digest,
+        threshold_version=CURRENT_SCREENING_MODEL.threshold_version,
+        user_id=user.id,
+        health_checkup_id=checkup.id,
+        input_as_of_date=checkup.checkup_date,
+        deadline_at=now + timedelta(seconds=config.PREDICTION_TIMEOUT_SECONDS),
+    )
+    if config.DEMO_MODE:
+        await _complete_demo_current_screening(job, checkup.checkup_date)
+        return job
+    message = {
+        "job_id": job_id,
+        "task_type": CURRENT_SCREENING_MODEL_KEY,
+        "payload": json.dumps({"input": inference_payload}, ensure_ascii=False),
+        "model_version": CURRENT_SCREENING_MODEL.version,
+        "feature_schema_version": CURRENT_SCREENING_MODEL.feature_schema_version,
+        "input_schema_version": CURRENT_SCREENING_MODEL.input_schema_version,
+        "preprocessing_version": CURRENT_SCREENING_MODEL.preprocessing_version,
+        "target_definition_version": CURRENT_SCREENING_MODEL.target_definition_version,
+        "calibration_version": CURRENT_SCREENING_MODEL.calibration_version,
+        "model_artifact_digest": CURRENT_SCREENING_MODEL.model_artifact_digest or "",
+        "threshold_version": CURRENT_SCREENING_MODEL.threshold_version,
+        "attempt": "0",
+        "created_at": now.isoformat(),
+    }
+    try:
+        await redis_client.hset(
+            job_cache_key(job_id),
+            mapping={"status": "queued", "task_type": CURRENT_SCREENING_MODEL_KEY, "created_at": now.isoformat()},
         )
         await redis_client.expire(job_cache_key(job_id), config.REDIS_JOB_TTL_SECONDS)
         await redis_client.xadd(config.REDIS_STREAM, message)
@@ -230,8 +319,51 @@ async def _complete_demo_prediction(
     await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
 
 
+async def _complete_demo_current_screening(job: PredictionJob, as_of_date: date) -> None:
+    """Complete wiring in demo mode without inventing an individual screening result."""
+    job.status = "running"
+    job.started_at = datetime.now(UTC)
+    job.worker_name = "embedded-demo-worker"
+    job.attempts = 1
+    await job.save(update_fields=["status", "started_at", "worker_name", "attempts", "updated_at"])
+    prediction = await Prediction.create(
+        job_id=job.job_id,
+        user_id=job.user_id,
+        health_checkup_id=job.health_checkup_id,
+        input_as_of_date=as_of_date,
+        model_key=CURRENT_SCREENING_MODEL.model_key,
+        outcome_definition=CURRENT_SCREENING_MODEL.outcome_definition,
+        result_status="development_only",
+        risk_category=None,
+        internal_score=None,
+        model_version=CURRENT_SCREENING_MODEL.version,
+        feature_schema_version=CURRENT_SCREENING_MODEL.feature_schema_version,
+        input_schema_version=CURRENT_SCREENING_MODEL.input_schema_version,
+        preprocessing_version=CURRENT_SCREENING_MODEL.preprocessing_version,
+        target_definition_version=CURRENT_SCREENING_MODEL.target_definition_version,
+        calibration_version=CURRENT_SCREENING_MODEL.calibration_version,
+        model_artifact_digest=CURRENT_SCREENING_MODEL.model_artifact_digest,
+        threshold_version=CURRENT_SCREENING_MODEL.threshold_version,
+        decision_threshold=None,
+        class_probabilities=None,
+        output_status="screening_model_wiring_only",
+        model_population=CURRENT_SCREENING_MODEL.model_population,
+        explanation_status="not_available",
+        disclaimer="현재 당뇨 관련 위험 신호를 선별하는 건강교육용 흐름이며 진단이 아닙니다.",
+    )
+    job.status = "succeeded"
+    job.prediction_id = prediction.id
+    job.completed_at = datetime.now(UTC)
+    job.result = {
+        "promotion_status": "development_only",
+        "screening_signal_detected": None,
+        "medical_notice": "개발용 연결 결과이며 개인 위험 신호는 표시하지 않습니다.",
+    }
+    await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
+
+
 async def get_prediction_job(job_id: str, user_id: int) -> PredictionJob | None:
-    job = await PredictionJob.get_or_none(job_id=job_id, user_id=user_id, task_type="diabetes_incidence")
+    job = await PredictionJob.get_or_none(job_id=job_id, user_id=user_id)
     if job is None:
         return None
     now = datetime.now(UTC)

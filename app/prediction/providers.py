@@ -45,6 +45,13 @@ class PredictionProvider(Protocol):
         as_of_date: date,
     ) -> ProviderResult: ...
 
+    async def predict_curve(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> list[dict[str, Any]]: ...
+
 
 class DevelopmentPredictionProvider:
     """Exercises the async integration without fabricating a medical prediction."""
@@ -86,6 +93,14 @@ class DevelopmentPredictionProvider:
             promotion_status="development_only",
         )
 
+    async def predict_curve(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> list[dict[str, Any]]:
+        return []
+
 
 class ArtifactPredictionProvider:
     provider_kind = "artifact"
@@ -116,6 +131,20 @@ class ArtifactPredictionProvider:
             decision_threshold=float(output["decision_threshold"]),
             promotion_status=loaded.manifest["promotion_status"],
         )
+
+    async def predict_curve(
+        self,
+        payload: DiabetesRiskInput | Mapping[str, Any],
+        *,
+        as_of_date: date,
+    ) -> list[dict[str, Any]]:
+        """Same-model, age-shifted approximation — see predict_age_curve()."""
+        from src.ml.inference.diabetes_standard import predict_age_curve
+        from src.ml.preprocessing.diabetes_api_features import DiabetesRiskInput, parse_diabetes_risk_input
+
+        user_input = payload if isinstance(payload, DiabetesRiskInput) else parse_diabetes_risk_input(dict(payload))
+        loaded = await asyncio.to_thread(load_standard_model)
+        return await asyncio.to_thread(predict_age_curve, loaded, user_input, as_of_date=as_of_date)
 
 
 @lru_cache(maxsize=1)

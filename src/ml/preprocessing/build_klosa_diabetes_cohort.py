@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pyreadstat
 
 TARGET = "target_diabetes_incident_next_wave"
 
@@ -33,6 +34,32 @@ FORBIDDEN_MODEL_COLUMNS = {
     "interval_diagnosis_t1",
     TARGET,
 }
+
+
+def _read_wave(data_dir: Path, wave: int, columns: list[str]) -> pd.DataFrame:
+    """Read one KLoSA wave from the official Stata or SPSS distribution.
+
+    KLoSA publishes equivalent extracts in more than one statistical-package
+    format.  Prefer Stata when both exist to preserve the historical pipeline,
+    and fall back to SPSS without applying value labels.
+    """
+    stem = data_dir / f"str{wave:02d}_20260413"
+    dta_path = stem.with_suffix(".dta")
+    if dta_path.exists():
+        return pd.read_stata(dta_path, columns=columns, convert_categoricals=False)
+
+    sav_path = stem.with_suffix(".sav")
+    if sav_path.exists():
+        frame, _ = pyreadstat.read_sav(
+            str(sav_path),
+            usecols=columns,
+            apply_value_formats=False,
+        )
+        return frame
+
+    raise FileNotFoundError(
+        f"KLoSA wave {wave} not found; expected {dta_path.name} or {sav_path.name} in {data_dir}"
+    )
 
 
 def _numeric(series: pd.Series) -> pd.Series:
@@ -90,16 +117,8 @@ def load_transition(
         f"{t1_prefix}mniw_d",
     ]
 
-    t0 = pd.read_stata(
-        data_dir / f"str{baseline_wave:02d}_20260413.dta",
-        columns=t0_columns,
-        convert_categoricals=False,
-    )
-    t1 = pd.read_stata(
-        data_dir / f"str{outcome_wave:02d}_20260413.dta",
-        columns=t1_columns,
-        convert_categoricals=False,
-    )
+    t0 = _read_wave(data_dir, baseline_wave, t0_columns)
+    t1 = _read_wave(data_dir, outcome_wave, t1_columns)
     return t0, t1
 
 
