@@ -31,9 +31,7 @@ async def nearby_emergency_facilities(
 ) -> dict[str, object]:
     del user
     try:
-        result = await EmergencyFacilityService().nearby(
-            latitude=lat, longitude=lon, radius_meters=radius
-        )
+        result = await EmergencyFacilityService().nearby(latitude=lat, longitude=lon, radius_meters=radius)
     except (MedicalFacilitySearchError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return envelope(result)

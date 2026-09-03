@@ -95,9 +95,7 @@ class Config(BaseSettings):
     # 국립중앙의료원 전국 응급의료기관 정보 조회 서비스
     EMERGENCY_FACILITY_SEARCH_PROVIDER: str = "nemc"
     NEMC_SERVICE_KEY: str = ""
-    NEMC_EMERGENCY_API_URL: str = (
-        "https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytLcinfoInqire"
-    )
+    NEMC_EMERGENCY_API_URL: str = "https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytLcinfoInqire"
     NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 

@@ -104,7 +104,9 @@ class KakaoLocalMedicalFacilitySearchProvider:
 
     def __init__(self) -> None:
         if not config.KAKAO_REST_API_KEY:
-            raise MedicalFacilitySearchError("KAKAO_REST_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가한 뒤 다시 시도해주세요.")
+            raise MedicalFacilitySearchError(
+                "KAKAO_REST_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가한 뒤 다시 시도해주세요."
+            )
         self._api_key = config.KAKAO_REST_API_KEY
         self._keywords = [word.strip() for word in config.MEDICAL_FACILITY_SEARCH_KEYWORDS.split(",") if word.strip()]
         self._category_group_code = config.MEDICAL_FACILITY_SEARCH_CATEGORY_GROUP_CODE
@@ -147,9 +149,13 @@ class KakaoLocalMedicalFacilitySearchProvider:
                         if place_id and place_id not in documents_by_id:
                             documents_by_id[place_id] = document
         except httpx.TimeoutException as exc:
-            raise MedicalFacilitySearchError("의료기관 검색 요청이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.") from exc
+            raise MedicalFacilitySearchError(
+                "의료기관 검색 요청이 시간 초과되었습니다. 잠시 후 다시 시도해주세요."
+            ) from exc
         except httpx.HTTPStatusError as exc:
-            raise MedicalFacilitySearchError(f"의료기관 검색 provider 호출에 실패했습니다: {exc.response.status_code}") from exc
+            raise MedicalFacilitySearchError(
+                f"의료기관 검색 provider 호출에 실패했습니다: {exc.response.status_code}"
+            ) from exc
         except httpx.HTTPError as exc:
             raise MedicalFacilitySearchError("의료기관 검색 provider에 연결할 수 없습니다.") from exc
 
@@ -190,9 +196,7 @@ class NemcEmergencyFacilitySearchProvider:
         if not config.NEMC_SERVICE_KEY:
             raise MedicalFacilitySearchError("NEMC_SERVICE_KEY가 설정되어 있지 않습니다.")
 
-    async def search(
-        self, *, latitude: float, longitude: float, radius_meters: int
-    ) -> list[FacilityResult]:
+    async def search(self, *, latitude: float, longitude: float, radius_meters: int) -> list[FacilityResult]:
         try:
             async with httpx.AsyncClient(timeout=config.NEMC_EMERGENCY_TIMEOUT_SECONDS) as client:
                 response = await client.get(
