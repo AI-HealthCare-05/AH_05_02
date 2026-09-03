@@ -10,6 +10,7 @@ from app.apis.v1.prediction_routers import prediction_payload
 from app.dependencies.security import get_request_user
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
+from app.services import challenge_v2
 from app.services.challenges import ChallengeService
 
 dashboard_router = APIRouter(tags=["Dashboard and guidance"])
@@ -28,6 +29,7 @@ async def dashboard_summary(user: Annotated[User, Depends(get_request_user)]) ->
     return envelope(
         {
             "risk_cards": [] if risk_card is None else [risk_card],
+            "daily_challenge_v2": await challenge_v2.dashboard_snapshot(user),
             "current_cycle": cycle_data,
             "next_action": None
             if follow_up is None
@@ -48,9 +50,10 @@ async def dashboard_summary(user: Annotated[User, Depends(get_request_user)]) ->
 @dashboard_router.get("/dashboard/challenge-progress")
 async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     repo = HealthRepository()
+    v2_progress = await challenge_v2.progress_summary(user)
     cycle = await repo.active_cycle(user.id)
     if cycle is None:
-        return envelope({"cycle": None, "recent_7_days": {"completed": 0, "planned": 0}, "four_weeks": None})
+        return envelope({"cycle": None, "recent_7_days": {"completed": 0, "planned": 0}, "four_weeks": None, "challenge_v2": v2_progress})
     logs = await repo.logs_for_cycle(cycle.id, user.id)
     user_challenges = await repo.list_user_challenges(cycle.id, user.id)
     today = date.today()
@@ -63,6 +66,7 @@ async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -
     return envelope(
         {
             "cycle_id": cycle.id,
+            "challenge_v2": v2_progress,
             "recent_7_days": {
                 "completed": sum(1 for item in recent_logs if item.is_completed),
                 "planned": recent_planned,

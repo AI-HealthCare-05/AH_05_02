@@ -7,7 +7,9 @@
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
   <link rel="stylesheet" href="/static/styles.css?v=20260824-mvp8">
-  <script src="/static/app.js?v=20260831-mvp9" defer></script>
+  <script src="/static/app.js?v=20260903-v21" defer></script>
+  <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.1">
+  <script src="/static/challenge-v2.js?v=2.1.1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -168,6 +170,7 @@
         </section>
 
         <section class="workspace-panel" id="workspace-panel-challenge" role="tabpanel" tabindex="-1" data-workspace-panel="challenge" aria-labelledby="workspace-tab-challenge" hidden>
+          <div data-challenge-v2 hidden></div>
           <div class="section-heading"><p class="eyebrow">오늘의 실천</p><h3 id="challenge-manage-title">챌린지 기록</h3><p>오늘 한 항목만 체크해 저장하세요.</p></div>
           <form id="daily-log-form" class="focus-card"><fieldset><legend>오늘 실천한 항목</legend><div id="daily-log-list"></div></fieldset><button class="primary" type="submit">오늘 기록 저장</button></form>
           <section class="dashboard-section" aria-labelledby="barrier-title">

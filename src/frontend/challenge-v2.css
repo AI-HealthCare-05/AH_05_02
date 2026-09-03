@@ -1,0 +1,18 @@
+[data-challenge-v2]{font-family:inherit;color:#193d32;min-width:0;text-align:left}
+[data-challenge-v2] .v2-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+[data-challenge-v2] h3{font-size:20px;margin:12px 0}[data-challenge-v2] h4{font-size:17px;line-height:1.5;margin:12px 0}
+[data-challenge-v2] .v2-card,[data-challenge-v2]>details{background:#fff;border:1px solid #d9e5dd;border-radius:14px;padding:16px;margin:12px 0}
+[data-challenge-v2] .v2-tags{display:flex;gap:6px;flex-wrap:wrap}[data-challenge-v2] .v2-tags span{padding:4px 9px;background:#edf5ef;border-radius:8px;font-size:13px}
+[data-challenge-v2] form{display:grid;gap:12px;padding:12px 0}[data-challenge-v2] label{display:grid;gap:7px;font-size:14px;line-height:1.5}
+[data-challenge-v2] input:not([type=checkbox]),[data-challenge-v2] select,[data-challenge-v2] textarea{box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:10px;border:1px solid #b7cec0;border-radius:8px;background:#fff;color:#193d32;font:inherit}
+[data-challenge-v2] .v2-check{display:flex;align-items:flex-start;gap:8px}[data-challenge-v2] input[type=checkbox]{width:18px;height:18px;flex-shrink:0}
+[data-challenge-v2] button{padding:10px 14px;border:1px solid #b7cec0;border-radius:9px;background:#edf5ef;color:#193d32;cursor:pointer;font:inherit;min-height:40px}
+[data-challenge-v2] button:disabled{opacity:.5;cursor:wait}[data-challenge-v2] summary{cursor:pointer;padding:10px 0;font-size:14px;font-weight:650}
+[data-challenge-v2] p{font-size:14px;line-height:1.6;margin:8px 0}[data-challenge-v2] .v2-safety{font-size:12px;color:#576b61}
+[data-challenge-v2] .v2-notice{background:#fff6df;border-radius:8px;padding:10px}[data-challenge-v2] [data-message]{color:#8c390d;white-space:pre-wrap}
+[data-challenge-v2] progress{width:100%;height:10px;accent-color:#438966}[data-challenge-v2] small{display:block;font-size:12px;line-height:1.6}
+.challenge-v2-enabled #start-prediction-flow,.challenge-v2-enabled #quest-list,.challenge-v2-enabled #quest-generation-status,.challenge-v2-enabled #daily-log-form{display:none!important}
+.challenge-v2-enabled #quest-title{font-size:17px}
+.challenge-v2-enabled #challenge-form{display:none!important}
+.challenge-v2-enabled #workspace-panel-challenge>.section-heading{display:none}
+@media(min-width:1201px){.challenge-v2-enabled .inspector{position:sticky;top:80px;max-height:calc(100vh - 96px);overflow-y:auto;scrollbar-color:#4c8b60 #e6eee8;scrollbar-width:thin}}

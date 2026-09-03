@@ -1,4 +1,5 @@
 const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, sharedGroups: [], forestGroupId: null, forestCatalog: null, forestHome: null };
+window.challengeV2TokenProvider = () => state.token;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -75,6 +76,7 @@ function showStep(step) {
   $("#step-current").textContent = state.step;
   $("#progress-bar").style.width = `${(state.step / 8) * 100}%`;
   if (state.step === 6) { syncLifestyleAvatar(); updateLifestyleMap(state.mapTopic || "rhythm"); }
+  window.dispatchEvent(new CustomEvent("challenge-v2-step", { detail: state.step }));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -357,12 +359,13 @@ async function loadNotifications() {
   $("#notification-list").innerHTML = notifications.items.length ? notifications.items.map((item) => `<article class="challenge-card"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.message)}</small></span></article>`).join("") : `<p class="lead">표시할 웹 알림이 없습니다.</p>`;
 }
 async function refreshDashboard() {
+  window.dispatchEvent(new Event("challenge-v2-auth"));
   const summary = await api("/dashboard/summary");
   const card = summary.risk_cards[0];
   $("#dashboard-stage").textContent = card ? card.risk_category_label : "기록 없음";
   $("#dashboard-notice").textContent = summary.disclaimer;
   const progress = await api("/dashboard/challenge-progress");
-  $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
+  $("#dashboard-complete").textContent = `${(progress.challenge_v2 || progress).recent_7_days.completed}개`;
   await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadNotifications()]);
 }
 
@@ -459,7 +462,14 @@ $("#feedback-form").addEventListener("submit", async (event) => {
   } catch (error) { showMessage(error.message); }
 });
 $("#to-challenges").addEventListener("click", async () => {
-  try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }
+  try {
+    if (window.ForestChallengeV2?.enabled) { showStep(7); window.dispatchEvent(new Event("challenge-v2-auth")); }
+    else { await loadChallenges(); showStep(7); }
+  } catch (error) { showMessage(error.message); }
+});
+window.addEventListener("challenge-v2-open-dashboard", async () => {
+  try { await refreshDashboard(); showStep(8); showWorkspace("challenge"); }
+  catch (error) { showMessage(error.message); }
 });
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
