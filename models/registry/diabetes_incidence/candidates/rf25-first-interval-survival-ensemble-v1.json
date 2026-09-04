@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_incidence_multihorizon",
+  "task_type": "future_incidence_risk_screening",
+  "threshold_scope": "future_cumulative_incidence_by_horizon",
+  "model_version": "rf25-first-interval-survival-ensemble-v1",
+  "promotion_status": "research_candidate_only",
+  "operational_model_activated": false,
+  "experiment_id": "rf25_first_interval_survival_ensemble_v001",
+  "run_id": "20260903T091006078025Z",
+  "artifact_local_path": "models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib",
+  "artifact_source_path": "outputs/ml/rf25_first_interval_survival_ensemble_v001/20260903T091006078025Z/model.joblib",
+  "artifact_size_bytes": 795635,
+  "artifact_sha256": "36323bad1ba2c115f8c52c4c6460220b960a5bae43787be5b029e2d90d3d488f",
+  "artifact_git_policy": "local_only_do_not_commit_model_binary",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "feature_schema_version": "klosa_rf25_first_interval_plus_survival_2to18_v1",
+  "threshold_version": "validation-spec043-by-horizon-first-interval-stack-v1",
+  "calibration_version": "train-pid-oof-platt-first-interval-v1",
+  "output_definition_version": "first-interval-stack-survival-signal-2to18-v1",
+  "horizon_years": [2, 4, 6, 8, 10, 12, 14, 16, 18],
+  "features": [
+    "age", "sex", "bmi", "smoking_status", "current_drinker", "regular_exercise",
+    "exercise_days_per_week", "exercise_minutes", "hypertension_diagnosis",
+    "cancer_diagnosis", "chronic_lung_disease_diagnosis", "liver_disease_diagnosis",
+    "heart_disease_diagnosis", "cerebrovascular_disease_diagnosis",
+    "psychiatric_disease_diagnosis", "arthritis_rheumatism_diagnosis",
+    "log_household_income", "education_level", "marital_status", "household_structure",
+    "health_satisfaction_score", "economic_satisfaction_score",
+    "overall_quality_of_life_score", "depressed_feeling_last_week",
+    "sleep_difficulty_last_week"
+  ],
+  "first_interval_method": "logistic_stack",
+  "curve_formula": "1-(1-p_stack_2y)*product(1-h_logistic_k), k=2..K",
+  "horizons": {
+    "2": {"threshold": 0.015721543101852798, "recall": 0.7777777777777778, "specificity": 0.4793452844894778, "precision": 0.030478955007256895, "auroc": 0.643168499754626, "auprc": 0.04198818697328316},
+    "4": {"threshold": 0.03354276970084047, "recall": 0.8163265306122449, "specificity": 0.44206773618538325, "precision": 0.06006006006006006, "auroc": 0.6485139510349593, "auprc": 0.07576903644852709},
+    "6": {"threshold": 0.047904207812079824, "recall": 0.8235294117647058, "specificity": 0.4203323558162268, "precision": 0.08628659476117104, "auroc": 0.6543614513253981, "auprc": 0.12960863258131772},
+    "8": {"threshold": 0.06879951120140348, "recall": 0.75, "specificity": 0.40962566844919784, "precision": 0.1024390243902439, "auroc": 0.6206646294881588, "auprc": 0.14462099587244132},
+    "10": {"threshold": 0.08539296336415325, "recall": 0.7297297297297297, "specificity": 0.4047058823529412, "precision": 0.13798977853492334, "auroc": 0.6028192898781134, "auprc": 0.182128828650832},
+    "12": {"threshold": 0.1011427527971307, "recall": 0.744, "specificity": 0.4261119081779053, "precision": 0.18864097363083165, "auroc": 0.5985997130559542, "auprc": 0.23488075840995623},
+    "14": {"threshold": 0.11444821142413208, "recall": 0.7586206896551724, "specificity": 0.3851132686084142, "precision": 0.22448979591836735, "auroc": 0.6041401629282446, "auprc": 0.2862482478389706},
+    "16": {"threshold": 0.13703732911311362, "recall": 0.7738095238095238, "specificity": 0.3814814814814815, "precision": 0.2801724137931034, "auroc": 0.625352733686067, "auprc": 0.36894082267802836},
+    "18": {"threshold": 0.1601476738985751, "recall": 0.7958115183246073, "specificity": 0.37872340425531914, "precision": 0.34234234234234234, "auroc": 0.6438788013813078, "auprc": 0.4462271017158415}
+  },
+  "supported_population": {
+    "age_minimum": 45,
+    "age_maximum": 105,
+    "baseline_diabetes_status": "no_previous_physician_diagnosis",
+    "source_population": "KLoSA earliest eligible origin cohort"
+  },
+  "risk_curve_status": "unavailable",
+  "availability_reason": "research_model_not_approved_and_uncertainty_not_available",
+  "intended_use": "internal diabetes incidence risk screening research and health education",
+  "prohibited_use": [
+    "diagnosis", "prescription", "medication_change", "emergency_triage",
+    "public_personal_probability_display", "use_outside_supported_age_range"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "disease_type": "diabetes",
+  "task_type": "future_incidence_risk_screening",
+  "model_key": "diabetes_incidence_multihorizon",
+  "risk_curve_status": "unavailable",
+  "availability_reason": "research_model_not_approved_and_uncertainty_not_available",
+  "display_allowed": false,
+  "as_of_date": "2026-08-31",
+  "current_age": 56,
+  "curve": [
+    {"horizon_years": 2, "projected_age": 58, "cumulative_risk_signal": 0.024914381803585, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.015721543101852798},
+    {"horizon_years": 4, "projected_age": 60, "cumulative_risk_signal": 0.053716045185859, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.03354276970084047},
+    {"horizon_years": 6, "projected_age": 62, "cumulative_risk_signal": 0.078011944743102, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.047904207812079824},
+    {"horizon_years": 8, "projected_age": 64, "cumulative_risk_signal": 0.111307984510501, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.06879951120140348},
+    {"horizon_years": 10, "projected_age": 66, "cumulative_risk_signal": 0.13726681714435, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.08539296336415325},
+    {"horizon_years": 12, "projected_age": 68, "cumulative_risk_signal": 0.158316051784598, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.1011427527971307},
+    {"horizon_years": 14, "projected_age": 70, "cumulative_risk_signal": 0.182814433155434, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.11444821142413208},
+    {"horizon_years": 16, "projected_age": 72, "cumulative_risk_signal": 0.221827015490248, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.13703732911311362},
+    {"horizon_years": 18, "projected_age": 74, "cumulative_risk_signal": 0.262479747234604, "cumulative_risk": null, "lower": null, "upper": null, "screening_signal_detected": true, "future_incidence_decision_threshold": 0.1601476738985751}
+  ],
+  "model_version": "rf25-first-interval-survival-ensemble-v1",
+  "feature_schema_version": "klosa_rf25_first_interval_plus_survival_2to18_v1",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "threshold_scope": "future_cumulative_incidence_by_horizon",
+  "threshold_version": "validation-spec043-by-horizon-first-interval-stack-v1",
+  "calibration_version": "train-pid-oof-platt-first-interval-v1",
+  "output_definition_version": "first-interval-stack-survival-signal-2to18-v1",
+  "output_status": "research_candidate_not_operationally_approved",
+  "disclaimer": "향후 당뇨병 의사진단 위험 선별을 위한 내부 연구 신호이며 확정 발병확률, 진단 또는 처방이 아닙니다. 불확실성 검증 전에는 사용자에게 표시하지 않습니다."
+}
