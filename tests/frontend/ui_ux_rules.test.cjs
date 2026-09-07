@@ -11,6 +11,21 @@ function load(name, data = {}) {
   vm.runInContext(fn[0], context);
   return context[name];
 }
+test('medical continuation requires challenge permission and preserves every safety exclusion', () => {
+  const state = { capabilities: { challenge: true }, eligibility: { reason_codes: [] }, medicalGuidanceRequired: false };
+  const allowed = load('canContinueAfterMedicalGuidance', { state });
+  assert.equal(allowed(), true);
+  for (const code of ['URGENT_MEDICAL_ATTENTION', 'SAME_DAY_MEDICAL_ATTENTION', 'DIAGNOSED_DIABETES', 'UNDER_MINIMUM_SERVICE_AGE', 'CONSENT_REQUIRED']) {
+    state.eligibility.reason_codes = [code];
+    assert.equal(allowed(), false, code);
+  }
+  state.eligibility.reason_codes = [];
+  state.capabilities.challenge = false;
+  assert.equal(allowed(), false);
+  state.capabilities.challenge = true;
+  state.medicalGuidanceRequired = true;
+  assert.equal(allowed(), false);
+});
 test('profile writes use current backend path, not GET-only /users/me', () => {
   assert.equal((source.match(/api\("\/users\/me\/profile", \{ method: "PATCH"/g) || []).length, 3);
   assert.doesNotMatch(source, /api\("\/users\/me", \{ method: "PATCH"/);
@@ -44,7 +59,7 @@ test('error navigation follows field DOM instead of outdated field-name lists', 
 test('missing snapshot endpoint is explicit and cannot reuse stale snapshot ID', async () => {
   const state = { checkupId: 3, currentScreeningInputId: 99 };
   const save = load('saveCurrentScreeningInputSnapshot', {
-    state, detailHealthPayload: () => ({}), canUseLocalModelPreview: () => false,
+    state, detailHealthPayload: () => ({}), isLocalPreview: () => false,
     api: async () => { throw { status: 404 }; },
   });
   await save();
