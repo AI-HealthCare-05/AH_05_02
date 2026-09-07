@@ -197,9 +197,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
             if public_category
             else DEVELOPMENT_DISCLAIMER
         ),
-        "age_risk_forecast": item.age_risk_forecast
-        if public_result_available or local_preview_available
-        else None,
+        "age_risk_forecast": item.age_risk_forecast if public_result_available or local_preview_available else None,
         "raw_probability_exposed": False,
     }
 

@@ -1603,3 +1603,11 @@ body.dialog-open{overflow:hidden}
   .forest-shortcut span{display:none}
   .my-page-button,#font-toggle{padding-inline:8px;font-size:14px}
 }
+
+/* Guide 3-1: guest authentication actions belong on the right, not by the logo. */
+.topbar #guest-flow-panel{justify-content:flex-end;margin-left:auto}
+.topbar #guest-flow-panel ol{justify-content:flex-end}
+#guest-flow-panel #sidebar-login,#guest-flow-panel #sidebar-signup{min-height:48px;font-size:16px;padding:10px 16px}
+#guest-flow-panel #sidebar-signup{background:var(--green);color:#fff;border:2px solid var(--green)}
+#guest-flow-panel #sidebar-signup:hover{background:var(--green-dark);border-color:var(--green-dark)}
+#guest-flow-panel #sidebar-signup[aria-current="page"]{text-decoration:underline;text-underline-offset:4px}

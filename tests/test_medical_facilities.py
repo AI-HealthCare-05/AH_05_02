@@ -15,7 +15,6 @@ from app.facilities.providers import (
 )
 from app.services.facilities import MedicalFacilityService
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -72,7 +71,8 @@ def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:
 
     assert 'id="emergency-facility-search"' in html
     assert 'id="find-nearby-emergency"' in html
-    assert 'reason !== "URGENT_MEDICAL_ATTENTION"' in script
+    assert 'const isUrgent = reason === "URGENT_MEDICAL_ATTENTION"' in script
+    assert '$("#urgent-guidance-actions").hidden = !isUrgent' in script
     assert 'api(`/emergency-facilities/nearby?${params.toString()}`)' in script
 
 
@@ -165,7 +165,7 @@ class _FakeKakaoAsyncClient:
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
 
-    async def __aenter__(self) -> "_FakeKakaoAsyncClient":
+    async def __aenter__(self) -> _FakeKakaoAsyncClient:
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:
@@ -241,7 +241,7 @@ class _FakeNemcAsyncClient:
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
 
-    async def __aenter__(self) -> "_FakeNemcAsyncClient":
+    async def __aenter__(self) -> _FakeNemcAsyncClient:
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:

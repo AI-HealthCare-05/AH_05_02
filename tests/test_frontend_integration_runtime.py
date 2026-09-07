@@ -1,9 +1,9 @@
 """Run frontend behavioral regressions without browser or external API access."""
 
-from html.parser import HTMLParser
-from pathlib import Path
 import shutil
 import subprocess
+from html.parser import HTMLParser
+from pathlib import Path
 
 import pytest
 

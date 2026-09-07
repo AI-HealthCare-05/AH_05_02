@@ -1825,6 +1825,27 @@ function geolocationFailureState(error) {
   return "unavailable";
 }
 
+function getCurrentPosition(options) {
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options));
+}
+
+async function getCurrentPositionWithRetry() {
+  try {
+    return await getCurrentPosition({
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000,
+    });
+  } catch (firstError) {
+    if (![2, 3].includes(firstError.code)) throw firstError;
+    return getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    });
+  }
+}
+
 async function findNearbyMedicalFacilities() {
   const button = $("#find-nearby-medical-facilities");
   if (!button) return;
@@ -1838,11 +1859,7 @@ async function findNearbyMedicalFacilities() {
   setMedicalFacilityStatus("loading", "현재 위치를 확인하고 있어요", "위치는 근처 의료기관을 찾는 요청에만 사용합니다.");
   let position;
   try {
-    position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
-      timeout: 10000,
-      maximumAge: 300000,
-    }));
+    position = await getCurrentPositionWithRetry();
   } catch (error) {
     resetFacilitySearchUi("medical");
     if (typeof error?.code === "number" && error.code >= 1 && error.code <= 3) {
@@ -1943,11 +1960,7 @@ async function requestEmergencyFacilities({ lat, lon, areaLabel = "", referenceL
 }
 
 function currentBrowserPosition() {
-  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
-    enableHighAccuracy: false,
-    timeout: 10000,
-    maximumAge: 300000,
-  }));
+  return getCurrentPositionWithRetry();
 }
 
 async function confirmEmergencyLocation() {
