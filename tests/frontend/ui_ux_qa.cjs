@@ -1,0 +1,137 @@
+// Local-only UI regression. Run with PLAYWRIGHT_MODULE pointing to installed Playwright.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const base = process.env.QA_BASE_URL || 'http://127.0.0.1:8022';
+assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname), 'Local QA only');
+const artifacts = path.resolve('tmp/ui-ux-qa');
+fs.mkdirSync(artifacts, { recursive: true });
+const checks = [];
+const pass = (name) => { checks.push(name); console.log(`PASS ${name}`); };
+async function noOverflow(page, name) {
+  const size = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
+  assert.ok(size.scroll <= size.width + 1, `${name}: ${JSON.stringify(size)}`);
+  pass(name);
+}
+(async () => {
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN } : {}) });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(base, { waitUntil: 'domcontentloaded' });
+    await page.locator('#sidebar-signup').click();
+    await noOverflow(page, 'desktop signup has no horizontal overflow');
+    await page.locator('#password').fill('Example123!');
+    await page.locator('[data-password-target="password"]').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#password').getAttribute('type'), 'text');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#password').getAttribute('type'), 'password');
+    pass('keyboard password reveal/hide preserves value');
+    await page.setViewportSize({ width: 380, height: 844 });
+    await noOverflow(page, '380px signup has no horizontal overflow');
+    await page.screenshot({ path: path.join(artifacts, 'signup-mobile.png'), fullPage: true });
+    await page.locator('#sidebar-login').click();
+    await page.route('**/api/v1/auth/login', route => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ detail: 'INTERNAL_AUTH_CODE' }) }));
+    await page.locator('#login-email').fill('qa@example.com');
+    await page.locator('#login-password').fill('Example123!');
+    await page.locator('#login-form button[type="submit"]').click();
+    await page.locator('#login-form .auth-error-summary').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#login-email').inputValue(), 'qa@example.com');
+    assert.equal(await page.locator('#login-password').inputValue(), 'Example123!');
+    assert.ok(await page.locator('#login-form .auth-error-summary').evaluate(el => el === document.activeElement));
+    assert.ok(!(await page.locator('#login-form').innerText()).includes('INTERNAL_AUTH_CODE'));
+    pass('401 login error is readable, focused, and preserves inputs');
+    await page.screenshot({ path: path.join(artifacts, 'login-error-mobile.png'), fullPage: true });
+    await page.unroute('**/api/v1/auth/login');
+    await page.locator('#sidebar-signup').click();
+    await page.route('**/api/v1/auth/signup', route => route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) }));
+    await page.locator('#email').fill('qa@example.com');
+    await page.locator('#signup-birth-date').fill('1966-04-12');
+    await page.locator('#personal-consent').check();
+    await page.locator('#health-consent').check();
+    await page.locator('#signup-form button[type="submit"]').click();
+    await page.locator('#password-error').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#password').getAttribute('aria-invalid'), 'true');
+    pass('422 signup error is associated with password input');
+    await page.unroute('**/api/v1/auth/signup');
+
+    // Controlled UI fixtures, not a claim of live model inference.
+    let failCatalog = true;
+    const items = [1, 2, 3, 4].map(id => ({ challenge_id: id, category: 'activity', title: `걷기 ${id}`, daily_goal: '10분 걷기' }));
+    await page.route('**/api/v1/challenges', route => route.fulfill({ status: failCatalog ? 503 : 200, contentType: 'application/json', body: JSON.stringify(failCatalog ? {} : { data: { items } }) }));
+    await page.route('**/api/v1/challenge-recommendations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { items, personalized: false } }) }));
+    await page.evaluate(async () => { state.capabilities.challenge = true; state.returningUser = true; showStep(7); await loadChallenges(); });
+    assert.ok(await page.locator('#retry-challenges').isVisible());
+    assert.ok(await page.locator('#start-challenge').isDisabled());
+    failCatalog = false;
+    await page.locator('#retry-challenges').click();
+    await page.locator('[data-challenge-category="activity"]').waitFor();
+    await page.locator('[data-challenge-category="activity"]').click();
+    await page.locator('.challenge-detail-option').nth(0).click();
+    assert.equal(await page.locator('#challenge-selection-count').innerText(), '1/3 선택');
+    await page.locator('.challenge-detail-option').nth(1).click();
+    await page.locator('.challenge-detail-option').nth(2).click();
+    await page.locator('.challenge-detail-option').nth(3).click();
+    assert.equal(await page.locator('#challenge-selection-count').innerText(), '3/3 선택');
+    pass('challenge failure -> retry -> selection, maximum three retained');
+    await noOverflow(page, '380px challenge has no horizontal overflow');
+    await page.screenshot({ path: path.join(artifacts, 'challenge-mobile.png'), fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: path.join(artifacts, 'challenge-desktop.png'), fullPage: true });
+
+    const requestedModels = [];
+    await page.route('**/api/v1/prediction-jobs', async route => {
+      requestedModels.push(route.request().postDataJSON().model_key);
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { job_id: 99, status: 'queued' } }) });
+    });
+    await page.route('**/api/v1/prediction-jobs/99', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { status: 'succeeded', prediction_id: 99 } }) }));
+    await page.route('**/api/v1/predictions/99', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { model_key: 'diabetes_current_screening', display_allowed: false, operational_model_activated: false } }) }));
+    assert.equal(await page.evaluate(() => { state.currentHealthOnly = true; state.capabilities.currentHealth = true; state.medicalGuidanceRequired = false; return shouldRunPredictionAfterHealthEdit(); }), true);
+    await page.evaluate(async () => { state.checkupId = 1; showStep(5); await runPrediction(); });
+    assert.deepEqual(requestedModels, ['diabetes_current_screening']);
+    assert.equal(await page.evaluate(() => state.step), 6);
+    assert.ok(await page.locator('#future-prediction-result').isHidden());
+    assert.match(await page.locator('#current-health-result-message').innerText(), /승인/);
+    pass('current-only analysis requests only current model and hides unapproved values');
+    assert.equal(await page.evaluate(() => { state.medicalGuidanceRequired = true; return shouldRunPredictionAfterHealthEdit(); }), false);
+    pass('medical restriction blocks reanalysis');
+    await page.evaluate(() => {
+      const approved = (key, risk) => ({ model_key: key, risk_category: risk, result_status: 'approved', promotion_status: 'approved', display_allowed: true });
+      state.currentHealthOnly = false;
+      state.medicalGuidanceRequired = false;
+      state.currentScreeningPrediction = approved('diabetes_current_screening', 'low');
+      state.prediction = approved('diabetes_incidence', 'high');
+      renderPrediction(state.prediction, { items: [] });
+      showStep(6);
+    });
+    assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'low');
+    assert.equal(await page.locator('#future-risk-category').innerText(), '높음');
+    assert.match(await page.locator('#to-challenges').innerText(), /검사/);
+    await page.locator('#to-challenges').click();
+    assert.ok(await page.locator('#medical-guidance-detail').isVisible());
+    pass('current low / future high stay separate; medical guidance has priority');
+    await page.evaluate(() => { state.currentScreeningPrediction = null; updateResultConfirmation(); });
+    assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'pending');
+    pass('missing current result is not replaced by future result');
+    await page.evaluate(async () => {
+      showStep(4);
+      await new Promise(requestAnimationFrame);
+      showHealthInputPanel('review');
+      document.querySelector('#walking-days').value = '8';
+      document.querySelector('#health-form').requestSubmit(document.querySelector('#submit-analysis'));
+    });
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'walking-days');
+    assert.ok(await page.locator('#lifestyle-input-panel').isVisible());
+    assert.match(await page.locator('#health-error-title').innerText(), /1개/);
+    pass('health validation opens the correct panel and focuses first error');
+    await page.setViewportSize({ width: 380, height: 844 });
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await page.screenshot({ path: path.join(artifacts, 'lifestyle-mobile-reviewed.png'), fullPage: true });
+    assert.deepEqual(errors, []);
+    pass('no browser JavaScript errors in tested scenarios');
+    fs.writeFileSync(path.join(artifacts, 'results.json'), JSON.stringify({ fixtureTests: checks }, null, 2));
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

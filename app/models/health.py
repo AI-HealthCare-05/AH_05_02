@@ -119,6 +119,12 @@ class Prediction(Model):
     # 나이별 위험 전망(그래프)용 표시 데이터. scenarios/uncertainty는 REQ-PRED-012
     # 검증 전까지 비워둔다 — is_active 없는 시나리오를 인과관계처럼 노출하지 않기 위함.
     age_risk_forecast = fields.JSONField(null=True)
+    task_type = fields.CharField(max_length=80, null=True)
+    threshold_scope = fields.CharField(max_length=100, null=True)
+    display_allowed = fields.BooleanField(default=False)
+    operational_model_activated = fields.BooleanField(default=False)
+    preview_only = fields.BooleanField(default=False)
+    preview_signal_level = fields.CharField(max_length=20, null=True)
 
     class Meta:
         table = "predictions"

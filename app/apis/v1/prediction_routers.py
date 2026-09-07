@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.apis.responses import envelope
+from app.core import config
 from app.dependencies.security import get_request_user
 from app.dtos.ai_jobs import prediction_job_response
 from app.dtos.health import PredictionJobCreateRequest
@@ -142,6 +143,13 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
     )
     promotion_status = "approved" if public_result_available else "development_only"
     public_category = item.risk_category if public_result_available else None
+    local_preview_available = (
+        config.ENV.value == "local"
+        and getattr(item, "preview_only", False) is True
+        and getattr(item, "display_allowed", False) is False
+        and getattr(item, "operational_model_activated", False) is False
+        and getattr(item, "preview_signal_level", None) in RISK_LABELS
+    )
     is_current_screening = item.model_key == CURRENT_SCREENING_MODEL_KEY
     screening_signal = public_category == "high" if is_current_screening and public_category else None
     return {
@@ -150,11 +158,22 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "input_as_of_date": item.input_as_of_date,
         "model_key": item.model_key,
         "prediction_type": "current_screening" if is_current_screening else "future_incidence",
+        "task_type": getattr(item, "task_type", None),
+        "threshold_scope": getattr(item, "threshold_scope", None),
         "outcome_definition": item.outcome_definition,
         "result_status": item.result_status,
         "promotion_status": promotion_status,
         "risk_category": public_category,
         "risk_category_label": RISK_LABELS.get(public_category) if public_category else None,
+        "preview_signal_level": getattr(item, "preview_signal_level", None) if local_preview_available else None,
+        "preview_signal_label": RISK_LABELS.get(getattr(item, "preview_signal_level", None))
+        if local_preview_available
+        else None,
+        "preview_only": local_preview_available,
+        "display_allowed": getattr(item, "display_allowed", True) if public_result_available else False,
+        "operational_model_activated": getattr(item, "operational_model_activated", True)
+        if public_result_available
+        else False,
         "screening_signal_detected": screening_signal,
         "screening_result_label": ("검사 권고" if screening_signal else "현재 위험 신호 낮음")
         if screening_signal is not None
@@ -178,7 +197,9 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
             if public_category
             else DEVELOPMENT_DISCLAIMER
         ),
-        "age_risk_forecast": item.age_risk_forecast if public_result_available else None,
+        "age_risk_forecast": item.age_risk_forecast
+        if public_result_available or local_preview_available
+        else None,
         "raw_probability_exposed": False,
     }
 
