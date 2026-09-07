@@ -7,6 +7,7 @@ def private_sender(send):
             headers = [(k, v) for k, v in message.get("headers", []) if k.lower() != b"cache-control"]
             message = {**message, "headers": [*headers, (b"cache-control", b"private, no-store")]}
         await send(message)
+
     return wrapped
 
 

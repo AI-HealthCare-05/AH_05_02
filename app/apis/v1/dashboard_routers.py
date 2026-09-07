@@ -53,7 +53,14 @@ async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -
     v2_progress = await challenge_v2.progress_summary(user)
     cycle = await repo.active_cycle(user.id)
     if cycle is None:
-        return envelope({"cycle": None, "recent_7_days": {"completed": 0, "planned": 0}, "four_weeks": None, "challenge_v2": v2_progress})
+        return envelope(
+            {
+                "cycle": None,
+                "recent_7_days": {"completed": 0, "planned": 0},
+                "four_weeks": None,
+                "challenge_v2": v2_progress,
+            }
+        )
     logs = await repo.logs_for_cycle(cycle.id, user.id)
     user_challenges = await repo.list_user_challenges(cycle.id, user.id)
     today = date.today()

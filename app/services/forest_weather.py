@@ -41,8 +41,11 @@ class ForestWeather:
                         if not math.isfinite(temperature) or not -90 <= temperature <= 65:
                             raise ValueError("invalid temperature")
                     self.value = {
-                        "temperature": temperature, "code": code, "observedAt": observed,
-                        "area": "서초구 잠원동 인근", "source": "Open-Meteo",
+                        "temperature": temperature,
+                        "code": code,
+                        "observedAt": observed,
+                        "area": "서초구 잠원동 인근",
+                        "source": "Open-Meteo",
                     }
                     self.updated = time.monotonic()
                     return {**self.value, "stale": False}
