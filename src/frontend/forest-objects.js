@@ -1,4 +1,4 @@
-/* One audited storage-atlas crop map for the world and every DOM thumbnail. */
+/* Individually authored furniture: complete alpha silhouettes, shared world/thumbnail atlases. */
 (() => {
   "use strict";
 
@@ -51,6 +51,122 @@
     code, Object.freeze(animatedBounds[row].map(([left, top, right, bottom]) => Object.freeze([left, top, right - left, bottom - top]))),
   ])));
   const animatedAtlasCache = new WeakMap();
+  const INDIVIDUAL_ASSETS = Object.freeze([...STORAGE_CODES, ...ANIMATED_CODES].map(code => Object.freeze({
+    code, key: `furniture-${code}`, url: `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
+    kind: Object.hasOwn(STORAGE_INDEX, code) ? "storage" : "animated",
+  })));
+  const individualAtlasCache = new WeakMap(), alphaBoundsCache = new WeakMap();
+  let individualImages = null, individualLoadRequired = false, individualLoadPromise = null;
+
+  function imageDimensions(image) {
+    if (!image || image.complete === false) return null;
+    const width = image.naturalWidth ?? image.width, height = image.naturalHeight ?? image.height;
+    return width > 0 && height > 0 ? { width, height } : null;
+  }
+
+  function alphaBounds(pixels, width, height) {
+    let left = width, top = height, right = -1, bottom = -1;
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      if (!pixels[(y * width + x) * 4 + 3]) continue;
+      left = Math.min(left, x); right = Math.max(right, x);
+      top = Math.min(top, y); bottom = Math.max(bottom, y);
+    }
+    return right < left ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+  }
+
+  function individualFrameLayout(bounds, tileSize = STORAGE_TILE_SIZE) {
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return null;
+    const padding = Math.round(tileSize * 12 / STORAGE_TILE_SIZE);
+    const scale = Math.min((tileSize - padding * 2) / bounds.width, (tileSize - padding * 2) / bounds.height);
+    const width = Math.round(bounds.width * scale), height = Math.round(bounds.height * scale);
+    return {
+      source: [bounds.x, bounds.y, bounds.width, bounds.height],
+      target: [Math.floor((tileSize - width) / 2), tileSize - padding - height, width, height],
+      scale, padding,
+    };
+  }
+
+  function measuredImageBounds(image) {
+    const size = imageDimensions(image);
+    if (!size) throw new Error("Individual furniture image is not loaded");
+    const sourceKey = `${image.currentSrc || image.src || ""}:${size.width}:${size.height}`;
+    const cached = alphaBoundsCache.get(image);
+    if (cached?.sourceKey === sourceKey) return cached.bounds;
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width; canvas.height = size.height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(image, 0, 0, size.width, size.height, 0, 0, size.width, size.height);
+    const bounds = alphaBounds(context.getImageData(0, 0, size.width, size.height).data, size.width, size.height);
+    if (!bounds) throw new Error("Individual furniture image is fully transparent");
+    alphaBoundsCache.set(image, { sourceKey, bounds });
+    return bounds;
+  }
+
+  function createIndividualTile(image, tileSize = STORAGE_TILE_SIZE) {
+    const layout = individualFrameLayout(measuredImageBounds(image), tileSize);
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = tileSize;
+    const context = tile.getContext("2d");
+    context.imageSmoothingEnabled = true;
+    context.drawImage(image, ...layout.source, ...layout.target);
+    return tile;
+  }
+
+  function createIndividualAtlas(images, kind) {
+    const codes = kind === "storage" ? STORAGE_CODES : ANIMATED_CODES;
+    if (!images || codes.some(code => !imageDimensions(images[code]))) throw new Error(`Missing required ${kind} furniture PNG`);
+    const sourceKey = codes.map(code => {
+      const image = images[code], size = imageDimensions(image);
+      return `${code}:${image.currentSrc || image.src || ""}:${size.width}:${size.height}`;
+    }).join("|");
+    let cached = individualAtlasCache.get(images);
+    if (cached?.[kind]?.sourceKey === sourceKey) return cached[kind].canvas;
+    if (!cached) { cached = {}; individualAtlasCache.set(images, cached); }
+    const tileSize = kind === "storage" ? STORAGE_TILE_SIZE : ANIMATED_TILE_SIZE;
+    const columns = kind === "storage" ? STORAGE_COLUMNS : 4;
+    const canvas = document.createElement("canvas");
+    canvas.width = columns * tileSize;
+    canvas.height = kind === "storage" ? STORAGE_ROWS * tileSize : ANIMATED_CODES.length * tileSize;
+    const context = canvas.getContext("2d");
+    context.imageSmoothingEnabled = true;
+    codes.forEach((code, index) => {
+      const image = images[code];
+      // Normalize in a dedicated tile first. No draw can ever read pixels from
+      // another object's source PNG or spill visible artwork into its neighbor.
+      const tile = createIndividualTile(image, tileSize);
+      const copies = kind === "storage" ? 1 : 4;
+      for (let frame = 0; frame < copies; frame++) {
+        const column = kind === "storage" ? index % columns : frame;
+        const row = kind === "storage" ? Math.floor(index / columns) : index;
+        context.drawImage(tile, 0, 0, tileSize, tileSize, column * tileSize, row * tileSize, tileSize, tileSize);
+      }
+    });
+    cached[kind] = { sourceKey, canvas };
+    return canvas;
+  }
+
+  function createStorageAtlasFromImages(images) { return createIndividualAtlas(images, "storage"); }
+  function createAnimatedAtlasFromImages(images) { return createIndividualAtlas(images, "animated"); }
+
+  function registerIndividualImages(images) {
+    if (INDIVIDUAL_ASSETS.some(asset => !imageDimensions(images?.[asset.code]))) throw new Error("All 24 individual furniture PNGs must be loaded before registration");
+    individualImages = Object.freeze(Object.fromEntries(INDIVIDUAL_ASSETS.map(asset => [asset.code, images[asset.code]])));
+    individualLoadRequired = true;
+    return individualImages;
+  }
+
+  function loadIndividualAssets() {
+    individualLoadRequired = true; // Suppress legacy-art flashes from this point onward.
+    if (individualImages) return Promise.resolve(individualImages);
+    if (individualLoadPromise) return individualLoadPromise;
+    individualLoadPromise = Promise.all(INDIVIDUAL_ASSETS.map(asset => new Promise((resolve, reject) => {
+      const image = new window.Image();
+      image.onload = () => resolve([asset.code, image]);
+      image.onerror = () => reject(new Error(`Unable to load furniture artwork: ${asset.code}`));
+      image.src = asset.url;
+    }))).then(entries => registerIndividualImages(Object.fromEntries(entries)));
+    return individualLoadPromise;
+  }
 
   function animatedFrameLayout(code, frame = 0) {
     const rectangles = ANIMATED_FRAME_RECTS[code];
@@ -64,7 +180,7 @@
     return { source, target: [Math.floor((128 - width) / 2), 124 - height, width, height], frame: index };
   }
 
-  function createAnimatedAtlas(source) {
+  function createLegacyAnimatedAtlas(source) {
     if (!source || source.complete === false) return null;
     const width = source.naturalWidth ?? source.width, height = source.naturalHeight ?? source.height;
     if (!width || !height) return null;
@@ -86,6 +202,11 @@
     return canvas;
   }
 
+  function createAnimatedAtlas(source) {
+    if (individualImages) return createAnimatedAtlasFromImages(individualImages);
+    return individualLoadRequired ? null : createLegacyAnimatedAtlas(source);
+  }
+
   function drawAnimatedItem(context, source, code, x, y, width, height, frame = 0) {
     const row = ANIMATED_ROWS[code], layout = animatedFrameLayout(code, frame);
     if (row == null || !layout) return false;
@@ -95,7 +216,7 @@
     return true;
   }
 
-  function createStorageAtlas(source) {
+  function createLegacyStorageAtlas(source) {
     if (!source || source.complete === false) return null;
     const width = source.naturalWidth ?? source.width;
     const height = source.naturalHeight ?? source.height;
@@ -118,6 +239,11 @@
     return canvas;
   }
 
+  function createStorageAtlas(source) {
+    if (individualImages) return createStorageAtlasFromImages(individualImages);
+    return individualLoadRequired ? null : createLegacyStorageAtlas(source);
+  }
+
   function drawStorageItem(context, source, code, x, y, width, height) {
     const index = STORAGE_INDEX[code];
     if (index == null) return false;
@@ -135,5 +261,9 @@
     SOURCE_RECTS, createStorageAtlas, drawStorageItem,
     ANIMATED_TILE_SIZE, ANIMATED_CODES, ANIMATED_ROWS, ANIMATED_FRAME_RECTS,
     animatedFrameLayout, createAnimatedAtlas, drawAnimatedItem,
+    INDIVIDUAL_ASSETS, alphaBounds, individualFrameLayout, createIndividualTile,
+    createStorageAtlasFromImages, createAnimatedAtlasFromImages,
+    registerIndividualImages, loadIndividualAssets, createLegacyStorageAtlas, createLegacyAnimatedAtlas,
+    get individualReady() { return Boolean(individualImages); },
   });
 })();

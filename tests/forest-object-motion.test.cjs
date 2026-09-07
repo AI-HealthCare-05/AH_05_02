@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 
 const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
+const ForestAnimals = require('../src/frontend/forest-animals.js');
 
 function displayObject(x = 0, y = 0, texture, frame) {
   const data = new Map();
@@ -13,7 +14,7 @@ function displayObject(x = 0, y = 0, texture, frame) {
     setData(key, value) { data.set(key, value); return this; },
     getData(key) { return data.get(key); },
     setPosition(x, y) { this.x = x; this.y = y; return this; },
-    setOrigin() { return this; },
+    setOrigin(x, y = x) { this.originX = x; this.originY = y; return this; },
     setDisplaySize(w, h) { this.scaleX = w / 256; this.scaleY = h / 256; return this; },
     setScale(x, y = x) { this.scaleX = x; this.scaleY = y; return this; },
     setAngle(value) { this.angle = value; return this; },
@@ -25,7 +26,8 @@ function displayObject(x = 0, y = 0, texture, frame) {
     play() { this.playing = true; return this; },
     stop() { this.playing = false; return this; },
     setFrame(value) { this.frame = value; return this; },
-    setTexture(value) { this.texture = value; this.frame = undefined; return this; },
+    setTexture(value, frame) { this.texture = value; this.frame = frame; return this; },
+    setY(value) { this.y = value; return this; },
     add(value) { this.list.push(value); return this; },
     clear() { this.operations = []; return this; },
     lineStyle(...args) { this.operations.push(['lineStyle', ...args]); return this; },
@@ -41,14 +43,15 @@ function setup() {
   const Phaser = {
     Scene: class {}, AUTO: 0, Scale: { FIT: 1, CENTER_BOTH: 1 },
     Game: class { constructor(config) { this.config = config; } },
+    Math: { Between: minimum => minimum }, Utils: { Array: { GetRandom: values => values[0] } },
   };
   const window = {
-    Phaser, matchMedia: () => ({ matches: reduced }),
+    Phaser, ForestAnimals, matchMedia: () => ({ matches: reduced }),
     dispatchEvent: event => events.push(event),
   };
   vm.runInNewContext(source, {
     window, Phaser, document: { getElementById: () => ({}) },
-    localStorage: { getItem: () => null },
+    localStorage: { getItem: () => null }, performance: { now: () => 0 },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   });
   const scene = new window.carrotForestPhaserGame.config.scene();
@@ -60,7 +63,9 @@ function setup() {
   scene.cameras = { main: { getWorldPoint: (x, y) => ({ x, y }) } };
   scene.cancelPointerMovement = () => { scene.cancelled = true; };
   scene.createPinwheelTextures = () => {};
+  scene.createFountainTextures = () => {};
   scene.placedObjectActors = [];
+  scene.time = { now: 0 };
   const place = (code, active = true) => {
     const item = { code, x: 300, y: 400, rotation: 11, active };
     const actor = scene.createPlacedObjectActor(item, false, scene.placedObjectActors.length);
@@ -72,35 +77,37 @@ function setup() {
 
 test('fountain, firefly and pinwheel fixtures keep identical frames and fixed bases', () => {
   const { scene, place } = setup();
-  for (const [code, frame] of [['animated_fountain', 4], ['firefly_lantern', 8], ['garden_pinwheel', undefined]]) {
+  for (const [code, frame] of [['animated_fountain', 0], ['firefly_lantern', 8], ['garden_pinwheel', undefined]]) {
     const actor = place(code), fixture = actor.getData('fixtureTarget');
     const scale = [fixture.scaleX, fixture.scaleY];
     for (let time = 0; time < 30000; time += 137) {
       scene.updatePlacedObjectMotion(time);
       assert.deepEqual([actor.x, actor.y, actor.angle], [300, 400, 11]);
-      assert.deepEqual([fixture.x, fixture.y, fixture.angle, fixture.frame], [0, 0, 0, frame]);
+      assert.deepEqual([fixture.x, fixture.y, fixture.angle, fixture.frame], [0, 0, 0, code === 'animated_fountain' ? Math.floor(time / 110) % 8 : frame]);
       assert.deepEqual([fixture.scaleX, fixture.scaleY], scale);
       assert.equal(fixture.playing, false);
     }
   }
 });
 
-test('pinwheel only rotates isolated blades around one fixed pivot at one turn per 36 seconds', () => {
+test('pinwheel cycles blade colors while every blade and the complete support stay fixed', () => {
   const { scene, place, setReduced } = setup();
   const actor = place('garden_pinwheel'), rotor = actor.getData('rotorTarget');
   const base = actor.getData('fixtureTarget');
   const pose = [rotor.x, rotor.y, rotor.scaleX, rotor.scaleY];
   assert.equal(base.texture, 'pinwheel-base');
   assert.equal(rotor.texture, 'pinwheel-blades');
-  for (const [time, expected] of [[0, 0], [9000, 90], [18000, 180], [27000, 270], [36000, 0]]) {
+  for (const [time, expected] of [[0, 0], [650, 1], [1300, 2], [1950, 3], [2600, 4], [3250, 0]]) {
     scene.updatePlacedObjectMotion(time);
-    assert.equal(rotor.angle, expected);
+    assert.equal(rotor.angle, 0);
+    assert.equal(rotor.texture, expected ? `pinwheel-blades-${expected}` : 'pinwheel-blades');
     assert.deepEqual([rotor.x, rotor.y, rotor.scaleX, rotor.scaleY], pose);
     assert.deepEqual([actor.x, actor.y, base.x, base.y, base.angle], [300, 400, 0, 0, 0]);
   }
   setReduced(true);
   scene.updatePlacedObjectMotion(9000);
   assert.equal(rotor.angle, 0);
+  assert.equal(rotor.texture, 'pinwheel-blades');
   assert.equal(rotor.interactive, true);
 });
 
@@ -141,17 +148,14 @@ test('duck only bobs less than half a world pixel without horizontal travel or r
   assert.equal(duck.y, 0);
 });
 
-test('water and firefly accent movement stays subpixel and firefly OFF clears it', () => {
+test('fountain uses only masked water frames and firefly accents remain subpixel until switched off', () => {
   const { scene, place } = setup();
   const fountain = place('animated_fountain'), lantern = place('firefly_lantern');
   for (let time = 0; time < 12000; time += 91) {
     scene.updatePlacedObjectMotion(time);
-    const drops = fountain.getData('ambientFx').operations.filter(op => op[0] === 'circle');
-    assert.equal(drops.length, 2);
-    drops.forEach(([, x, y]) => {
-      assert.ok([-15, 17].includes(x));
-      assert.ok(Math.abs(y + 37) <= .35 + 1e-9);
-    });
+    assert.deepEqual(fountain.getData('ambientFx').operations, [], 'no old-coordinate droplets may drift over the new stone fixture');
+    assert.equal(fountain.getData('fixtureTarget').texture, 'fountain-flow');
+    assert.equal(fountain.getData('fixtureTarget').frame, Math.floor(time / 110) % 8);
     const points = lantern.getData('ambientFx').operations.filter(op => op[0] === 'circle');
     points.forEach(([, x, y], index) => {
       const [originX, originY] = [[-18, -31], [24, -42], [12, -20]][index];
@@ -176,31 +180,60 @@ test('reduced-motion water and light accents do not change between updates', () 
   assert.deepEqual(actors.map(actor => actor.getData('ambientFx').operations), before);
 });
 
-test('cow toggles and touch reactions retain display-size scale and fixed grass base', () => {
+test('transparent cow stays still until touched, reacts with natural frames, and has no grass base', () => {
   const { scene, place, tweens, setReduced } = setup();
-  const actor = place('reward_cow'), body = actor.getData('motionTarget'), base = actor.list[0];
+  const actor = place('reward_cow'), body = actor.getData('motionTarget');
   const origin = actor.getData('motionOrigin');
-  assert.deepEqual([body.scaleX, body.scaleY], [84 / 256, 84 / 256]);
-  assert.deepEqual([base.x, base.y], [0, 3]);
-  assert.equal(tweens[0].targets, body);
-  assert.ok(Math.abs(tweens[0].x) < 1 && Math.abs(tweens[0].y - origin.y) < 1);
-  assert.equal(tweens[0].scaleX, undefined);
+  assert.equal(actor.list.length, 1, 'complete transparent animal needs no attached grass/base layer');
+  assert.equal(body.texture, 'forest-cow-eat'); assert.equal(body.frame, 4);
+  assert.deepEqual([body.scaleX, body.scaleY], [1.25, 1.25]);
+  assert.equal(body.originY, 88 / 128);
+  for (const time of [0, 9999, 99000]) {
+    scene.updatePlacedObjectMotion(time);
+    assert.equal(body.frame, 4, 'untouched cow remains in exactly the same idle pose');
+  }
   for (const reaction of ['head', 'body']) {
+    scene.time.now = 1000;
     scene.reactCow(0, reaction);
-    const tween = tweens.at(-1);
-    assert.equal(tween.targets, body);
-    assert.ok(Math.abs(tween.x) <= 1.2 && Math.abs(tween.y - origin.y) <= 1.8 + 1e-9);
-    assert.equal(tween.scaleX, undefined);
-    assert.deepEqual([body.scaleX, body.scaleY], [origin.scaleX, origin.scaleY]);
-    assert.deepEqual([base.x, base.y], [0, 3]);
+    const frames = [];
+    for (let time = 1000; time <= 2360; time += 170) {
+      scene.updatePlacedObjectMotion(time); frames.push(body.frame);
+      assert.deepEqual([body.x, body.y, body.scaleX, body.scaleY, body.angle], [0, 0, origin.scaleX, origin.scaleY, 0]);
+    }
+    assert.deepEqual(frames, [4, 5, 6, 7, 7, 6, 5, 4, 4]);
+    assert.equal(actor.getData('cowReactionStartedAt'), null);
   }
   scene.applyPlacedObjectState(actor, { ...actor.getData('item'), active: false });
-  assert.deepEqual([body.x, body.y, body.scaleX], [0, -7, 84 / 256]);
+  assert.deepEqual([body.x, body.y, body.scaleX], [0, 0, 1.25]);
   setReduced(true);
-  const count = tweens.length;
   scene.applyPlacedObjectState(actor, { ...actor.getData('item'), active: true });
-  scene.reactCow(0, 'head');
-  assert.equal(tweens.length, count);
+  scene.reactCow(0, 'head'); scene.updatePlacedObjectMotion(1200);
+  assert.equal(body.frame, 4); assert.equal(tweens.length, 0, 'cow never uses whole-image bob/scale/rotation tweens');
+});
+
+test('rabbit uses directional hop frames while its body scale and foot origin remain stable', () => {
+  const { scene } = setup();
+  Object.assign(scene, { ratActive: true, ratDespawnAt: Infinity, ratTurnAt: Infinity, ratDirection: 'left', ratSpecies: 'rabbit' });
+  scene.ratActor = displayObject(420, 350);
+  scene.ratSprite = displayObject(0, 0).setScale(1.35);
+  scene.ratShadow = displayObject(0, 0);
+  scene.isBlocked = () => false;
+  const frames = [];
+  for (let time = 0; time < 560; time += 140) {
+    scene.updateRat(time, 40); frames.push(scene.ratSprite.frame);
+    assert.equal(scene.ratSprite.texture, 'forest-rabbit');
+    assert.deepEqual([scene.ratSprite.x, scene.ratSprite.y, scene.ratSprite.scaleX, scene.ratSprite.scaleY, scene.ratSprite.angle], [0, 0, 1.35, 1.35, 0]);
+    assert.equal(scene.ratSprite.originY, 51 / 72);
+  }
+  assert.deepEqual(frames, [4, 5, 6, 7]);
+  assert.ok(scene.ratActor.x < 420);
+  scene.isBlocked = () => true; scene.updateRat(600, 40);
+  assert.ok(scene.ratSprite.frame >= 16, 'blocked movement uses grazing rather than skating in place');
+  scene.setRatSpecies('mouse');
+  scene.isBlocked = () => false; scene.ratTurnAt = Infinity; scene.updateRat(700, 40);
+  assert.equal(scene.ratSprite.texture, 'lpc-rat', 'rabbits supplement rather than replace the existing mouse');
+  assert.equal(scene.ratSprite.scaleX, 1.4);
+  assert.equal(scene.ratSprite.originY, 1);
 });
 
 test('fixed child fixtures retain direct pointer selection and placement guard', () => {

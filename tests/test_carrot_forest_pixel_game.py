@@ -113,11 +113,11 @@ def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
     for key in (
         'event.key === "q"',
         'event.key === "r"',
-        'event.key === "c"',
+        'event.key.toLowerCase() === "c"',
         'event.key === "x"',
         'event.key === "e"',
         'event.key === "z"',
-        'event.key === "0"',
+        'event.key === "Enter"',
     ):
         assert key in script
     for behavior in ("CozyForestMusic", "toggleRide", "toggleSit", "openWorldDialog"):
@@ -309,8 +309,8 @@ def test_world_scene_transitions_visual_storage_cats_and_fishing_are_connected()
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
     asset_names = (
-        "carrot-forest-world-v5.png",
-        "carrot-forest-home-v2.png",
+        "carrot-forest-world-v6.png",
+        "carrot-forest-home-v3.png",
         "carrot-forest-garden-v2.png",
         "carrot-forest-cat-pets-v1.png",
         "carrot-forest-storage-atlas-v4.png",
@@ -456,7 +456,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v151" in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v153-shell2";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -485,8 +485,8 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
     assets = ROOT / "src/frontend/assets"
     expected = {
         "carrot-forest-loading-v2.png": (1672, 941),
-        "carrot-forest-world-v5.png": (1536, 1024),
-        "carrot-forest-home-v2.png": (1536, 1024),
+        "carrot-forest-world-v6.png": (1536, 1024),
+        "carrot-forest-home-v3.png": (1536, 1024),
         "carrot-forest-garden-v2.png": (1536, 1024),
         "carrot-forest-storage-atlas-v4.png": (1280, 1024),
         "carrot-forest-animated-objects-v2.png": (512, 512),
@@ -502,8 +502,8 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
         assert filename in worker
 
     for source in (game_script, phaser_script):
-        assert "carrot-forest-world-v5.png" in source
-        assert "carrot-forest-home-v2.png" in source
+        assert "carrot-forest-world-v6.png" in source
+        assert "carrot-forest-home-v3.png" in source
         assert "carrot-forest-garden-v2.png" in source
     assert "carrot-forest-storage-atlas-v4.png" in game_script
     assert "carrot-forest-animated-objects-v2.png" in phaser_script
@@ -543,7 +543,7 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'forest: new Audio("/static/assets/carrot-forest-main-theme.mp3")' in game_script
     assert 'night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
     assert 'avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg")' in game_script
-    assert '(hour >= 20 || hour < 5)) return "night"' in game_script
+    assert '(hour >= 19 || hour < 5)) return "night"' in game_script
     assert 'home: new Audio("/static/assets/home-drowsy-evening-cc0.wav")' in game_script
     assert 'homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3")' in game_script
     assert 'homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3")' in game_script
@@ -571,13 +571,18 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'new Audio("/static/assets/reward-chest-success.mp3")' in game_script
     assert "musicEngine.applyVolume(.34)" in game_script
     assert "musicEngine.applyVolume();" in game_script
-    assert "storage-reward-cow" in game_script
+    assert 'class="animal-thumbnail-canvas"' in game_script
+    assert 'data-animal="cow"' in game_script
     assert ".reward-rays,.reward-particles{display:none}" in css
     assert "/static/assets/lpc-pack/manifest.json" in worker
     assert "/static/lpc-avatar-engine.js" in html
     assert "/static/avatar-compositor.js" in html
     assert "CarrotAvatarCompositor" in phaser_script
-    assert "const NAMEPLATE_Y = -126" in phaser_script
+    assert 'id="avatar-nameplate" class="map-label avatar-nameplate"' in html
+    assert "avatarAnchor()" in phaser_script
+    assert 'nickname.textContent = anchor.name || state.avatar.name' in game_script
+    assert 'window.addEventListener("forest-camera-view", projectMapLabels)' in game_script
+    assert "const NAMEPLATE_Y" not in phaser_script
     assert "const AVATAR_RENDER_SCALE = 0.43" in phaser_script
     assert (ROOT / "src/frontend/vendor/phaser-3.90.0.min.js").stat().st_size > 1_000_000
     assert (ROOT / "src/frontend/vendor/PHASER_LICENSE.txt").exists()
@@ -606,7 +611,10 @@ def test_lpc_actions_and_pet_companion_motion_are_connected() -> None:
     assert "time - 330" in phaser_script
     assert "this.petFacing" in phaser_script
     assert 'this.petAction = nextAvatar.sitting ? "sit" : "idle"' in phaser_script
-    assert 'event.key === "0"' in game_script
+    hud_script = (ROOT / "src/frontend/forest-hud.js").read_text(encoding="utf-8")
+    assert '"0": "ui-toggle"' in hud_script
+    assert 'event.key === "0"' not in game_script
+    assert 'event.key !== "0"' not in phaser_script
 
 
 def test_original_forest_sound_effects_are_generated_cached_and_event_driven() -> None:
@@ -714,12 +722,13 @@ def test_day_night_pond_animation_and_water_object_placement_contract() -> None:
     assert 'atmosphereButton.textContent = "날씨·시간"' in game_script
     assert "forest-atmosphere-updated" in game_script
     assert "this.atmosphereEnabled" in phaser_script
-    assert ".setDepth(0.5).setAlpha(0).setVisible(false)" in phaser_script
-    assert "this.add.graphics().setDepth(1.5)" in phaser_script
+    assert ".setDepth(900).setAlpha(0).setVisible(false)" in phaser_script
+    assert 'context.globalCompositeOperation = "destination-out"' in phaser_script
+    assert "this.add.graphics().setDepth(901)" in phaser_script
     assert "[218, 430, 30]" in phaser_script
     assert "this.waterRippleFx" in phaser_script
     assert "strokeEllipse" in phaser_script
-    assert 'new Set(["duck_float", "animated_fountain"])' in game_script
+    assert 'new Set(["duck_float"])' in game_script
     assert "if (waterObjectCodes.has(placementCode))" in game_script
     assert "const inPond = x >= 64 && x <= 288" in game_script
     assert "white-space:nowrap;writing-mode:horizontal-tb" in css
@@ -780,7 +789,9 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
         assert f"<span>{label}</span>" in html
     assert "data-footer-tool=" not in html
     assert 'class="asset-dock rail-assets"' in html
-    assert html.index('class="asset-dock rail-assets"') < html.index('class="stage-footer arcade-deck"')
+    overlay_position = html.index('class="game-controls-overlay arcade-deck"')
+    assert html.index('class="canvas-frame"') < overlay_position < html.index('class="right-hud"')
+    assert html.index('class="asset-dock rail-assets"') < overlay_position
     assert 'class="object-inspector footer-objects"' in html
     assert "grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr)" in (ROOT / "src/frontend/forest-game.css").read_text(
         encoding="utf-8"
@@ -1134,7 +1145,10 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     assert 'this.load.image("animated-objects-source"' in phaser_script
     assert 'window.ForestObjects.createAnimatedAtlas(animatedSource)' in phaser_script
     assert 'window.ForestObjects.drawAnimatedItem' in game_script
-    assert "repeat: -1" in phaser_script
+    assert 'actor.setData("cowReactionStartedAt", null)' in phaser_script
+    assert 'if (frame.done) actor.setData("cowReactionStartedAt", null)' in phaser_script
+    animals = (ROOT / "src/frontend/forest-animals.js").read_text(encoding="utf-8")
+    assert "elapsedMs < cowReactionDurationMs" in animals
     assert "syncPlacedObjects" in phaser_script
     assert "carrot-forest-animated-objects-v2.png" in worker
     assert 'data-animated-object-row="${animatedRow}"' in game_script
@@ -1168,6 +1182,9 @@ def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None
 
 
 def test_object_cutouts_and_shared_renderers_are_wired_in_every_surface() -> None:
+    import shutil
+    import subprocess
+
     from PIL import Image
 
     frontend = ROOT / "src/frontend"
@@ -1175,15 +1192,51 @@ def test_object_cutouts_and_shared_renderers_are_wired_in_every_surface() -> Non
     phaser = (frontend / "forest-phaser.js").read_text(encoding="utf-8")
     html = (frontend / "forest.html").read_text(encoding="utf-8")
     worker = (frontend / "forest-sw.js").read_text(encoding="utf-8")
-    for name in ("carrot-forest-duck-cutout-v1.png", "carrot-forest-campfire-base-v5.png"):
-        with Image.open(frontend / "assets" / name) as sprite:
+    node = shutil.which("node")
+    assert node is not None, "The shared furniture asset contract requires the Node test runtime"
+    # Read the actual exported manifest and worker cache lists: do not duplicate
+    # the 24 object filenames or assume how the worker constructs its list.
+    inventory = json.loads(subprocess.check_output(
+        [node, "-e", """
+const fs = require('node:fs'), vm = require('node:vm');
+const objects = { window: {} }, worker = { self: { addEventListener() {} } };
+vm.runInNewContext(fs.readFileSync('src/frontend/forest-objects.js', 'utf8'), objects);
+vm.runInNewContext(fs.readFileSync('src/frontend/forest-sw.js', 'utf8') +
+  ';globalThis.cachedAssets = [...CORE_SHELL, ...MEDIA_ASSETS];', worker);
+process.stdout.write(JSON.stringify({
+  assets: objects.window.ForestObjects.INDIVIDUAL_ASSETS,
+  cachedAssets: worker.cachedAssets,
+}));
+"""],
+        cwd=ROOT, text=True, encoding="utf-8",
+    ))
+    individual_assets = inventory["assets"]
+    assert len(individual_assets) == 24
+    assert len({asset["url"] for asset in individual_assets}) == 24
+    for asset in individual_assets:
+        url = asset["url"]
+        assert url == f'/static/assets/furniture-v153/{asset["code"]}.png?v=20260907-1'
+        assert asset["key"] == f'furniture-{asset["code"]}'
+        path = frontend / url.partition("?")[0].removeprefix("/static/")
+        assert path.is_file(), f"Missing independent furniture asset: {path.name}"
+        with Image.open(path) as sprite:
             assert sprite.mode == "RGBA", "Cutouts need real alpha, not a painted checkerboard"
             low_alpha, high_alpha = sprite.getchannel("A").getextrema()
             assert low_alpha == 0 and high_alpha >= 250
             assert sprite.getpixel((0, 0))[3] == 0
-        assert name in game and name in phaser and name in worker
+        assert url in inventory["cachedAssets"], f"Furniture missing from offline cache: {url}"
+    assert "await window.ForestObjects.loadIndividualAssets()" in game
+    assert "window.ForestObjects.INDIVIDUAL_ASSETS.forEach" in phaser
+    assert 'furniture-v153/duck_float.png' in game
+    assert 'createIndividualTile(individualImages.duck_float, 128)' in phaser
+    assert 'furniture-v153/campfire.png' in game and 'furniture-v153/campfire.png' in phaser
+    # Only flame extraction retains the old atlas; new furniture uses whole PNGs.
+    assert all("carrot-forest-storage-atlas-v4.png" in source for source in (game, phaser, worker))
+    assert "ForestObjects.createLegacyStorageAtlas(storageSpriteAtlas)" in game
+    assert "ForestObjects.createLegacyStorageAtlas(storageSource)" in phaser
+    assert 'ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" })' in phaser
     assert html.index("forest-objects.js") < html.index("forest-phaser.js")
-    assert "forest-objects.js?v=20260907-1" in worker
+    assert "forest-objects.js?v=20260907-2" in worker
     assert "canvas[data-storage-object]" in game
     assert 'background-position:${backgroundPosition}' not in game
     assert "ForestFire.burningTile" in game and "ForestFire.offTile" in game

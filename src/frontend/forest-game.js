@@ -100,7 +100,7 @@
   ];
   const storageObjectIndex = Object.fromEntries(storageObjectCodes.map((code, index) => [code, index]));
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
-  const waterObjectCodes = new Set(["duck_float", "animated_fountain"]);
+  const waterObjectCodes = new Set(["duck_float"]);
   const interactiveObjectTypes = {
     reward_cow: "cow",
     campfire: "fire",
@@ -759,6 +759,8 @@
   const duckCutoutImage = new Image();
   const campfireBaseImage = new Image();
   const rewardCowImage = new Image();
+  const cowReactions = new WeakMap();
+  let cowReactionUntil = 0;
   const homeRecordPlayerImage = new Image();
   const basicWalkAtlas = new Image();
   const modularAvatarAtlas = new Image();
@@ -773,11 +775,11 @@
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
-  duckCutoutImage.src = "/static/assets/carrot-forest-duck-cutout-v1.png?v=20260907-1";
-  campfireBaseImage.src = "/static/assets/carrot-forest-campfire-base-v5.png?v=20260907-1";
-  rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1";
-  sceneImages.world.src = "/static/assets/carrot-forest-world-v5.png?v=20260907-1";
-  sceneImages.home.src = "/static/assets/carrot-forest-home-v2.png?v=20260907-1";
+  duckCutoutImage.src = "/static/assets/furniture-v153/duck_float.png?v=20260907-1";
+  campfireBaseImage.src = "/static/assets/furniture-v153/campfire.png?v=20260907-1";
+  rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
+  sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";
+  sceneImages.home.src = "/static/assets/carrot-forest-home-v3.png?v=20260907-1";
   homeRecordPlayerImage.src = "/static/assets/home-record-player-cottage-v2.png?v=20260907-1";
   homeRecordPlayerImage.addEventListener("load", renderCanvas);
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v2.png?v=20260907-1";
@@ -786,7 +788,7 @@
   animatedObjectAtlas.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
   duckCutoutImage.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
   campfireBaseImage.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
-  rewardCowImage.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  rewardCowImage.addEventListener("load", () => { renderInventory(); drawAnimalThumbnails(); renderCanvas(); });
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
   window.addEventListener("lpc-avatar-ready", () => {
     syncLpcCatalog();
@@ -876,7 +878,7 @@
       this.tracks = Object.fromEntries([
         "step-grass", "run-grass", "door-open", "sit-cloth", "mount", "harvest", "water",
         "fishing-cast", "fishing-catch", "attack-sword", "attack-bow", "attack-magic",
-        "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off", "cow-toggle",
+        "rat-caught", "pet-feed", "dance", "place-object", "object-on", "object-off",
       ].map((name) => [name, new Audio(`${root}/${name}.wav`)]));
       Object.values(this.tracks).forEach((track) => { track.preload = "auto"; });
       this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(SFX_VOLUME_KEY) ?? 1)));
@@ -964,7 +966,7 @@
     if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome" : "home";
     if (scene === "garden") return "garden";
     const hour = currentLocalHour();
-    if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 20 || hour < 5)) return "night";
+    if (localStorage.getItem(ATMOSPHERE_KEY) !== "off" && (hour >= 19 || hour < 5)) return "night";
     return "forest";
   }
   function activeQuestIds() {
@@ -1179,12 +1181,19 @@
         context.restore();
         return;
       }
-      if (item.code === "reward_cow" && rewardCowImage.complete) {
-        context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); context.restore(); return;
+      if (item.code === "reward_cow" && rewardCowImage.complete && rewardCowImage.naturalWidth && window.ForestAnimals) {
+        const started = preview ? null : cowReactions.get(item);
+        const sample = window.ForestAnimals.cowFrame(started == null ? -1 : performance.now() - started, {
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        });
+        const frame = window.ForestAnimals.frameRect(sample.key, sample.frame), size = 160;
+        context.drawImage(rewardCowImage, frame.x, frame.y, frame.width, frame.height,
+          x - size * sample.originX, y - size * sample.originY, size, size);
+        context.restore(); return;
       }
       const storageIndex = storageObjectIndex[item.code];
       if (storageIndex != null && storageSpriteAtlas.complete && storageSpriteAtlas.naturalWidth) {
-        const atlas = window.ForestObjects.createStorageAtlas(storageSpriteAtlas);
+        const atlas = window.ForestObjects.createLegacyStorageAtlas(storageSpriteAtlas);
         if (item.code === "campfire" && campfireBaseImage.complete && campfireBaseImage.naturalWidth) {
           const tile = interactionActive ? window.ForestFire.burningTile(atlas, campfireBaseImage) : window.ForestFire.offTile(atlas, campfireBaseImage);
           context.drawImage(tile, x - 32, y - 48, 64, 64);
@@ -1325,9 +1334,7 @@
       context.font = "bold 7px sans-serif"; context.textAlign = "center"; context.fillStyle = "#31343f";
       context.fillText(cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "한 걸음" : "같이 걸어요", x + 56, y - 41);
     }
-    context.font = "bold 11px sans-serif"; context.textAlign = "center";
-    context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x - Math.max(25, avatar.name.length * 6), y - 69, Math.max(50, avatar.name.length * 12), 17);
-    context.fillStyle = "#18382d"; context.fillText(avatar.name, x, y - 56);
+    // The shared DOM label stays sharp at every camera magnification.
     return true;
   }
 
@@ -1346,9 +1353,7 @@
       context.font = "bold 7px sans-serif"; context.textAlign = "center"; context.fillStyle = "#31343f";
       context.fillText(cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "한 걸음" : "같이 걸어요", x + 56, y - 36);
     }
-    context.font = "bold 11px sans-serif"; context.textAlign = "center";
-    context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x - Math.max(25, avatar.name.length * 6), y - 63, Math.max(50, avatar.name.length * 12), 17);
-    context.fillStyle = "#18382d"; context.fillText(avatar.name, x, y - 50);
+    // The shared DOM label stays sharp at every camera magnification.
     return true;
   }
 
@@ -1447,12 +1452,7 @@
         context.font = "22px sans-serif"; context.fillText(petGlyphs[cosmetics.pet] || "🐾", x + 34, y + 34);
       }
     }
-    context.font = "bold 13px sans-serif";
-    context.textAlign = "center";
-    context.fillStyle = "rgba(255,255,255,.94)";
-    context.fillRect(x - Math.max(28, avatar.name.length * 7), y - 58, Math.max(56, avatar.name.length * 14), 19);
-    context.fillStyle = "#18382d";
-    context.fillText(avatar.name, x, y - 44);
+    // Nickname is rendered once as a camera-projected DOM pill.
     if (cosmetics.speech !== "none") {
       const speechText = cosmetics.speech === "cat" ? "안녕!" : cosmetics.speech === "leaf" ? "오늘도 한 걸음" : "같이 걸어요";
       context.font = "bold 9px sans-serif"; context.fillStyle = "rgba(255,255,255,.94)"; context.fillRect(x + 26, y - 48, 68, 22); context.fillStyle = "#31343f"; context.fillText(speechText, x + 60, y - 34);
@@ -1493,12 +1493,59 @@
       garden: { title: "당근 밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
     }[currentScene];
     $("#map-title").textContent = sceneCopy.title;
-    $("#edit-forest-name").hidden = currentScene !== "world";
-    if (currentScene !== "world") window.ForestHud?.closeNameEditor();
     canvas.setAttribute("aria-label", `${sceneCopy.aria}. 방향키나 WASD로 이동하고 Q키로 상호작용할 수 있습니다.`);
     $("#scene-exit").hidden = currentScene === "world";
-    $(".home-label").hidden = currentScene !== "world";
-    $(".garden-label").hidden = currentScene !== "world";
+    projectMapLabels();
+  }
+
+  function projectMapLabels() {
+    [[".home-label", 205, 62], [".garden-label", 610, 62]].forEach(([selector, x, y]) => {
+      const label = $(selector);
+      const point = window.ForestCamera?.worldToScreen(x, y) || { x: x / WORLD_WIDTH, y: y / WORLD_HEIGHT };
+      label.hidden = currentScene !== "world" || point.x < .03 || point.x > .97 || point.y < .03 || point.y > .94;
+      label.style.left = `${point.x * 100}%`;
+      label.style.top = `${point.y * 100}%`;
+    });
+    const nickname = $("#avatar-nameplate");
+    if (!nickname) return;
+    const anchor = window.ForestCamera?.avatarAnchor() || { x: state.avatar.x / WORLD_WIDTH, y: (state.avatar.y - 74) / WORLD_HEIGHT, name: state.avatar.name };
+    nickname.textContent = anchor.name || state.avatar.name;
+    nickname.hidden = !nickname.textContent || anchor.x < 0 || anchor.x > 1 || anchor.y < 0 || anchor.y > 1;
+    nickname.style.left = `${anchor.x * 100}%`;
+    nickname.style.top = `${anchor.y * 100}%`;
+  }
+  window.addEventListener("forest-camera-view", projectMapLabels);
+
+  let fallbackNightCanvas = null;
+  function drawFallbackNightLighting() {
+    if (window.carrotForestPhaserActive || currentScene !== "world" || localStorage.getItem(ATMOSPHERE_KEY) === "off") return;
+    const strength = window.ForestAtmosphere.strength(currentLocalHour());
+    if (!strength) return;
+    fallbackNightCanvas ||= document.createElement("canvas");
+    if (fallbackNightCanvas.width !== WORLD_WIDTH) fallbackNightCanvas.width = WORLD_WIDTH;
+    if (fallbackNightCanvas.height !== WORLD_HEIGHT) fallbackNightCanvas.height = WORLD_HEIGHT;
+    const mask = fallbackNightCanvas.getContext("2d");
+    mask.globalCompositeOperation = "source-over";
+    mask.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    mask.fillStyle = "#101b2d";
+    mask.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    mask.globalCompositeOperation = "destination-out";
+    state.placed.forEach(item => {
+      if (!item.active || !["campfire", "lantern", "firefly_lantern"].includes(item.code)) return;
+      const radius = item.code === "campfire" ? 105 : 86;
+      const y = item.y - (item.code === "campfire" ? 22 : 32);
+      const gradient = mask.createRadialGradient(item.x, y, 0, item.x, y, radius);
+      gradient.addColorStop(0, "rgba(0,0,0,.96)");
+      gradient.addColorStop(.3, "rgba(0,0,0,.78)");
+      gradient.addColorStop(1, "rgba(0,0,0,0)");
+      mask.fillStyle = gradient;
+      mask.beginPath(); mask.arc(item.x, y, radius, 0, Math.PI * 2); mask.fill();
+    });
+    mask.globalCompositeOperation = "source-over";
+    context.save();
+    context.globalAlpha = strength;
+    context.drawImage(fallbackNightCanvas, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    context.restore();
   }
 
   function renderCanvas() {
@@ -1510,6 +1557,7 @@
     drawPlacementGrid();
     drawAvatar();
     drawSceneEffects();
+    drawFallbackNightLighting();
     renderSceneChrome();
     $("#avatar-coordinate").textContent = `X ${Math.round(state.avatar.x)} · Y ${Math.round(state.avatar.y)}`;
     updateInteractionPrompt();
@@ -1519,15 +1567,24 @@
     const item = state.placed[index];
     if (item?.code !== "reward_cow") return;
     const headTouch = reaction === "head";
-    playSfx("cow-toggle", { volume: .3, rate: headTouch ? 1.12 : .92 });
+    const startedAt = performance.now();
+    cowReactions.set(item, startedAt);
+    cowReactionUntil = startedAt + (window.ForestAnimals?.cowReactionDurationMs || 1360);
+    sfxEngine ||= new ForestSfx();
+    window.ForestAnimals?.playMoo({ enabled: !sfxEngine.muted, volume: sfxEngine.effectiveVolume(.4) });
     window.dispatchEvent(new CustomEvent("forest-cow-react", { detail: { index, reaction } }));
-    setStatus(headTouch ? "행운의 젖소 머리를 쓰다듬었어요. 기분 좋게 고개를 흔듭니다." : "행운의 젖소 몸을 토닥였어요. 신나게 몸을 흔듭니다.");
+    setStatus(headTouch ? "행운의 젖소를 쓰다듬었어요. 음메 하고 고개를 움직인 뒤 다시 쉬어요." : "행운의 젖소를 토닥였어요. 음메 하고 반응한 뒤 편안히 쉬어요.");
+    renderCanvas();
   }
 
   let lastAnimationAt = 0;
   let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
     let needsRender = false;
+    if (!document.hidden && !window.carrotForestPhaserActive && cowReactionUntil > 0) {
+      needsRender = true;
+      if (timestamp >= cowReactionUntil) cowReactionUntil = 0;
+    }
     if (!document.hidden && timestamp - lastAnimationAt > 420) {
       animationFrame = (animationFrame + 1) % 4;
       lastAnimationAt = timestamp;
@@ -1567,7 +1624,7 @@
   function objectInteractionLabel(item) {
     if (seatObjectCodes.has(item.code)) return `${itemCatalog[item.code].name}에 앉기`;
     const type = interactiveObjectTypes[item.code];
-    if (type === "cow") return item.active ? "젖소 쉬게 하기" : "젖소 움직이기";
+    if (type === "cow") return "젖소 쓰다듬기";
     if (type === "fire") return item.active ? "모닥불 끄기" : "모닥불 피우기";
     return item.active ? `${itemCatalog[item.code].name} 끄기` : `${itemCatalog[item.code].name} 켜기`;
   }
@@ -1576,13 +1633,13 @@
     const item = state.placed[index];
     const type = interactiveObjectTypes[item?.code];
     if (!item || !type) return;
+    if (type === "cow") { reactToCow(index); return; }
     item.active = !item.active;
     item.activatedAt = item.active ? Date.now() : null;
-    if (type === "cow") playSfx("cow-toggle", { volume: .34, rate: item.active ? 1 : .88 });
-    else playSfx(item.active ? "object-on" : "object-off", { volume: .3 });
+    playSfx(item.active ? "object-on" : "object-off", { volume: .3 });
     renderPlaced();
     emitPlacementUpdate();
-    await persist(`${itemCatalog[item.code].name}${type === "cow" ? (item.active ? "가 신나게 움직이기 시작했습니다." : "가 편안히 쉬고 있습니다.") : (item.active ? "을 켰습니다." : "을 껐습니다.")}`);
+    await persist(`${itemCatalog[item.code].name}${item.active ? "을 켰습니다." : "을 껐습니다."}`);
     updateInteractionPrompt();
   }
 
@@ -1719,16 +1776,20 @@
 
   function placementCellValid(x, y) {
     if (currentScene !== "world") return false;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 16 || x > WORLD_WIDTH - 16 || y < 16 || y > WORLD_HEIGHT - 16) return false;
+    const inHouse = x > 45 && x < 335 && y > 55 && y < 275;
+    const inGarden = x > 465 && x < 735 && y > 45 && y < 255;
     const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
     if (waterObjectCodes.has(placementCode)) {
       if (!inPond) return false;
-    } else if (blocked(x, y) || inPond) return false;
-    return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 44);
+    } else if (inHouse || inGarden || inPond) return false;
+    // Traversal collision and decorative pixels do not reserve usable grass cells.
+    return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 28);
   }
 
   function placementGridCells() {
     const cells = [];
-    for (let y = 64; y <= WORLD_HEIGHT - 32; y += 32) {
+    for (let y = 32; y <= WORLD_HEIGHT - 32; y += 32) {
       for (let x = 32; x <= WORLD_WIDTH - 32; x += 32) cells.push({ x, y, valid: placementCellValid(x, y) });
     }
     return cells;
@@ -1961,7 +2022,7 @@
       const item = itemCatalog[code];
       const animatedRow = animatedObjectRows[code];
       let visual;
-      if (code === "reward_cow") visual = '<span class="storage-reward-cow" aria-hidden="true"></span>';
+      if (code === "reward_cow") visual = '<canvas class="animal-thumbnail-canvas" width="96" height="96" data-animal="cow" aria-hidden="true"></canvas>';
       else if (animatedRow != null) visual = `<canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas>`;
       else {
         const storageIndex = storageObjectIndex[code];
@@ -1975,6 +2036,22 @@
     $("#inventory-dialog").dataset.view = view;
     drawAnimatedObjectThumbnails($("#inventory-dialog-grid"));
     drawStorageObjectThumbnails($("#inventory-dialog-grid"));
+    drawAnimalThumbnails($("#inventory-dialog-grid"));
+  }
+
+  function drawAnimalThumbnails(root = document) {
+    if (!rewardCowImage.complete || !rewardCowImage.naturalWidth || !window.ForestAnimals) return;
+    const sample = window.ForestAnimals.cowFrame();
+    const frame = window.ForestAnimals.frameRect(sample.key, sample.frame);
+    root.querySelectorAll('canvas[data-animal="cow"]').forEach(thumbnail => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      // Source row's complete side-facing body, with safe transparent padding.
+      const width = thumbnail.width - 8, height = width * 57 / 88;
+      target.drawImage(rewardCowImage, frame.x + 20, frame.y + 39, 88, 57,
+        4, (thumbnail.height - height) / 2, width, height);
+    });
   }
 
   function drawStorageObjectThumbnails(root = document) {
@@ -1984,7 +2061,7 @@
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       target.imageSmoothingEnabled = true;
       if (thumbnail.dataset.storageObject === "campfire" && campfireBaseImage.complete && campfireBaseImage.naturalWidth) {
-        target.drawImage(window.ForestFire.burningTile(window.ForestObjects.createStorageAtlas(storageSpriteAtlas), campfireBaseImage), 0, 0, thumbnail.width, thumbnail.height);
+        target.drawImage(window.ForestFire.burningTile(window.ForestObjects.createLegacyStorageAtlas(storageSpriteAtlas), campfireBaseImage), 0, 0, thumbnail.width, thumbnail.height);
       } else window.ForestObjects.drawStorageItem(target, storageSpriteAtlas, thumbnail.dataset.storageObject, 0, 0, thumbnail.width, thumbnail.height);
     });
   }
@@ -2011,7 +2088,7 @@
       const selected = item.kind === "object" && placementCode === code;
       if (item.kind === "object") {
         const action = selected ? "선택됨, 맵에서 배치 위치 선택" : "배치 선택";
-        if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><span class="storage-reward-cow" aria-hidden="true"></span></button>`;
+        if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><canvas class="animal-thumbnail-canvas" width="96" height="96" data-animal="cow" aria-hidden="true"></canvas></button>`;
         const animatedRow = animatedObjectRows[code];
         if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas></button>`;
         return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><canvas class="storage-sprite-thumb" width="96" height="96" data-storage-object="${code}" aria-hidden="true"></canvas></button>`;
@@ -2023,6 +2100,7 @@
     drawWardrobeLookThumbnails();
     drawAnimatedObjectThumbnails($("#storage-list"));
     drawStorageObjectThumbnails($("#storage-list"));
+    drawAnimalThumbnails($("#storage-list"));
     renderPlacementUI();
   }
 
@@ -2030,7 +2108,8 @@
     $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
       ? state.placed.map((item, index) => {
-        const stateLabel = interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
+        const stateLabel = item.code === "reward_cow" ? "<small>편안히 쉬는 중 · 쓰다듬어 주세요</small>"
+          : interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
         return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><div class="placed-object-copy"><strong>${itemCatalog[item.code].name}</strong>${stateLabel}</div><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
       }).join("")
       : "<p>아직 배치한 오브젝트가 없습니다.</p>";
@@ -2945,13 +3024,36 @@
     if (rewardSkipResolve) rewardSkipResolve();
   });
 
+  let chatFocusTimer = 0;
   function toggleChat(force) {
     const panel = $("#chat-panel");
     panel.hidden = force === undefined ? !panel.hidden : !force;
     $("#chat-toggle").setAttribute("aria-expanded", String(!panel.hidden));
-    if (!panel.hidden) window.setTimeout(() => $("#chat-input").focus(), 0);
-    else canvas.focus();
+    $("#chat-toggle").hidden = !panel.hidden;
+    window.clearTimeout(chatFocusTimer);
+    if (!panel.hidden) {
+      window.dispatchEvent(new CustomEvent("forest-controls-hidden"));
+      chatFocusTimer = window.setTimeout(() => { if (!panel.hidden) $("#chat-input").focus({ preventScroll: true }); }, 0);
+    } else (window.carrotForestPhaserActive ? $("#phaser-world") : canvas).focus({ preventScroll: true });
   }
+
+  document.addEventListener("keydown", event => {
+    if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (document.querySelector("dialog[open], #reward-celebration:not([hidden])")) return;
+    const active = document.activeElement;
+    const inChat = active === $("#chat-input");
+    const editing = active?.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(active?.tagName);
+    if (event.key.toLowerCase() === "c" && (!editing || inChat)) {
+      event.preventDefault();
+      toggleChat();
+    } else if (event.key === "Enter" && !editing && active?.tagName !== "BUTTON" && $("#chat-panel").hidden) {
+      event.preventDefault();
+      toggleChat(true);
+    } else if (event.key === "Escape" && !$("#chat-panel").hidden && (!editing || inChat)) {
+      event.preventDefault();
+      toggleChat(false);
+    }
+  });
 
   async function toggleSit() {
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
@@ -3053,38 +3155,46 @@
     if (event.detail === "ride") await toggleRide();
     if (event.detail === "feed") await feedPet();
   });
-  window.addEventListener("forest-rat-appeared", () => {
+  let currentWildEncounter = null;
+  window.addEventListener("forest-rat-appeared", (event) => {
+    currentWildEncounter = { eventId: event.detail?.eventId, species: event.detail?.species === "rabbit" ? "rabbit" : "mouse" };
+    if (event.detail?.species === "rabbit") {
+      setStatus("하얀 야생 토끼가 나타났어요. 숲 사이를 깡충깡충 다니는 모습을 찾아보세요!");
+      return;
+    }
     setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"
       ? "야생 쥐가 나타났어요. 가까이 가면 펫이 자동으로 달려가고, 직접 Z로도 잡을 수 있어요!"
       : "숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
   });
   window.addEventListener("forest-rat-caught", async (event) => {
+    const rabbit = event.detail?.species === "rabbit" || (!event.detail?.species
+      && currentWildEncounter?.eventId === event.detail?.eventId && currentWildEncounter?.species === "rabbit");
+    currentWildEncounter = null;
     const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
     state.carrots += amount;
     playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
     $("#profile-carrots").textContent = String(state.carrots);
-    await persist(event.detail?.source === "pet"
+    await persist(rabbit ? `야생 토끼와 만나 당근 ${amount}개를 얻었습니다!` : event.detail?.source === "pet"
       ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
       : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
   });
   window.addEventListener("forest-placement-confirm", confirmPlacement);
 
   document.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.isComposing) return;
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName)) return;
     if (window.carrotForestPhaserActive) return;
-    if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "j", "J", "v", "V", "0"].includes(event.key)) event.preventDefault();
+    if (["q", "Q", "r", "R", "x", "X", "e", "E", "z", "Z", "f", "F", "j", "J", "v", "V"].includes(event.key)) event.preventDefault();
     if (event.key === "v" || event.key === "V") { confirmPlacement(); return; }
     if (event.key === "q" || event.key === "Q") { interact(); return; }
     if (event.code === "KeyR" || event.key === "r" || event.key === "R") { if (!event.repeat) toggleRunning(); return; }
-    if (event.key === "c" || event.key === "C") { toggleChat(); return; }
     if (event.key === "x" || event.key === "X") { toggleSit(); return; }
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
     if (event.key === "z" || event.key === "Z") { attackWithEquippedWeapon(); return; }
     if (event.key === "f" || event.key === "F") { feedPet(); return; }
     if (event.key === "j" || event.key === "J") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } })); return; }
-    if (event.key === "0") { window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "dance", duration: 1800 } })); return; }
     const direction = { ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down", ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right" }[event.key];
     if (!direction) return;
     event.preventDefault(); moveAvatar(direction);
@@ -3109,11 +3219,19 @@
 
   $("#harvest-challenge-carrots").addEventListener("click", harvestChallengeCarrots);
 
-  $("#large-text-toggle").addEventListener("click", (event) => {
-    const enabled = document.body.classList.toggle("large-text");
-    event.currentTarget.setAttribute("aria-pressed", String(enabled));
-    event.currentTarget.textContent = enabled ? "기본 글자" : "글자 크게";
-  });
+  const FONT_SIZE_KEY = "gandang-carrot-forest-font-size-v1";
+  const applyFontSize = value => {
+    const size = ["small", "default", "large"].includes(value) ? value : "default";
+    document.body.classList.remove("large-text");
+    document.body.dataset.fontSize = size;
+    $("#font-size-select").value = size;
+    try { localStorage.setItem(FONT_SIZE_KEY, size); } catch { /* Session-only preference. */ }
+    window.ForestHud?.fitGame();
+  };
+  let savedFontSize = document.body.classList.contains("large-text") ? "large" : "default";
+  try { savedFontSize = localStorage.getItem(FONT_SIZE_KEY) || savedFontSize; } catch { /* Keep default. */ }
+  applyFontSize(savedFontSize);
+  $("#font-size-select").addEventListener("change", event => applyFontSize(event.currentTarget.value));
 
   const atmosphereButton = $("#atmosphere-toggle");
   const updateAtmosphereButton = (enabled) => {
@@ -3181,13 +3299,8 @@
 
   // Fullscreen and Escape handling live in forest-atmosphere.js.
 
-  $("#reset-position").addEventListener("click", async () => {
-    const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
-    [state.avatar.x, state.avatar.y] = positions[currentScene];
-    renderCanvas();
-    await persist("아바타를 시작 위치로 이동했습니다.");
-    canvas.focus();
-  });
+  // Refresh the app without deleting any saved outfits, placements or progress.
+  $("#reset-position").addEventListener("click", () => window.location.reload());
 
   $("#world-dialog-close").addEventListener("click", () => $("#world-dialog").close());
   $("#world-dialog-actions").addEventListener("click", async (event) => {
@@ -3293,6 +3406,7 @@
 
   $("#chat-close").addEventListener("click", () => toggleChat(false));
   $("#chat-toggle").addEventListener("click", () => toggleChat());
+  $("#ui-toggle").addEventListener("click", () => { if (document.body.classList.contains("forest-ui-hidden")) toggleChat(false); });
   window.addEventListener("forest-name-updated", () => renderSceneChrome());
   $("#chat-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -3413,6 +3527,8 @@
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
   adapter.load().then(async (loaded) => {
     await window.LpcAvatarEngine?.ready();
+    // One complete PNG per object: never reveal legacy cropped furniture while loading.
+    await window.ForestObjects.loadIndividualAssets();
     const params = new URLSearchParams(window.location.search);
     const localReset = localDemoOrigin && params.get("resetToday") === "1";
     state = localReset ? resetTodayProgress(loaded) : loaded;

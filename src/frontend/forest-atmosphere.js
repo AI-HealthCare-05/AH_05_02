@@ -8,9 +8,9 @@
     return { hour: date.getUTCHours(), minute: date.getUTCMinutes(), second: date.getUTCSeconds(), key: Math.floor(now / HOUR) };
   }
   function strength(hour) {
-    if (hour >= 20 || hour < 5) return .42;
-    if (hour === 19 || hour === 5) return .3;
-    if (hour === 18 || hour === 6) return .16;
+    if (hour >= 19 || hour < 5) return .78;
+    if (hour === 5) return .44;
+    if (hour === 18 || hour === 6) return .22;
     return 0;
   }
   function currentHour() {
@@ -19,7 +19,7 @@
     return Number.isFinite(forced) && forced >= 0 && forced < 24 ? Math.floor(forced) : seoulTime().hour;
   }
   function phase(hour) {
-    if (hour < 5 || hour >= 20) return ["☾", "밤이 찾아왔어요", "등불 아래에서 쉬어가세요"];
+    if (hour < 5 || hour >= 19) return ["☾", "밤이 찾아왔어요", "등불 아래에서 쉬어가세요"];
     if (hour < 7) return ["☀", "아침이 밝아오고 있어요", "숲이 천천히 밝아집니다"];
     if (hour < 18) return ["☀", "환한 낮이 시작됐어요", "오늘도 숲에서 함께해요"];
     return ["☀", "저녁이 찾아왔어요", "숲이 천천히 어두워집니다"];

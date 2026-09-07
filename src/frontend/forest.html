@@ -50,19 +50,20 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260907-43" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260907-45" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260902-28" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-atmosphere.js?v=20260907-3" defer></script>
-  <script src="/static/forest-objects.js?v=20260907-1" defer></script>
-  <script src="/static/forest-fire.js?v=20260907-2" defer></script>
-  <script src="/static/forest-phaser.js?v=20260907-39" defer></script>
-  <script src="/static/forest-hud.js?v=20260907-2" defer></script>
-  <script src="/static/forest-game.js?v=20260907-93" defer></script>
+  <script src="/static/forest-atmosphere.js?v=20260907-4" defer></script>
+  <script src="/static/forest-objects.js?v=20260907-2" defer></script>
+  <script src="/static/forest-fire.js?v=20260907-3" defer></script>
+  <script src="/static/forest-animals.js?v=20260907-1" defer></script>
+  <script src="/static/forest-phaser.js?v=20260907-42" defer></script>
+  <script src="/static/forest-hud.js?v=20260907-4" defer></script>
+  <script src="/static/forest-game.js?v=20260907-95" defer></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.2">
-  <script src="/static/challenge-v2.js?v=2.1.2" defer></script>
+  <script src="/static/challenge-v2.js?v=2.1.4" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand"><span>간당<b>간당</b></span></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">함께 실천하고, 같이 성장하는 모두의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲을 준비하고 있어요</div></div></div>
@@ -92,7 +93,7 @@
         </div>
       </div>
       <button id="atmosphere-toggle" class="icon-button" type="button" aria-pressed="true" aria-label="날씨·시간 효과 켜짐">날씨·시간</button>
-      <button id="large-text-toggle" class="icon-button" type="button" aria-pressed="false">글자 크게</button>
+      <label class="font-size-control" for="font-size-select"><span>글자 크기</span><select id="font-size-select" aria-label="글자 크기"><option value="small">작게</option><option value="default" selected>보통</option><option value="large">크게</option></select></label>
       <button id="open-profile" class="profile-button" type="button"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
     </div>
   </header>
@@ -112,36 +113,8 @@
     <p id="game-status" class="game-status sr-only" role="status" aria-live="polite"><span aria-hidden="true">●</span> 게임을 준비하고 있습니다.</p>
 
     <div class="workspace">
-      <div class="stage-toolbar">
-        <div class="stage-title">
-          <span class="live-dot" aria-hidden="true"></span>
-          <h2 id="map-title">우리의 작은 숲</h2>
-          <button id="edit-forest-name" class="toolbar-button" type="button" aria-label="숲 이름 수정" title="숲 이름 수정">✎</button>
-          <form id="forest-name-form" hidden>
-            <label class="sr-only" for="forest-name-input">숲 이름</label>
-            <input id="forest-name-input" maxlength="24" required autocomplete="off">
-            <button class="toolbar-button" type="submit">저장</button>
-            <button id="cancel-forest-name" class="toolbar-button" type="button">취소</button>
-          </form>
-        </div>
-        <aside id="chat-panel" class="chat-panel" aria-labelledby="chat-title">
-          <h2 id="chat-title" class="sr-only">숲 채팅</h2>
-          <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"><p><strong>숲지기</strong><span>오늘도 같이 숲을 가꿔봐요!</span></p></div>
-          <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">채팅 메시지</label><input id="chat-input" maxlength="60" placeholder="숲 채팅"><button type="submit" aria-label="채팅 보내기">보내기</button></form>
-          <button id="chat-close" class="toolbar-button" type="button" aria-label="채팅 숨기기">×</button>
-        </aside>
-        <div class="stage-tools">
-          <span id="adapter-badge" class="adapter-badge sr-only">숲 체험</span>
-          <button id="scene-exit" class="toolbar-button" type="button" hidden>← 숲으로</button>
-          <button id="chat-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="chat-panel">채팅</button>
-          <div class="world-zoom" role="group" aria-label="게임 화면 크기">
-            <button id="zoom-out" class="toolbar-button" type="button" aria-label="게임 화면 축소">−</button>
-            <output id="zoom-level" aria-live="polite">100%</output>
-            <button id="zoom-in" class="toolbar-button" type="button" aria-label="게임 화면 확대">+</button>
-          </div>
-          <button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기</button>
-        </div>
-      </div>
+      <h2 id="map-title" class="sr-only">우리의 작은 숲</h2>
+      <span id="adapter-badge" class="adapter-badge sr-only">숲 체험</span>
 
       <aside class="tool-rail" aria-label="당근의 숲 작업 도구">
         <div class="rail-title sr-only"><strong>메뉴</strong></div>
@@ -174,6 +147,14 @@
             </section>
           </div>
         </section>
+        <section class="object-inspector footer-objects" aria-labelledby="placed-title">
+          <div class="panel-title"><div><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span><button id="objects-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="placed-list">숨기기</button></div>
+          <div id="placement-controls" class="placement-controls" role="toolbar" aria-label="오브젝트 배치 조작" hidden>
+            <button id="rotate-placement" type="button" disabled><span aria-hidden="true">↻</span> 회전</button>
+            <button id="confirm-placement" class="placement-confirm" type="button" disabled><kbd>V</kbd> 배치 확정</button>
+          </div>
+          <div id="placed-list" class="placed-list"></div>
+        </section>
       </aside>
 
       <section id="world-stage" class="world-stage" aria-labelledby="map-title">
@@ -183,23 +164,45 @@
         </div>
         <div class="canvas-workarea">
           <div class="canvas-frame">
+            <div class="viewport-tools" aria-label="게임 화면 도구">
+              <button id="scene-exit" class="toolbar-button" type="button" hidden>← 숲으로</button>
+              <div class="world-zoom" role="group" aria-label="캐릭터 중심 확대·축소">
+                <button id="zoom-out" class="toolbar-button" type="button" aria-label="게임 화면 축소">−</button>
+                <output id="zoom-level" aria-live="polite">100%</output>
+                <button id="zoom-in" class="toolbar-button" type="button" aria-label="게임 화면 확대">+</button>
+              </div>
+              <button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기(0)</button>
+            </div>
             <div id="forest-time-toast" class="forest-time-toast" role="status" aria-live="polite" hidden><span class="time-toast-icon" aria-hidden="true"></span><div><strong></strong><small></small></div></div>
             <div id="phaser-world" role="application" tabindex="0" aria-label="고해상도 4방향 픽셀 아바타로 이동하는 당근의 숲 월드"></div>
             <canvas id="forest-canvas" width="1536" height="1024" tabindex="0" aria-label="숲, 당근밭, 공동 나무와 집이 있는 고해상도 픽셀 맵. 방향키나 WASD로 아바타를 움직일 수 있습니다." aria-describedby="movement-help"></canvas>
             <span class="phaser-quality-badge">JUNE JTOY AVATATA</span>
             <div class="map-label home-label"><span aria-hidden="true">🏠</span>우리 집</div>
             <div class="map-label garden-label"><span aria-hidden="true">🥕</span>당근 밭</div>
+            <div id="avatar-nameplate" class="map-label avatar-nameplate" aria-label="아바타 닉네임"></div>
             <div id="interaction-prompt" class="interaction-prompt" hidden><kbd>Q</kbd><span>상호작용</span></div>
             <section id="garden-harvest-panel" class="garden-harvest-panel" aria-live="polite" hidden>
               <span class="harvest-carrot" aria-hidden="true">🥕</span>
               <div><small>누적 챌린지 수확</small><strong><span id="pending-harvest-carrots">0</span>개가 자랐어요</strong></div>
               <button id="harvest-challenge-carrots" type="button">Q · 수확하기</button>
             </section>
-            <div id="placement-controls" class="placement-controls" role="toolbar" aria-label="오브젝트 배치 조작" hidden>
-              <button id="rotate-placement" type="button" disabled><span aria-hidden="true">↻</span> 회전</button>
-              <button id="confirm-placement" class="placement-confirm" type="button" disabled><kbd>V</kbd> 배치 확정</button>
-            </div>
             <div class="canvas-hud sr-only"><span id="avatar-coordinate">X 384 · Y 352</span></div>
+            <div class="game-controls-overlay arcade-deck" aria-label="게임 조작 버튼">
+              <div class="control-cluster">
+                <div class="hud-panel-heading"><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">버튼 숨기기(8)</button><button id="reset-position" class="toolbar-button" type="button" title="페이지 새로고침">초기화(9)</button></div>
+                <div id="controls-content" class="touch-controls" aria-label="아바타 이동 버튼">
+                  <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
+                  <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
+                  <button class="arcade-action action-run" type="button" data-action="run" aria-pressed="false" aria-label="달리기 꺼짐, 단축키 R"><span>달리기 (R)</span></button>
+                  <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
+                  <button class="arcade-action action-interact" type="button" data-action="interact" aria-label="상호작용, 단축키 Q"><span>상호작용 (Q)</span></button>
+                  <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
+                  <button class="arcade-action action-ride" type="button" data-action="ride" aria-label="탈것, 단축키 E"><span>탈것 (E)</span></button>
+                  <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
+                  <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span>공격 (Z)</span></button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -207,26 +210,6 @@
       </section>
 
       <div class="right-hud">
-        <div class="stage-footer arcade-deck">
-          <div class="control-cluster">
-            <div class="hud-panel-heading"><h2>조작</h2><button id="reset-position" class="toolbar-button" type="button" title="아바타를 시작 위치로 이동">위치 초기화</button><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">숨기기</button></div>
-            <div id="controls-content" class="touch-controls" aria-label="아바타 이동 버튼">
-              <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
-              <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
-              <button class="arcade-action action-run" type="button" data-action="run" aria-pressed="false" aria-label="달리기 꺼짐, 단축키 R"><span>달리기 (R)</span></button>
-              <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
-              <button class="arcade-action action-interact" type="button" data-action="interact" aria-label="상호작용, 단축키 Q"><span>상호작용 (Q)</span></button>
-              <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
-              <button class="arcade-action action-ride" type="button" data-action="ride" aria-label="탈것, 단축키 E"><span>탈것 (E)</span></button>
-              <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
-              <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span>공격 (Z)</span></button>
-            </div>
-          </div>
-          <section class="object-inspector footer-objects" aria-labelledby="placed-title">
-            <div class="panel-title"><div><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span><button id="objects-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="placed-list">숨기기</button></div>
-            <div id="placed-list" class="placed-list"></div>
-          </section>
-        </div>
       <aside class="inspector" aria-label="퀘스트와 구성원 정보">
         <div class="inspector-tabs" role="tablist" aria-label="인스펙터 보기">
           <button class="inspector-tab is-active" type="button" role="tab" aria-selected="true" data-inspector-tab="quests-panel">오늘 할 일</button>
@@ -262,6 +245,13 @@
     </div>
 
   </main>
+
+  <button id="chat-toggle" class="chat-launcher" type="button" aria-expanded="false" aria-controls="chat-panel">채팅 (Enter / C)</button>
+  <aside id="chat-panel" class="chat-panel bottom-chat" aria-labelledby="chat-title" hidden>
+    <div class="chat-heading"><h2 id="chat-title">숲 채팅</h2><small id="chat-help">C를 다시 누르면 채팅이 숨겨집니다.</small><button id="chat-close" class="toolbar-button" type="button" aria-label="채팅 숨기기">×</button></div>
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"><p><strong>숲지기</strong><span>오늘도 같이 숲을 가꿔봐요!</span></p></div>
+    <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">채팅 메시지</label><input id="chat-input" maxlength="60" placeholder="메시지를 입력하고 Enter" aria-describedby="chat-help"><button type="submit" aria-label="채팅 보내기">보내기</button></form>
+  </aside>
 
   <dialog id="avatar-studio" class="avatar-studio" aria-labelledby="avatar-studio-title">
     <header class="avatar-studio-header">

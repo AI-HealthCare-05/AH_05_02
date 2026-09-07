@@ -36,14 +36,14 @@ function readRgbaPng(file) {
   return { width, height, naturalWidth: width, naturalHeight: height, complete: true, pixels };
 }
 
-function setup() {
+function setup({ ImageClass } = {}) {
   const canvases = [];
   const document = { createElement(tag) {
     assert.equal(tag, 'canvas');
     const canvas = { width: 0, height: 0, calls: [] };
     canvas.getContext = () => {
       canvas.pixels ||= new Uint8ClampedArray(canvas.width * canvas.height * 4);
-      return { drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh) {
+      return { getImageData() { return { data: canvas.pixels }; }, drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh) {
         canvas.calls.push([source, sx, sy, sw, sh, dx, dy, dw, dh]);
         if (!source.pixels) return;
         for (let y = 0; y < dh; y++) {
@@ -58,7 +58,7 @@ function setup() {
     canvases.push(canvas);
     return canvas;
   } };
-  const window = {};
+  const window = { Image: ImageClass };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-objects.js'), 'utf8'), { window, document });
   return { api: window.ForestObjects, canvases };
 }
@@ -208,4 +208,166 @@ test('animated DOM thumbnails and Phaser reuse one atlas with a stable first pin
   assert.deepEqual(Array.from(api.animatedFrameLayout('garden_pinwheel', 0).target), [24, 10, 80, 114]);
   assert.equal(api.createAnimatedAtlas({ complete: false }), null);
   assert.throws(() => api.createAnimatedAtlas({ width: 512, height: 500 }), /512×512/);
+});
+
+function individualImages(api) {
+  return Object.fromEntries(Array.from(api.INDIVIDUAL_ASSETS, (asset, index) => {
+    const width = 40, height = 80, pixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 1; y < 79; y++) for (let x = 2; x < 38; x++) pixels.set([index + 10, 70, 140, 255], (y * width + x) * 4);
+    return [asset.code, { width, height, naturalWidth: width, naturalHeight: height, complete: true, src: asset.url, pixels }];
+  }));
+}
+
+test('individual manifest names one independent PNG for each storage and animated object', () => {
+  const { api } = setup();
+  assert.equal(api.INDIVIDUAL_ASSETS.length, 24);
+  assert.equal(new Set(api.INDIVIDUAL_ASSETS.map(asset => asset.url)).size, 24);
+  for (const asset of api.INDIVIDUAL_ASSETS) {
+    assert.equal(asset.key, `furniture-${asset.code}`);
+    assert.equal(asset.url, `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
+  }
+});
+
+test('individual alpha bounds include faint edge pixels and aspect-fit the complete body with padding', () => {
+  const { api } = setup(), pixels = new Uint8ClampedArray(80 * 40 * 4);
+  pixels[(2 * 80 + 3) * 4 + 3] = 1;
+  pixels[(37 * 80 + 77) * 4 + 3] = 255;
+  const bounds = api.alphaBounds(pixels, 80, 40);
+  assert.deepEqual({ ...bounds }, { x: 3, y: 2, width: 75, height: 36 });
+  for (const tileSize of [128, 256]) {
+    const layout = api.individualFrameLayout(bounds, tileSize), [x, y, width, height] = layout.target;
+    assert.deepEqual(Array.from(layout.source), [3, 2, 75, 36]);
+    assert.ok(x >= layout.padding && y >= layout.padding);
+    assert.ok(x + width <= tileSize - layout.padding);
+    assert.equal(y + height, tileSize - layout.padding);
+    assert.ok(Math.abs(width / 75 - height / 36) < 1 / 36, 'rounding may differ by less than one pixel; body must not stretch');
+  }
+  assert.equal(api.alphaBounds(new Uint8ClampedArray(16), 2, 2), null);
+});
+
+test('independent normalized tiles cannot inherit neighbors and retain padded top and bottom edges', () => {
+  const { api } = setup(), images = individualImages(api), result = api.createStorageAtlasFromImages(images);
+  assert.deepEqual([result.width, result.height], [1280, 1024]);
+  assert.equal(result.calls.length, 20);
+  for (let index = 0; index < 20; index++) {
+    const tile = result.calls[index][0], ox = index % 5 * 256, oy = Math.floor(index / 5) * 256;
+    assert.equal(tile.calls.length, 1);
+    assert.equal(tile.calls[0][0], images[api.STORAGE_CODES[index]], 'tile reads only its own standalone PNG');
+    assert.deepEqual(tile.calls[0].slice(1, 5), [2, 1, 36, 78]);
+    let visible = 0;
+    for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) {
+      if (!alpha(result, ox + x, oy + y)) continue;
+      visible++;
+      assert.ok(x >= 12 && x < 244 && y >= 12 && y < 244);
+      assert.equal(result.pixels[((oy + y) * result.width + ox + x) * 4], index + 10, 'no foreign source color can enter a tile');
+    }
+    assert.ok(visible > 10000);
+    assert.equal(alpha(result, ox + 128, oy + 12), 255, 'the full top edge survives normalization');
+    assert.equal(alpha(result, ox + 128, oy + 243), 255, 'the full bottom edge survives normalization');
+  }
+  assert.equal(api.createStorageAtlasFromImages(images), result, 'unchanged source maps reuse the exact atlas');
+  assert.throws(() => api.createStorageAtlasFromImages({ ...images, chair_green: null }), /Missing required/);
+});
+
+test('individual animated tiles repeat one identical fixture so only isolated runtime parts can move', () => {
+  const { api } = setup(), images = individualImages(api), atlas = api.createAnimatedAtlasFromImages(images);
+  assert.deepEqual([atlas.width, atlas.height], [512, 512]);
+  assert.equal(atlas.calls.length, 16);
+  for (let row = 0; row < 4; row++) {
+    for (let frame = 1; frame < 4; frame++) assert.equal(atlas.calls[row * 4 + frame][0], atlas.calls[row * 4][0]);
+    for (let x = 0; x < 128; x++) for (const y of [0, 5, 122, 127]) {
+      assert.equal(alpha(atlas, x, row * 128 + y), 0);
+    }
+  }
+});
+
+test('registered images are shared by normal DOM drawing while explicit legacy flame access remains intact', () => {
+  const { api } = setup(), images = individualImages(api), calls = [];
+  api.registerIndividualImages(images);
+  assert.equal(api.individualReady, true);
+  const storage = api.createStorageAtlas(source), animated = api.createAnimatedAtlas(animatedSource);
+  api.drawStorageItem({ drawImage: (...args) => calls.push(args) }, source, 'bench', 0, 0, 80, 80);
+  api.drawAnimatedItem({ drawImage: (...args) => calls.push(args) }, animatedSource, 'garden_pinwheel', 0, 0, 80, 80);
+  assert.equal(calls[0][0], storage); assert.equal(calls[1][0], animated);
+  const flame = api.createLegacyStorageAtlas(source);
+  assert.notEqual(flame, storage);
+  assert.equal(flame.calls[14][0], source, 'the original flame pixels never come from new OFF-only artwork');
+  assert.throws(() => api.registerIndividualImages({}), /All 24/);
+});
+
+test('async art boot blocks legacy flashes and registers nothing until every required PNG is ready', async () => {
+  const pending = [];
+  class ImageClass {
+    constructor() { this.complete = false; pending.push(this); }
+    set src(value) { this.url = value; }
+    get src() { return this.url; }
+  }
+  const { api } = setup({ ImageClass }), loading = api.loadIndividualAssets();
+  assert.equal(api.loadIndividualAssets(), loading);
+  assert.equal(pending.length, 24);
+  assert.equal(api.createStorageAtlas(source), null);
+  assert.equal(api.createAnimatedAtlas(animatedSource), null);
+  const fixtures = individualImages(api);
+  for (let index = 0; index < 23; index++) {
+    Object.assign(pending[index], fixtures[api.INDIVIDUAL_ASSETS[index].code]); pending[index].onload();
+  }
+  await Promise.resolve(); assert.equal(api.individualReady, false);
+  Object.assign(pending[23], fixtures[api.INDIVIDUAL_ASSETS[23].code]); pending[23].onload();
+  await loading; assert.equal(api.individualReady, true);
+  assert.ok(api.createStorageAtlas(source));
+});
+
+test('every shipped standalone PNG is nonempty RGBA and normalizes its complete alpha extent', () => {
+  const { api } = setup();
+  for (const asset of api.INDIVIDUAL_ASSETS) {
+    const image = readRgbaPng(path.join(__dirname, `../src/frontend/assets/furniture-v153/${asset.code}.png`));
+    const tile = api.createIndividualTile(image, 128), bounds = api.alphaBounds(image.pixels, image.width, image.height);
+    assert.ok(bounds.width > 0 && bounds.height > 0, asset.code);
+    assert.deepEqual(tile.calls[0].slice(1, 5), [bounds.x, bounds.y, bounds.width, bounds.height]);
+    for (let x = 0; x < 128; x++) for (const y of [0, 5, 122, 127]) assert.equal(alpha(tile, x, y), 0, `${asset.code} padding`);
+  }
+});
+
+function phaserSceneForPixels() {
+  const Phaser = { Scene: class {}, AUTO: 0, Scale: { FIT: 1, CENTER_BOTH: 1 }, Game: class { constructor(config) { this.config = config; } } };
+  const window = { Phaser };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8'), {
+    window, Phaser, localStorage: { getItem: () => null }, document: { getElementById: () => ({}) },
+  });
+  return new window.carrotForestPhaserGame.config.scene();
+}
+
+test('new pinwheel art partitions without fabricated stem pixels or changes to its whole lower base', () => {
+  const { api } = setup(), scene = phaserSceneForPixels();
+  const image = readRgbaPng(path.join(__dirname, '../src/frontend/assets/furniture-v153/garden_pinwheel.png'));
+  const tile = api.createIndividualTile(image, 128), { base, blades } = scene.splitStaticPinwheelPixels(tile.pixels);
+  let coloredBladePixels = 0;
+  for (let i = 0; i < tile.pixels.length; i += 4) {
+    if (blades[i + 3]) coloredBladePixels++;
+    assert.ok(!base[i + 3] || !blades[i + 3], 'a source pixel belongs to exactly one layer');
+    for (let channel = 0; channel < 4; channel++) assert.equal(base[i + channel] + blades[i + channel], tile.pixels[i + channel]);
+    if (Math.floor(i / 4 / 128) >= 79) assert.equal(blades[i + 3], 0, 'entire pot and exposed lower stem remain static');
+  }
+  assert.ok(coloredBladePixels > 500);
+});
+
+test('new fountain animation changes only original cyan water pixels, never stone, moss, alpha, or position', () => {
+  const { api } = setup(), scene = phaserSceneForPixels();
+  const image = readRgbaPng(path.join(__dirname, '../src/frontend/assets/furniture-v153/animated_fountain.png'));
+  const tile = api.createIndividualTile(image, 128), original = new Uint8ClampedArray(tile.pixels);
+  for (let frame = 1; frame < 8; frame++) {
+    const output = scene.fountainFlowPixels(original, frame);
+    let changed = 0;
+    for (let i = 0; i < original.length; i += 4) {
+      const [r, g, b, a] = original.subarray(i, i + 4);
+      assert.equal(output[i + 3], a);
+      const water = a && b - r > 28 && g - r > 18 && b >= g * .92;
+      for (let channel = 0; channel < 3; channel++) {
+        if (!water) assert.equal(output[i + channel], original[i + channel]);
+        else if (output[i + channel] !== original[i + channel]) changed++;
+      }
+    }
+    assert.ok(changed > 500, 'flow must visibly animate the real water surface');
+  }
+  assert.deepEqual(tile.pixels, original, 'the static source art is never modified');
 });

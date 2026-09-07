@@ -25,7 +25,7 @@
 #storage-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));overflow:visible}.inventory-item.storage-icon-item{display:grid;place-items:center;min-width:0;min-height:92px;aspect-ratio:1;grid-template-columns:1fr;grid-template-rows:1fr;padding:5px;border-radius:14px;background:linear-gradient(145deg,#fff,#eef4ef);box-shadow:0 4px 10px rgba(30,61,42,.07)}.inventory-item.storage-icon-item:hover{border-color:#77ae88;transform:translateY(-2px)}.inventory-item.storage-icon-item>.storage-sprite-thumb{display:block;width:76px;height:76px;grid-row:auto;border-radius:10px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1');background-repeat:no-repeat;background-size:500% 400%;image-rendering:auto}.inventory-item.storage-icon-item[data-placement="true"]{border:3px solid var(--orange);background:#fff7e7;box-shadow:0 0 0 4px rgba(240,138,48,.14)}
 .recent-outfit-entry{flex:0 0 136px;display:grid;gap:6px}.recent-outfit-card{width:100%;display:grid;place-items:center;min-height:142px;padding:7px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(#fff,#f1f5f2);color:var(--ink);cursor:pointer}.recent-outfit-entry:first-child .recent-outfit-card{border-color:#6aa681;box-shadow:0 0 0 3px rgba(45,138,95,.12)}.recent-outfit-card canvas{width:88px;height:88px;aspect-ratio:1;background:radial-gradient(circle at 50% 75%,#dcebdd 0 24%,transparent 25%);image-rendering:pixelated}.recent-outfit-card strong{max-width:100%;overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.recent-outfit-card small{color:var(--muted);font-size:9px}.recent-outfit-card:hover{border-color:var(--green);transform:translateY(-2px)}.outfit-name-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px}.outfit-name-form input{width:100%;min-height:36px;padding:5px 7px;border:1px solid var(--line-dark);border-radius:7px;font-size:10px}.outfit-name-form button{min-height:36px;padding:4px 7px;border:1px solid var(--line-dark);border-radius:7px;background:#fff;color:var(--green-dark);font-size:9px;font-weight:900;cursor:pointer}.inventory-dialog-grid .recent-outfit-entry{width:100%}.inventory-dialog-grid .recent-outfit-card{width:100%;min-height:132px}.inventory-dialog-grid .recent-outfit-card canvas{width:82px;height:82px}
 .avatar-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.avatar-quick-actions button{min-height:42px;padding:7px 9px;border:1px solid #c9c6f6;border-radius:9px;background:#fff;color:#5146b5;font-size:12px;font-weight:900;cursor:pointer}.avatar-quick-actions button:hover{border-color:#7a6df0;background:#f0eeff}
-.storage-reward-cow{width:78px;height:78px;background:url('/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1') center/contain no-repeat;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
+.animal-thumbnail-canvas{display:block!important;width:78px!important;height:78px!important;aspect-ratio:1!important;border-radius:10px;background:transparent!important;image-rendering:pixelated!important;touch-action:auto;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
 .animated-object-thumbnail-canvas{display:block!important;width:76px!important;height:76px!important;aspect-ratio:1!important;border-radius:10px;background:transparent!important;image-rendering:auto!important;filter:drop-shadow(0 5px 6px rgba(28,61,42,.14));touch-action:auto}.inventory-dialog-grid .animated-object-thumbnail-canvas{width:84px!important;height:84px!important}
 .thread-icon{display:inline-block;width:19px;height:19px;border-radius:50%;background:repeating-radial-gradient(circle at 42% 38%,transparent 0 2px,currentColor 3px 4px);border:2px solid currentColor}.thread-green{color:#39a85f}.thread-blue{color:#4385d8}.thread-mono{color:#353a3e;background-color:#f5f5f1}
 .avatar-item-card{position:relative;min-height:104px}.avatar-item-card .selected-check{position:absolute;right:8px;bottom:7px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#6558e8;color:#fff;font-weight:900}.avatar-item-card.action-view-only{opacity:1;cursor:default}.avatar-item-card .shortcut-badge{position:absolute;left:7px;bottom:7px;padding:3px 7px;border-radius:999px;background:#263c34;color:#fff;font-size:11px;font-weight:800}
@@ -95,7 +95,7 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .face-section-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 3px 14px;padding:8px;border:1px solid #e1e2e8;border-radius:12px;background:#f7f7fb}.face-section-tabs button{min-height:36px;padding:6px 11px;border:1px solid transparent;border-radius:999px;background:transparent;color:#696d78;font-size:11px;font-weight:900;cursor:pointer}.face-section-tabs button:hover{background:#fff}.face-section-tabs button[aria-selected="true"]{border-color:#8d82f4;background:#fff;color:#5b4dd6;box-shadow:0 2px 8px rgba(88,75,206,.12)}
 
 /* 창고 팝업에서도 실제 오브젝트 스프라이트를 사용한다. */
-.inventory-dialog-grid .storage-sprite-thumb{display:block;width:78px;height:78px;border-radius:11px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1');background-repeat:no-repeat;background-size:500% 400%;font-size:0;image-rendering:auto}.inventory-dialog-grid .storage-reward-cow{display:block;width:78px;height:78px;font-size:0}
+.inventory-dialog-grid .storage-sprite-thumb{display:block;width:78px;height:78px;border-radius:11px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1');background-repeat:no-repeat;background-size:500% 400%;font-size:0;image-rendering:auto}.inventory-dialog-grid .animal-thumbnail-canvas{display:block;width:78px;height:78px;font-size:0}
 
 /* 보상 UI: 반복 점멸과 과한 파티클 대신 한 번만 열리는 차분한 연출. */
 .reward-button:not(:disabled){animation:none;background:linear-gradient(135deg,#fff7df,#f4ddb0);border-color:#cba76d;color:#614521;box-shadow:0 4px 12px rgba(105,76,35,.12);transition:transform .18s ease,box-shadow .18s ease}.reward-button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(105,76,35,.18)}.reward-celebration{background:radial-gradient(circle at 50% 44%,rgba(246,232,187,.18),transparent 34%),linear-gradient(145deg,rgba(16,44,34,.98),rgba(8,25,20,.98))}.reward-rays,.reward-particles{display:none}.reward-stage h2{font-size:clamp(30px,5vw,56px);letter-spacing:-.04em;text-shadow:0 6px 24px rgba(0,0,0,.34)}.treasure-chest{filter:drop-shadow(0 22px 22px rgba(0,0,0,.34));animation:chestArrival .7s cubic-bezier(.2,.85,.25,1) forwards}.chest-lid,.chest-body{border-color:#49321e;background:linear-gradient(#a77a48,#69472d);box-shadow:inset 0 0 0 5px #c59a63}.chest-lid{animation:chestOpen .72s .68s cubic-bezier(.25,.8,.3,1) forwards}.chest-lock{border-color:#49321e;background:#d4b56e;color:#4d3b20}.chest-light{box-shadow:0 0 22px 12px rgba(255,250,220,.9),0 0 65px 34px rgba(223,198,130,.55)}.reward-reveal{border-color:rgba(240,225,188,.46);background:rgba(255,255,255,.1);animation:rewardReveal .5s 1.25s forwards}.reward-reveal small{color:#eadbb4}.reward-flight{background:#fffaf0;box-shadow:0 0 18px 7px rgba(255,250,224,.8),0 0 46px 18px rgba(218,190,117,.38)}
@@ -104,8 +104,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .match-body-color{display:flex;align-items:flex-start;gap:10px;margin:0 4px 14px;padding:10px 12px;border:1px solid #e2e4ea;border-radius:10px;background:#fafbfc;color:#444854}.match-body-color input{width:18px;height:18px;margin-top:2px;accent-color:#6b5ce7}.match-body-color span{display:grid;gap:2px}.match-body-color strong{font-size:13px}.match-body-color small{color:#858995;font-size:10px}.avatar-item-group-title{grid-column:1/-1;margin:8px 0 -2px;padding:8px 2px 5px;border-bottom:1px solid #ececf2;color:#555a67;font-size:12px;font-weight:900}
 .avatar-color-controls{max-height:190px;overflow:auto;padding:10px 11px;border:1px solid #dfe1e7;border-radius:11px;background:#fff}.avatar-color-controls h3{margin:0 0 7px;color:#4e46a8;font-size:12px}.avatar-color-row{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:6px;margin-top:5px}.avatar-color-row>strong{color:#5b5f6b;font-size:10px}.avatar-color-row>div{display:flex;gap:4px;overflow-x:auto;padding:2px}.avatar-color-row button{flex:0 0 22px;width:22px;height:22px;padding:0;border:2px solid #fff;border-radius:50%;background:var(--avatar-swatch);box-shadow:0 0 0 1px #c8cad2;cursor:pointer}.avatar-color-row button[aria-pressed="true"]{box-shadow:0 0 0 2px #6c5ce7,0 0 0 4px #fff}
 
-/* Generic inventory backgrounds must not erase the rare cow artwork. */
-.inventory-item .storage-reward-cow,.storage-icon-item .storage-reward-cow,.inventory-dialog-grid .storage-reward-cow{display:block;width:78px;height:78px;grid-row:auto;border-radius:10px;background-color:transparent;background-image:url('/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1');background-position:center;background-size:contain;background-repeat:no-repeat;font-size:0;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
+/* Animal thumbnails draw the same isolated sprite as the world renderer. */
+.inventory-item .animal-thumbnail-canvas,.storage-icon-item .animal-thumbnail-canvas,.inventory-dialog-grid .animal-thumbnail-canvas{display:block;width:78px;height:78px;grid-row:auto;border-radius:10px;background:transparent;font-size:0;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
 
 /* 긴 얼굴·의상 목록에서도 우측 미리보기의 크기와 위치를 유지한다. */
 @media(min-width:921px){
@@ -167,7 +167,7 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .stage-footer .recent-outfit-entry{flex:0 0 112px;grid-template-rows:100px 28px;gap:3px;height:131px;scroll-snap-align:start}
 .stage-footer .recent-outfit-card{min-height:100px;height:100px;padding:3px}.stage-footer .recent-outfit-card canvas{width:72px;height:72px}.stage-footer .recent-outfit-card small{font-size:8px}
 .stage-footer .outfit-name-form{height:28px}.stage-footer .outfit-name-form input,.stage-footer .outfit-name-form button{min-height:28px;height:28px;padding:2px 5px}.stage-footer .fixed-preset-name{display:grid;place-items:center;text-align:center}.stage-footer .fixed-preset-name small{color:var(--ink);font-size:11px;font-weight:900}
-.stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .storage-reward-cow{width:86px!important;height:86px!important}
+.stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .animal-thumbnail-canvas{width:86px!important;height:86px!important}
 @media(max-width:620px){.stage-footer .asset-group{min-height:198px;max-height:198px}.stage-footer .asset-library-grid{height:auto}}
 
 /* v105 workspace: avatar rail owns wardrobe/storage; stage footer owns placed objects. */
@@ -185,7 +185,7 @@ body{overflow-x:hidden}
 .rail-assets .recent-outfit-card{min-height:82px;height:82px;padding:2px}.rail-assets .recent-outfit-card canvas{width:60px;height:60px}.rail-assets .recent-outfit-card small{font-size:7px}
 .rail-assets .outfit-name-form{height:27px}.rail-assets .outfit-name-form input,.rail-assets .outfit-name-form button{min-height:27px;height:27px;padding:2px 4px;font-size:8px}
 .rail-assets #storage-list .storage-icon-item{flex:0 0 88px;width:88px;min-width:88px;height:108px;min-height:108px;padding:3px;aspect-ratio:auto;scroll-snap-align:start}
-.rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .storage-reward-cow{width:78px!important;height:78px!important}
+.rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .animal-thumbnail-canvas{width:78px!important;height:78px!important}
 .rail-assets #storage-list{display:grid;grid-auto-flow:column;grid-auto-columns:88px;grid-template-columns:none;justify-content:start;align-items:stretch;height:128px;max-height:128px;padding-bottom:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#4c8b60 #e6eee8}
 .rail-assets #storage-list::-webkit-scrollbar{height:8px}.rail-assets #storage-list::-webkit-scrollbar-track{border-radius:999px;background:#e6eee8}.rail-assets #storage-list::-webkit-scrollbar-thumb{border-radius:999px;background:#4c8b60}.rail-assets #storage-list::-webkit-scrollbar-thumb:hover{background:#315b40}
 .rail-assets #wardrobe-list,.stage-footer .footer-objects .placed-list{scrollbar-width:thin;scrollbar-color:#4c8b60 #e6eee8}
@@ -302,3 +302,118 @@ body.forest-ui-hidden .stage-toolbar{justify-self:end;width:auto;background:#fff
 .world-dialog>.eyebrow,.avatar-studio-header .eyebrow,.avatar-browser-heading .section-kicker,.flow-dialog .eyebrow,.inventory-dialog .eyebrow,.profile-dialog .eyebrow,.reward-celebration .eyebrow,.chat-panel .eyebrow{display:none}
 /* Canvas thumbnails share the exact isolated texture used in the field. */
 .inventory-item.storage-icon-item>canvas.storage-sprite-thumb,.inventory-dialog-grid canvas.storage-sprite-thumb{background-image:none;background-color:transparent}
+
+/* v152: fixed viewport, balanced side panels, camera-only zoom and bottom chat. */
+:root{--hud-right:var(--hud-left)}
+.workspace,body.forest-ui-hidden .workspace{grid-template-columns:var(--hud-left) minmax(0,1fr) var(--hud-left);grid-template-rows:minmax(0,1fr);grid-template-areas:"rail stage right"}
+.viewport-tools{position:absolute;right:9px;top:9px;z-index:20;display:flex;align-items:center;justify-content:flex-end;gap:5px;max-width:calc(100% - 18px);flex-wrap:wrap}
+.viewport-tools .toolbar-button{min-height:32px;padding:4px 8px;font-size:11px;background:#fffdf5ed;box-shadow:0 2px 6px #16392720}
+.viewport-tools .world-zoom .toolbar-button{font-size:20px;padding:0 7px;min-width:30px;box-shadow:none;background:transparent}
+.viewport-tools .world-zoom{background:#fffdf5ed}
+.hud-panel-heading{display:grid;grid-template-columns:1fr;gap:5px}
+.hud-panel-heading .toolbar-button{width:100%;font-size:11px;min-height:30px}
+.right-hud .arcade-deck .touch-controls{height:172px;min-height:172px;max-height:172px;gap:4px;padding:3px}
+.right-hud .arcade-deck .touch-controls button.arcade-action span{font-size:9px;letter-spacing:-.06em;white-space:nowrap}
+.tool-rail>.footer-objects{display:block;position:static;min-width:0;width:auto;margin:8px;padding:9px;border:1px solid var(--line);border-radius:12px;background:#fffdf6}
+.tool-rail .footer-objects .panel-title{display:flex;gap:4px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.tool-rail .footer-objects .panel-title>div{flex:1}.tool-rail .footer-objects h2{font-size:13px;white-space:nowrap}
+.tool-rail .footer-objects .object-count{font-size:10px;padding:3px 5px}
+.tool-rail .placed-list{display:grid;grid-template-columns:1fr;max-height:210px;overflow:auto;scrollbar-color:#749b72 transparent}
+.tool-rail .placed-object-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px;padding:7px;min-width:0;width:100%}
+.tool-rail .placed-object-copy strong{font-size:12px}.tool-rail .placed-object-copy small{font-size:10px}
+.tool-rail .placed-object-row .remove-object{grid-column:1/-1;justify-self:end;width:auto;min-width:110px;min-height:28px;font-size:10px;white-space:nowrap}
+.tool-rail #placement-controls{position:static;display:flex;flex-wrap:wrap;width:100%;transform:none;margin:0 0 8px;padding:5px;gap:4px;box-shadow:none}
+.tool-rail #placement-controls[hidden]{display:none}.tool-rail #placement-controls button{flex:1;min-height:32px;min-width:0;font-size:10px;padding:4px}
+body.forest-ui-hidden .workspace>.tool-rail{display:block!important;visibility:hidden;pointer-events:none}
+body.forest-ui-hidden .workspace>.right-hud{display:flex!important;visibility:hidden;pointer-events:none}
+body.forest-ui-hidden .forest-weather-strip{display:block!important;visibility:hidden;pointer-events:none}
+.map-label{transform:translate(-50%,-50%);right:auto;bottom:auto;pointer-events:none}
+.chat-launcher{position:fixed;z-index:39;left:50%;bottom:12px;transform:translateX(-50%);padding:8px 14px;border:1px solid var(--line);border-radius:12px;background:#fffdf6ed;color:var(--ink);font-size:12px;box-shadow:0 4px 12px #16392720}
+.chat-launcher[hidden]{display:none}.bottom-chat{position:fixed;z-index:60;left:50%;right:auto;bottom:12px;transform:translateX(-50%);width:min(768px,calc(100% - 28px));border-radius:14px;background:#fffdf8f5}
+.bottom-chat .chat-heading{padding:6px 10px;gap:8px}.bottom-chat .chat-heading h2{font-size:13px;white-space:nowrap}.bottom-chat .chat-heading small{flex:1;font-size:11px;color:var(--muted)}
+.bottom-chat .chat-messages{display:flex;flex-direction:column;gap:3px;max-height:118px;padding:7px 12px}
+.bottom-chat .chat-messages p{display:flex;gap:10px;padding:3px 0;background:none;align-items:baseline}.bottom-chat .chat-messages strong{flex:none}.bottom-chat .chat-messages span{overflow-wrap:anywhere}
+.bottom-chat .chat-form{padding:7px 10px}.bottom-chat .chat-form input,.bottom-chat .chat-form button{min-height:36px;font-size:12px}
+body.forest-ui-hidden #chat-panel.bottom-chat:not([hidden]){display:block!important}
+@media(min-width:1600px){:root{--hud-right:var(--hud-left)}}
+@media(max-width:1150px) and (min-width:901px){:root{--hud-right:var(--hud-left)}}
+@media(max-width:900px){.workspace,body.forest-ui-hidden .workspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;grid-template-areas:"stage stage" "rail right"}.world-stage,.forest-ui-hidden .world-stage{height:min(74vw,650px);min-height:250px}.right-hud{display:flex}.studio-shell{padding-bottom:64px}.bottom-chat{bottom:8px}.chat-launcher{bottom:8px}}
+@media(max-width:520px){.workspace,body.forest-ui-hidden .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;grid-template-areas:"stage" "rail" "right"}.rail-assets .asset-library-grid{grid-template-columns:1fr}.viewport-tools{right:5px;top:5px;gap:3px}.viewport-tools .toolbar-button{font-size:10px;min-height:28px;padding:3px 6px}.bottom-chat .chat-heading small{font-size:10px}}
+
+/* Enlarged viewport and Suin's final landing palette. Import tokens only, never its page layout. */
+:root{--forest-native-width:1536px;--landing-paper:#f5f4ef;--landing-surface:#eeeee8;--landing-ink:#292e32;--landing-muted:#51595d;--landing-accent:#236657;--ink:var(--landing-ink);--muted:var(--landing-muted);--green:var(--landing-accent);--green-dark:#194f43;--mint:#e9f4f0;--green-soft:var(--mint);--paper:var(--landing-paper);--surface:var(--landing-surface);--bg:var(--landing-paper);--line:#d5dedb;--line-dark:#b9c5c1;--warning:#8a4b08;--warning-bg:#fff4df;--danger:#a32828;--shadow-soft:0 12px 35px rgba(20,33,61,.09)}
+body{font-family:Pretendard,"Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font-family:inherit}
+.studio-topbar,.tool-rail,.tool-rail>.footer-objects,.right-hud .control-cluster,.right-hud>.inspector,html.challenge-v2-enabled .right-hud>.inspector,.forest-weather-strip{background:var(--paper);border-color:var(--line)}
+.studio-topbar{box-shadow:0 2px 14px rgba(20,33,61,.06)}
+.rail-title,.rail-assets,.inspector-tabs,.tool-button,.bottom-chat .chat-heading,.profile-summary>div{background:var(--surface)}
+.rail-assets .asset-group,.tool-rail .placed-object-row{background:var(--paper);border-color:var(--line)}
+.tool-button.is-active{background:var(--mint);border-color:var(--green);color:var(--green-dark)}
+.avatar-form label,.hud-panel-heading,.right-hud .panel-title{color:var(--ink)}
+.forest-weather-strip{max-width:var(--forest-native-width)}
+.viewport-tools .toolbar-button,.viewport-tools .world-zoom,.chat-launcher,.bottom-chat{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.viewport-tools .world-zoom .toolbar-button{background:transparent}
+.viewport-tools .toolbar-button:hover,.chat-launcher:hover{background:var(--mint);border-color:var(--green)}
+.right-hud .arcade-deck .touch-controls{background:var(--paper)}
+.right-hud .arcade-deck .touch-controls button:not(.arcade-action){background:var(--surface);border-color:var(--line-dark);border-bottom-color:var(--green-dark);color:var(--ink);text-shadow:none}
+.right-hud .arcade-deck .touch-controls button.arcade-action{background:var(--green);border-color:var(--green-dark);color:var(--paper);text-shadow:none;box-shadow:inset 0 1px rgba(255,255,255,.2)}
+.right-hud .arcade-deck .touch-controls button.arcade-action:hover{background:var(--green-dark)}
+.right-hud .arcade-deck .touch-controls button.arcade-action kbd{font-family:inherit}
+.right-hud [data-challenge-v2]{color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;min-width:0}
+.right-hud [data-challenge-v2] .v2-heading>h3{flex:0 1 auto;max-width:100%;margin:0;font-size:14px;line-height:1.5;word-break:keep-all;white-space:nowrap;color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-heading>[data-refresh]{flex:0 0 auto;width:auto;max-width:100%;min-height:34px;margin-left:auto;padding:6px 8px;font-size:12px;font-weight:800;line-height:1.5;white-space:nowrap}
+.right-hud [data-challenge-v2] button,.right-hud [data-challenge-v2] .v2-setup-link,.right-hud [data-challenge-v2] .v2-settings-button{border-color:var(--line-dark);background:var(--mint);color:var(--green-dark)}
+.right-hud [data-challenge-v2] button:hover,.right-hud [data-challenge-v2] .v2-setup-link:hover{border-color:var(--green)}
+.right-hud [data-challenge-v2] .v2-card,.right-hud [data-challenge-v2]>details,.right-hud [data-challenge-v2] [data-settings]{background:var(--paper);border-color:var(--line)}
+.right-hud [data-challenge-v2] .v2-tags span{background:var(--surface)}
+.right-hud [data-challenge-v2] input:not([type=checkbox]),.right-hud [data-challenge-v2] select,.right-hud [data-challenge-v2] textarea{background:var(--paper);border-color:var(--line-dark);color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-safety{color:var(--muted)}
+.right-hud [data-challenge-v2] .v2-notice{background:var(--warning-bg)}
+.right-hud [data-challenge-v2] [data-message]{color:var(--warning)}
+.right-hud [data-challenge-v2] progress{accent-color:var(--green)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:#bce6dc}
+
+/* Three text levels affect DOM typography, not the world canvas or its zoom. */
+body{--forest-ui-scale:1;font-size:calc(16px * var(--forest-ui-scale))}
+body[data-font-size="small"]{--forest-ui-scale:.9}
+body[data-font-size="default"]{--forest-ui-scale:1}
+body[data-font-size="large"]{--forest-ui-scale:1.12}
+.font-size-control{display:flex;align-items:center;gap:6px;flex:none;white-space:nowrap;color:var(--muted);font-size:calc(11px * var(--forest-ui-scale))}
+.font-size-control select{min-height:34px;max-width:88px;padding:5px 7px;border:1px solid var(--line-dark);border-radius:9px;background:var(--paper);color:var(--ink);font-size:calc(12px * var(--forest-ui-scale));cursor:pointer}
+.studio-topbar .forest-brand{font-size:calc(21px * var(--forest-ui-scale))}
+.topbar-actions .icon-button,.topbar-actions .profile-button,.inspector-tab{font-size:calc(12px * var(--forest-ui-scale))}
+.tool-rail h2,.right-hud .panel-title h2{font-size:calc(15px * var(--forest-ui-scale))}
+.tool-rail .asset-group-title h3,.right-hud [data-challenge-v2] .v2-heading>h3{font-size:calc(14px * var(--forest-ui-scale))}
+.tool-rail .avatar-form input,.tool-rail .avatar-form label,.tool-rail .avatar-form button,.tool-rail .placed-object-copy strong,.inspector-panel button,.inspector-panel input,.inspector-panel textarea,.inspector-panel select{font-size:calc(12px * var(--forest-ui-scale))}
+.tool-rail .tool-button b,.tool-rail .placed-object-copy small,.tool-rail .remove-object,.viewport-tools .toolbar-button{font-size:calc(10px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] h4,.right-hud [data-challenge-v2] button,.right-hud [data-challenge-v2] label,.right-hud [data-challenge-v2] p,.right-hud [data-challenge-v2] summary{font-size:calc(13px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] .v2-heading>[data-refresh]{font-size:calc(12px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] .v2-safety,.right-hud [data-challenge-v2] small,.right-hud [data-challenge-v2] [data-message],.panel-description,.group-reward-help,.rag-guide>p,.rag-result p,.profile-form>small,.weather-main strong,.weather-main span,.weather-main time{font-size:calc(11px * var(--forest-ui-scale));line-height:1.55}
+.bottom-chat .chat-heading h2,.bottom-chat .chat-messages span,.bottom-chat .chat-form input,.bottom-chat .chat-form button,.chat-launcher{font-size:calc(12px * var(--forest-ui-scale))}
+.bottom-chat .chat-heading small,.bottom-chat .chat-messages strong{font-size:calc(10px * var(--forest-ui-scale))}
+dialog{font-size:calc(16px * var(--forest-ui-scale))}
+dialog h2{font-size:calc(25px * var(--forest-ui-scale))}
+dialog h3{font-size:calc(19px * var(--forest-ui-scale))}
+dialog button,dialog input,dialog select,dialog textarea,dialog label{font-size:calc(13px * var(--forest-ui-scale))}
+dialog small,dialog>p,.profile-form>small,.avatar-studio-description{font-size:calc(12px * var(--forest-ui-scale))}
+
+/* The tab strip is clipped to the inspector's top corners, not painted over them. */
+.right-hud>.inspector,html.challenge-v2-enabled .right-hud>.inspector{overflow:hidden;border-radius:16px;border:1px solid var(--line)}
+.right-hud .inspector-tabs{overflow:hidden;border-radius:15px 15px 0 0;background:var(--surface)}
+.avatar-nameplate{z-index:22;display:inline-flex;max-width:calc(100% - 20px);font-size:calc(12px * var(--forest-ui-scale));line-height:1.35;white-space:nowrap;transform:translate(-50%,-100%);pointer-events:none}
+
+/* Light, floating lower-left controls. Gaps pass through to the game canvas. */
+.game-controls-overlay{position:absolute;z-index:18;left:10px;bottom:10px;width:clamp(178px,21vw,222px);max-width:calc(100% - 20px);padding:7px;border:1px solid rgba(213,222,219,.65);border-radius:15px;background:rgba(245,244,239,.58);box-shadow:0 5px 18px rgba(20,33,61,.12);backdrop-filter:blur(3px);pointer-events:none}
+.game-controls-overlay .control-cluster{display:block;min-width:0;width:100%;padding:0;border:0;background:transparent;pointer-events:none}
+.game-controls-overlay .hud-panel-heading{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:4px;margin:0 0 5px;pointer-events:none}
+.game-controls-overlay .hud-panel-heading .toolbar-button{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;min-height:30px;padding:3px 4px;font-size:calc(10px * var(--forest-ui-scale));font-weight:800;text-align:center;white-space:nowrap;background:rgba(245,244,239,.84);pointer-events:auto}
+.game-controls-overlay .touch-controls{display:grid;width:100%;height:auto;min-height:0;max-height:none;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,40px);gap:4px;padding:0;border:0;background:transparent;box-shadow:none;pointer-events:none}
+.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;width:100%;height:40px;margin:0;padding:3px;border:1px solid rgba(25,79,67,.48);border-bottom-width:2px;border-radius:10px;text-align:center;text-shadow:none;box-shadow:inset 0 1px rgba(255,255,255,.3);pointer-events:auto;touch-action:manipulation}
+.game-controls-overlay .touch-controls button:not(.arcade-action){background:rgba(238,238,232,.78);color:var(--ink);font-size:calc(16px * var(--forest-ui-scale))}
+.game-controls-overlay .touch-controls button.arcade-action{background:rgba(35,102,87,.76);color:var(--paper)}
+.game-controls-overlay .touch-controls button.arcade-action span{display:block;width:100%;font-size:calc(10px * var(--forest-ui-scale));font-weight:800;line-height:1.2;letter-spacing:0;text-align:center;white-space:normal;word-break:keep-all}
+.game-controls-overlay .touch-controls button:hover,.game-controls-overlay .touch-controls button[aria-pressed="true"]{background:var(--green-dark);color:var(--paper);filter:none;transform:none}
+.game-controls-overlay .touch-controls button:active{transform:translateY(1px)}
+body.forest-ui-hidden .game-controls-overlay{display:none!important}
+@media(max-width:520px){.font-size-control{gap:3px}.font-size-control>span{font-size:10px}.font-size-control select{max-width:70px;min-height:32px;padding:4px}.studio-topbar .forest-brand{font-size:calc(15px * var(--forest-ui-scale))}.game-controls-overlay{left:7px;bottom:7px;max-width:calc(100% - 14px);padding:5px}.game-controls-overlay .touch-controls{grid-template-rows:repeat(3,36px)}.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{height:36px}}

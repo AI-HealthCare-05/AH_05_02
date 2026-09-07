@@ -6,10 +6,12 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-atmosphere.js'), 'utf8');
 const window = {};
 vm.runInNewContext(source, { window, document: {getElementById: () => null} });
-const {seoulTime, hourlyEvent, strength, weatherLabel} = window.ForestAtmosphere;
+const {seoulTime, hourlyEvent, strength, phase, weatherLabel} = window.ForestAtmosphere;
 test('Seoul time and lighting boundaries are independent of browser timezone', () => {
   assert.equal(seoulTime(Date.parse('2026-09-03T15:00:00Z')).hour, 0);
-  assert.deepEqual([4,5,6,7,17,18,19,20].map(strength), [.42,.3,.16,0,0,.16,.3,.42]);
+  assert.deepEqual([4,5,6,7,17,18,19,20].map(strength), [.78,.44,.22,0,0,.22,.78,.78]);
+  assert.equal(phase(18)[1], '저녁이 찾아왔어요');
+  assert.equal(phase(19)[1], '밤이 찾아왔어요');
 });
 test('one hourly bell; no startup, duplicate, hidden, disabled or wake-up catch-up bell', () => {
   const now = Date.parse('2026-09-03T09:00:01Z'), prev = now - 2000;

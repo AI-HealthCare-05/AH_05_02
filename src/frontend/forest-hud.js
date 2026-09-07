@@ -1,11 +1,12 @@
-/* Native-size forest viewport and lightweight in-game HUD controls. */
+/* Fixed-size forest viewport, camera zoom, and lightweight in-game HUD controls. */
 (() => {
   "use strict";
   const NAME_KEY = "carrot-forest-name-v1";
   const DEFAULT_NAME = "우리의 작은 숲";
   const NATIVE_WIDTH = 768;
   const NATIVE_HEIGHT = 512;
-  const MIN_ZOOM = .25, MAX_ZOOM = 1.5, ZOOM_EPSILON = 1e-6;
+  const MAX_FRAME_SCALE = 2;
+  const MIN_ZOOM = .5, MAX_ZOOM = 2, ZOOM_STEP = .25;
   const byId = id => document.getElementById(id);
   const cleanName = value => Array.from(String(value ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim()).slice(0, 24).join("");
   let forestName = DEFAULT_NAME;
@@ -29,37 +30,40 @@
 
   function fitGame() {
     if (!area || !frame || area.clientWidth <= 0 || area.clientHeight <= 0) return;
-    const availableZoom = Math.min(MAX_ZOOM, area.clientWidth / NATIVE_WIDTH, area.clientHeight / NATIVE_HEIGHT);
-    const displayedZoom = Math.min(zoom, availableZoom);
-    const width = NATIVE_WIDTH * displayedZoom;
+    // Double the former frame's width, height and diagonal when space allows.
+    // Fit both axes up to 1536x1024; camera +/- never changes the DOM frame.
+    const fittedScale = Math.min(MAX_FRAME_SCALE, area.clientWidth / NATIVE_WIDTH, area.clientHeight / NATIVE_HEIGHT);
+    const width = NATIVE_WIDTH * fittedScale;
     const height = width * NATIVE_HEIGHT / NATIVE_WIDTH;
     const widthStyle = `${width}px`, heightStyle = `${height}px`;
     const changed = frame.style.width !== widthStyle || frame.style.height !== heightStyle;
     frame.style.width = widthStyle;
     frame.style.height = heightStyle;
-    const level = byId("zoom-level");
-    if (level) {
-      level.textContent = `${Math.round(width / NATIVE_WIDTH * 100)}%`;
-      level.title = `표시 크기 ${Math.round(width / NATIVE_WIDTH * 100)}% · 설정 ${Math.round(zoom * 100)}%`;
-    }
-    if (byId("zoom-out")) byId("zoom-out").disabled = displayedZoom <= MIN_ZOOM + ZOOM_EPSILON;
-    if (byId("zoom-in")) byId("zoom-in").disabled = displayedZoom >= availableZoom - ZOOM_EPSILON;
     if (changed) window.carrotForestPhaserGame?.scale.refresh();
   }
 
-  function changeZoom(delta) {
-    if (!area || area.clientWidth <= 0 || area.clientHeight <= 0) return;
-    const availableZoom = Math.min(MAX_ZOOM, area.clientWidth / NATIVE_WIDTH, area.clientHeight / NATIVE_HEIGHT);
-    const displayedZoom = Math.min(zoom, availableZoom);
-    if (delta > 0) {
-      if (displayedZoom >= availableZoom - ZOOM_EPSILON) return;
-      zoom = Math.min(MAX_ZOOM, (Math.floor((displayedZoom + ZOOM_EPSILON) * 4) + 1) / 4);
-    } else {
-      if (displayedZoom <= MIN_ZOOM + ZOOM_EPSILON) return;
-      zoom = Math.max(MIN_ZOOM, (Math.ceil((displayedZoom - ZOOM_EPSILON) * 4) - 1) / 4);
+  function updateZoomControls() {
+    const level = byId("zoom-level");
+    if (level) {
+      level.textContent = `${Math.round(zoom * 100)}%`;
+      level.title = `카메라 확대 ${Math.round(zoom * 100)}%`;
     }
-    fitGame();
+    if (byId("zoom-out")) byId("zoom-out").disabled = zoom <= MIN_ZOOM;
+    if (byId("zoom-in")) byId("zoom-in").disabled = zoom >= MAX_ZOOM;
   }
+
+  function setZoom(value) {
+    const requested = Number(value);
+    if (!Number.isFinite(requested)) return zoom;
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(requested / ZOOM_STEP) * ZOOM_STEP));
+    if (next === zoom) return zoom;
+    zoom = next;
+    updateZoomControls();
+    window.dispatchEvent(new CustomEvent("forest-camera-zoom", { detail: { zoom } }));
+    return zoom;
+  }
+
+  function resetZoom() { return setZoom(1); }
 
   function closeNameEditor() {
     if (form) form.hidden = true;
@@ -98,14 +102,18 @@
     closeNameEditor();
     edit?.focus({ preventScroll: true });
   });
-  byId("zoom-in")?.addEventListener("click", () => changeZoom(.25));
-  byId("zoom-out")?.addEventListener("click", () => changeZoom(-.25));
+  byId("zoom-in")?.addEventListener("click", () => setZoom(zoom + ZOOM_STEP));
+  byId("zoom-out")?.addEventListener("click", () => setZoom(zoom - ZOOM_STEP));
+  function updateUiToggle() {
+    const button = byId("ui-toggle");
+    if (!button) return;
+    button.textContent = uiHidden ? "UI 보이기(0)" : "UI 숨기기(0)";
+    button.setAttribute("aria-pressed", String(uiHidden));
+  }
   byId("ui-toggle")?.addEventListener("click", () => {
     uiHidden = !uiHidden;
     document.body.classList.toggle("forest-ui-hidden", uiHidden);
-    const button = byId("ui-toggle");
-    button.textContent = uiHidden ? "UI 보이기" : "UI 숨기기";
-    button.setAttribute("aria-pressed", String(uiHidden));
+    updateUiToggle();
     if (uiHidden) {
       closeNameEditor();
       window.dispatchEvent(new CustomEvent("forest-controls-hidden"));
@@ -113,11 +121,11 @@
     requestAnimationFrame(fitGame);
   });
 
-  function setupDisclosure(buttonId, contentId, label, releasesControls) {
+  function setupDisclosure(buttonId, contentId, label, releasesControls, shortcut = "") {
     const button = byId(buttonId), content = byId(contentId);
     if (!button || !content) return;
     const update = () => {
-      button.textContent = `${label} ${content.hidden ? "보이기" : "숨기기"}`;
+      button.textContent = `${label} ${content.hidden ? "보이기" : "숨기기"}${shortcut}`;
       button.setAttribute("aria-expanded", String(!content.hidden));
     };
     update();
@@ -128,13 +136,34 @@
       requestAnimationFrame(fitGame);
     });
   }
-  setupDisclosure("controls-toggle", "controls-content", "조작 버튼", true);
+  setupDisclosure("controls-toggle", "controls-content", "버튼", true, "(8)");
   setupDisclosure("objects-toggle", "placed-list", "오브젝트", false);
+  if (byId("reset-position")) byId("reset-position").textContent = "초기화(9)";
+
+  const shortcutButtons = { "8": "controls-toggle", "9": "reset-position", "0": "ui-toggle" };
+  function isEditing(target) {
+    return Boolean(target && (
+      ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable ||
+      target.closest?.('form, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')
+    ));
+  }
+  window.addEventListener("keydown", event => {
+    const buttonId = shortcutButtons[event.key];
+    if (!buttonId || event.defaultPrevented || event.repeat || event.isComposing ||
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+      isEditing(event.target) || isEditing(document.activeElement) ||
+      document.querySelector('dialog[open], [aria-modal="true"]:not([hidden])')) return;
+    const button = byId(buttonId);
+    if (!button || button.disabled) return;
+    event.preventDefault();
+    // Route all input through one click handler; Enter/Space retain native button behavior.
+    button.click();
+  });
 
   window.ForestHud = {
     get forestName() { return forestName; },
     get zoom() { return zoom; },
-    setForestName, fitGame, closeNameEditor,
+    setForestName, fitGame, closeNameEditor, setZoom, resetZoom,
   };
   let resizePending = false;
   function scheduleFit() {
@@ -144,5 +173,8 @@
   }
   window.addEventListener("resize", scheduleFit);
   if (area && typeof ResizeObserver !== "undefined") new ResizeObserver(scheduleFit).observe(area);
+  updateZoomControls();
+  updateUiToggle();
   fitGame();
+  window.dispatchEvent(new CustomEvent("forest-camera-zoom", { detail: { zoom } }));
 })();

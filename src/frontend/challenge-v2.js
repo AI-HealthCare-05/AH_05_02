@@ -9,24 +9,39 @@
   const levelLabel = {E:"쉬움",M:"보통",H:"도전"};
   const statusLabel = {assigned:"기록 준비",in_progress:"진행 중",submitted:"검토 대기",completed:"완료",not_required:"기록 제출 완료",pending:"검토 대기",passed:"사진 조건 확인",needs_retry:"재제출 필요",inconclusive:"판단 어려움"};
   const reasonLabel = {real_visual_review_unavailable:"지금은 사진 확인 대신 직접 기록하는 챌린지를 드려요.",photo_consent_or_accessibility:"사진 없이도 할 수 있는 챌린지로 바꿨어요.",difficulty_safety_or_preference_limit:"몸 상태와 선택에 맞춰 난이도를 조정했어요.",proof_mix_safety_accessibility_or_weekly_limit:"이번 주에 무리 없이 할 수 있는 챌린지로 골랐어요.",replacement_accessibility:"사진 없이 기록하기",replacement_safety:"몸 상태에 맞게 바꾸기",replacement_too_hard:"난이도 낮추기",replacement_preference:"다른 활동 선택"};
-  const setupUrl = "/?returnTo=forest-challenges";
-  let token=null, plan=null, busy=false, needsSetup=false, settingsOpen=location.hash==="#daily-settings";
+  const setupUrl = "/service?returnTo=forest-challenges";
+  let token=null, plan=null, busy=false, needsSetup=false, connectionFailed=false, settingsOpen=location.hash==="#daily-settings";
   const channel=typeof BroadcastChannel==="function"?new BroadcastChannel("challenge-v2-refresh"):null;
   window.ForestChallengeV2={enabled:false,plan:null};
-  async function api(path,options={}) {
-    token=window.challengeV2TokenProvider?.()||token;
-    if (!token) {
-      const auth=await fetch("/api/v1/auth/token/refresh",{credentials:"same-origin",cache:"no-store"});
-      if (!auth.ok) {
-        const error=new Error("내 챌린지를 저장하려면 먼저 로그인해 주세요. 이용 확인을 마치면 이곳으로 돌아와요.");
-        error.needsSetup=true;throw error;
-      }
-      token=(await auth.json()).access_token;
+  async function readJson(response) {
+    try { return await response.json(); } catch { return {}; }
+  }
+  async function refreshToken() {
+    const auth=await fetch("/api/v1/auth/token/refresh",{credentials:"same-origin",cache:"no-store"});
+    if (!auth.ok) {
+      const result=await readJson(auth);
+      // JwtService uses 400 for an invalid refresh cookie, not an API outage.
+      const invalidRefresh=auth.status===400&&result.detail==="Provided invalid token.";
+      const needsLogin=auth.status===401||auth.status===403||invalidRefresh;
+      if(needsLogin)token=null;
+      const error=new Error(needsLogin?"내 챌린지를 저장하려면 먼저 로그인해 주세요. 이용 확인을 마치면 이곳으로 돌아와요.":"로그인 상태를 확인하지 못했어요. 잠시 후 새로고침해 주세요.");
+      error.needsSetup=needsLogin;throw error;
     }
+    token=(await readJson(auth)).access_token;
+    if(typeof token!=="string"||!token)throw new Error("로그인 상태를 확인하지 못했어요. 잠시 후 새로고침해 주세요.");
+  }
+  async function api(path,options={},canRefresh=true) {
+    token=token||window.challengeV2TokenProvider?.();
+    if (!token) await refreshToken();
     const headers={Authorization:`Bearer ${token}`};
     if (options.body && !(options.body instanceof FormData)) headers["Content-Type"]="application/json";
     const response=await fetch(`/api/v1/challenge-v2${path}`,{...options,headers,credentials:"same-origin",cache:"no-store"});
-    const result=await response.json();
+    if(response.status===401&&canRefresh){
+      token=null;
+      await refreshToken();
+      return api(path,options,false);
+    }
+    const result=await readJson(response);
     if (!response.ok) {
       if(response.status===401)token=null;
       const error=new Error(typeof result.detail==="string"?result.detail:"입력값을 확인해 주세요. 저장하지 못했습니다.");
@@ -79,7 +94,7 @@
   function render() {
     if(!plan?.enrolled)settingsOpen=true;
     root.innerHTML=`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p><p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
-      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"설정 닫기":"챌린지 설정"}</button>
+      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"설정 닫기":"챌린지 설정"}</button>
       ${(plan?.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan?.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
       ${settings(plan?.preferences)}<div class="v2-cards">${(plan?.items||[]).map(card).join("")}</div>
@@ -92,7 +107,7 @@
   const notify=message=>{root.querySelector("[data-message]").textContent=message;};
   async function load() {
     if(busy)return;busy=true;
-    try {plan=await api("/today",{method:"POST"});needsSetup=false;render();} catch(error){if(error.needsSetup){needsSetup=true;plan=null;}render();notify(error.message);} finally{busy=false;}
+    try {plan=await api("/today",{method:"POST"});needsSetup=false;connectionFailed=false;render();} catch(error){needsSetup=Boolean(error.needsSetup);connectionFailed=!needsSetup;plan=null;render();notify(error.message);} finally{busy=false;}
   }
   root.addEventListener("click",async event=>{
     if(event.target.closest("[data-refresh]"))return load();

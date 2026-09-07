@@ -61,6 +61,15 @@ async def carrot_forest() -> FileResponse:
     return response
 
 
+@app.get("/service", include_in_schema=False)
+async def suin_service() -> FileResponse:
+    """Namespaced September 7 frontend; shares the forest's host-only session."""
+    response = FileResponse(FRONTEND_DIR / "suin" / "index.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
 @app.get("/manifest.webmanifest", include_in_schema=False)
 async def forest_manifest() -> FileResponse:
     response = FileResponse(

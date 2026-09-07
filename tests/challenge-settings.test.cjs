@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(__dirname, '../src/frontend/challenge-v
 const app = fs.readFileSync(path.join(__dirname, '../src/frontend/app.js'), 'utf8');
 const settled = () => new Promise(resolve => setImmediate(resolve));
 
-async function widget({ authenticated = true, enrolled = true, hash = '' } = {}) {
+async function widget({ authenticated = true, enrolled = true, hash = '', requestHook, initialToken } = {}) {
   const handlers = {}, requests = [], message = {}, section = { hidden: true };
   const root = {
     hidden: true, innerHTML: '', parentElement: { matches: () => false },
@@ -15,13 +15,17 @@ async function widget({ authenticated = true, enrolled = true, hash = '' } = {})
     querySelector: selector => selector === '[data-message]' ? message : selector === '[data-settings]' ? section : { focus() {} },
   };
   const document = { querySelector: () => root, addEventListener() {}, documentElement: { classList: { add() {} } } };
-  const window = { addEventListener() {}, dispatchEvent() {} };
+  const window = { addEventListener() {}, dispatchEvent() {}, challengeV2TokenProvider: () => initialToken };
   vm.runInNewContext(source, {
     document, window, location: { hash }, FormData: class {}, CustomEvent: class {},
-    fetch: async url => {
+    fetch: async (url, options) => {
       requests.push(url);
+      if (requestHook) {
+        const response = await requestHook(url, options);
+        if (response) return response;
+      }
       if (url.includes('capabilities')) return { json: async () => ({ data: { enabled: true } }) };
-      if (url.includes('refresh')) return { ok: authenticated, json: async () => ({ access_token: 'synthetic' }) };
+      if (url.includes('refresh')) return { ok: authenticated, status: authenticated ? 200 : 401, json: async () => ({ access_token: 'synthetic' }) };
       return { ok: true, json: async () => ({ data: { enrolled, items: [], preferences: {} } }) };
     },
   });
@@ -31,10 +35,69 @@ async function widget({ authenticated = true, enrolled = true, hash = '' } = {})
 
 test('signed-out users get a return-aware login link, not an unsavable settings form', async () => {
   const { root, message, requests } = await widget({ authenticated: false });
-  assert.match(root.innerHTML, /href="\/\?returnTo=forest-challenges"/);
+  assert.match(root.innerHTML, /href="\/service\?returnTo=forest-challenges"/);
   assert.doesNotMatch(root.innerHTML, /data-preferences/);
   assert.match(message.textContent, /로그인/);
   assert.equal(requests.some(url => url.endsWith('/today')), false);
+});
+
+test('authentication outages are not mistaken for a signed-out user or writable setup', async () => {
+  const { root, message } = await widget({ requestHook: async url => url.includes('refresh')
+    ? { ok: false, status: 503, json: async () => { throw new Error('non-JSON outage'); } } : null });
+  assert.doesNotMatch(root.innerHTML, /data-preferences|v2-setup-link/);
+  assert.match(message.textContent, /새로고침/);
+});
+
+test('the backend invalid refresh cookie response offers login without loading a plan', async () => {
+  const { root, message, requests } = await widget({ requestHook: async url => url.includes('refresh')
+    ? { ok: false, status: 400, json: async () => ({ detail: 'Provided invalid token.' }) } : null });
+  assert.match(root.innerHTML, /href="\/service\?returnTo=forest-challenges"/);
+  assert.doesNotMatch(root.innerHTML, /data-preferences/);
+  assert.match(message.textContent, /로그인/);
+  assert.equal(requests.some(url => url.endsWith('/today')), false);
+});
+
+test('unrecognized refresh 400 and validation failures remain connection errors', async () => {
+  for (const [status, detail] of [[400, 'Bad request.'], [422, [{ loc: ['cookie', 'refresh_token'], type: 'missing' }]]]) {
+    const { root, message, requests } = await widget({ requestHook: async url => url.includes('refresh')
+      ? { ok: false, status, json: async () => ({ detail }) } : null });
+    assert.doesNotMatch(root.innerHTML, /data-preferences|v2-setup-link/);
+    assert.match(message.textContent, /새로고침/);
+    assert.equal(requests.some(url => url.endsWith('/today')), false);
+  }
+});
+
+test('invalid refresh after an expired access token stops retrying and offers login', async () => {
+  const { root, requests } = await widget({ initialToken: 'expired-test-token', requestHook: async url => {
+    if (url.endsWith('/today')) return { ok: false, status: 401, json: async () => ({ detail: 'expired' }) };
+    if (url.includes('refresh')) return { ok: false, status: 400, json: async () => ({ detail: 'Provided invalid token.' }) };
+  } });
+  assert.equal(requests.filter(url => url.includes('refresh')).length, 1);
+  assert.equal(requests.filter(url => url.endsWith('/today')).length, 1);
+  assert.match(root.innerHTML, /v2-setup-link/);
+  assert.doesNotMatch(root.innerHTML, /data-preferences/);
+});
+
+test('expired access token refreshes once via the same-origin cookie then retries', async () => {
+  const authorization = [];
+  const { root, requests } = await widget({ initialToken: 'expired-test-token', requestHook: async (url, options) => {
+    if (url.endsWith('/today')) {
+      authorization.push(options.headers.Authorization);
+      if (authorization.length === 1) return { ok: false, status: 401, json: async () => ({ detail: 'expired' }) };
+    }
+    if (url.includes('refresh')) assert.equal(options.credentials, 'same-origin');
+  } });
+  assert.deepEqual(authorization, ['Bearer expired-test-token', 'Bearer synthetic']);
+  assert.equal(requests.filter(url => url.includes('refresh')).length, 1);
+  assert.match(root.innerHTML, /data-preferences/);
+});
+
+test('a repeated unauthorized response cannot cause an infinite refresh loop', async () => {
+  const { root, requests } = await widget({ initialToken: 'expired-test-token', requestHook: async url => url.endsWith('/today')
+    ? { ok: false, status: 401, json: async () => ({ detail: '로그인이 만료됐어요.' }) } : null });
+  assert.equal(requests.filter(url => url.includes('refresh')).length, 1);
+  assert.match(root.innerHTML, /v2-setup-link/);
+  assert.doesNotMatch(root.innerHTML, /data-preferences/);
 });
 
 test('settings open button toggles existing form without discarding edits', async () => {

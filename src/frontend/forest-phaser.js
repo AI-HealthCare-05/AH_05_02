@@ -6,8 +6,15 @@
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const WORLD = { width: 768, height: 512 };
+  // Phaser 3.90 has no game-level resolution option. Render into a denser
+  // backing canvas, then compensate in the camera only: saved coordinates,
+  // sprite sizes, collision geometry and movement speed remain world units.
+  // The CSS frame can now reach 1536×1024. Four backing pixels per original
+  // world unit retain at least two physical pixels per CSS pixel at that size.
+  const BACKING_SCALE = 4;
+  const BASE_CAMERA_ZOOM = 2;
+  const TEXT_RESOLUTION = BACKING_SCALE * BASE_CAMERA_ZOOM;
   const AVATAR_RENDER_SCALE = 0.43;
-  const NAMEPLATE_Y = -126;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
   const interactiveObjectTypes = {
@@ -84,6 +91,7 @@
       this.ratDespawnAt = 0;
       this.ratTurnAt = 0;
       this.ratDirection = "left";
+      this.ratSpecies = "mouse";
       this.ratEventId = 0;
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
@@ -100,39 +108,45 @@
     }
 
     preload() {
-      this.load.image("world-bg", "/static/assets/carrot-forest-world-v5.png?v=20260907-1");
-      this.load.image("home-bg", "/static/assets/carrot-forest-home-v2.png?v=20260907-1");
+      this.load.image("world-bg", "/static/assets/carrot-forest-world-v6.png?v=20260907-1");
+      this.load.image("home-bg", "/static/assets/carrot-forest-home-v3.png?v=20260907-1");
       this.load.image("home-record-player", "/static/assets/home-record-player-cottage-v2.png?v=20260907-1");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
+      window.ForestAnimals.assets.forEach(asset => this.load.spritesheet(asset.key, asset.url, {
+        frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
+      }));
       this.load.image("animated-objects-source", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1");
       this.load.image("storage-objects-source", "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1");
-      this.load.image("duck-cutout", "/static/assets/carrot-forest-duck-cutout-v1.png?v=20260907-1");
-      this.load.image("campfire-base-source", "/static/assets/carrot-forest-campfire-base-v5.png?v=20260907-1");
+      window.ForestObjects.INDIVIDUAL_ASSETS.forEach(asset => this.load.image(asset.key, asset.url));
+      this.load.image("campfire-base-source", "/static/assets/furniture-v153/campfire.png?v=20260907-1");
       this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1");
-      this.load.image("reward-cow-body", "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1");
-      this.load.image("reward-cow-base", "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1");
     }
 
     create() {
+      // Phaser's preload is the boot gate: register only the complete 24-file
+      // art pack, so no scene can flash the retired multi-object atlas.
+      const individualImages = window.ForestObjects.registerIndividualImages(Object.fromEntries(window.ForestObjects.INDIVIDUAL_ASSETS.map(asset => [
+        asset.code, this.textures.get(asset.key).getSourceImage(),
+      ])));
       const storageSource = this.textures.get("storage-objects-source").getSourceImage();
       this.textures.addSpriteSheet("storage-objects", window.ForestObjects.createStorageAtlas(storageSource), { frameWidth: 256, frameHeight: 256 });
+      this.textures.addSpriteSheet("campfire-flame-atlas", window.ForestObjects.createLegacyStorageAtlas(storageSource), { frameWidth: 256, frameHeight: 256 });
       const animatedSource = this.textures.get("animated-objects-source").getSourceImage();
       this.textures.addSpriteSheet("animated-objects", window.ForestObjects.createAnimatedAtlas(animatedSource), { frameWidth: 128, frameHeight: 128 });
+      this.textures.addImage("duck-cutout", window.ForestObjects.createIndividualTile(individualImages.duck_float, 128));
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
       this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
-      window.ForestFire.install(this);
+      window.ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" });
       this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
       this.placementPreview = null;
       this.placedObjectActors = [];
       this.syncPlacedObjects(storedState().placed || []);
-      // Darken only the map. Actors and placed objects stay above this layer,
-      // otherwise their bodies appear to vanish against the night overlay.
-      this.nightOverlay = this.add.rectangle(WORLD.width / 2, WORLD.height / 2, WORLD.width, WORLD.height, 0x07172d, 1)
-        .setDepth(0.5).setAlpha(0).setVisible(false);
-      // Local light sits above the map and below placed objects.
-      this.lightFx = this.add.graphics().setDepth(1.5).setBlendMode(Phaser.BlendModes.ADD);
+      // One mask darkens the map AND every placed object once. Local lamps
+      // erase soft holes from that same pass, revealing furniture near them.
+      this.createNightMask();
+      this.lightFx = this.add.graphics().setDepth(901).setBlendMode(Phaser.BlendModes.ADD);
       this.lastLightingRefresh = 0;
       this.nightStrength = 0;
       this.createHomeRecordPlayer();
@@ -148,7 +162,7 @@
       this.premiumAvatar = this.add.image(0, 0, "avatar-composite").setOrigin(0.5, 0.87).setDepth(3);
       this.player.add(this.premiumAvatar);
       this.pet = this.add.sprite(this.avatar.x + 31, this.avatar.y + 10, "lpc-pets", 0).setOrigin(0.5, 1).setScale(1.2).setDepth(this.avatar.y - 1);
-      this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
+      this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px", resolution: TEXT_RESOLUTION }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
       this.lastPetPointerAt = 0;
       const feedPetFromPointer = (pointer, localX, localY, event) => {
         if (this.placementActive) return;
@@ -159,31 +173,28 @@
       };
       this.pet.setInteractive({ useHandCursor: true }).on("pointerdown", feedPetFromPointer);
       this.petEmoji.setInteractive({ useHandCursor: true }).on("pointerdown", feedPetFromPointer);
-      this.petHeart = this.add.text(this.avatar.x + 31, this.avatar.y - 28, "💚", { fontSize: "23px" }).setOrigin(0.5).setDepth(999).setVisible(false);
+      this.petHeart = this.add.text(this.avatar.x + 31, this.avatar.y - 28, "💚", { fontSize: "23px", resolution: TEXT_RESOLUTION }).setOrigin(0.5).setDepth(999).setVisible(false);
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
       this.ratActor = this.add.container(0, 0).setVisible(false);
       this.ratShadow = this.add.ellipse(0, 0, 22, 6, 0x17352a, 0.24).setOrigin(0.5, 0.5);
-      this.ratSprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(0.5, 1).setScale(1.4);
+      this.ratSprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
       this.ratMarker = this.add.text(0, -38, "!", {
+        resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
         color: "#ffffff", backgroundColor: "#d85836", padding: { x: 5, y: 1 },
       }).setOrigin(0.5);
       this.ratActor.add([this.ratShadow, this.ratSprite, this.ratMarker]);
       this.createRatAttackButton();
-      this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
-        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
-        color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
-      }).setOrigin(0.5).setStroke("#ffffff", 2);
-      this.player.add(this.nameplate);
+      // Nicknames use the same crisp DOM label layer as house/garden labels.
       this.rebuildAvatar();
-      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,C,X,E,F,J");
+      this.configureWorldCamera();
+      this.keys = this.input.keyboard.addKeys("W,A,S,D,R,Q,X,E,F,J");
       this.cursors = this.input.keyboard.createCursorKeys();
       // Phaser가 Space를 가로채면 슬로건 textarea에서 띄어쓰기가 되지 않는다.
       this.input.keyboard.removeCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);
       const formFocused = () => ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(document.activeElement?.tagName);
       this.input.keyboard.on("keydown-Q", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-interact")); });
-      this.input.keyboard.on("keydown-C", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })); });
       this.input.keyboard.on("keydown-R", (event) => {
         if (event.repeat || formFocused()) return;
         event.preventDefault();
@@ -215,11 +226,6 @@
         event.preventDefault();
         window.dispatchEvent(new CustomEvent("forest-placement-confirm"));
       });
-      this.input.keyboard.on("keydown", (event) => {
-        if (event.key !== "0" || event.repeat || formFocused()) return;
-        event.preventDefault();
-        this.playTogether("dance", 1800);
-      });
       this.events.on("shutdown", () => this.detachWindowEvents());
       this.attachWindowEvents();
       window.LpcAvatarEngine?.ready().then(() => this.rebuildAvatar());
@@ -238,11 +244,97 @@
       this.emitPosition(true);
     }
 
+    cameraFocusOffsetY() {
+      const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
+      // The player container is at the feet; follow the stable body center,
+      // not the nameplate or the transient jump/dance offset.
+      return 96 * worldScale;
+    }
+
+    configureWorldCamera() {
+      const camera = this.cameras.main;
+      camera.setBounds(0, 0, WORLD.width, WORLD.height);
+      camera.startFollow(this.player, false, 1, 1, 0, this.cameraFocusOffsetY());
+      this.cameraApi = Object.freeze({
+        worldToScreen: (x, y) => this.worldToScreen(x, y),
+        avatarAnchor: () => this.avatarAnchor(),
+      });
+      window.ForestCamera = this.cameraApi;
+      this.onCameraView = () => this.emitCameraView();
+      camera.on("followupdate", this.onCameraView);
+      this.setCameraZoom(window.ForestHud?.zoom ?? 1);
+    }
+
+    worldToScreen(x, y) {
+      const camera = this.cameras.main;
+      const point = camera.matrix.transformPoint(x - camera.scrollX, y - camera.scrollY);
+      // Fractions of the fixed canvas CSS frame, independent of backing
+      // density. DOM labels can track the map without scaling their text.
+      return { x: point.x / camera.width, y: point.y / camera.height };
+    }
+
+    avatarAnchor() {
+      const worldScale = Math.min(.58, Math.max(.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
+      const sprite = this.premiumAvatar;
+      // The 224×288 composite has a large transparent margin above the LPC
+      // drawing. Anchor to its measured opaque top, not texture y=0.
+      const opaqueTop = this.avatarOpaqueBounds?.top ?? 112;
+      const spriteHeight = sprite?.height || 288;
+      const originY = Number.isFinite(sprite?.originY) ? sprite.originY : .87;
+      const scaleY = Number.isFinite(sprite?.scaleY) ? sprite.scaleY : worldScale;
+      const headY = this.player.y + (sprite?.y || 0) + (opaqueTop - spriteHeight * originY) * scaleY;
+      const projected = this.worldToScreen(this.player.x, headY);
+      const cssHeight = this.game?.canvas?.clientHeight || document.getElementById("phaser-world")?.clientHeight || WORLD.height;
+      // DOM transforms place the label's bottom at this coordinate. CSS pixels
+      // keep the visible gap constant across camera zoom and responsive frames.
+      return { x: projected.x, y: projected.y - 8 / cssHeight, name: this.avatar.name, scene: this.sceneName };
+    }
+
+    measureAvatarOpaqueBounds(pixels, width, height) {
+      let left = width, top = height, right = -1, bottom = -1;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        if (pixels[(y * width + x) * 4 + 3] < 32) continue;
+        left = Math.min(left, x); right = Math.max(right, x);
+        top = Math.min(top, y); bottom = Math.max(bottom, y);
+      }
+      return right < left ? null : { left, top, right, bottom };
+    }
+
+    emitCameraView() {
+      const camera = this.cameras.main;
+      const avatar = this.avatarAnchor();
+      const key = [camera.scrollX, camera.scrollY, camera.zoom, camera.width, camera.height,
+        avatar.x, avatar.y, avatar.name, avatar.scene].join(":");
+      if (this.lastCameraView === key) return;
+      this.lastCameraView = key;
+      window.dispatchEvent(new CustomEvent("forest-camera-view", { detail: {
+        scrollX: camera.scrollX, scrollY: camera.scrollY, zoom: camera.zoom,
+        displayZoom: this.cameraZoom, worldZoom: this.worldCameraZoom,
+        viewportWidth: camera.width, viewportHeight: camera.height,
+        avatar,
+      } }));
+    }
+
+    setCameraZoom(value = 1) {
+      const requested = Number(value);
+      this.cameraZoom = Math.min(2, Math.max(.5, Number.isFinite(requested) ? requested : 1));
+      this.worldCameraZoom = this.cameraZoom * BASE_CAMERA_ZOOM;
+      const camera = this.cameras?.main;
+      if (!camera) return;
+      camera.setZoom(this.worldCameraZoom * BACKING_SCALE);
+      camera.setFollowOffset(0, this.cameraFocusOffsetY());
+      camera.centerOn(this.player.x, this.player.y - this.cameraFocusOffsetY());
+      // Refresh the inverse transform immediately as well as on the next
+      // frame, so a click directly after +/- still resolves in world space.
+      camera.preRender();
+    }
+
     createHomeRecordPlayer() {
       const x = 452;
       const y = 320;
       const furniture = this.add.image(0, 0, "home-record-player").setOrigin(.5, 1).setDisplaySize(76, 108);
       const note = this.add.text(33, -112, "♪", {
+        resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f6d795", stroke: "#775332", strokeThickness: 2,
       }).setOrigin(.5).setVisible(false);
       this.recordPlayerActor = this.add.container(x, y, [furniture, note])
@@ -287,13 +379,89 @@
       tile.width = tile.height = 128;
       const context = tile.getContext("2d", { willReadFrequently: true });
       context.drawImage(frame.source.image, frame.cutX, frame.cutY, 128, 128, 0, 0, 128, 128);
-      const layers = this.splitPinwheelPixels(context.getImageData(0, 0, 128, 128).data);
+      const pixels = context.getImageData(0, 0, 128, 128).data;
+      const layers = window.ForestObjects.individualReady ? this.splitStaticPinwheelPixels(pixels) : this.splitPinwheelPixels(pixels);
       Object.entries(layers).forEach(([name, pixels]) => {
         const canvas = document.createElement("canvas");
         canvas.width = canvas.height = 128;
         canvas.getContext("2d").putImageData(new ImageData(pixels, 128, 128), 0, 0);
         this.textures.addImage(`pinwheel-${name}`, canvas);
       });
+      for (let phase = 1; phase < 5; phase++) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 128;
+        canvas.getContext("2d").putImageData(new ImageData(this.colorCyclePinwheelPixels(layers.blades, phase), 128, 128), 0, 0);
+        this.textures.addImage(`pinwheel-blades-${phase}`, canvas);
+      }
+    }
+
+    splitStaticPinwheelPixels(pixels) {
+      const base = new Uint8ClampedArray(pixels), blades = new Uint8ClampedArray(pixels.length);
+      // Audited against the complete v153 PNG after 6px-padded normalization:
+      // hub ~64,44; lowest blade ~78; exposed stem x61..67 from y68 down.
+      // Partition actual colored blade pixels only. Never reconstruct a support
+      // or rotate geometry; recombining these two layers exactly recovers source.
+      for (let y = 0; y < 79; y++) for (let x = 0; x < 128; x++) {
+        const i = (y * 128 + x) * 4;
+        if (!pixels[i + 3] || Math.hypot(x - 64, y - 44) < 5 || (y >= 68 && x >= 61 && x <= 67)) continue;
+        const [r, g, b] = pixels.subarray(i, i + 3);
+        if (Math.max(r, g, b) - Math.min(r, g, b) < 28 || Math.max(r, g, b) < 65) continue;
+        blades.set(pixels.subarray(i, i + 4), i);
+        base.fill(0, i, i + 4);
+      }
+      return { base, blades };
+    }
+
+    fountainFlowPixels(pixels, frame) {
+      const output = new Uint8ClampedArray(pixels);
+      if (!frame) return output;
+      const phase = frame / 8 * Math.PI * 2;
+      for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+        const i = (y * 128 + x) * 4, [r, g, b, a] = pixels.subarray(i, i + 4);
+        // Only cyan/blue water is eligible. Stone, moss, silhouettes, and alpha
+        // are byte-for-byte static; the flow cannot shift the fountain fixture.
+        if (!a || b - r <= 28 || g - r <= 18 || b < g * .92) continue;
+        const flow = 1 + (Math.sin(y / 4 - phase) - Math.sin(y / 4)) * .12;
+        output[i] = r * flow; output[i + 1] = g * flow; output[i + 2] = b * flow;
+      }
+      return output;
+    }
+
+    createFountainTextures() {
+      if (this.textures.exists("fountain-flow")) return;
+      const frame = this.textures.getFrame("animated-objects", animatedObjectRows.animated_fountain * 4);
+      const tile = document.createElement("canvas");
+      tile.width = tile.height = 128;
+      const context = tile.getContext("2d", { willReadFrequently: true });
+      context.drawImage(frame.source.image, frame.cutX, frame.cutY, 128, 128, 0, 0, 128, 128);
+      const pixels = context.getImageData(0, 0, 128, 128).data;
+      const sheet = document.createElement("canvas");
+      sheet.width = 128 * 8; sheet.height = 128;
+      const sheetContext = sheet.getContext("2d");
+      for (let index = 0; index < 8; index++) sheetContext.putImageData(new ImageData(this.fountainFlowPixels(pixels, index), 128, 128), index * 128, 0);
+      this.textures.addSpriteSheet("fountain-flow", sheet, { frameWidth: 128, frameHeight: 128 });
+    }
+
+    colorCyclePinwheelPixels(pixels, phase) {
+      const output = new Uint8ClampedArray(pixels);
+      const hueShift = ((phase % 5) + 5) % 5 / 5;
+      if (!hueShift) return output;
+      for (let y = 0; y < 76; y++) for (let x = 0; x < 128; x++) {
+        const i = (y * 128 + x) * 4;
+        // Preserve the hub, stem, outlines, highlights, shape, and all alpha.
+        if (!pixels[i + 3] || Math.hypot(x - 62, y - 48) < 8 || (y >= 48 && x >= 60 && x < 68)) continue;
+        const [r, g, b] = pixels.subarray(i, i + 3);
+        const maximum = Math.max(r, g, b), minimum = Math.min(r, g, b), chroma = maximum - minimum;
+        if (chroma < 28 || maximum < 65) continue;
+        let hue = maximum === r ? (g - b) / chroma : maximum === g ? (b - r) / chroma + 2 : (r - g) / chroma + 4;
+        hue = ((hue / 6 + hueShift) % 1 + 1) % 1 * 6;
+        const secondary = chroma * (1 - Math.abs(hue % 2 - 1));
+        const rgb = hue < 1 ? [chroma, secondary, 0] : hue < 2 ? [secondary, chroma, 0]
+          : hue < 3 ? [0, chroma, secondary] : hue < 4 ? [0, secondary, chroma]
+          : hue < 5 ? [secondary, 0, chroma] : [chroma, 0, secondary];
+        for (let channel = 0; channel < 3; channel++) output[i + channel] = rgb[channel] + minimum;
+      }
+      return output;
     }
 
     createPlacedObjectActor(item, preview = false, placedIndex = -1) {
@@ -313,6 +481,9 @@
             actor.setData("motionTarget", fixture).setData("motionOrigin", {
               x: 0, y: 0, scaleX: fixture.scaleX, scaleY: fixture.scaleY,
             });
+          } else if (item.code === "animated_fountain") {
+            this.createFountainTextures();
+            fixture.setTexture("fountain-flow", 0).setDisplaySize(size, size);
           } else if (item.code === "garden_pinwheel") {
             this.createPinwheelTextures();
             fixture.setTexture("pinwheel-base").setDisplaySize(size, size);
@@ -322,11 +493,13 @@
             actor.setData("rotorTarget", blades).setData("pointerTargets", [fixture, blades]);
           }
         } else if (item.code === "reward_cow") {
-          const base = this.add.image(0, 3, "reward-cow-base").setOrigin(0.5, 0.86).setDisplaySize(88, 88);
-          const body = this.add.image(0, -7, "reward-cow-body").setOrigin(0.5, 0.86).setDisplaySize(84, 84);
-          actor = this.add.container(item.x, item.y, [base, body]);
-          actor.setData("motionTarget", body).setData("pointerTargets", [base, body]);
-          actor.setData("motionOrigin", { x: 0, y: -7, scaleX: body.scaleX, scaleY: body.scaleY });
+          const frame = window.ForestAnimals.cowFrame();
+          const body = this.add.sprite(0, 0, frame.key, frame.frame)
+            .setOrigin(frame.originX, frame.originY).setScale(1.25);
+          // A complete transparent cow sprite has no attached grass/ground.
+          actor = this.add.container(item.x, item.y, [body]);
+          actor.setData("motionTarget", body).setData("pointerTargets", [body]).setData("cowReactionStartedAt", null);
+          actor.setData("motionOrigin", { x: 0, y: 0, scaleX: body.scaleX, scaleY: body.scaleY });
         } else if (item.code === "campfire") {
           const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
           const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.9).setDisplaySize(94, 94);
@@ -381,7 +554,8 @@
       if (Object.hasOwn(animatedObjectRows, item.code)) {
         const fixture = actor.getData("fixtureTarget");
         fixture?.stop();
-        if (!["duck_float", "garden_pinwheel"].includes(item.code)) fixture?.setFrame(animatedObjectRows[item.code] * 4);
+        if (item.code === "animated_fountain") fixture?.setFrame(0);
+        else if (!["duck_float", "garden_pinwheel"].includes(item.code)) fixture?.setFrame(animatedObjectRows[item.code] * 4);
         actor.getData("ambientFx")?.clear();
       }
       if (!type) return;
@@ -403,12 +577,10 @@
         motionTarget.setAngle(0);
         if (origin) motionTarget.setScale(origin.scaleX, origin.scaleY);
       }
-      if (!item.active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       if (type === "cow" && motionTarget) {
-        this.tweens.add({
-          targets: motionTarget, x: .55, y: -7.9, angle: .55,
-          duration: 1200, yoyo: true, repeat: -1, repeatDelay: 800, ease: "Sine.easeInOut",
-        });
+        const frame = window.ForestAnimals.cowFrame();
+        motionTarget.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
+        actor.setData("cowReactionStartedAt", null);
       }
     }
 
@@ -419,21 +591,10 @@
       const target = actor.getData("motionTarget");
       this.tweens.killTweensOf(target);
       const origin = actor.getData("motionOrigin");
-      target.setPosition(origin?.x ?? 0, origin?.y ?? -7).setAngle(0);
+      target.setPosition(origin?.x ?? 0, origin?.y ?? 0).setAngle(0);
       if (origin) target.setScale(origin.scaleX, origin.scaleY);
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      const headTouch = reaction === "head";
-      this.tweens.add({
-        targets: target,
-        x: headTouch ? 0 : 1.2,
-        y: headTouch ? -8.8 : -7.5,
-        angle: headTouch ? -.75 : .9,
-        duration: headTouch ? 360 : 300,
-        yoyo: true,
-        repeat: 1,
-        ease: "Sine.easeInOut",
-        onComplete: () => this.applyPlacedObjectState(actor, actor.getData("item")),
-      });
+      actor.setData("cowReactionStartedAt", window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? null : (this.time?.now ?? performance.now()));
     }
 
     syncPlacedObjects(placed = []) {
@@ -450,6 +611,12 @@
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.placedObjectActors?.forEach((actor) => {
         const item = actor.getData("item");
+        if (item.code === "reward_cow") {
+          const started = actor.getData("cowReactionStartedAt");
+          const frame = window.ForestAnimals.cowFrame(started == null ? -1 : Math.max(0, time - started), { reducedMotion });
+          actor.getData("motionTarget")?.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
+          if (frame.done) actor.setData("cowReactionStartedAt", null);
+        }
         const accents = actor.getData("ambientFx");
         if (!accents) return;
         accents.clear();
@@ -458,19 +625,15 @@
           // Subpixel bob, no horizontal travel, rotation or scale pumping.
           actor.getData("motionTarget")?.setPosition(0, reducedMotion ? 0 : Math.sin(phase) * .45);
         } else if (item.code === "garden_pinwheel") {
-          // A single detached blade image turns once every 36 seconds. Its
-          // pivot is fixed; the stem/base never inherit angle or frame changes.
-          actor.getData("rotorTarget")?.setAngle(reducedMotion ? 0 : (time / 100) % 360);
+          // Color steps suggest a turning toy while every blade pixel, hub,
+          // support, and footprint remains in its original position.
+          const colorFrame = reducedMotion ? 0 : Math.floor(time / 650) % 5;
+          const rotor = actor.getData("rotorTarget");
+          rotor?.setAngle(0).setTexture(colorFrame ? `pinwheel-blades-${colorFrame}` : "pinwheel-blades");
         }
         if (this.sceneName !== "world") return;
         if (item.code === "animated_fountain") {
-          const shimmer = .18 + (Math.sin(phase) + 1) * .07;
-          accents.lineStyle(.7, 0xd8faff, shimmer)
-            .strokeEllipse(0, -21, 25, 3);
-          [-15, 17].forEach((x, index) => {
-            const offset = reducedMotion ? 0 : Math.sin(phase + index) * .35;
-            accents.fillStyle(0xe0fbff, shimmer + .1).fillCircle(x, -37 + offset, .8);
-          });
+          actor.getData("fixtureTarget")?.setFrame(reducedMotion ? 0 : Math.floor(time / 110) % 8);
         } else if (item.code === "firefly_lantern" && item.active) {
           [[-18, -31], [24, -42], [12, -20]].forEach(([x, y], index) => {
             const wave = reducedMotion ? 0 : Math.sin(phase + index * 1.8);
@@ -488,10 +651,49 @@
     }
 
     ambientStrengthForHour(hour) {
-      if (hour >= 20 || hour < 5) return .42;
-      if (hour === 19 || hour === 5) return .3;
-      if (hour === 18 || hour === 6) return .16;
+      if (hour >= 19 || hour < 5) return .78;
+      if (hour < 6) return .44;
+      if (hour < 7 || hour >= 18) return .22;
       return 0;
+    }
+
+    createNightMask() {
+      this.nightMaskTexture = this.textures.exists("forest-night-mask")
+        ? this.textures.get("forest-night-mask") : this.textures.createCanvas("forest-night-mask", WORLD.width, WORLD.height);
+      this.nightOverlay = this.add.image(WORLD.width / 2, WORLD.height / 2, "forest-night-mask")
+        .setDisplaySize(WORLD.width, WORLD.height).setDepth(900).setAlpha(0).setVisible(false);
+      this.lastNightMaskKey = null;
+    }
+
+    localLightSources() {
+      return (this.placedObjectActors || []).flatMap(actor => {
+        const item = actor.getData?.("item"), type = interactiveObjectTypes[item?.code];
+        if (!item?.active || !["fire", "light"].includes(type)) return [];
+        return [{ x: item.x, y: item.y - (type === "fire" ? 24 : 30), radius: type === "fire" ? 102 : 124, type }];
+      });
+    }
+
+    refreshNightMask(lights) {
+      if (!this.nightMaskTexture) return;
+      const key = JSON.stringify(lights);
+      if (this.lastNightMaskKey === key) return;
+      this.lastNightMaskKey = key;
+      const context = this.nightMaskTexture.getContext();
+      context.clearRect(0, 0, WORLD.width, WORLD.height);
+      context.globalCompositeOperation = "source-over";
+      context.fillStyle = "#07172d";
+      context.fillRect(0, 0, WORLD.width, WORLD.height);
+      context.globalCompositeOperation = "destination-out";
+      lights.forEach(({ x, y, radius }) => {
+        const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, "rgba(0,0,0,.96)");
+        gradient.addColorStop(.3, "rgba(0,0,0,.78)");
+        gradient.addColorStop(1, "rgba(0,0,0,0)");
+        context.fillStyle = gradient;
+        context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill();
+      });
+      context.globalCompositeOperation = "source-over";
+      this.nightMaskTexture.refresh();
     }
 
     updateWorldAtmosphere(time) {
@@ -509,6 +711,8 @@
       this.waterRippleFx.clear().setVisible(worldVisible);
       this.lightFx.clear().setVisible(worldVisible);
       if (!worldVisible) return;
+      const lights = this.localLightSources();
+      this.refreshNightMask(lights);
 
       const ripplePhase = time / 780;
       // Keep every ripple inside the irregular pond shoreline. In particular,
@@ -522,15 +726,11 @@
       // A soft pool of light remains visible during the day; night only makes
       // it broader and brighter. This keeps the on/off interaction readable.
       const illuminationStrength = Math.max(this.nightStrength, .32);
-      this.placedObjectActors.forEach((actor) => {
-        const item = actor.getData?.("item");
-        const type = interactiveObjectTypes[item?.code];
-        if (!item?.active || !["fire", "light"].includes(type)) return;
-        const flicker = type === "fire" ? Math.sin(time / 95) * 5 : Math.sin(time / 420) * 2;
-        const y = item.y - (type === "fire" ? 24 : 30);
+      lights.forEach(({ x, y, type }) => {
+        const flicker = reducedMotion ? 0 : type === "fire" ? Math.sin(time / 95) * 5 : Math.sin(time / 420) * 2;
         const radius = (type === "fire" ? 46 : 58) + flicker;
-        this.lightFx.fillStyle(type === "fire" ? 0xffa33a : 0xffefad, .12 + illuminationStrength * .18).fillCircle(item.x, y, radius * 1.75);
-        this.lightFx.fillStyle(type === "fire" ? 0xffc55a : 0xfff5c8, .2 + illuminationStrength * .22).fillCircle(item.x, y, radius);
+        this.lightFx.fillStyle(type === "fire" ? 0xffa33a : 0xffefad, .025 + illuminationStrength * .045).fillCircle(x, y, radius * 1.5);
+        this.lightFx.fillStyle(type === "fire" ? 0xffc55a : 0xfff5c8, .04 + illuminationStrength * .09).fillCircle(x, y, radius);
       });
     }
 
@@ -559,7 +759,8 @@
     rebuildAvatar() {
       const c = this.avatar.cosmetics;
       this.setPremiumFrame(this.avatar.direction, false, 0);
-      this.nameplate?.setDepth(30).setText(this.avatar.name);
+      this.cameras?.main?.setFollowOffset?.(0, this.cameraFocusOffsetY());
+      if (this.cameraApi) this.emitCameraView();
       const pet = c.pet;
       const petColumns = { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 3, white_pup: 6 };
       this.pet?.setVisible(Object.hasOwn(petColumns, pet));
@@ -571,6 +772,8 @@
     }
 
     attachWindowEvents() {
+      this.onCameraZoom = (event) => this.setCameraZoom(event.detail?.zoom);
+      window.addEventListener("forest-camera-zoom", this.onCameraZoom);
       this.onAvatar = (event) => this.applyAvatarUpdate(normalizedAvatar({ ...this.avatar, ...(event.detail || {}) }));
       this.onState = (event) => {
         const detail = event.detail || {};
@@ -581,6 +784,7 @@
         }
         if (detail.scene) this.setScene(detail.scene);
         if (Array.isArray(detail.placed)) this.syncPlacedObjects(detail.placed);
+        if (detail.rat?.species) this.setRatSpecies(detail.rat.species);
         if (typeof detail.homeRecordPlaying === "boolean") this.syncHomeRecordPlayer(detail.homeRecordPlaying);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
@@ -615,6 +819,9 @@
     }
 
     detachWindowEvents() {
+      this.cameras?.main?.off("followupdate", this.onCameraView);
+      if (window.ForestCamera === this.cameraApi) delete window.ForestCamera;
+      window.removeEventListener("forest-camera-zoom", this.onCameraZoom);
       window.removeEventListener("forest-avatar-updated", this.onAvatar);
       window.removeEventListener("forest-state-updated", this.onState);
       window.removeEventListener("forest-avatar-action", this.onAction);
@@ -839,6 +1046,7 @@
 
     createRatAttackButton() {
       this.ratAttackButton = this.add.text(0, 0, "공격", {
+        resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "15px", fontStyle: "bold",
         color: "#ffffff", backgroundColor: "#bd4636", padding: { x: 18, y: 9 },
       }).setOrigin(.5).setDepth(1001).setVisible(false).setInteractive({ useHandCursor: true });
@@ -1014,8 +1222,18 @@
       this.ratDespawnAt = time + 12000;
       this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
       this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
+      this.setRatSpecies(Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]));
       this.ratActor.setPosition(x, y).setDepth(y - 2).setAlpha(1).setScale(1).setVisible(true);
-      window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: { eventId: this.ratEventId } }));
+      window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: { eventId: this.ratEventId, species: this.ratSpecies } }));
+    }
+
+    setRatSpecies(species) {
+      this.ratSpecies = species === "rabbit" ? "rabbit" : "mouse";
+      if (!this.ratSprite) return;
+      if (this.ratSpecies === "rabbit") {
+        const frame = window.ForestAnimals.rabbitFrame(this.ratDirection, false, 0);
+        this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY).setScale(1.35);
+      } else this.ratSprite.setTexture("lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
     }
 
     dismissRat(time, caught = false) {
@@ -1035,11 +1253,12 @@
       const x = this.ratActor.x;
       const y = this.ratActor.y;
       const rewardText = this.add.text(x, y - 30, "+5 🥕", {
+        resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
         color: "#fff7bd", stroke: "#5c3511", strokeThickness: 4,
       }).setOrigin(0.5).setDepth(999);
       this.tweens.add({
-        targets: this.ratActor, alpha: 0, scale: 1.45, duration: 180,
+        targets: this.ratActor, alpha: 0, duration: 180,
         onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
       });
       this.tweens.add({
@@ -1059,7 +1278,7 @@
       if (distance > 76 || facingScore < -0.1) return;
       const eventId = this.ratEventId;
       this.dismissRat(time, true);
-      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5 } }));
+      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, species: this.ratSpecies } }));
     }
 
     updateRat(time, delta) {
@@ -1085,14 +1304,20 @@
       const vector = { left: [-speed, 0], right: [speed, 0], up: [0, -speed], down: [0, speed] }[this.ratDirection];
       const nextX = this.ratActor.x + vector[0];
       const nextY = this.ratActor.y + vector[1];
-      if (this.isBlocked(nextX, nextY)) {
+      const moving = !this.isBlocked(nextX, nextY);
+      if (!moving) {
         this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
         this.ratTurnAt = time + 500;
       } else {
         this.ratActor.setPosition(nextX, nextY).setDepth(nextY - 2);
       }
-      const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
-      this.ratSprite.setFrame(directionRow * 3 + Math.floor(time / 145) % 3);
+      if (this.ratSpecies === "rabbit") {
+        const frame = window.ForestAnimals.rabbitFrame(this.ratDirection, moving, time, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+        this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
+      } else {
+        const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
+        this.ratSprite.setFrame(directionRow * 3 + (moving ? Math.floor(time / 145) % 3 : 1));
+      }
       this.ratShadow.setY(0);
     }
 
@@ -1155,7 +1380,7 @@
         this.petActionUntil = time + 760;
         const eventId = this.ratEventId;
         this.dismissRat(time, true);
-        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, source: "pet" } }));
+        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, source: "pet", species: this.ratSpecies } }));
       }
     }
 
@@ -1174,11 +1399,15 @@
       }, { x: 16, y: 58, width: 192, height: 192 });
       if (!usedLpc) this.premiumAvatar.setVisible(false);
       else this.premiumAvatar.setVisible(true);
+      if (usedLpc && typeof context.getImageData === "function") {
+        const pixels = context.getImageData(0, 0, 224, 288).data;
+        const bounds = this.measureAvatarOpaqueBounds(pixels, 224, 288);
+        if (bounds) this.avatarOpaqueBounds = bounds;
+      }
       this.compositeTexture.refresh();
       this.drawMotionEffects(direction, moving, Math.floor(time / rate) % 4);
       const worldScale = Math.min(0.58, Math.max(0.32, Number(this.avatar.tuning.worldScale) || AVATAR_RENDER_SCALE));
       this.premiumAvatar.setScale(worldScale);
-      this.nameplate?.setY(-Math.round(288 * worldScale * 0.87) - 7);
     }
 
     drawMotionEffects() {
@@ -1189,8 +1418,8 @@
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: "phaser-world",
-    width: WORLD.width,
-    height: WORLD.height,
+    width: WORLD.width * BACKING_SCALE,
+    height: WORLD.height * BACKING_SCALE,
     backgroundColor: "#78b96a",
     pixelArt: true,
     roundPixels: true,

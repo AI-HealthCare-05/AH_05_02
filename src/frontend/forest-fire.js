@@ -131,9 +131,11 @@
     return tile;
   }
 
-  function install(scene) {
+  function install(scene, { flameAtlasKey = "storage-objects" } = {}) {
     const key = "campfire-ripple";
-    const frame = scene.textures.getFrame("storage-objects", 14);
+    // The visible furniture atlas now contains independently authored OFF art.
+    // Keep the isolated legacy flame source explicit instead of reading its ring.
+    const frame = scene.textures.getFrame(flameAtlasKey, 14);
     const baseSource = scene.textures.get("campfire-base-source").getSourceImage();
     const base = offTile(frame.source.image, baseSource);
     if (!scene.textures.exists("campfire-off")) {
