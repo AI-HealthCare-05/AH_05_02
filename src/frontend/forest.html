@@ -12,15 +12,23 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
+  <link rel="preload" as="image" href="/static/assets/carrot-forest-loading-v2.png?v=20260907-1" fetchpriority="high">
   <style>
-    #forest-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;padding:clamp(28px,7vw,108px);overflow:hidden;background:#f7efd9 url('/static/assets/carrot-forest-loading-v1.png?v=20260831-1') center/cover no-repeat;color:#173d2b;font:800 18px/1.5 Pretendard,"Noto Sans KR",system-ui,sans-serif}
-    #forest-boot::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,249,231,.98) 0%,rgba(255,249,231,.86) 28%,rgba(255,249,231,.18) 54%,transparent 72%);pointer-events:none}
-    .forest-boot-panel{position:relative;z-index:1;width:min(520px,46vw);padding:clamp(22px,3vw,38px);border:1px solid rgba(110,83,33,.16);border-radius:28px;background:rgba(255,251,238,.76);box-shadow:0 20px 70px rgba(66,56,24,.16);backdrop-filter:blur(9px);text-align:left}
-    .forest-boot-brand{display:flex;align-items:center;gap:12px;margin:0 0 10px;color:#23633d;font-size:clamp(16px,1.5vw,21px);font-weight:950;letter-spacing:.02em}.forest-boot-brand b{color:#ef7627}.forest-boot-title{margin:0;font-size:clamp(40px,6vw,82px);line-height:1;letter-spacing:-.06em;text-shadow:0 4px 0 rgba(255,255,255,.8)}.forest-boot-copy{margin:18px 0 24px;color:#516a58;font-size:clamp(14px,1.4vw,18px);font-weight:750}.forest-boot-progress{height:13px;overflow:hidden;border:1px solid rgba(42,93,55,.2);border-radius:999px;background:rgba(255,255,255,.82)}.forest-boot-progress i{display:block;width:46%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ef7627,#f4a43d,#4a9a54);animation:forestBootLoad 1.25s ease-in-out infinite}.forest-boot-status{display:flex;align-items:center;gap:8px;margin-top:10px;color:#315e40;font-size:13px;font-weight:850}.forest-boot-status span{width:10px;height:10px;border-radius:50%;background:#4a9a54;box-shadow:0 0 0 5px rgba(74,154,84,.13);animation:forestBootPulse 1s ease-in-out infinite alternate}
+    #forest-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;overflow:hidden;isolation:isolate;background:#dcecc3 url('/static/assets/carrot-forest-loading-v2.png?v=20260907-1') center/cover no-repeat;color:#155528;font:800 18px/1.5 Pretendard,"Noto Sans KR",system-ui,sans-serif}
+    #forest-boot::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(238,247,213,.18),transparent 58%);pointer-events:none}
+    .forest-boot-panel{width:min(650px,47vw);margin-left:clamp(24px,6vw,112px);padding:24px 0;transform:translateY(-5vh);text-align:left}
+    .forest-boot-brand{display:flex;align-items:center;gap:8px;margin:0 0 20px;color:#28653b;font-size:clamp(16px,1.6vw,22px);font-weight:950;letter-spacing:-.03em}.forest-boot-brand b{color:#e47927}
+    .forest-boot-title{margin:0;font-size:clamp(48px,6.5vw,116px);font-weight:950;line-height:1.12;letter-spacing:-.07em;white-space:nowrap;text-shadow:0 3px 0 #f6f7d9,3px 0 0 #f6f7d9,-3px 0 0 #f6f7d9,0 -3px 0 #f6f7d9,0 6px 18px rgba(45,86,37,.1)}
+    .forest-boot-copy{max-width:500px;margin:22px 0 34px;color:#235b32;font-size:clamp(15px,1.5vw,23px);font-weight:800;line-height:1.7;letter-spacing:-.035em;text-wrap:balance;text-shadow:0 1px 8px #f7f9dc}
+    .forest-boot-progress{width:min(400px,100%);height:9px;overflow:hidden;border:1px solid rgba(46,95,42,.24);border-radius:999px;background:rgba(255,255,237,.8);box-shadow:0 2px 8px rgba(36,80,37,.08)}
+    .forest-boot-progress i{display:block;width:36%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e78629,#f4b452,#699644);animation:forestBootLoad 1.6s ease-in-out infinite}
+    .forest-boot-status{display:flex;align-items:center;gap:8px;width:fit-content;margin-top:12px;padding:4px 10px;border-radius:999px;background:rgba(247,249,220,.78);color:#35663c;font-size:13px;font-weight:800}.forest-boot-status span{width:7px;height:7px;border-radius:50%;background:#5a8f47;animation:forestBootPulse 1s ease-in-out infinite alternate}
+    html:not(.forest-style-ready),html:not(.forest-script-ready){overflow:hidden}
     html:not(.forest-style-ready) body>:not(#forest-boot),html:not(.forest-script-ready) body>:not(#forest-boot){visibility:hidden}
     html.forest-style-ready.forest-script-ready #forest-boot{display:none}
-    @keyframes forestBootPulse{to{opacity:.48;transform:scale(.84)}}@keyframes forestBootLoad{0%{transform:translateX(-100%)}55%,100%{transform:translateX(220%)}}
-    @media(max-width:760px){#forest-boot{align-items:flex-end;padding:18px;background-position:67% center}#forest-boot::after{background:linear-gradient(0deg,rgba(255,249,231,.98) 0%,rgba(255,249,231,.78) 42%,transparent 78%)}.forest-boot-panel{width:100%;padding:22px}.forest-boot-title{font-size:46px}.forest-boot-copy{margin:12px 0 18px}}
+    @keyframes forestBootPulse{to{opacity:.48;transform:scale(.84)}}@keyframes forestBootLoad{0%{transform:translateX(-105%)}85%,100%{transform:translateX(285%)}}
+    @media(max-aspect-ratio:1/1){#forest-boot{align-items:flex-end;background-position:73% center}#forest-boot::after{background:linear-gradient(0deg,rgba(243,248,219,.98) 0%,rgba(237,246,213,.96) 21%,rgba(237,246,213,.6) 37%,transparent 61%)}.forest-boot-panel{width:100%;margin:0;padding:28px 26px max(30px,env(safe-area-inset-bottom));transform:none}.forest-boot-brand{margin-bottom:10px;font-size:17px}.forest-boot-title{font-size:clamp(48px,11vw,80px)}.forest-boot-copy{max-width:420px;margin:14px 0 22px;font-size:16px}}
+    @media(max-height:500px) and (min-aspect-ratio:1/1){.forest-boot-panel{transform:none;padding:12px 0}.forest-boot-brand{margin-bottom:8px;font-size:14px}.forest-boot-title{font-size:clamp(36px,6vw,58px)}.forest-boot-copy{margin:10px 0 16px;font-size:14px}.forest-boot-status{margin-top:8px;font-size:11px}}
     @media(prefers-reduced-motion:reduce){.forest-boot-progress i,.forest-boot-status span{animation:none}.forest-boot-progress i{width:72%}}
   </style>
   <script>
@@ -55,7 +63,7 @@
   <script src="/static/challenge-v2.js?v=2.1.2" defer></script>
 </head>
 <body>
-  <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
+  <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand"><span>간당<b>간당</b></span></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">함께 실천하고, 같이 성장하는 모두의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲을 준비하고 있어요</div></div></div>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
 
   <header class="studio-topbar">

@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v146";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v147";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -62,7 +62,7 @@ const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-campfire-off-v4.png?v=20260907-1",
   "/static/assets/carrot-forest-lpc-pets-v1.png",
   "/static/assets/carrot-forest-lpc-rat-v1.png",
-  "/static/assets/carrot-forest-loading-v1.png?v=20260831-1",
+  "/static/assets/carrot-forest-loading-v2.png?v=20260907-1",
   "/static/assets/carrot-forest-world-v5.png?v=20260907-1",
   "/static/assets/carrot-forest-home-v2.png?v=20260907-1",
   "/static/assets/carrot-forest-garden-v2.png?v=20260907-1",

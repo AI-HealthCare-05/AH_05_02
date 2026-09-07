@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v146" in worker
+    assert "gandang-carrot-forest-pwa-v147" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -482,6 +482,7 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
 
     assets = ROOT / "src/frontend/assets"
     expected = {
+        "carrot-forest-loading-v2.png": (1672, 941),
         "carrot-forest-world-v5.png": (1536, 1024),
         "carrot-forest-home-v2.png": (1536, 1024),
         "carrot-forest-garden-v2.png": (1536, 1024),
@@ -509,6 +510,8 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
     assert '<h1 id="forest-title">당근의 숲</h1>' in html
     assert "CARROT FOREST · WORLD STUDIO" not in html
     assert "2× HD · 24 × 16 TILE" not in html
+    assert 'rel="preload" as="image" href="/static/assets/carrot-forest-loading-v2.png' in html
+    assert "함께 실천하고, 같이 성장하는 모두의 건강 숲" in html
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
