@@ -54,6 +54,10 @@ function displayContext(today) {
   const context = loadFunctions(['normalizeRiskKey', 'updateResultConfirmation', 'renderPrediction'], {
     $, nodes, state: { currentScreeningPrediction: today },
     isDemoEnvironment: () => false, normalizeForecastSignal: () => null,
+    isPublicRiskDisplayAllowed: prediction => prediction?.result_status === 'approved'
+      && prediction?.promotion_status === 'approved'
+      && prediction?.display_allowed !== false,
+    rememberModelOutputMetadata: () => {}, requiresMedicalResultGuidance: () => false,
     renderPredictionStatus: () => {}, showFuturePredictionResult: () => {},
     renderAgeRiskForecast: () => {}, updateLifestyleSummary: () => {},
     forecastSignalLabel: key => key, escapeHtml: text => text,
@@ -82,13 +86,22 @@ for (const today of [null, { ...approved('diabetes_current_screening', 'high'), 
   });
 }
 
-test('missing forecast percentage is not turned into zero', () => {
-  const context = loadFunctions(['approvedDisplayPercent']);
-  for (const value of [null, undefined, '', 'not-a-number', -1, 101]) {
-    assert.equal(context.approvedDisplayPercent(value), null);
-  }
-  assert.equal(context.approvedDisplayPercent(0), 0);
-  assert.equal(context.approvedDisplayPercent(12.5), 12.5);
+test('forecast curve stays hidden until approval and uncertainty bounds are available', () => {
+  const context = loadFunctions(['forecastCurveDisplayAllowed']);
+  const point = { lower: 0.1, upper: 0.3 };
+  assert.equal(context.forecastCurveDisplayAllowed({}, true), false);
+  assert.equal(context.forecastCurveDisplayAllowed({
+    public_display_approved: true,
+    risk_curve_status: 'available',
+    calibration_status: 'approved',
+    points: [point],
+  }, false), false);
+  assert.equal(context.forecastCurveDisplayAllowed({
+    public_display_approved: true,
+    risk_curve_status: 'available',
+    calibration_status: 'approved',
+    points: [point],
+  }, true), true);
 });
 
 test('search reset clears results and every previous map marker', () => {

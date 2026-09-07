@@ -43,7 +43,7 @@ def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
     ):
         assert reason_code in script
     assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." in html
-    assert "입력정보 확인하기" in html
+    assert "입력 내용 확인하기" in html
     assert "다시 시도하기" in html
     assert "증상이 있으면 의료기관 안내가 우선돼요." not in html
     assert "연령대는 별도 질문 없이 자동으로 구분합니다." not in html
@@ -98,10 +98,10 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "검사·상담 안내 보기" in script
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
-    assert '$("#result-next").hidden = false' in script
-    assert '$("#result-next").disabled = false' in script
+    assert 'const challengeButton = $("#to-challenges")' in script
+    assert 'challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next' in script
     assert "const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk)" in script
-    assert "options.showResult !== false" in script
+    assert 'renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true })' in script
     assert 'factors?.status === "approved"' in script
     assert "factors?.shap_claimed === true" in script
     assert '$("#risk-confirm-card").hidden = false' in script
@@ -151,8 +151,8 @@ def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
     assert 'forecast?.status === "approved"' in script
     assert "`/static/assets/hyeoldangi-face-${point.level}.png`" in script
     assert ".age-risk-signal-track img{" in styles
-    assert "forecast?.public_display_approved === true" in script
-    assert "approvedDisplayPercent" in script
+    assert "forecast.public_display_approved !== true" in script
+    assert "forecastCurveDisplayAllowed" in script
     assert "hyeoldangi-face-${point.level}.png" in script
     assert ".age-risk-signal-track" in styles
     for level in ("low", "caution", "high"):
@@ -171,14 +171,12 @@ def test_rule_forecast_preview_is_local_opt_in_and_non_predictive() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="rule-forecast-preview"' in html
-    assert "?ruleForecastDemo=1" in html
-    assert "개인 예측 아님" in html
-    assert "학습된 생존곡선·생활습관 개선 효과·확정 발병확률이 아닙니다." in html
-    assert 'get("ruleForecastDemo") === "1"' in script
-    assert "isDemoEnvironment()" in script
-    assert "survival *= 1 - hazard" in script
-    assert "initializeRuleForecastPreview" in script
+    assert 'id="rule-forecast-preview"' not in html
+    assert "const canUseLocalModelPreview = () =>" in script
+    assert 'params.get("preview") === "forecast"' in script
+    assert "tryRunJunhyukModelDemo" in script
+    assert 'api("/research/models/junhyuk-local-demo"' in script
+    assert "운영 승인 전 수치·확률" in script
 
 
 def test_together_shares_only_challenge_completion_status() -> None:
@@ -225,15 +223,18 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'days.value = "0"' in script
     assert 'minutes.value = "0"' in script
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
-    assert html.index('id="current-drinker-title"') < html.index('id="smoking-status-title"')
+    assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
     assert "필수" not in lifestyle
     assert (
-        lifestyle.index('id="regular-exercise-title"')
+        lifestyle.index('id="smoking-status-title"')
         < lifestyle.index('for="self-health"')
         < lifestyle.index('for="meal-count"')
+        < lifestyle.index('id="current-drinker-title"')
+        < lifestyle.index('id="regular-exercise-title"')
     )
-    assert "card.hidden = !isRegularExercise" in script
+    assert "days.disabled = !isRegularExercise" in script
+    assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
     assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
     assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split("</div>", 2)[0]
 
@@ -243,15 +244,15 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     for label in (
-        "기존 계정으로 로그인",
         "이메일로 초대",
         "초대 코드로 초대",
         "워치 연결하기",
         "근거 자료에서 찾기",
         "검진표 사진 올리기",
-        "PDF 받기",
+        "PDF로 받기",
     ):
         assert label in html
+    assert "기존 계정으로 로그인해 주세요" in script
     assert "accept-shared" in script
     assert "cheer-shared" in script
     assert "[hidden]{display:none!important}" in (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
@@ -305,9 +306,8 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'id="signup-birth-date" type="date"' in html
     assert 'id="signup-gender" required' in html
     assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
-    assert "email, password, gender, birth_date: birthDate" in script
-    assert 'api("/users/me/profile", { method: "PATCH"' not in script
-    assert 'api("/users/me", { method: "PATCH"' in script
+    assert "birth_date: birthDate" in script
+    assert 'api("/users/me/profile", { method: "PATCH"' in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
@@ -328,8 +328,8 @@ def test_signup_and_existing_login_use_separate_forms() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="auth-mode-signup"' in html
-    assert 'id="auth-mode-login"' in html
+    assert 'id="sidebar-signup"' in html
+    assert 'id="sidebar-login"' in html
     assert 'id="signup-form"' in html
     assert 'id="login-form" class="login-form" hidden' in html
     assert 'id="login-email" type="email"' in html
@@ -375,15 +375,15 @@ def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
     styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
 
     assert 'id="medical-guidance-detail" class="notice safety medical-guidance-alert"' in html
-    assert html.index('id="medical-guidance-detail"') > html.index('id="lifestyle-map-title"')
     assert html.index('id="medical-guidance-detail"') > html.index('id="risk-forecast-panel"')
+    assert html.index('id="medical-guidance-detail"') < html.index('id="to-challenges"')
     assert 'next: "검사·상담 안내 보기"' in script
     assert '$("#medical-guidance-detail").hidden = true;' in script
     assert 'const guidance = $("#medical-guidance-detail");' in script
     assert "guidance.hidden = false;" in script
     assert "guidance.focus({ preventScroll: true });" in script
-    assert 'const displayedRisk = $("#risk-confirm-card")?.dataset.risk || normalizeRiskKey();' in script
-    assert 'displayedRisk === "high"' in script
+    assert "if (requiresMedicalResultGuidance())" in script
+    assert 'return $("#risk-confirm-card")?.dataset.risk === "high"' in script
     assert ".notice.safety.medical-guidance-alert" in styles
     assert "border-left:8px solid #b83f36" not in styles
     assert "border:2px solid #d35f55;border-radius:20px" in styles
@@ -557,12 +557,12 @@ def test_returning_user_routes_from_persisted_eligibility_state() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="returning-route-note"' in html
+    assert 'id="returning-route-note"' not in html
     assert 'api("/eligibility-checks/latest")' in script
     assert "syncReturningEligibilityState(latestEligibility)" in script
     assert 'beginReturningEligibility("challenges")' in script
     assert 'beginReturningEligibility("health")' in script
-    assert "로그인할 때마다 반복하는 절차는 아닙니다" in script
+    assert "state.requiresEligibility = !eligibility" in script
     assert 'id="challenge-follow-up"' in html
     assert 'api("/follow-up-actions")' in script
     assert "state.openFollowUpActionIds.map((actionId)" in script
@@ -600,9 +600,9 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     for workspace in ("home", "challenge", "report", "together", "tools"):
-        assert f'data-workspace="{workspace}"' in html
         assert f'data-workspace-panel="{workspace}"' in html
-        assert f'id="workspace-tab-{workspace}"' in html
+    for label in ("홈", "챌린지", "리포트", "함께하기", "건강도구"):
+        assert f">{label}</button>" in html
     assert "오늘 할 일부터 확인하세요" in html
     assert 'id="today-task-title"' in html
     assert 'id="today-task-description"' in html
@@ -637,11 +637,10 @@ def test_forest_return_accepts_resume_and_workspace_links() -> None:
     assert "입력값을 반영한 참고 표현" in script
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
-    assert 'role="tablist"' in html
-    assert html.count('role="tab"') >= 5
-    assert html.count('role="tabpanel"') >= 5
-    assert 'aria-pressed="true"' in html
-    assert 'button.setAttribute("aria-pressed", String(selected))' in script
+    assert 'id="workspace-top-nav" aria-label="로그인 후 주요 메뉴"' in html
+    assert html.count('data-workspace-panel=') >= 5
+    assert html.count('role="region"') >= 5
+    assert 'button.setAttribute("aria-selected", String(selected))' in script
     assert "selectedPanel.focus({ preventScroll: true })" in script
 
 
