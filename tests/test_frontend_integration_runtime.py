@@ -47,4 +47,5 @@ def test_current_result_and_medical_guidance_are_not_hidden_with_future_results(
     assert not parser.stack
     for element_id in ["risk-confirm-card", "medical-guidance-detail"]:
         assert "future-prediction-result" not in parser.parents[element_id]
-    assert "future-prediction-result" in parser.parents["risk-forecast-panel"]
+    assert "future-prediction-result" in parser.parents["future-onset-title"]
+    assert "risk-forecast-panel" not in parser.parents

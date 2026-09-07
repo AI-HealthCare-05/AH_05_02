@@ -94,8 +94,9 @@ def test_frontend_requests_both_models_and_labels_them_separately() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
 
-    assert 'requestPredictionModel("diabetes_current_screening")' in script
-    assert 'requestPredictionModel("diabetes_incidence")' in script
+    assert '...(state.capabilities.currentHealth ? ["diabetes_current_screening"] : [])' in script
+    assert '...(!state.currentHealthOnly ? ["diabetes_incidence"] : [])' in script
+    assert "requestPredictionModel(modelKey)" in script
     assert 'id="risk-confirm-title">현재 위험 신호 선별 결과' in html
     assert 'id="future-onset-title">앞으로의 위험 신호 선별 결과' in html
     assert 'id="future-risk-category"' in html
