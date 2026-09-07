@@ -88,6 +88,14 @@
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
       this.lastStepSfxAt = 0;
+      this.movePath = [];
+      this.pointerAttackEventId = null;
+      this.nextPointerRepathAt = 0;
+      this.placementActive = false;
+      this.ratHoverUntil = 0;
+      this.ratHovered = false;
+      this.ratAttackHovered = false;
+      this.ratAttackPinned = false;
       this.homeRecordPlaying = Boolean(storedState().homeRecordPlaying);
     }
 
@@ -139,7 +147,9 @@
       this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px" }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
       this.lastPetPointerAt = 0;
       const feedPetFromPointer = (pointer, localX, localY, event) => {
+        if (this.placementActive) return;
         event?.stopPropagation?.();
+        this.cancelPointerMovement();
         this.lastPetPointerAt = performance.now();
         window.dispatchEvent(new CustomEvent("forest-pet-clicked"));
       };
@@ -156,6 +166,7 @@
         color: "#ffffff", backgroundColor: "#d85836", padding: { x: 5, y: 1 },
       }).setOrigin(0.5);
       this.ratActor.add([this.ratShadow, this.ratSprite, this.ratMarker]);
+      this.createRatAttackButton();
       this.nameplate = this.add.text(0, NAMEPLATE_Y, this.avatar.name, {
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "12px", fontStyle: "bold",
         color: "#173528", backgroundColor: "rgba(255,255,255,.92)", padding: { x: 7, y: 3 },
@@ -213,8 +224,12 @@
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
       this.input.once("pointerdown", () => document.getElementById("phaser-world")?.focus());
       this.input.on("pointerdown", (pointer) => {
+        if (!pointer.wasTouch && pointer.button !== 0) return;
         if (performance.now() - this.lastPetPointerAt < 120) return;
-        window.dispatchEvent(new CustomEvent("forest-world-pointer", { detail: { x: pointer.worldX, y: pointer.worldY } }));
+        this.cancelPointerMovement();
+        this.ratAttackPinned = false;
+        const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        window.dispatchEvent(new CustomEvent("forest-world-pointer", { detail: { x: point.x, y: point.y } }));
       });
       this.emitPosition(true);
     }
@@ -297,9 +312,12 @@
           pointerTargets.forEach((target) => target.setInteractive({ useHandCursor: true }).on(
             "pointerdown",
             (pointer, _localX, _localY, inputEvent) => {
+              if (this.placementActive) return;
               inputEvent?.stopPropagation?.();
+              this.cancelPointerMovement();
+              const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
               window.dispatchEvent(new CustomEvent("forest-placed-object-pointer", {
-                detail: { index: placedIndex, x: pointer.worldX, y: pointer.worldY },
+                detail: { index: placedIndex, x: point.x, y: point.y },
               }));
             },
           ));
@@ -427,6 +445,11 @@
     }
 
     syncPlacement(detail = {}) {
+      this.placementActive = Boolean(detail.active);
+      if (this.placementActive) {
+        this.cancelPointerMovement();
+        this.ratAttackButton?.setVisible(false);
+      }
       this.placementGrid.clear().setVisible(Boolean(detail.active) && this.sceneName === "world");
       this.placementPreview?.destroy();
       this.placementPreview = null;
@@ -489,6 +512,16 @@
       window.addEventListener("forest-atmosphere-updated", this.onAtmosphere);
       this.onCowReaction = (event) => this.reactCow(Number(event.detail?.index), event.detail?.reaction);
       window.addEventListener("forest-cow-react", this.onCowReaction);
+      this.onMoveTo = (event) => {
+        const point = event.detail || {};
+        this.requestMoveTo(point.x, point.y);
+      };
+      window.addEventListener("forest-move-to", this.onMoveTo);
+      this.onControlsHidden = () => {
+        this.forcedDirection = null;
+        this.forcedUntil = 0;
+      };
+      window.addEventListener("forest-controls-hidden", this.onControlsHidden);
     }
 
     detachWindowEvents() {
@@ -499,6 +532,8 @@
       window.removeEventListener("forest-placement-updated", this.onPlacement);
       window.removeEventListener("forest-atmosphere-updated", this.onAtmosphere);
       window.removeEventListener("forest-cow-react", this.onCowReaction);
+      window.removeEventListener("forest-move-to", this.onMoveTo);
+      window.removeEventListener("forest-controls-hidden", this.onControlsHidden);
     }
 
     showPetHeart() {
@@ -604,7 +639,16 @@
     }
 
     setScene(sceneName) {
-      this.sceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
+      const nextSceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
+      if (nextSceneName !== this.sceneName) {
+        this.ratHovered = false;
+        this.ratAttackHovered = false;
+        this.ratHoverUntil = 0;
+      }
+      this.cancelPointerMovement();
+      this.ratAttackPinned = false;
+      this.ratAttackButton?.setVisible(false);
+      this.sceneName = nextSceneName;
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
       this.recordPlayerActor?.setVisible(this.sceneName === "home");
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
@@ -614,9 +658,190 @@
     }
 
     nudge(direction) {
+      this.cancelPointerMovement();
       this.forcedDirection = directionRows[direction] == null ? null : direction;
       this.forcedUntil = performance.now() + 170;
       document.getElementById("phaser-world")?.focus();
+    }
+
+    cancelPointerMovement() {
+      this.movePath = [];
+      this.pointerAttackEventId = null;
+    }
+
+    isWorldInputBlocked() {
+      return Boolean(document.querySelector?.('dialog[open], [aria-modal="true"]:not([hidden])'));
+    }
+
+    canWalkSegment(from, to) {
+      const samples = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 4));
+      for (let step = 1; step <= samples; step += 1) {
+        const progress = step / samples;
+        if (this.isBlocked(from.x + (to.x - from.x) * progress, from.y + (to.y - from.y) * progress)) return false;
+      }
+      return true;
+    }
+
+    findMovePath(x, y) {
+      if (!Number.isFinite(x) || !Number.isFinite(y) || this.isBlocked(x, y)) return [];
+      const start = { x: this.avatar.x, y: this.avatar.y };
+      const target = { x, y };
+      if (this.canWalkSegment(start, target)) return [target];
+      // A small world-space grid routes around the house, pond and garden.
+      // Segment checks also prevent diagonal paths from cutting through corners.
+      const step = 16;
+      const nearestNode = (point) => {
+        const candidates = [];
+        const column = Math.round(point.x / step);
+        const row = Math.round(point.y / step);
+        for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) {
+          const node = { x: (column + dx) * step, y: (row + dy) * step };
+          if (!this.isBlocked(node.x, node.y) && this.canWalkSegment(point, node)) candidates.push(node);
+        }
+        return candidates.sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
+      };
+      const first = nearestNode(start);
+      const last = nearestNode(target);
+      if (!first || !last) return [];
+      const key = (point) => `${point.x},${point.y}`;
+      const queue = [first];
+      const parents = new Map([[key(first), null]]);
+      let found = false;
+      for (let index = 0; index < queue.length; index += 1) {
+        const current = queue[index];
+        if (key(current) === key(last)) { found = true; break; }
+        for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
+          const next = { x: current.x + dx, y: current.y + dy };
+          if (parents.has(key(next)) || this.isBlocked(next.x, next.y) || !this.canWalkSegment(current, next)) continue;
+          parents.set(key(next), current);
+          queue.push(next);
+        }
+      }
+      if (!found) return [];
+      const path = [target];
+      for (let current = last; current; current = parents.get(key(current))) path.unshift(current);
+      // Prefer the furthest visible waypoint to avoid an unnatural grid zigzag.
+      const smooth = [];
+      let current = start;
+      while (path.length) {
+        let furthest = path.length - 1;
+        while (furthest > 0 && !this.canWalkSegment(current, path[furthest])) furthest -= 1;
+        current = path[furthest];
+        smooth.push(current);
+        path.splice(0, furthest + 1);
+      }
+      return smooth;
+    }
+
+    requestMoveTo(x, y) {
+      this.cancelPointerMovement();
+      if (this.placementActive || this.mountTransitioning || this.isWorldInputBlocked()) return false;
+      const path = this.findMovePath(x, y);
+      if (!path.length) return false;
+      this.movePath = path;
+      this.forcedUntil = 0;
+      this.forcedDirection = null;
+      this.avatar.sitting = false;
+      this.emitPosition(true);
+      document.getElementById("phaser-world")?.focus();
+      return true;
+    }
+
+    createRatAttackButton() {
+      this.ratAttackButton = this.add.text(0, 0, "공격", {
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "15px", fontStyle: "bold",
+        color: "#ffffff", backgroundColor: "#bd4636", padding: { x: 18, y: 9 },
+      }).setOrigin(.5).setDepth(1001).setVisible(false).setInteractive({ useHandCursor: true });
+      const keepVisible = () => { this.ratHoverUntil = performance.now() + 650; };
+      this.ratSprite.setInteractive({ useHandCursor: true })
+        .on("pointerover", () => { this.ratHovered = true; keepVisible(); })
+        .on("pointermove", keepVisible)
+        .on("pointerout", () => { this.ratHovered = false; keepVisible(); })
+        .on("pointerdown", (pointer, _x, _y, event) => {
+          if (this.placementActive || (!pointer.wasTouch && pointer.button !== 0)) return;
+          event?.stopPropagation?.();
+          this.cancelPointerMovement();
+          this.ratAttackPinned = true;
+          keepVisible();
+          this.updateRatAttackButton();
+        });
+      this.ratAttackButton.on("pointerover", () => {
+        this.ratAttackHovered = true;
+        keepVisible();
+        this.ratAttackButton.setBackgroundColor("#df6047");
+      }).on("pointermove", keepVisible).on("pointerout", () => {
+        this.ratAttackHovered = false;
+        keepVisible();
+        this.ratAttackButton.setBackgroundColor("#bd4636");
+      }).on("pointerdown", (pointer, _x, _y, event) => {
+        if (!pointer.wasTouch && pointer.button !== 0) return;
+        event?.stopPropagation?.();
+        this.requestRatAttack();
+      });
+    }
+
+    updateRatAttackButton() {
+      if (!this.ratAttackButton) return;
+      const visible = this.sceneName === "world" && this.ratActive && !this.placementActive && !this.isWorldInputBlocked()
+        && (this.ratHovered || this.ratAttackHovered || this.ratAttackPinned || this.pointerAttackEventId != null || performance.now() < this.ratHoverUntil);
+      this.ratAttackButton.setVisible(visible);
+      if (visible) this.ratAttackButton.setPosition(
+        Math.max(40, Math.min(WORLD.width - 40, this.ratActor.x)), Math.max(24, this.ratActor.y - 72),
+      );
+    }
+
+    requestRatAttack() {
+      if (this.sceneName !== "world" || !this.ratActive || this.placementActive || this.mountTransitioning || this.isWorldInputBlocked()) return;
+      this.cancelPointerMovement();
+      this.forcedUntil = 0;
+      this.forcedDirection = null;
+      this.pointerAttackEventId = this.ratEventId;
+      this.nextPointerRepathAt = 0;
+      this.ratAttackPinned = true;
+      this.avatar.sitting = false;
+      this.emitPosition(true);
+      document.getElementById("phaser-world")?.focus();
+    }
+
+    pointerMovementStep(distance, time) {
+      if (this.pointerAttackEventId != null) {
+        if (this.sceneName !== "world" || !this.ratActive || this.pointerAttackEventId !== this.ratEventId) {
+          this.cancelPointerMovement();
+          return null;
+        }
+        const dx = this.ratActor.x - this.avatar.x;
+        const dy = this.ratActor.y - this.avatar.y;
+        if (Math.hypot(dx, dy) <= 68) {
+          this.avatar.direction = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+          this.emitPosition(true);
+          this.cancelPointerMovement();
+          this.playAction("attack", this.equippedWeaponDuration());
+          return null;
+        }
+        if (time >= this.nextPointerRepathAt) {
+          this.movePath = this.findMovePath(this.ratActor.x, this.ratActor.y);
+          this.nextPointerRepathAt = time + 300;
+        }
+      }
+      while (this.movePath?.length) {
+        const target = this.movePath[0];
+        const dx = target.x - this.avatar.x;
+        const dy = target.y - this.avatar.y;
+        const remaining = Math.hypot(dx, dy);
+        if (remaining < .0001) {
+          this.movePath.shift();
+          // Ordinary movement updates are throttled. Always persist the final
+          // exact destination, even when arrival falls between two updates.
+          if (!this.movePath.length && this.pointerAttackEventId == null) this.emitPosition(true);
+          continue;
+        }
+        const ratio = Math.min(1, distance / remaining);
+        return {
+          x: this.avatar.x + dx * ratio, y: this.avatar.y + dy * ratio,
+          direction: Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down"),
+        };
+      }
+      return null;
     }
 
     isBlocked(x, y) {
@@ -630,7 +855,7 @@
       const now = performance.now();
       if (!force && now - this.lastPersist < 180) return;
       this.lastPersist = now;
-      window.dispatchEvent(new CustomEvent("forest-phaser-position", { detail: { x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction } }));
+      window.dispatchEvent(new CustomEvent("forest-phaser-position", { detail: { x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction, sitting: this.avatar.sitting } }));
     }
 
     update(time, delta) {
@@ -640,7 +865,15 @@
       }
       this.updateWorldAtmosphere(time);
       this.updateRat(time, delta);
-      const inputAllowed = !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);
+      this.updateRatAttackButton?.();
+      const modalOpen = this.isWorldInputBlocked?.() === true;
+      if (modalOpen) {
+        if (this.movePath?.length || this.pointerAttackEventId != null) this.emitPosition(true);
+        this.cancelPointerMovement?.();
+        this.forcedUntil = 0;
+        this.forcedDirection = null;
+      }
+      const inputAllowed = !modalOpen && !["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(document.activeElement?.tagName);
       let direction = performance.now() < this.forcedUntil ? this.forcedDirection : null;
       if (inputAllowed) {
         if (this.cursors.left.isDown || this.keys.A.isDown) direction = "left";
@@ -649,16 +882,19 @@
         else if (this.cursors.down.isDown || this.keys.S.isDown) direction = "down";
       }
       const running = window.carrotForestRunning === true;
+      const speed = this.avatar.mounted ? 185 : running ? 150 : 92;
+      const distance = speed * Math.min(delta, 40) / 1000;
+      if (direction) this.cancelPointerMovement?.();
+      const pointerStep = !direction && inputAllowed && !this.placementActive ? this.pointerMovementStep?.(distance, time) : null;
+      if (pointerStep) direction = pointerStep.direction;
       if (!direction) {
         this.setPremiumFrame(this.avatar.direction, false, time);
         this.updatePet(time, delta, false);
         return;
       }
-      const speed = this.avatar.mounted ? 185 : running ? 150 : 92;
-      const distance = speed * Math.min(delta, 40) / 1000;
       const vector = { left: [-distance, 0], right: [distance, 0], up: [0, -distance], down: [0, distance] }[direction];
-      const nextX = this.avatar.x + vector[0];
-      const nextY = this.avatar.y + vector[1];
+      const nextX = pointerStep ? pointerStep.x : this.avatar.x + vector[0];
+      const nextY = pointerStep ? pointerStep.y : this.avatar.y + vector[1];
       this.avatar.direction = direction;
       if (!this.isBlocked(nextX, nextY)) {
         this.avatar.x = nextX; this.avatar.y = nextY;
@@ -694,6 +930,12 @@
     dismissRat(time, caught = false) {
       if (!this.ratActive) return;
       this.ratActive = false;
+      this.ratAttackPinned = false;
+      this.ratHovered = false;
+      this.ratAttackHovered = false;
+      this.ratHoverUntil = 0;
+      this.ratAttackButton?.setVisible(false);
+      if (this.pointerAttackEventId != null) this.cancelPointerMovement();
       this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
       if (!caught) {
         this.ratActor.setVisible(false);

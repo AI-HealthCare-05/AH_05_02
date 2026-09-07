@@ -1,4 +1,4 @@
-/* Seoul clock, informational weather and real game fullscreen. */
+/* Seoul clock and informational weather. Viewport controls live in forest-hud.js. */
 (() => {
   "use strict";
   const KEY = "gandang-carrot-forest-atmosphere-v1";
@@ -108,40 +108,4 @@
   window.addEventListener("online", refreshWeather);
   document.addEventListener("visibilitychange", refreshWeather);
 
-  const stage = document.getElementById("world-stage"), zoom = document.getElementById("zoom-toggle");
-  let fallback = false;
-  function fitGame() {
-    const active = document.fullscreenElement === stage || fallback;
-    stage.classList.toggle("game-fullscreen", active);
-    stage.dataset.fullscreenMode = fallback ? "window" : active ? "native" : "off";
-    zoom.textContent = active ? "전체화면 나가기" : "확대 보기";
-    zoom.setAttribute("aria-pressed", String(active));
-    const frame = stage.querySelector(".canvas-frame");
-    if (active) {
-      const area = stage.querySelector(".canvas-workarea");
-      frame.style.width = `${Math.max(0, Math.min(area.clientWidth - 16, (area.clientHeight - 16) * 1.5))}px`;
-    } else frame.style.removeProperty("width");
-    window.carrotForestPhaserGame?.scale.refresh();
-  }
-  zoom.addEventListener("click", async () => {
-    if (fallback) { fallback = false; fitGame(); return; }
-    if (document.fullscreenElement === stage) { await document.exitFullscreen(); return; }
-    try {
-      if (!stage.requestFullscreen) throw new Error("unsupported");
-      await stage.requestFullscreen();
-    } catch {
-      fallback = true;
-      notify("⛶", "창 전체 보기", "이 브라우저는 전체화면을 지원하지 않아요 · Esc로 닫기");
-    }
-    fitGame();
-    document.getElementById("phaser-world").focus({ preventScroll: true });
-  });
-  document.addEventListener("fullscreenchange", fitGame);
-  document.addEventListener("keydown", event => {
-    if (event.key !== "Escape") return;
-    if (fallback) { fallback = false; fitGame(); }
-    else if (document.fullscreenElement === stage) document.exitFullscreen().catch(() => {});
-  });
-  window.addEventListener("resize", fitGame);
-  new ResizeObserver(fitGame).observe(stage.querySelector(".canvas-workarea"));
 })();

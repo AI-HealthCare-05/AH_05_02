@@ -90,13 +90,15 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
         assert label in html
     for removed_label in ("당근의 숲 작업실", "SCENE OBJECTS", "2× HD · 24 × 16 TILE"):
         assert removed_label not in html
-    for control_id in ("reset-position", "zoom-toggle", "avatar-coordinate", "object-count"):
+    for control_id in ("reset-position", "zoom-in", "zoom-out", "ui-toggle", "avatar-coordinate", "object-count"):
         assert f'id="{control_id}"' in html
     assert html.count("data-workspace-target=") == 4
     assert "scrollIntoView" in script
-    atmosphere = (ROOT / "src/frontend/forest-atmosphere.js").read_text(encoding="utf-8")
-    assert 'await stage.requestFullscreen()' in atmosphere
-    assert 'await document.exitFullscreen()' in atmosphere
+    hud = (ROOT / "src/frontend/forest-hud.js").read_text(encoding="utf-8")
+    assert 'const NATIVE_WIDTH = 768' in hud
+    assert 'const NATIVE_HEIGHT = 512' in hud
+    assert 'forest-ui-hidden' in hud
+    assert 'forest-name-updated' in script
 
 
 def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
@@ -454,7 +456,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v147" in worker
+    assert "gandang-carrot-forest-pwa-v150" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker

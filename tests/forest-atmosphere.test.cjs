@@ -24,18 +24,13 @@ test('one hourly bell; no startup, duplicate, hidden, disabled or wake-up catch-
 test('weather codes cover rain snow fog thunder and unknown without inventing sunshine', () => {
   for (const [code,label] of [[0,'맑음'],[3,'흐림'],[45,'안개'],[61,'비'],[75,'눈'],[95,'뇌우'],[999,'날씨 정보']]) assert.equal(weatherLabel(code)[1],label);
 });
-test('fullscreen uses browser API with exit, resize and fallback handling', () => {
-  for (const token of ['await stage.requestFullscreen()', 'await document.exitFullscreen()', 'fullscreenchange', 'Escape', 'new ResizeObserver', 'scale.refresh()']) assert.ok(source.includes(token), token);
-});
-
 test('live clock dispatches one bell and evening toast, then respects OFF', () => {
   let now = Date.parse('2026-09-03T08:59:59Z'), off = false;
   const dispatched = [], timers = [], handlers = {};
   const icon = {}, title = {}, subtitle = {};
   const toast = {hidden:true, classList:{remove(){},add(){}}, querySelector:s => s === 'strong' ? title : s === 'small' ? subtitle : icon};
-  const clock = {}, area = {}, zoom = {addEventListener(){}};
-  const stage = {querySelector:() => area};
-  const elements = {'forest-clock':clock,'forest-time-toast':toast,'world-stage':stage,'zoom-toggle':zoom};
+  const clock = {};
+  const elements = {'forest-clock':clock,'forest-time-toast':toast};
   const document = {hidden:false,getElementById:id=>elements[id],addEventListener(){}};
   class FakeDate extends Date { static now(){return now;} }
   const window = {addEventListener:(name,fn)=>{handlers[name]=fn;},dispatchEvent:event=>dispatched.push(event.type)};

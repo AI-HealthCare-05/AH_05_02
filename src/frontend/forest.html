@@ -50,15 +50,16 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260907-40" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260907-42" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260902-28" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-atmosphere.js?v=20260903-2" defer></script>
+  <script src="/static/forest-atmosphere.js?v=20260907-3" defer></script>
   <script src="/static/forest-fire.js?v=20260903-1" defer></script>
-  <script src="/static/forest-phaser.js?v=20260907-35" defer></script>
-  <script src="/static/forest-game.js?v=20260907-91" defer></script>
+  <script src="/static/forest-phaser.js?v=20260907-38" defer></script>
+  <script src="/static/forest-hud.js?v=20260907-2" defer></script>
+  <script src="/static/forest-game.js?v=20260907-92" defer></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.2">
   <script src="/static/challenge-v2.js?v=2.1.2" defer></script>
 </head>
@@ -110,6 +111,37 @@
     <p id="game-status" class="game-status sr-only" role="status" aria-live="polite"><span aria-hidden="true">●</span> 게임을 준비하고 있습니다.</p>
 
     <div class="workspace">
+      <div class="stage-toolbar">
+        <div class="stage-title">
+          <span class="live-dot" aria-hidden="true"></span>
+          <h2 id="map-title">우리의 작은 숲</h2>
+          <button id="edit-forest-name" class="toolbar-button" type="button" aria-label="숲 이름 수정" title="숲 이름 수정">✎</button>
+          <form id="forest-name-form" hidden>
+            <label class="sr-only" for="forest-name-input">숲 이름</label>
+            <input id="forest-name-input" maxlength="24" required autocomplete="off">
+            <button class="toolbar-button" type="submit">저장</button>
+            <button id="cancel-forest-name" class="toolbar-button" type="button">취소</button>
+          </form>
+        </div>
+        <aside id="chat-panel" class="chat-panel" aria-labelledby="chat-title">
+          <h2 id="chat-title" class="sr-only">숲 채팅</h2>
+          <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"><p><strong>숲지기</strong><span>오늘도 같이 숲을 가꿔봐요!</span></p></div>
+          <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">채팅 메시지</label><input id="chat-input" maxlength="60" placeholder="숲 채팅"><button type="submit" aria-label="채팅 보내기">보내기</button></form>
+          <button id="chat-close" class="toolbar-button" type="button" aria-label="채팅 숨기기">×</button>
+        </aside>
+        <div class="stage-tools">
+          <span id="adapter-badge" class="adapter-badge sr-only">숲 체험</span>
+          <button id="scene-exit" class="toolbar-button" type="button" hidden>← 숲으로</button>
+          <button id="chat-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="chat-panel">채팅</button>
+          <div class="world-zoom" role="group" aria-label="게임 화면 크기">
+            <button id="zoom-out" class="toolbar-button" type="button" aria-label="게임 화면 축소">−</button>
+            <output id="zoom-level" aria-live="polite">100%</output>
+            <button id="zoom-in" class="toolbar-button" type="button" aria-label="게임 화면 확대">+</button>
+          </div>
+          <button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기</button>
+        </div>
+      </div>
+
       <aside class="tool-rail" aria-label="당근의 숲 작업 도구">
         <div class="rail-title sr-only"><strong>메뉴</strong></div>
         <nav class="tool-nav" aria-label="작업 영역 바로가기">
@@ -144,16 +176,6 @@
       </aside>
 
       <section id="world-stage" class="world-stage" aria-labelledby="map-title">
-        <div class="stage-toolbar">
-          <div class="stage-title"><span class="live-dot" aria-hidden="true"></span><div><h2 id="map-title">우리의 작은 숲</h2></div></div>
-          <div class="stage-tools">
-            <span id="adapter-badge" class="adapter-badge sr-only">숲 체험</span>
-            <button id="scene-exit" class="toolbar-button" type="button" hidden>← 숲으로</button>
-            <button id="reset-position" class="toolbar-button" type="button" title="아바타를 시작 위치로 이동">위치 초기화</button>
-            <button id="zoom-toggle" class="toolbar-button" type="button" aria-pressed="false">확대 보기</button>
-          </div>
-        </div>
-
         <div class="forest-weather-strip" aria-label="잠원동 인근 날씨와 한국 시간">
           <div class="weather-main"><strong>서초구 잠원동 <small>인근</small></strong><span id="forest-weather-value" role="status">날씨 불러오는 중</span><time id="forest-clock">--:--</time></div>
           <div class="weather-caption sr-only"><span id="forest-weather-updated">잠원동 인근 모델 기반 날씨 · 10분마다 갱신</span><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a></div>
@@ -180,9 +202,14 @@
           </div>
         </div>
 
+
+      </section>
+
+      <div class="right-hud">
         <div class="stage-footer arcade-deck">
           <div class="control-cluster">
-            <div class="touch-controls" aria-label="아바타 이동 버튼">
+            <div class="hud-panel-heading"><h2>조작</h2><button id="reset-position" class="toolbar-button" type="button" title="아바타를 시작 위치로 이동">위치 초기화</button><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">숨기기</button></div>
+            <div id="controls-content" class="touch-controls" aria-label="아바타 이동 버튼">
               <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
               <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
               <button class="arcade-action action-run" type="button" data-action="run" aria-pressed="false" aria-label="달리기 꺼짐, 단축키 R"><span>달리기 (R)</span></button>
@@ -195,12 +222,10 @@
             </div>
           </div>
           <section class="object-inspector footer-objects" aria-labelledby="placed-title">
-            <div class="panel-title"><div><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span></div>
+            <div class="panel-title"><div><h2 id="placed-title">배치한 오브젝트</h2></div><span class="object-count" id="object-count">0개</span><button id="objects-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="placed-list">숨기기</button></div>
             <div id="placed-list" class="placed-list"></div>
           </section>
         </div>
-      </section>
-
       <aside class="inspector" aria-label="퀘스트와 구성원 정보">
         <div class="inspector-tabs" role="tablist" aria-label="인스펙터 보기">
           <button class="inspector-tab is-active" type="button" role="tab" aria-selected="true" data-inspector-tab="quests-panel">오늘 할 일</button>
@@ -231,6 +256,7 @@
           <a id="add-family-colleague" class="add-member-button" href="/?step=8&amp;workspace=together">+ 가족/동료 추가하기</a>
         </section>
       </aside>
+      </div>
 
     </div>
 
@@ -324,11 +350,7 @@
     </div>
   </section>
 
-  <aside id="chat-panel" class="chat-panel" aria-labelledby="chat-title" hidden>
-    <div class="chat-heading"><div><p class="eyebrow">FOREST CHAT</p><h2 id="chat-title">숲 채팅</h2></div><button id="chat-close" type="button" aria-label="채팅 닫기">×</button></div>
-    <div id="chat-messages" class="chat-messages" aria-live="polite"><p><strong>숲지기</strong><span>오늘도 같이 숲을 가꿔봐요! 🌱</span></p></div>
-    <form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">채팅 메시지</label><input id="chat-input" maxlength="60" placeholder="메시지를 입력하세요"><button type="submit">보내기</button></form>
-  </aside>
+
 
 </body>
 </html>

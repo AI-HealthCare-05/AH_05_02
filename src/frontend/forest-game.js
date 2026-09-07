@@ -1481,11 +1481,13 @@
 
   function renderSceneChrome() {
     const sceneCopy = {
-      world: { title: "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
+      world: { title: window.ForestHud?.forestName || "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
       home: { title: "우리 집", aria: "소파와 옷장이 있는 집 내부 장면" },
       garden: { title: "당근 밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
     }[currentScene];
     $("#map-title").textContent = sceneCopy.title;
+    $("#edit-forest-name").hidden = currentScene !== "world";
+    if (currentScene !== "world") window.ForestHud?.closeNameEditor();
     canvas.setAttribute("aria-label", `${sceneCopy.aria}. 방향키나 WASD로 이동하고 Q키로 상호작용할 수 있습니다.`);
     $("#scene-exit").hidden = currentScene === "world";
     $(".home-label").hidden = currentScene !== "world";
@@ -2854,11 +2856,11 @@
         else if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
-        else setStatus("소파·옷장·LP 재생기·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
       } else if (currentScene === "garden") {
         if ((x >= 75 && x <= 320 && y >= 90 && y <= 380) || (x >= 455 && x <= 700 && y >= 90 && y <= 410)) interact("crops");
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
-        else setStatus("당근밭이나 출구를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
       } else {
         const placedTarget = nearbyPlacedObject(x, y, 58);
         if (placedTarget?.item.code === "reward_cow") {
@@ -2868,7 +2870,7 @@
         else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
         else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
         else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");
-        else setStatus("집·당근밭·연못·상호작용 오브젝트를 클릭하거나 가까이에서 Q를 눌러 보세요.");
+        else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
       }
       return;
     }
@@ -2929,6 +2931,7 @@
   function toggleChat(force) {
     const panel = $("#chat-panel");
     panel.hidden = force === undefined ? !panel.hidden : !force;
+    $("#chat-toggle").setAttribute("aria-expanded", String(!panel.hidden));
     if (!panel.hidden) window.setTimeout(() => $("#chat-input").focus(), 0);
     else canvas.focus();
   }
@@ -3017,6 +3020,7 @@
     if (!Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
     state.avatar.x = detail.x;
     state.avatar.y = detail.y;
+    if (typeof detail.sitting === "boolean") state.avatar.sitting = detail.sitting;
     if (detail.direction) state.avatar.direction = detail.direction;
     $("#avatar-coordinate").textContent = `X ${Math.round(detail.x)} · Y ${Math.round(detail.y)}`;
     updateInteractionPrompt();
@@ -3271,6 +3275,8 @@
   });
 
   $("#chat-close").addEventListener("click", () => toggleChat(false));
+  $("#chat-toggle").addEventListener("click", () => toggleChat());
+  window.addEventListener("forest-name-updated", () => renderSceneChrome());
   $("#chat-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const input = $("#chat-input");
@@ -3283,6 +3289,7 @@
     copy.textContent = message;
     row.append(author, copy);
     $("#chat-messages").append(row);
+    while ($("#chat-messages").children.length > 50) $("#chat-messages").firstElementChild.remove();
     input.value = "";
     $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
   });
