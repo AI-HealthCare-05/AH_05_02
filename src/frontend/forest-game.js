@@ -756,6 +756,8 @@
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
   const animatedObjectAtlas = new Image();
+  const duckCutoutImage = new Image();
+  const campfireBaseImage = new Image();
   const rewardCowImage = new Image();
   const homeRecordPlayerImage = new Image();
   const basicWalkAtlas = new Image();
@@ -771,6 +773,8 @@
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
+  duckCutoutImage.src = "/static/assets/carrot-forest-duck-cutout-v1.png?v=20260907-1";
+  campfireBaseImage.src = "/static/assets/carrot-forest-campfire-base-v5.png?v=20260907-1";
   rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v5.png?v=20260907-1";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v2.png?v=20260907-1";
@@ -778,8 +782,10 @@
   homeRecordPlayerImage.addEventListener("load", renderCanvas);
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v2.png?v=20260907-1";
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
-  storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
-  animatedObjectAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
+  storageSpriteAtlas.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
+  animatedObjectAtlas.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
+  duckCutoutImage.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
+  campfireBaseImage.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
   rewardCowImage.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
   window.addEventListener("lpc-avatar-ready", () => {
@@ -1161,21 +1167,15 @@
       context.globalAlpha = preview ? .72 : 1;
       const interactionType = interactiveObjectTypes[item.code];
       const interactionActive = interactionType && Boolean(item.active);
-      if (interactionType && !interactionActive) context.globalAlpha *= .58;
-      if (interactionActive && interactionType === "cow") {
-        context.rotate(Math.sin(performance.now() / 170) * .045);
-        context.translate(0, -Math.abs(Math.sin(performance.now() / 190)) * 3);
-      }
-      if (interactionActive && ["fire", "light"].includes(interactionType)) {
-        const pulse = 1 + Math.sin(performance.now() / 150) * .025;
-        context.scale(pulse, pulse);
-        context.globalAlpha *= .9 + Math.sin(performance.now() / 130) * .1;
+      // Fixtures stay anchored even in the non-Phaser fallback renderer.
+      if (item.code === "duck_float" && duckCutoutImage.complete && duckCutoutImage.naturalWidth) {
+        context.drawImage(duckCutoutImage, x - 46, y - 92 * .84, 92, 92);
+        context.restore(); return;
       }
       const animatedRow = animatedObjectRows[item.code];
       if (animatedRow != null && animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) {
-        const frame = interactionType && !interactionActive ? 0 : Math.floor(performance.now() / 220) % 4;
         const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 72 : 92;
-        context.drawImage(animatedObjectAtlas, frame * 128, animatedRow * 128, 128, 128, x - size / 2, y - size * .82, size, size);
+        if (item.code !== "duck_float") window.ForestObjects.drawAnimatedItem(context, animatedObjectAtlas, item.code, x - size / 2, y - size * .84, size, size);
         context.restore();
         return;
       }
@@ -1183,7 +1183,14 @@
         context.drawImage(rewardCowImage, x - 34, y - 55, 68, 68); context.restore(); return;
       }
       const storageIndex = storageObjectIndex[item.code];
-      if (drawAtlasCell(context, storageSpriteAtlas, storageIndex, 5, 4, x - 32, y - 48, 64, 64)) { context.restore(); return; }
+      if (storageIndex != null && storageSpriteAtlas.complete && storageSpriteAtlas.naturalWidth) {
+        const atlas = window.ForestObjects.createStorageAtlas(storageSpriteAtlas);
+        if (item.code === "campfire" && campfireBaseImage.complete && campfireBaseImage.naturalWidth) {
+          const tile = interactionActive ? window.ForestFire.burningTile(atlas, campfireBaseImage) : window.ForestFire.offTile(atlas, campfireBaseImage);
+          context.drawImage(tile, x - 32, y - 48, 64, 64);
+        } else window.ForestObjects.drawStorageItem(context, storageSpriteAtlas, item.code, x - 32, y - 48, 64, 64);
+        context.restore(); return;
+      }
       if (item.code === "flower_patch") {
         fillPixelRect(x - 15, y - 7, 30, 14, "#4b8e3f");
         [[-10, -8, "#ffcf43"], [0, -12, "#f16d77"], [10, -7, "#fff2a8"]].forEach(([dx, dy, color]) => fillPixelRect(x + dx, y + dy, 7, 7, color));
@@ -1960,15 +1967,26 @@
         const storageIndex = storageObjectIndex[code];
         if (storageIndex == null) visual = `<span aria-hidden="true">${item.icon || "📦"}</span>`;
         else {
-          const column = storageIndex % 5;
-          const row = Math.floor(storageIndex / 5);
-          visual = `<span class="storage-sprite-thumb" style="background-position:${column * 25}% ${row * 100 / 3}%" aria-hidden="true"></span>`;
+          visual = `<canvas class="storage-sprite-thumb" width="96" height="96" data-storage-object="${code}" aria-hidden="true"></canvas>`;
         }
       }
       return `<button type="button" data-inventory-dialog-item="${code}" aria-label="${item.name}" title="${item.name}">${visual}${view === "wardrobe" ? `<small>${item.name}</small>` : ""}</button>`;
     }).join("") || "<p>아직 보관 중인 아이템이 없습니다.</p>";
     $("#inventory-dialog").dataset.view = view;
     drawAnimatedObjectThumbnails($("#inventory-dialog-grid"));
+    drawStorageObjectThumbnails($("#inventory-dialog-grid"));
+  }
+
+  function drawStorageObjectThumbnails(root = document) {
+    if (!storageSpriteAtlas.complete || !storageSpriteAtlas.naturalWidth) return;
+    root.querySelectorAll("canvas[data-storage-object]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = true;
+      if (thumbnail.dataset.storageObject === "campfire" && campfireBaseImage.complete && campfireBaseImage.naturalWidth) {
+        target.drawImage(window.ForestFire.burningTile(window.ForestObjects.createStorageAtlas(storageSpriteAtlas), campfireBaseImage), 0, 0, thumbnail.width, thumbnail.height);
+      } else window.ForestObjects.drawStorageItem(target, storageSpriteAtlas, thumbnail.dataset.storageObject, 0, 0, thumbnail.width, thumbnail.height);
+    });
   }
 
   function drawAnimatedObjectThumbnails(root = document) {
@@ -1978,7 +1996,9 @@
       const row = Number(thumbnail.dataset.animatedObjectRow);
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       target.imageSmoothingEnabled = true;
-      target.drawImage(animatedObjectAtlas, 0, row * 128, 128, 128, 0, 0, thumbnail.width, thumbnail.height);
+      if (row === animatedObjectRows.duck_float) {
+        if (duckCutoutImage.complete && duckCutoutImage.naturalWidth) target.drawImage(duckCutoutImage, 0, 0, thumbnail.width, thumbnail.height);
+      } else window.ForestObjects.drawAnimatedItem(target, animatedObjectAtlas, window.ForestObjects.ANIMATED_CODES[row], 0, 0, thumbnail.width, thumbnail.height);
     });
     if (animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) draw();
     else animatedObjectAtlas.addEventListener("load", draw, { once: true });
@@ -1994,11 +2014,7 @@
         if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><span class="storage-reward-cow" aria-hidden="true"></span></button>`;
         const animatedRow = animatedObjectRows[code];
         if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas></button>`;
-        const storageIndex = storageObjectIndex[code];
-        const column = storageIndex % 5;
-        const row = Math.floor(storageIndex / 5);
-        const backgroundPosition = `${column * 25}% ${row * 100 / 3}%`;
-        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
+        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><canvas class="storage-sprite-thumb" width="96" height="96" data-storage-object="${code}" aria-hidden="true"></canvas></button>`;
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
@@ -2006,6 +2022,7 @@
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
     drawWardrobeLookThumbnails();
     drawAnimatedObjectThumbnails($("#storage-list"));
+    drawStorageObjectThumbnails($("#storage-list"));
     renderPlacementUI();
   }
 

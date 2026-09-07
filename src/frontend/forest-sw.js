@@ -1,25 +1,28 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v150";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v151";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260907-42",
+  "/static/forest-game.css?v=20260907-43",
   "/static/forest-atmosphere.css?v=20260903-2",
   "/static/forest-atmosphere.js?v=20260907-3",
   "/static/forest-hud.js?v=20260907-2",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260902-28",
-  "/static/forest-fire.js?v=20260903-1",
-  "/static/forest-phaser.js?v=20260907-38",
-  "/static/forest-game.js?v=20260907-92",
+  "/static/forest-objects.js?v=20260907-1",
+  "/static/forest-fire.js?v=20260907-2",
+  "/static/forest-phaser.js?v=20260907-39",
+  "/static/forest-game.js?v=20260907-93",
   "/static/challenge-v2.js?v=2.1.2",
   "/static/challenge-v2.css?v=2.1.2",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
+  "/static/assets/carrot-forest-duck-cutout-v1.png?v=20260907-1",
+  "/static/assets/carrot-forest-campfire-base-v5.png?v=20260907-1",
   "/static/assets/home-record-player-cottage-v2.png?v=20260907-1",
   "/static/assets/town-pro-sensory-cc0.mp3",
   "/static/assets/home-drowsy-evening-cc0.wav",

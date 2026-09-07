@@ -56,7 +56,7 @@ test('button-mode running drives actual Phaser distance, pose and footsteps with
     sceneName: 'world', forcedUntil: 100, forcedDirection: 'right',
     avatar: { x: 384, y: 410, mounted: false }, lastStepSfxAt: 0,
     player: { setPosition() { return this; }, setDepth() {} },
-    updateWorldAtmosphere() {}, updateRat() {}, updatePet() {}, emitPosition() {},
+    updateWorldAtmosphere() {}, updatePlacedObjectMotion() {}, updateRat() {}, updatePet() {}, emitPosition() {},
     isBlocked: () => false,
     setPremiumFrame: (...args) => frames.push(args),
   };

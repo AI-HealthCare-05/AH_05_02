@@ -456,7 +456,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v150" in worker
+    assert "gandang-carrot-forest-pwa-v151" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -668,7 +668,8 @@ def test_cow_fire_and_lights_toggle_nearby_with_q_and_persist_state() -> None:
     assert 'item.active ? "작동 중" : "꺼짐·정지"' in game_script
     assert "applyPlacedObjectState" in phaser_script
     assert 'actor.setData("interactive", true)' in phaser_script
-    assert "if (!type || item.active)" in phaser_script
+    assert 'item.code === "firefly_lantern" && item.active' in phaser_script
+    assert 'actor.getData("ambientFx")?.clear()' in phaser_script
     assert "this.tweens.killTweensOf(actor)" in phaser_script
     assert 'actor.getData("fireOffTarget")?.setVisible(!item.active)' in phaser_script
     assert 'actor.getData("fireOnTarget")?.setVisible(Boolean(item.active))' in phaser_script
@@ -1130,7 +1131,9 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
         assert code in phaser_script
     assert 'new CustomEvent("forest-world-pointer"' in phaser_script
     assert 'window.addEventListener("forest-world-pointer"' in game_script
-    assert 'this.load.spritesheet("animated-objects"' in phaser_script
+    assert 'this.load.image("animated-objects-source"' in phaser_script
+    assert 'window.ForestObjects.createAnimatedAtlas(animatedSource)' in phaser_script
+    assert 'window.ForestObjects.drawAnimatedItem' in game_script
     assert "repeat: -1" in phaser_script
     assert "syncPlacedObjects" in phaser_script
     assert "carrot-forest-animated-objects-v2.png" in worker
@@ -1151,7 +1154,9 @@ def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None
 
     assert (width, height) == (256 * 5, 256 * 4)
     assert (ROOT / "scripts/build_storage_object_atlas.py").is_file()
-    assert 'this.load.spritesheet("storage-objects"' in phaser_script
+    assert 'this.load.image("storage-objects-source"' in phaser_script
+    assert 'this.textures.addSpriteSheet("storage-objects", window.ForestObjects.createStorageAtlas(storageSource)' in phaser_script
+    assert 'window.ForestObjects.drawStorageItem' in game_script
     assert "storageObjectIndex" in phaser_script
     assert 'item.code === "reward_cow"' in phaser_script
     assert "outfitHistory" in game_script
@@ -1160,6 +1165,31 @@ def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None
     assert "data-outfit-look" in game_script
     assert "inventory: [...storageObjectCodes]" in game_script
     assert "carrot-forest-storage-atlas-v4.png" in css
+
+
+def test_object_cutouts_and_shared_renderers_are_wired_in_every_surface() -> None:
+    from PIL import Image
+
+    frontend = ROOT / "src/frontend"
+    game = (frontend / "forest-game.js").read_text(encoding="utf-8")
+    phaser = (frontend / "forest-phaser.js").read_text(encoding="utf-8")
+    html = (frontend / "forest.html").read_text(encoding="utf-8")
+    worker = (frontend / "forest-sw.js").read_text(encoding="utf-8")
+    for name in ("carrot-forest-duck-cutout-v1.png", "carrot-forest-campfire-base-v5.png"):
+        with Image.open(frontend / "assets" / name) as sprite:
+            assert sprite.mode == "RGBA", "Cutouts need real alpha, not a painted checkerboard"
+            low_alpha, high_alpha = sprite.getchannel("A").getextrema()
+            assert low_alpha == 0 and high_alpha >= 250
+            assert sprite.getpixel((0, 0))[3] == 0
+        assert name in game and name in phaser and name in worker
+    assert html.index("forest-objects.js") < html.index("forest-phaser.js")
+    assert "forest-objects.js?v=20260907-1" in worker
+    assert "canvas[data-storage-object]" in game
+    assert 'background-position:${backgroundPosition}' not in game
+    assert "ForestFire.burningTile" in game and "ForestFire.offTile" in game
+    assert 'this.load.image("campfire-off"' not in phaser
+    assert '"campfire-off").setOrigin(0.5, 0.9).setDisplaySize(94, 94)' in phaser
+    assert '"campfire-ripple", 0).setOrigin(0.5, 0.9).setDisplaySize(94, 94)' in phaser
 
 
 def test_avatar_catalog_cards_render_actual_lpc_previews_instead_of_emoji() -> None:

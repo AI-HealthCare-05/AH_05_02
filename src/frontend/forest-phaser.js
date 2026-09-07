@@ -106,18 +106,22 @@
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
-      this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1", { frameWidth: 128, frameHeight: 128 });
-      this.load.spritesheet("storage-objects", "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1", { frameWidth: 256, frameHeight: 256 });
+      this.load.image("animated-objects-source", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1");
+      this.load.image("storage-objects-source", "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1");
+      this.load.image("duck-cutout", "/static/assets/carrot-forest-duck-cutout-v1.png?v=20260907-1");
+      this.load.image("campfire-base-source", "/static/assets/carrot-forest-campfire-base-v5.png?v=20260907-1");
       this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1");
       this.load.image("reward-cow-body", "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1");
       this.load.image("reward-cow-base", "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1");
-      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v4.png?v=20260907-1");
     }
 
     create() {
+      const storageSource = this.textures.get("storage-objects-source").getSourceImage();
+      this.textures.addSpriteSheet("storage-objects", window.ForestObjects.createStorageAtlas(storageSource), { frameWidth: 256, frameHeight: 256 });
+      const animatedSource = this.textures.get("animated-objects-source").getSourceImage();
+      this.textures.addSpriteSheet("animated-objects", window.ForestObjects.createAnimatedAtlas(animatedSource), { frameWidth: 128, frameHeight: 128 });
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
       this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
-      this.createAnimatedObjectAnimations();
       window.ForestFire.install(this);
       this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
       this.placementPreview = null;
@@ -234,19 +238,6 @@
       this.emitPosition(true);
     }
 
-    createAnimatedObjectAnimations() {
-      Object.entries(animatedObjectRows).forEach(([code, row]) => {
-        const key = `forest-object-${code}`;
-        if (this.anims.exists(key)) return;
-        this.anims.create({
-          key,
-          frames: this.anims.generateFrameNumbers("animated-objects", { start: row * 4, end: row * 4 + 3 }),
-          frameRate: code === "garden_pinwheel" ? 7 : code === "firefly_lantern" ? 4 : 5,
-          repeat: -1,
-        });
-      });
-    }
-
     createHomeRecordPlayer() {
       const x = 452;
       const y = 320;
@@ -265,21 +256,80 @@
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
     }
 
+    splitPinwheelPixels(pixels) {
+      const base = new Uint8ClampedArray(pixels);
+      const blades = new Uint8ClampedArray(pixels.length);
+      // Audited against ForestObjects' normalized first pinwheel frame. The
+      // stem beneath the hub and every pixel of the flower/rock base stay put.
+      for (let y = 0; y < 76; y++) {
+        for (let x = 0; x < 128; x++) {
+          if (y >= 75 && x >= 60 && x < 68) continue;
+          const offset = (y * 128 + x) * 4;
+          blades.set(pixels.subarray(offset, offset + 4), offset);
+          base.fill(0, offset, offset + 4);
+        }
+      }
+      // Reuse the straight stem's own pixels behind the detached rotor. A turn
+      // must not reveal a gap where a blade previously occluded the support.
+      for (let y = 48; y < 75; y++) {
+        for (let x = 60; x < 68; x++) {
+          const from = (78 * 128 + x) * 4, to = (y * 128 + x) * 4;
+          base.set(pixels.subarray(from, from + 4), to);
+        }
+      }
+      return { base, blades };
+    }
+
+    createPinwheelTextures() {
+      if (this.textures.exists("pinwheel-base") && this.textures.exists("pinwheel-blades")) return;
+      const frame = this.textures.getFrame("animated-objects", animatedObjectRows.garden_pinwheel * 4);
+      const tile = document.createElement("canvas");
+      tile.width = tile.height = 128;
+      const context = tile.getContext("2d", { willReadFrequently: true });
+      context.drawImage(frame.source.image, frame.cutX, frame.cutY, 128, 128, 0, 0, 128, 128);
+      const layers = this.splitPinwheelPixels(context.getImageData(0, 0, 128, 128).data);
+      Object.entries(layers).forEach(([name, pixels]) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 128;
+        canvas.getContext("2d").putImageData(new ImageData(pixels, 128, 128), 0, 0);
+        this.textures.addImage(`pinwheel-${name}`, canvas);
+      });
+    }
+
     createPlacedObjectActor(item, preview = false, placedIndex = -1) {
         let actor;
         if (Object.hasOwn(animatedObjectRows, item.code)) {
           const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
-          actor = this.add.sprite(item.x, item.y, "animated-objects", animatedObjectRows[item.code] * 4)
+          // The generated frames redraw rocks, plants and supports between
+          // frames. Keep one fixture image; animate only a detached duck or
+          // small water/light accents so the placed footprint never drifts.
+          const fixture = this.add.sprite(0, 0, item.code === "duck_float" ? "duck-cutout" : "animated-objects", item.code === "duck_float" ? undefined : animatedObjectRows[item.code] * 4)
             .setOrigin(0.5, 0.84)
             .setDisplaySize(size, size);
+          const accents = this.add.graphics();
+          actor = this.add.container(item.x, item.y, [fixture, accents]);
+          actor.setData("fixtureTarget", fixture).setData("ambientFx", accents).setData("pointerTargets", [fixture]);
+          if (item.code === "duck_float") {
+            actor.setData("motionTarget", fixture).setData("motionOrigin", {
+              x: 0, y: 0, scaleX: fixture.scaleX, scaleY: fixture.scaleY,
+            });
+          } else if (item.code === "garden_pinwheel") {
+            this.createPinwheelTextures();
+            fixture.setTexture("pinwheel-base").setDisplaySize(size, size);
+            const blades = this.add.image((62 - 64) * size / 128, (48 - 128 * .84) * size / 128, "pinwheel-blades")
+              .setOrigin(62 / 128, 48 / 128).setDisplaySize(size, size);
+            actor.add(blades);
+            actor.setData("rotorTarget", blades).setData("pointerTargets", [fixture, blades]);
+          }
         } else if (item.code === "reward_cow") {
           const base = this.add.image(0, 3, "reward-cow-base").setOrigin(0.5, 0.86).setDisplaySize(88, 88);
           const body = this.add.image(0, -7, "reward-cow-body").setOrigin(0.5, 0.86).setDisplaySize(84, 84);
           actor = this.add.container(item.x, item.y, [base, body]);
           actor.setData("motionTarget", body).setData("pointerTargets", [base, body]);
+          actor.setData("motionOrigin", { x: 0, y: -7, scaleX: body.scaleX, scaleY: body.scaleY });
         } else if (item.code === "campfire") {
           const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
-          const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(94, 94);
+          const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.9).setDisplaySize(94, 94);
           const onFire = this.add.sprite(0, 0, "campfire-ripple", 0).setOrigin(0.5, 0.9).setDisplaySize(94, 94);
           actor = this.add.container(item.x, item.y, [shadow, offFire, onFire]);
           actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire).setData("pointerTargets", [offFire, onFire]);
@@ -329,8 +379,10 @@
     applyPlacedObjectState(actor, item) {
       const type = interactiveObjectTypes[item.code];
       if (Object.hasOwn(animatedObjectRows, item.code)) {
-        if (!type || item.active) actor.play(`forest-object-${item.code}`);
-        else actor.stop().setFrame(animatedObjectRows[item.code] * 4);
+        const fixture = actor.getData("fixtureTarget");
+        fixture?.stop();
+        if (!["duck_float", "garden_pinwheel"].includes(item.code)) fixture?.setFrame(animatedObjectRows[item.code] * 4);
+        actor.getData("ambientFx")?.clear();
       }
       if (!type) return;
       actor.setData("interactive", true).setData("active", Boolean(item.active)).setData("item", { ...item });
@@ -345,16 +397,17 @@
       const motionTarget = actor.getData("motionTarget");
       this.tweens.killTweensOf(motionTarget || actor);
       actor.setPosition(item.x, item.y).setAlpha(1);
+      const origin = actor.getData("motionOrigin");
       if (motionTarget) {
-        motionTarget.setPosition(0, item.code === "reward_cow" ? -7 : 0);
+        motionTarget.setPosition(origin?.x ?? 0, origin?.y ?? 0);
         motionTarget.setAngle(0);
-        motionTarget.setScale(1);
+        if (origin) motionTarget.setScale(origin.scaleX, origin.scaleY);
       }
-      if (!item.active) return;
+      if (!item.active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       if (type === "cow" && motionTarget) {
         this.tweens.add({
-          targets: motionTarget, x: 3, y: -12, angle: 4, scaleX: 1.03,
-          duration: 420, yoyo: true, repeat: -1, repeatDelay: 420, ease: "Sine.easeInOut",
+          targets: motionTarget, x: .55, y: -7.9, angle: .55,
+          duration: 1200, yoyo: true, repeat: -1, repeatDelay: 800, ease: "Sine.easeInOut",
         });
       }
     }
@@ -365,19 +418,20 @@
       if (!actor || item?.code !== "reward_cow") return;
       const target = actor.getData("motionTarget");
       this.tweens.killTweensOf(target);
-      target.setPosition(0, -7).setAngle(0).setScale(1);
+      const origin = actor.getData("motionOrigin");
+      target.setPosition(origin?.x ?? 0, origin?.y ?? -7).setAngle(0);
+      if (origin) target.setScale(origin.scaleX, origin.scaleY);
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const headTouch = reaction === "head";
       this.tweens.add({
         targets: target,
-        x: headTouch ? 0 : 7,
-        y: headTouch ? -17 : -10,
-        angle: headTouch ? -5 : 7,
-        scaleX: headTouch ? 1.08 : .98,
-        scaleY: headTouch ? .94 : 1.04,
-        duration: headTouch ? 190 : 140,
+        x: headTouch ? 0 : 1.2,
+        y: headTouch ? -8.8 : -7.5,
+        angle: headTouch ? -.75 : .9,
+        duration: headTouch ? 360 : 300,
         yoyo: true,
-        repeat: headTouch ? 1 : 2,
-        ease: headTouch ? "Back.easeOut" : "Sine.easeInOut",
+        repeat: 1,
+        ease: "Sine.easeInOut",
         onComplete: () => this.applyPlacedObjectState(actor, actor.getData("item")),
       });
     }
@@ -389,6 +443,42 @@
         actor.destroy();
       });
       this.placedObjectActors = placed.map((item, index) => this.createPlacedObjectActor(item, false, index)).filter(Boolean);
+    }
+
+    updatePlacedObjectMotion(time) {
+      if (!this.placedObjectActors?.length) return;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      this.placedObjectActors?.forEach((actor) => {
+        const item = actor.getData("item");
+        const accents = actor.getData("ambientFx");
+        if (!accents) return;
+        accents.clear();
+        const phase = reducedMotion ? 0 : time / 1600 + item.x * .01;
+        if (item.code === "duck_float") {
+          // Subpixel bob, no horizontal travel, rotation or scale pumping.
+          actor.getData("motionTarget")?.setPosition(0, reducedMotion ? 0 : Math.sin(phase) * .45);
+        } else if (item.code === "garden_pinwheel") {
+          // A single detached blade image turns once every 36 seconds. Its
+          // pivot is fixed; the stem/base never inherit angle or frame changes.
+          actor.getData("rotorTarget")?.setAngle(reducedMotion ? 0 : (time / 100) % 360);
+        }
+        if (this.sceneName !== "world") return;
+        if (item.code === "animated_fountain") {
+          const shimmer = .18 + (Math.sin(phase) + 1) * .07;
+          accents.lineStyle(.7, 0xd8faff, shimmer)
+            .strokeEllipse(0, -21, 25, 3);
+          [-15, 17].forEach((x, index) => {
+            const offset = reducedMotion ? 0 : Math.sin(phase + index) * .35;
+            accents.fillStyle(0xe0fbff, shimmer + .1).fillCircle(x, -37 + offset, .8);
+          });
+        } else if (item.code === "firefly_lantern" && item.active) {
+          [[-18, -31], [24, -42], [12, -20]].forEach(([x, y], index) => {
+            const wave = reducedMotion ? 0 : Math.sin(phase + index * 1.8);
+            accents.fillStyle(0xfff3a9, .28 + (wave + 1) * .09)
+              .fillCircle(x + wave * .65, y + wave * .4, 1.1);
+          });
+        }
+      });
     }
 
     currentLocalHour() {
@@ -864,6 +954,7 @@
         this.recordPlayerNote?.setY(-112 + Math.sin(time / 420) * 2).setAlpha(.8 + Math.sin(time / 420) * .15);
       }
       this.updateWorldAtmosphere(time);
+      this.updatePlacedObjectMotion(time);
       this.updateRat(time, delta);
       this.updateRatAttackButton?.();
       const modalOpen = this.isWorldInputBlocked?.() === true;
