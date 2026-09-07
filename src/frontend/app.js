@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -13,6 +13,9 @@ const safeExternalUrl = (value) => {
 };
 const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 const isLocalPreview = () => isDemoEnvironment() && state.token === "local-demo-token";
+const HEALTH_DRAFT_STORAGE_KEY = "gandang-health-draft-v1";
+const SESSION_RECOVERY_STORAGE_KEY = "gandang-session-recovery-v1";
+const HEALTH_DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 function setFormBusy(form, activeButton, busyLabel) {
   if (!form) return () => {};
@@ -715,6 +718,7 @@ function showHealthInputPanel(panel) {
     element.classList.toggle("active", element.dataset.healthTab === panel);
     element.setAttribute("aria-pressed", String(element.dataset.healthTab === panel));
   });
+  if (state.healthDraftDirty) persistHealthDraft();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1032,6 +1036,195 @@ function hydrateSavedHealthForm() {
   syncLifestyleAvatar();
   // Reopening a tab must preserve the in-progress draft for this saved record.
   state.healthFormCheckupId = checkup.checkup_id;
+}
+
+function healthDraftOwnerId(profile = state.userProfile) {
+  const ownerId = profile?.id ?? profile?.user_id;
+  return ownerId == null ? null : String(ownerId);
+}
+
+function currentHealthInputPanel() {
+  return [
+    ["health-metrics-panel", "metrics"],
+    ["lifestyle-input-panel", "lifestyle"],
+    ["detail-health-panel", "details"],
+    ["health-review-panel", "review"],
+  ].find(([id]) => !document.getElementById(id)?.hidden)?.[1] || "metrics";
+}
+
+function healthDraftFieldValues() {
+  const values = {};
+  $$("#health-form input, #health-form select, #health-form textarea").forEach((field) => {
+    if (!field.id || ["button", "submit", "file", "hidden", "password"].includes(field.type)) return;
+    values[field.id] = ["radio", "checkbox"].includes(field.type) ? field.checked : field.value;
+  });
+  return values;
+}
+
+function persistHealthDraft({ markDirty = false } = {}) {
+  if (markDirty) state.healthDraftDirty = true;
+  if (!state.healthDraftDirty) return false;
+  try {
+    sessionStorage.setItem(HEALTH_DRAFT_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      savedAt: Date.now(),
+      ownerId: healthDraftOwnerId(),
+      panel: currentHealthInputPanel(),
+      values: healthDraftFieldValues(),
+    }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function clearHealthDraft() {
+  state.healthDraftDirty = false;
+  try { sessionStorage.removeItem(HEALTH_DRAFT_STORAGE_KEY); } catch { /* storage may be unavailable */ }
+}
+
+function readHealthDraft() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(HEALTH_DRAFT_STORAGE_KEY) || "null");
+    if (!draft || draft.version !== 1 || !draft.values || Date.now() - Number(draft.savedAt || 0) > HEALTH_DRAFT_MAX_AGE_MS) {
+      clearHealthDraft();
+      return null;
+    }
+    const currentOwnerId = healthDraftOwnerId();
+    if (!draft.ownerId && currentOwnerId) {
+      clearHealthDraft();
+      return null;
+    }
+    if (draft.ownerId && currentOwnerId && draft.ownerId !== currentOwnerId) {
+      clearHealthDraft();
+      return null;
+    }
+    return draft;
+  } catch {
+    clearHealthDraft();
+    return null;
+  }
+}
+
+function restoreHealthDraft() {
+  const draft = readHealthDraft();
+  if (!draft) return null;
+  Object.entries(draft.values).forEach(([id, value]) => {
+    const field = document.getElementById(id);
+    if (!field || !field.closest("#health-form") || ["file", "password"].includes(field.type)) return;
+    if (["radio", "checkbox"].includes(field.type)) field.checked = value === true;
+    else field.value = value ?? "";
+  });
+  state.healthDraftDirty = true;
+  syncExerciseDetails();
+  syncAlcoholFrequencyDetails();
+  syncLifestyleAvatar();
+  return draft;
+}
+
+function persistSessionRecovery(recovery) {
+  try {
+    sessionStorage.setItem(SESSION_RECOVERY_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      returnStep: recovery.returnStep,
+      healthPanel: recovery.healthPanel,
+      ownerId: recovery.ownerId,
+    }));
+  } catch { /* the in-memory recovery path remains available */ }
+}
+
+function storedSessionRecovery() {
+  if (state.sessionRecovery) {
+    const currentOwnerId = healthDraftOwnerId();
+    if (state.sessionRecovery.ownerId && currentOwnerId && state.sessionRecovery.ownerId !== currentOwnerId) {
+      clearSessionRecovery();
+      return null;
+    }
+    return state.sessionRecovery;
+  }
+  try {
+    const recovery = JSON.parse(sessionStorage.getItem(SESSION_RECOVERY_STORAGE_KEY) || "null");
+    if (!recovery || recovery.version !== 1) return null;
+    const currentOwnerId = healthDraftOwnerId();
+    if (!recovery.ownerId || (currentOwnerId && recovery.ownerId !== currentOwnerId)) {
+      sessionStorage.removeItem(SESSION_RECOVERY_STORAGE_KEY);
+      return null;
+    }
+    return recovery;
+  } catch {
+    return null;
+  }
+}
+
+function clearSessionRecovery() {
+  state.sessionRecovery = null;
+  try { sessionStorage.removeItem(SESSION_RECOVERY_STORAGE_KEY); } catch { /* storage may be unavailable */ }
+}
+
+function beginSessionRecovery() {
+  if (state.accountRecovery) return;
+  if (state.step === 4) persistHealthDraft();
+  const recovery = state.sessionRecovery || {
+    version: 1,
+    returnStep: state.step,
+    healthPanel: currentHealthInputPanel(),
+    ownerId: healthDraftOwnerId(),
+  };
+  state.sessionRecovery = recovery;
+  persistSessionRecovery(recovery);
+  const email = state.userProfile?.email || $("#login-email")?.value || "";
+  state.token = null;
+  state.analysisRun = null;
+  showStep(2);
+  showAuthMode("login", { moveFocus: false });
+  if (email) $("#login-email").value = email;
+  const message = $("#login-form .auth-error-summary");
+  if (message) {
+    message.textContent = "로그인 시간이 만료되었습니다. 다시 로그인하면 입력하던 내용부터 이어서 진행할 수 있습니다.";
+    message.hidden = false;
+    window.requestAnimationFrame(() => message.focus());
+  } else $("#login-email")?.focus();
+}
+
+function resumeInterruptedHealthFlow(latestHealthCheckup) {
+  const recovery = storedSessionRecovery();
+  const draft = readHealthDraft();
+  if (draft) {
+    if (latestHealthCheckup) {
+      state.checkupId = latestHealthCheckup.checkup_id;
+      state.healthCheckupResult = latestHealthCheckup;
+      rememberCurrentScreeningInputId(latestHealthCheckup);
+      hydrateSavedHealthForm();
+    }
+    const restored = restoreHealthDraft();
+    if (!restored) return false;
+    clearSessionRecovery();
+    state.visitedSteps.add(4);
+    $("#submit-analysis").textContent = healthSubmitLabel();
+    showStep(4);
+    showHealthInputPanel(["metrics", "lifestyle", "details", "review"].includes(restored.panel) ? restored.panel : "metrics");
+    showMessage("로그인 전에 저장하지 못한 건강정보를 복원했습니다. 내용을 확인한 뒤 다시 저장해 주세요.", "success");
+    return true;
+  }
+  if (recovery?.returnStep === 5 && latestHealthCheckup) {
+    state.checkupId = latestHealthCheckup.checkup_id;
+    state.healthCheckupResult = latestHealthCheckup;
+    rememberCurrentScreeningInputId(latestHealthCheckup);
+    clearSessionRecovery();
+    state.analysisRun = null;
+    showStep(5);
+    renderPredictionStatus("failed", {
+      errorCode: "UNAUTHENTICATED",
+      message: "다시 로그인했습니다. 저장된 건강정보로 분석을 다시 요청해 주세요.",
+    });
+    $("#retry-analysis").hidden = false;
+    $("#retry-analysis").disabled = false;
+    $("#retry-partial-analysis").disabled = false;
+    showMessage("로그인이 복구되었습니다. 같은 건강정보로 분석을 다시 시도할 수 있습니다.", "success");
+    return true;
+  }
+  if (recovery) clearSessionRecovery();
+  return false;
 }
 
 function selectedRadioValue(name) {
@@ -2229,6 +2422,7 @@ function updateLifestyleMap(topic) {
 }
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const authenticatedRequest = Boolean(state.token) && !path.startsWith("/auth/");
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
   let response;
   try {
@@ -2250,13 +2444,15 @@ async function api(path, options = {}) {
     const message = typeof detail === "string" ? detail : validationMessage || detail?.message || payload.error?.message;
     const fallbackCode = fallbackApiErrorCode(response.status);
     const resolvedCode = normalizeModelErrorCode(detail?.error_code || payload.error_code || payload.error?.code || detail?.code || payload.code || fallbackCode);
-    throw new ApiError(message || fallbackApiErrorMessage(resolvedCode), {
+    const apiError = new ApiError(message || fallbackApiErrorMessage(resolvedCode), {
       code: resolvedCode,
       status: response.status,
       retryable: detail?.retryable ?? payload.retryable ?? payload.error?.retryable ?? response.status >= 500,
       retryAfterSeconds: detail?.retry_after_seconds ?? payload.retry_after_seconds ?? payload.error?.retry_after_seconds,
       details: Array.isArray(detail) ? detail : null,
     });
+    if (response.status === 401 && authenticatedRequest && !state.accountRecovery) beginSessionRecovery();
+    throw apiError;
   }
   return payload.data ?? payload;
 }
@@ -3917,13 +4113,18 @@ $("#signup-form").addEventListener("submit", async (event) => {
       showSignupEligibilityGuidance("CONSENT_REQUIRED", birthDate, gender);
       return;
     }
-    await api("/auth/signup", { method: "POST", body: JSON.stringify({
+    const signup = await api("/auth/signup", { method: "POST", body: JSON.stringify({
       email,
       password,
       birth_date: birthDate,
       gender,
       terms_agreed: $("#personal-consent").checked,
     }) });
+    state.userProfile = {
+      ...(state.userProfile || {}),
+      id: signup?.user_id ?? signup?.id ?? state.userProfile?.id,
+      email: signup?.email || email.trim(),
+    };
     recovery = { email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
     state.accountRecovery = recovery;
     state.token = null;
@@ -4185,6 +4386,8 @@ $("#health-error-list").addEventListener("click", (event) => {
   if (!button) return;
   focusHealthField(button.dataset.fieldId);
 });
+$("#health-form").addEventListener("input", () => persistHealthDraft({ markDirty: true }));
+$("#health-form").addEventListener("change", () => persistHealthDraft({ markDirty: true }));
 $("#health-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = event.submitter;
@@ -4211,6 +4414,7 @@ $("#health-form").addEventListener("submit", async (event) => {
       state.healthCheckupResult = checkup;
       rememberCurrentScreeningInputId(checkup);
       await saveCurrentScreeningInputSnapshot();
+      clearHealthDraft();
       state.healthCheckupHistory = [checkup, ...state.healthCheckupHistory];
       renderHealthCheckupHistory();
     } else {
@@ -4233,6 +4437,7 @@ $("#health-form").addEventListener("submit", async (event) => {
       state.healthCheckupResult = checkup;
       rememberCurrentScreeningInputId(checkup);
       await saveCurrentScreeningInputSnapshot();
+      clearHealthDraft();
       await loadHealthCheckupHistory();
     }
     if (state.currentHealthOnly) {
@@ -4727,6 +4932,14 @@ async function resumeAuthenticatedAccount() {
     state.healthCheckupHistory = Array.isArray(healthHistory?.items) ? healthHistory.items : [];
     renderHealthCheckupHistory();
     const latestHealthCheckup = Array.isArray(healthHistory?.items) ? healthHistory.items[0] : null;
+    state.returningUser = true;
+    state.visitedSteps.add(2);
+    if (latestHealthCheckup) {
+      state.checkupId = latestHealthCheckup.checkup_id;
+      state.healthCheckupResult = latestHealthCheckup;
+      rememberCurrentScreeningInputId(latestHealthCheckup);
+    }
+    if (resumeInterruptedHealthFlow(latestHealthCheckup)) return;
     try {
       const cycle = await api("/challenge-cycles/current");
       renderCycle(cycle);
@@ -4734,8 +4947,6 @@ async function resumeAuthenticatedAccount() {
     } catch (cycleError) {
       if (cycleError.status !== 404 && !cycleError.message.includes("진행 중인 챌린지가 없습니다")) throw cycleError;
     }
-    state.returningUser = true;
-    state.visitedSteps.add(2);
     if (!latestHealthCheckup) {
       if (state.requiresEligibility) beginReturningEligibility("health");
       else if (state.capabilities.currentHealth) openReturningUserHealthEdit();
@@ -4743,13 +4954,11 @@ async function resumeAuthenticatedAccount() {
       showMessage("저장된 건강정보가 없어 건강정보 입력으로 안내합니다.", "success");
       return;
     }
-    state.checkupId = latestHealthCheckup.checkup_id;
-    state.healthCheckupResult = latestHealthCheckup;
-    rememberCurrentScreeningInputId(latestHealthCheckup);
     [4, 8].forEach((step) => state.visitedSteps.add(step));
     showWorkspace("home", { moveFocus: false });
     showStep(8);
   } catch (error) {
+    if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
     showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token, verifyOnly: true },
       state.token ? "로그인은 완료했지만 계정의 저장 상태를 불러오지 못했습니다. 다시 가입하지 말고 저장 상태를 다시 확인해 주세요." : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
