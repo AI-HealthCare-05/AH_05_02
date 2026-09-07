@@ -8,6 +8,8 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../src/frontend/app.js'), 'utf8');
 const handlerSource = source.match(/^\$\("#signup-form"\)\.addEventListener\("submit", async \(event\) => \{[\s\S]*?^\}\);/m);
 assert.ok(handlerSource, 'Signup submit handler must exist');
+const passwordValidationSource = source.match(/^function signupPasswordIssues\(value\) \{[\s\S]*?(?=^function showAuthError)/m);
+assert.ok(passwordValidationSource, 'Password validation helpers must exist');
 
 for (const checked of [true, false]) {
   test(`signup JSON terms_agreed follows checkbox: ${checked}`, async () => {
@@ -20,7 +22,8 @@ for (const checked of [true, false]) {
       },
       '#eligibility-guidance': { hidden: false },
       '#email': { value: 'payload-fixture@example.com' },
-      '#password': { value: 'FixtureOnly123!' },
+      '#password': { value: 'FixtureOnly123!', removeAttribute() {}, setAttribute() {} },
+      '#password-error': { hidden: true, textContent: '' },
       '#signup-birth-date': { value: '1966-04-12' },
       '#signup-gender': { value: 'FEMALE' },
       '#personal-consent': { checked },
@@ -34,7 +37,7 @@ for (const checked of [true, false]) {
       isUnderMinimumBirthdayError: () => false,
       showAuthError: (_form, error) => assert.equal(error, stopAfterCapture),
     });
-    vm.runInContext(handlerSource[0], context);
+    vm.runInContext(passwordValidationSource[0] + handlerSource[0], context);
     await handler({ preventDefault() {}, currentTarget: nodes['#signup-form'], submitter: {} });
     assert.ok(request, 'Signup must issue a request');
     assert.equal(request.endpoint, '/auth/signup');

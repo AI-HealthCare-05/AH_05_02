@@ -16,7 +16,15 @@ fs.mkdirSync(dir, { recursive: true });
   const mark = name => { report.stages.push(name); console.log(`PASS ${name}`); };
   const email = `uiqa-${Date.now()}@example.com`;
   const password = 'LocalQa123!';
-  page.on('response', response => { const url = new URL(response.url()); if (url.pathname.startsWith('/api/v1/')) report.responses.push({ path: url.pathname, status: response.status() }); });
+  page.on('response', async response => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith('/api/v1/')) report.responses.push({ path: url.pathname, status: response.status() });
+    if (/\/prediction-jobs\/.+/.test(url.pathname) && response.ok()) {
+      const body = await response.json().catch(() => ({}));
+      const data = body.data || body;
+      report.lastJobStatus = ['queued', 'running', 'succeeded', 'failed'].includes(data.status) ? data.status : 'unknown';
+    }
+  });
   page.on('pageerror', error => report.errors.push(error.message));
   try {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -57,8 +65,16 @@ fs.mkdirSync(dir, { recursive: true });
     await page.screenshot({ path: path.join(dir, 'input-review-desktop.png'), fullPage: true });
     mark('basic -> lifestyle -> detail -> review; 380px input pages fit');
     await page.locator('#submit-analysis').click();
-    await page.waitForFunction(() => state.step === 6 || (state.step === 5 && !document.querySelector('#retry-analysis').hidden), { timeout: 45000 });
+    await page.waitForFunction(() => state.step === 6 || (state.step === 5 && !document.querySelector('#retry-analysis').hidden), null, { timeout: 45000 });
     if (await page.evaluate(() => state.step) !== 6) throw new Error('Analysis did not succeed; retry state visible');
+    report.models = await page.evaluate(() => Object.entries(state.analysisRun.models).map(([key, result]) => ({
+      key, status: result.status, model_version: result.prediction?.model_version,
+      display_allowed: result.prediction?.display_allowed,
+      operational_model_activated: result.prediction?.operational_model_activated,
+    })));
+    assert.equal(report.models.length, 2);
+    assert.ok(report.models.every(model => model.status === 'succeeded'));
+    assert.ok(report.models.every(model => model.operational_model_activated !== true));
     mark('health save -> analysis -> result');
     await page.screenshot({ path: path.join(dir, 'result-desktop.png'), fullPage: true });
     await page.locator('#to-challenges').click();
@@ -113,7 +129,7 @@ fs.mkdirSync(dir, { recursive: true });
     mark('controlled daily read failure -> retry -> actual saved completion restored');
     const restoredDailyCount = await saved.locator('.daily-record-card.done').count();
     await saved.locator('[data-top-workspace="home"]').click();
-    await saved.locator('#dashboard-edit-health').evaluate(button => button.closest('details').open = true);
+    await saved.locator('#open-health-management').click();
     await saved.locator('#dashboard-edit-health').click();
     const editHeight = await saved.locator('#height').inputValue();
     const editWeight = await saved.locator('#weight').inputValue();
@@ -123,7 +139,7 @@ fs.mkdirSync(dir, { recursive: true });
     await saved.locator('#weight').fill('72');
     await saved.locator('[data-health-tab="review"]').click();
     await saved.locator('#submit-analysis').click();
-    await saved.waitForFunction(() => state.step === 6 || (state.step === 5 && !document.querySelector('#retry-analysis').hidden), { timeout: 45000 });
+    await saved.waitForFunction(() => state.step === 6 || (state.step === 5 && !document.querySelector('#retry-analysis').hidden), null, { timeout: 45000 });
     assert.equal(await saved.evaluate(() => state.step), 6);
     const history = await saved.evaluate(() => state.healthCheckupHistory.map(item => ({ id: item.checkup_id, type: item.checkup_type, weight: item.weight_kg })));
     assert.equal(history.length, 2);
@@ -134,6 +150,15 @@ fs.mkdirSync(dir, { recursive: true });
     mark('health edit -> reanalysis -> new history, original record preserved');
     assert.equal(await saved.locator('#risk-forecast-panel').count(), 0);
     assert.ok(!report.responses.some(response => response.path.includes('/research/models/')));
+    const reportToken = await saved.evaluate(() => state.token);
+    const pdf = await saved.request.get(`${base}/api/v1/weekly-reports/current/pdf`, { headers: { Authorization: `Bearer ${reportToken}` } });
+    report.pdf = { status: pdf.status(), contentType: pdf.headers()['content-type'] };
+    if (pdf.ok() && report.pdf.contentType?.includes('application/pdf')) {
+      const pdfDir = path.resolve('tmp/pdfs');
+      fs.mkdirSync(pdfDir, { recursive: true });
+      fs.writeFileSync(path.join(pdfDir, 'weekly-report-live-20260907.pdf'), await pdf.body());
+      mark('actual weekly PDF downloaded for visual review');
+    } else console.log(`PDF_PENDING HTTP ${pdf.status()}`);
     await saved.close();
     assert.deepEqual(report.errors, []);
   } catch (error) {

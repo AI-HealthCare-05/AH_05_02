@@ -30,6 +30,9 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
       await page.locator('.profile-menu > summary').click();
       const cards = page.locator('.home-feature-card');
       assert.equal(await cards.count(), 4);
+      assert.equal(await cards.locator('span').count(), 0);
+      assert.ok(await page.locator('#home-health-management').isHidden());
+      assert.equal(await page.locator('#open-health-management').getAttribute('aria-expanded'), 'false');
       const boxes = await cards.evaluateAll(nodes => nodes.map(n => ({ y: n.getBoundingClientRect().y, width: n.getBoundingClientRect().width })));
       if (width === 1440) assert.equal(new Set(boxes.map(b => Math.round(b.y))).size, 1);
       if (width === 768) assert.equal(new Set(boxes.map(b => Math.round(b.y))).size, 2);
@@ -41,16 +44,39 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
         assert.ok(await page.locator(`#workspace-panel-${target}`).isVisible());
         await page.evaluate(() => showWorkspace('home'));
       }
-      await page.evaluate(() => document.querySelector('#home-health-management').open = false);
       await page.locator('#open-health-management').click();
-      assert.ok(await page.locator('#home-health-management').getAttribute('open') !== null);
+      assert.ok(await page.locator('#home-health-management').isVisible());
+      assert.ok(await page.locator('#dashboard-edit-health').isVisible());
+      assert.ok(await page.locator('#health-history-list').isVisible());
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'dashboard-health-title');
+      await page.keyboard.press('Escape');
+      assert.ok(await page.locator('#home-health-management').isHidden());
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'open-health-management');
+      await page.keyboard.press('Enter');
+      assert.ok(await page.locator('#home-health-management').isVisible());
+      await page.locator('#close-health-management').click();
+      assert.ok(await page.locator('#home-health-management').isHidden());
+      await page.locator('#open-health-management').click();
+      await page.locator('#open-health-management').click();
+      assert.ok(await page.locator('#home-health-management').isHidden());
+      await page.evaluate(() => renderHealthCheckupHistory([
+        { checkup_id: 11, height_cm: 170, weight_kg: 70 },
+        { checkup_id: 10, height_cm: 168, weight_kg: 68 },
+      ]));
+      await page.locator('#open-health-management').click();
+      assert.equal(await page.locator('[data-health-history-edit]').count(), 1);
+      await page.locator('[data-health-history-edit]').click();
+      assert.equal(await page.locator('#height').inputValue(), '170');
+      assert.equal(await page.locator('#weight').inputValue(), '70');
+      await page.evaluate(() => { showStep(8); showWorkspace('home'); });
+      assert.ok(await page.locator('#home-health-management').isHidden());
       await page.locator('#today-record-action').click();
       assert.equal(await page.getByRole('heading', { name: '챌린지 기록', exact: true }).count(), 1);
       await page.evaluate(() => showWorkspace('home'));
       await page.locator('#font-toggle').click();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
       assert.deepEqual(errors, []);
-      console.log(`PASS ${width}px: profile menu, notification isolation, four shortcuts, single record heading, large text without overflow`);
+      console.log(`PASS ${width}px: profile menu, arrow-free shortcuts, hidden health management, click/Enter/Escape/close, single record heading, large text without overflow`);
       await page.close();
     }
   } finally { await browser.close(); }

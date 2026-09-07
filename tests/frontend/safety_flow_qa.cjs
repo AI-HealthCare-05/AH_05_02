@@ -47,8 +47,18 @@ assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname));
       assert.ok(!requests.some(item => /auth\/signup|health-checkups|prediction-jobs|challenge-cycles/.test(item.path)));
       if (['urgent', 'same-day'].includes(scenario)) assert.equal(await panel.locator('a[href="tel:119"]:visible').count(), 1);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-      await page.locator('#eligibility-edit-answer').click();
+      await page.keyboard.press('Shift+Tab');
+      assert.ok(await page.evaluate(() => document.querySelector('#eligibility-guidance').contains(document.activeElement)));
+      await page.keyboard.press('Tab');
+      assert.ok(await page.evaluate(() => document.activeElement === safetyDialogControls(document.querySelector('#eligibility-guidance'))[0]));
+      await page.keyboard.press('Shift+Tab');
+      assert.ok(await page.evaluate(() => document.activeElement === safetyDialogControls(document.querySelector('#eligibility-guidance')).at(-1)));
+      await page.keyboard.press('Escape');
       assert.ok(await panel.isHidden());
+      assert.ok(await page.evaluate(() => document.activeElement.getClientRects().length > 0));
+      if (['underage', 'consent'].includes(scenario)) {
+        await page.waitForFunction(id => document.activeElement.id === id, scenario === 'underage' ? 'signup-birth-date' : 'health-consent');
+      }
       assert.deepEqual(errors, []);
       console.log(`PASS ${scenario}: guidance, focus entry, 380px, no prediction/save/start request, close`);
       await page.close();

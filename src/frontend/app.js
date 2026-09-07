@@ -347,6 +347,7 @@ function getRiskCategoryLabel(prediction) {
 }
 
 function showEligibilityGuidance(reasonCodes) {
+  state.eligibilityReturnFocus = document.activeElement;
   const priority = [
     "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
@@ -409,6 +410,30 @@ function togglePasswordVisibility(button) {
   } else button.textContent = label;
 }
 
+function signupPasswordIssues(value) {
+  const issues = [];
+  if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
+  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
+  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
+  if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
+  // Check missing character groups only; the server remains authoritative
+  // for its exact allowed special-character set and any additional rules.
+  if (!/[^A-Za-z0-9\s]/.test(value)) issues.push("특수문자를 포함해 주세요. 예: !");
+  return issues;
+}
+
+function showSignupPasswordIssues({ moveFocus = false } = {}) {
+  const input = $("#password");
+  const hint = $("#password-error");
+  const issues = signupPasswordIssues(input.value);
+  hint.textContent = issues.join(" ");
+  hint.hidden = issues.length === 0;
+  if (issues.length) input.setAttribute("aria-invalid", "true");
+  else input.removeAttribute("aria-invalid");
+  if (moveFocus && issues.length) input.focus();
+  return issues.length === 0;
+}
+
 function showAuthError(form, error) {
   const message = form.querySelector(".auth-error-summary");
   message.textContent = error.status === 401
@@ -421,15 +446,24 @@ function showAuthError(form, error) {
   message.hidden = false;
   // Only backend-declared field errors are associated with a specific input.
   const fields = { email: form.id === "signup-form" ? "email" : "login-email", password: form.id === "signup-form" ? "password" : "login-password" };
+  let firstInvalid = null;
   for (const detail of Array.isArray(error.details) ? error.details : []) {
     const input = document.getElementById(fields[detail.loc?.at(-1)]);
     if (!input) continue;
     input.setAttribute("aria-invalid", "true");
     const hint = document.getElementById(`${input.id}-error`);
     hint.textContent = input.id.includes("password") ? "비밀번호 조건을 확인해 주세요." : "올바른 이메일 주소를 입력해 주세요.";
+    if (input.id === "password") {
+      hint.textContent = signupPasswordIssues(input.value).join(" ") || "서버의 비밀번호 조건에 맞지 않습니다. 특수문자로 !를 사용해 다시 확인해 주세요.";
+    }
+    if (input.id === "email" && input.value.length > 40) hint.textContent = "이메일은 40자 이내로 입력해 주세요.";
     hint.hidden = false;
+    firstInvalid ||= input;
   }
-  message.focus();
+  if (firstInvalid) {
+    message.textContent = "표시된 입력칸의 안내를 확인해 주세요.";
+    firstInvalid.focus();
+  } else message.focus();
 }
 
 function setupAuthAccessibility() {
@@ -445,6 +479,7 @@ function setupAuthAccessibility() {
       const error = document.createElement("small");
       error.id = `${input.id}-error`;
       error.className = "field-error";
+      error.setAttribute("aria-live", "polite");
       error.hidden = true;
       (input.closest(".form-row") || input.closest(".consent-list")).append(error);
       input.setAttribute("aria-describedby", [input.getAttribute("aria-describedby"), error.id].filter(Boolean).join(" "));
@@ -457,6 +492,7 @@ function setupAuthAccessibility() {
         input.removeAttribute("aria-invalid");
         error.hidden = true;
         summary.hidden = true;
+        if (input.id === "password" && input.value) showSignupPasswordIssues();
       });
     });
     form.addEventListener("submit", () => { summary.hidden = true; });
@@ -858,6 +894,7 @@ function closeProfileEditor() {
 }
 
 function showSignupEligibilityGuidance(reasonCode, birthDate, gender) {
+  state.signupGuidanceField = reasonCode === "CONSENT_REQUIRED" ? "health-consent" : "signup-birth-date";
   $("#eligibility-birth-date").value = birthDate;
   $("#gender").value = gender;
   resetEligibilityAnswers();
@@ -1786,11 +1823,22 @@ function medicalFacilityCheckedAt(value) {
   }).format(date);
 }
 
+function isSampleFacilityPayload(payload = {}) {
+  return payload.provider_kind === "development" || payload.data_source === "development_mock";
+}
+
 function renderMedicalFacilities(payload = {}) {
   const facilities = Array.isArray(payload.facilities) ? payload.facilities : [];
   const results = $("#medical-facility-results");
   const meta = $("#medical-facility-meta");
   if (!results || !meta) return;
+  if (isSampleFacilityPayload(payload)) {
+    results.replaceChildren();
+    results.hidden = true;
+    meta.hidden = true;
+    setMedicalFacilityStatus("sample", "실제 의료기관 검색 연결이 필요해요", "현재 서버는 개발용 예시를 반환하고 있어 기관 목록·전화·지도는 표시하지 않습니다.");
+    return;
+  }
   results.hidden = facilities.length === 0;
   meta.hidden = false;
   const radius = Number(payload.retrieved_radius_meters);
@@ -1827,6 +1875,7 @@ async function requestMedicalFacilities({ lat, lon, areaLabel = "", referenceLab
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "5000" });
     const payload = await api(`/medical-facilities/nearby?${params.toString()}`);
     renderMedicalFacilities({ ...payload, search_area_label: areaLabel });
+    if (isSampleFacilityPayload(payload)) return;
     await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "medical", referenceLabel);
   } catch (error) {
     resetFacilitySearchUi("medical");
@@ -1938,6 +1987,13 @@ function renderEmergencyFacilities(payload = {}) {
   const results = $("#emergency-facility-results");
   const meta = $("#emergency-facility-meta");
   if (!results || !meta) return;
+  if (isSampleFacilityPayload(payload)) {
+    results.replaceChildren();
+    results.hidden = true;
+    meta.hidden = true;
+    setEmergencyFacilityStatus("sample", "실제 응급의료기관 검색 연결이 필요해요", "개발용 예시의 전화·지도는 표시하지 않습니다. 위급하면 검색을 기다리지 말고 119에 연락해 주세요.");
+    return;
+  }
   results.hidden = facilities.length === 0;
   meta.hidden = false;
   const radius = Number(payload.retrieved_radius_meters);
@@ -1973,6 +2029,7 @@ async function requestEmergencyFacilities({ lat, lon, areaLabel = "", referenceL
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: "10000" });
     const payload = await api(`/emergency-facilities/nearby?${params.toString()}`);
     renderEmergencyFacilities({ ...payload, search_area_label: areaLabel });
+    if (isSampleFacilityPayload(payload)) return;
     await renderFacilityMap(lat, lon, Array.isArray(payload.facilities) ? payload.facilities : [], "emergency", referenceLabel);
   } catch (error) {
     resetFacilitySearchUi("emergency");
@@ -2868,6 +2925,7 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
         <div><dt>현재 흡연</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_smoker))}</dd></div>
         <div><dt>현재 음주</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_drinker))}</dd></div>
       </dl>
+      ${index === 0 ? '<button class="secondary" type="button" data-health-history-edit>최근 정보 불러와 수정하기</button>' : ""}
     </details>`;
   }).join("");
 }
@@ -3224,10 +3282,13 @@ function renderTogetherMember(item) {
 }
 
 function showWorkspace(name, { moveFocus = true } = {}) {
+  $("#home-health-management").hidden = true;
+  $("#open-health-management").setAttribute("aria-expanded", "false");
   state.activeWorkspace = name;
   const heroCopy = workspaceHeroCopy[name] || workspaceHeroCopy.home;
   $("#dashboard-eyebrow").textContent = heroCopy.eyebrow;
   $("#dashboard-title").textContent = heroCopy.title;
+  $("#dashboard-together-mascot").hidden = name !== "together";
   $("#dashboard-lead").textContent = heroCopy.lead;
   $$(".workspace-tab").forEach((button) => {
     const selected = button.dataset.workspace === name;
@@ -3714,9 +3775,22 @@ $("#header-my-page").addEventListener("keydown", (event) => {
   }
 });
 $("#open-health-management").addEventListener("click", () => {
-  $("#home-health-management").open = true;
-  $("#dashboard-health-title").scrollIntoView({ behavior: "smooth", block: "center" });
-  $("#dashboard-health-title").focus({ preventScroll: true });
+  const panel = $("#home-health-management");
+  panel.hidden = !panel.hidden;
+  $("#open-health-management").setAttribute("aria-expanded", String(!panel.hidden));
+  if (!panel.hidden) {
+    $("#dashboard-health-title").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("#dashboard-health-title").focus({ preventScroll: true });
+  }
+});
+function closeHealthManagement() {
+  $("#home-health-management").hidden = true;
+  $("#open-health-management").setAttribute("aria-expanded", "false");
+  $("#open-health-management").focus();
+}
+$("#close-health-management").addEventListener("click", closeHealthManagement);
+$("#home-health-management").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { event.stopPropagation(); closeHealthManagement(); }
 });
 $("#profile-editor-close")?.addEventListener("click", closeProfileEditor);
 $("#profile-editor-cancel")?.addEventListener("click", closeProfileEditor);
@@ -3817,6 +3891,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   if (form.getAttribute("aria-busy") === "true") return;
+  if (!showSignupPasswordIssues({ moveFocus: true })) return;
   if (state.accountRecovery?.email === $("#email").value.trim()) {
     showAccountRecovery(state.accountRecovery, "이 계정은 이미 만들어졌습니다. 남은 설정을 이어서 완료해 주세요.");
     return;
@@ -4002,9 +4077,56 @@ $("#diagnosis-help-toggle").addEventListener("click", (event) => {
   help.hidden = !willOpen;
   event.currentTarget.setAttribute("aria-expanded", String(willOpen));
 });
-$("#eligibility-edit-answer").addEventListener("click", () => {
+function closeEligibilityGuidance() {
   $("#eligibility-guidance").hidden = true;
-  $("#eligibility-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  const signupField = state.signupGuidanceField;
+  state.signupGuidanceField = null;
+  if (signupField) {
+    showStep(2);
+    showAuthMode("signup", { moveFocus: false });
+    document.getElementById(signupField)?.focus();
+    // showStep schedules its heading focus; the correction field must win after it.
+    requestAnimationFrame(() => document.getElementById(signupField)?.focus());
+    return;
+  }
+  const previous = state.eligibilityReturnFocus;
+  const target = previous?.isConnected && !previous.disabled && previous.tabIndex >= 0 && previous.getClientRects().length
+    ? previous : $("#eligibility-birth-date");
+  target.focus();
+}
+$("#eligibility-edit-answer").addEventListener("click", closeEligibilityGuidance);
+function activeSafetyDialog() {
+  return [$("#emergency-questionnaire-modal"), $("#eligibility-guidance")]
+    .find(node => !node.hidden && node.getClientRects().length);
+}
+function safetyDialogControls(dialog) {
+  return [...dialog.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')]
+    .filter(node => !node.disabled && node.tabIndex >= 0 && node.getClientRects().length);
+}
+document.addEventListener("keydown", event => {
+  const dialog = activeSafetyDialog();
+  if (!dialog) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (dialog.id === "emergency-questionnaire-modal") closeEmergencyQuestionnaire();
+    else closeEligibilityGuidance();
+  } else if (event.key === "Tab") {
+    const controls = safetyDialogControls(dialog);
+    const first = controls[0];
+    const last = controls.at(-1);
+    const current = document.activeElement;
+    if (!first) { event.preventDefault(); dialog.focus(); return; }
+    if (event.shiftKey && (current === first || !controls.includes(current))) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (current === last || !controls.includes(current))) {
+      event.preventDefault(); first.focus();
+    }
+  }
+}, true);
+document.addEventListener("focusin", event => {
+  const dialog = activeSafetyDialog();
+  if (dialog && !dialog.contains(event.target)) (safetyDialogControls(dialog)[0] || dialog).focus();
 });
 $("#eligibility-guidance-primary").addEventListener("click", async () => {
   if (!state.eligibilityGuidanceStep) {
@@ -4014,6 +4136,7 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   }
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
+  state.signupGuidanceField = null;
   if (state.eligibilityGuidanceStep === 7) await loadChallenges();
   if (state.eligibilityGuidanceStep === 4) showHealthInputPanel("metrics");
   showStep(state.eligibilityGuidanceStep);
@@ -4692,6 +4815,11 @@ $("#return-login-back")?.addEventListener("click", () => {
 $("#dashboard-edit-health").addEventListener("click", () => {
   openReturningUserHealthEdit();
 });
+$("#health-history-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-health-history-edit]");
+  if (!button) return;
+  openReturningUserHealthEdit();
+});
 $("#shared-group-list")?.addEventListener("click", async (event) => {
   const accept = event.target.closest(".accept-shared");
   const cheer = event.target.closest(".cheer-shared");
@@ -4726,6 +4854,27 @@ $("#wearable-form")?.addEventListener("submit", async (event) => {
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
+function normalizeHealthEducationResult(result) {
+  const medicalNotice = "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다.";
+  const states = {
+    grounded: ["근거 자료에서 답변을 찾았어요", "done"],
+    insufficient_evidence: ["근거를 충분히 찾지 못했어요", "insufficient"],
+    medical_safety_refusal: ["의료진 확인이 필요한 질문입니다", "refused"],
+  };
+  const answer = typeof result?.answer === "string" ? result.answer.trim() : "";
+  if (!answer) return { title: "표시할 답변이 없어요", state: "empty", answer: "질문을 바꾸거나 다시 시도해 주세요.", citations: [], medicalNotice };
+  const status = Object.hasOwn(states, result.answer_status) ? states[result.answer_status] : null;
+  if (!status) throw new Error("건강교육 응답 형식을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+  const citations = (Array.isArray(result.citations) ? result.citations : []).flatMap(item => {
+    const url = safeExternalUrl(item?.url);
+    return url ? [{ url, title: typeof item.title === "string" ? item.title : "근거 자료" }] : [];
+  });
+  if (result.answer_status === "grounded" && !citations.length) {
+    return { title: "답변의 출처를 확인하지 못했어요", state: "insufficient", answer: "확인 가능한 근거가 없어 답변을 표시하지 않습니다. 다시 시도해 주세요.", citations: [], medicalNotice };
+  }
+  return { title: status[0], state: status[1], answer, citations, medicalNotice: typeof result.medical_notice === "string" && result.medical_notice.trim() ? result.medical_notice : medicalNotice };
+}
+
 $("#rag-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -4736,17 +4885,10 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
   box.innerHTML = "<div><strong>승인된 건강자료에서 근거를 찾고 있어요.</strong><p>잠시만 기다려 주세요.</p></div>";
   try {
     const result = await api("/health-education/questions", { method: "POST", body: JSON.stringify({ question: $("#rag-question").value }) });
-    const citations = (Array.isArray(result.citations) ? result.citations : []).map((item) => {
-      const url = safeExternalUrl(item.url);
-      return url ? `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(item.title || "근거 자료")}</a></li>` : "";
-    }).filter(Boolean).join("");
-    const statusCopy = {
-      grounded: ["근거 자료에서 답변을 찾았어요", "done"],
-      insufficient_evidence: ["근거를 충분히 찾지 못했어요", "insufficient"],
-      medical_safety_refusal: ["의료진 확인이 필요한 질문입니다", "refused"],
-    }[result.answer_status] || ["건강교육 정보를 확인했어요", "done"];
-    box.dataset.state = statusCopy[1];
-    box.innerHTML = `<div><strong>${escapeHtml(statusCopy[0])}</strong><p>${escapeHtml(result.answer || "표시할 답변이 없습니다.")}</p>${citations ? `<p class="rag-citation-title">근거 및 출처</p><ul>${citations}</ul>` : ""}${result.medical_notice ? `<small>${escapeHtml(result.medical_notice)}</small>` : ""}</div>`;
+    const view = normalizeHealthEducationResult(result);
+    const citations = view.citations.map(item => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a></li>`).join("");
+    box.dataset.state = view.state;
+    box.innerHTML = `<div><strong>${escapeHtml(view.title)}</strong><p>${escapeHtml(view.answer)}</p>${citations ? `<p class="rag-citation-title">근거 및 출처</p><ul>${citations}</ul>` : ""}<small>${escapeHtml(view.medicalNotice)}</small></div>`;
   } catch (error) {
     box.dataset.state = "failed";
     box.innerHTML = `<div><strong>건강교육 정보를 불러오지 못했어요</strong><p>${escapeHtml(error?.retryable ? "잠시 후 다시 시도해 주세요." : error.message)}</p></div>`;

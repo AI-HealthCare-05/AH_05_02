@@ -612,7 +612,7 @@
       </section>
       <section class="screen" data-step="8" aria-labelledby="dashboard-title">
         <div class="dashboard-hero">
-          <div><p class="eyebrow" id="dashboard-eyebrow">나의 건강 홈</p><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2><p class="lead" id="dashboard-lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
+          <div><p class="eyebrow" id="dashboard-eyebrow">나의 건강 홈</p><div class="dashboard-title-row"><img id="dashboard-together-mascot" src="/static/assets/hyeoldangi-forest-carrot.png" alt="" hidden><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2></div><p class="lead" id="dashboard-lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
           <details class="profile-menu">
             <summary aria-label="알림 설정 메뉴 열기"><span aria-hidden="true"><svg class="profile-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span></summary>
             <div class="profile-menu-panel">
@@ -635,17 +635,17 @@
             <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
           </div>
           <div class="home-feature-grid" aria-label="다른 기능 바로가기">
-            <button class="home-feature-card feature-report workspace-shortcut" type="button" data-workspace="report"><strong>주간 리포트</strong><small>나의 실천 기록 살펴보기</small><img src="/static/assets/hyeoldangi-guide.png" alt=""><span aria-hidden="true">→</span></button>
-            <button class="home-feature-card feature-together workspace-shortcut" type="button" data-workspace="together"><strong>함께하기</strong><small>가족·친구와 함께 실천해요</small><img src="/static/assets/hyeoldangi-challenge-walking.png" alt=""><span aria-hidden="true">→</span></button>
-            <button class="home-feature-card feature-tools workspace-shortcut" type="button" data-workspace="tools"><strong>건강도구</strong><small>필요한 건강도구 찾아보기</small><img src="/static/assets/hyeoldangi-wearable.png" alt=""><span aria-hidden="true">→</span></button>
-            <button class="home-feature-card feature-health" id="open-health-management" type="button" aria-controls="home-health-management"><strong>건강정보 관리</strong><small>저장된 정보 확인·수정하기</small><img src="/static/assets/hyeoldangi-health-input.png" alt=""><span aria-hidden="true">↓</span></button>
+            <button class="home-feature-card feature-report workspace-shortcut" type="button" data-workspace="report"><strong>주간 리포트</strong><small>나의 실천 기록 살펴보기</small><img src="/static/assets/hyeoldangi-guide.png" alt=""></button>
+            <button class="home-feature-card feature-together workspace-shortcut" type="button" data-workspace="together"><strong>함께하기</strong><small>가족·친구와 함께 실천해요</small><img src="/static/assets/hyeoldangi-challenge-walking.png" alt=""></button>
+            <button class="home-feature-card feature-tools workspace-shortcut" type="button" data-workspace="tools"><strong>건강도구</strong><small>필요한 건강도구 찾아보기</small><img src="/static/assets/hyeoldangi-wearable.png" alt=""></button>
+            <button class="home-feature-card feature-health" id="open-health-management" type="button" aria-controls="home-health-management" aria-expanded="false"><strong>건강정보 관리</strong><small>새 기록 남기기·저장된 정보 수정</small><img src="/static/assets/hyeoldangi-health-input.png" alt=""></button>
           </div>
           <div class="dashboard-management-grid">
-            <details class="dashboard-account-actions health-management" id="home-health-management" open>
-              <summary id="dashboard-health-title">건강정보 관리</summary>
+            <section class="dashboard-account-actions health-management" id="home-health-management" aria-labelledby="dashboard-health-title" hidden>
+              <div class="dashboard-management-heading"><h3 id="dashboard-health-title" tabindex="-1">건강정보 관리</h3><button class="secondary" id="close-health-management" type="button">닫기</button></div>
               <div class="dashboard-management-content">
                 <div class="dashboard-management-heading">
-                  <p>새 건강정보를 저장해도 이전 기록은 그대로 유지됩니다.</p>
+                  <p>새 기록은 최근 정보를 참고해 입력할 수 있어요. 최근 기록을 불러와 수정할 수도 있으며, 저장 시 이전 기록은 유지됩니다.</p>
                   <button class="secondary" id="dashboard-edit-health" type="button">새 건강정보 기록하기</button>
                 </div>
                 <section class="health-history-section" aria-labelledby="health-history-title">
@@ -658,7 +658,7 @@
                   </div>
                 </section>
               </div>
-            </details>
+            </section>
           </div>
           <div class="dashboard-safety-note"><span aria-hidden="true">ⓘ</span><p><strong>해석 주의:</strong> <span id="dashboard-notice">수행률은 치료 효과를 의미하지 않습니다.</span></p></div>
         </section>
@@ -806,16 +806,7 @@
         </section>
 
         <section class="workspace-panel" id="workspace-panel-together" role="region" tabindex="-1" data-workspace-panel="together" aria-label="함께하기" hidden>
-          <section class="dashboard-section first-section together-page" aria-labelledby="together-title">
-            <div class="together-header">
-              <div class="together-title-row">
-                <img class="together-mascot" src="/static/assets/hyeoldangi-forest-carrot.png" alt="한 손에 당근을 들고 인사하는 혈당이">
-                <h3 id="together-title">당근의 숲</h3>
-                <span class="together-context-label">가족·친구와 함께하기</span>
-                <span class="forest-week-pill">2주차 · 14일 남음</span>
-              </div>
-            </div>
-
+          <section class="dashboard-section first-section together-page" aria-labelledby="dashboard-title">
             <a class="forest-preview" href="/forest" aria-label="당근의 숲 게임 열기">
               <img src="/static/assets/carrot-forest-entry.webp" alt="당근의 숲 — 함께 실천하고, 같이 성장하는 모두의 건강 숲" width="1644" height="863">
             </a>
