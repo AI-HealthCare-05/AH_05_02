@@ -59,7 +59,7 @@ test('error navigation follows field DOM instead of outdated field-name lists', 
 test('missing snapshot endpoint is explicit and cannot reuse stale snapshot ID', async () => {
   const state = { checkupId: 3, currentScreeningInputId: 99 };
   const save = load('saveCurrentScreeningInputSnapshot', {
-    state, detailHealthPayload: () => ({}), canUseLocalModelPreview: () => false,
+    state, detailHealthPayload: () => ({}), isLocalPreview: () => false,
     api: async () => { throw { status: 404 }; },
   });
   await save();

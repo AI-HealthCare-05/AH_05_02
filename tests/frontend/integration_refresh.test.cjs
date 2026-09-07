@@ -86,7 +86,7 @@ for (const today of [null, { ...approved('diabetes_current_screening', 'high'), 
   });
 }
 
-test('forecast curve stays hidden until approval and uncertainty bounds are available', () => {
+test('research forecast stays excluded from MVP even with approval and uncertainty bounds', () => {
   const context = loadFunctions(['forecastCurveDisplayAllowed']);
   const point = { lower: 0.1, upper: 0.3 };
   assert.equal(context.forecastCurveDisplayAllowed({}, true), false);
@@ -101,7 +101,7 @@ test('forecast curve stays hidden until approval and uncertainty bounds are avai
     risk_curve_status: 'available',
     calibration_status: 'approved',
     points: [point],
-  }, true), true);
+  }, true), false);
 });
 
 test('search reset clears results and every previous map marker', () => {

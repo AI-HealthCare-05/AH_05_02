@@ -120,9 +120,9 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'data-risk-preview="low"' in html
     assert 'data-risk-preview="caution"' in html
     assert 'data-risk-preview="high"' in html
-    assert 'setForecastRiskPreview("caution")' in script
+    assert "function setForecastRiskPreview(risk)" in script
     assert "normalizeRiskKey(prediction)" in script
-    assert html.index('id="risk-confirm-card"') < html.index('id="risk-forecast-panel"')
+    assert html.index('id="risk-confirm-card"') < html.index('id="future-risk-category"')
     assert 'id="result-unavailable"' in html
     assert "모델 검증 중" in script
     assert "medical-guidance-detail" in html + script
@@ -137,36 +137,15 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "약 2년 뒤" not in html
 
 
-def test_age_risk_forecast_is_accessible_and_requires_public_approval() -> None:
+def test_mvp_excludes_research_forecast_and_retains_separate_results() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-    styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
-
-    assert 'id="risk-forecast-panel"' in html
-    assert "2년 단위 미래 전망" not in html
-    assert 'id="age-risk-chart" role="img"' in html
-    assert 'id="forecast-state" role="status" aria-live="polite"' in html
-    assert "현재 생활습관 유지" in html
-    assert "생활습관 개선" in html
-    assert "효과를 보장하거나 치료 결과를 예측하는 값이 아닙니다." in html
-    assert "불확실성 범위" in html
-    assert 'forecast?.status === "approved"' in script
-    assert "`/static/assets/hyeoldangi-face-${point.level}.png`" in script
-    assert ".age-risk-signal-track img{" in styles
-    assert "forecast.public_display_approved !== true" in script
-    assert "forecastCurveDisplayAllowed" in script
-    assert "hyeoldangi-face-${point.level}.png" in script
-    assert ".age-risk-signal-track" in styles
-    for level in ("low", "caution", "high"):
-        assert (ROOT / f"src/frontend/assets/hyeoldangi-face-{level}.png").is_file()
-    assert "normalizeForecastSignal" in script
-    assert "point.signal_level" in script
-    assert "point.risk_category" in script
-    assert "임의 수치나 그래프를 만들지 않습니다." in script
-    assert "renderAgeRiskForecast(prediction, isApprovedRisk)" in script
-    assert "@media(forced-colors:active)" in styles
-    assert "age-risk-signal-track" in styles
-    assert 'data-status="preview"' in styles
+    for panel in ("risk-forecast-panel", "age-risk-chart", "uncertainty-panel", "scenario-comparison-title"):
+        assert f'id="{panel}"' not in html
+    assert 'id="risk-confirm-card"' in html
+    assert 'id="future-risk-category"' in html
+    assert "/research/models/" not in script
+    assert "isPublicRiskDisplayAllowed" in script
 
 
 def test_rule_forecast_preview_is_local_opt_in_and_non_predictive() -> None:
@@ -174,11 +153,11 @@ def test_rule_forecast_preview_is_local_opt_in_and_non_predictive() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert 'id="rule-forecast-preview"' not in html
-    assert "const canUseLocalModelPreview = () =>" in script
-    assert 'params.get("preview") === "forecast"' in script
-    assert "tryRunJunhyukModelDemo" in script
-    assert 'api("/research/models/junhyuk-local-demo"' in script
-    assert "운영 승인 전 수치·확률" in script
+    assert 'includes(params.get("preview")) || !isDemoEnvironment()' in script
+    assert "tryRunJunhyukModelDemo" not in script
+    assert "/research/models/" not in script
+    assert "실제 모델을 호출하지 않았습니다" in script
+    assert "운영 승인 결과가 아닙니다" in html
 
 
 def test_together_shares_only_challenge_completion_status() -> None:
@@ -321,8 +300,9 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'data-demo-status="model_not_ready"' not in html
     assert 'renderPredictionStatus("failed", {' in script
     assert 'errorCode: isTimeout ? "TIMEOUT"' in script
-    assert 'requestPredictionModel("diabetes_current_screening")' in script
-    assert 'requestPredictionModel("diabetes_incidence")' in script
+    assert "await requestPredictionModel(modelKey)" in script
+    assert '"diabetes_current_screening"' in script
+    assert '"diabetes_incidence"' in script
     assert "state.currentScreeningPrediction" in script
 
 
@@ -377,7 +357,7 @@ def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
     styles = (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
 
     assert 'id="medical-guidance-detail" class="notice safety medical-guidance-alert"' in html
-    assert html.index('id="medical-guidance-detail"') > html.index('id="risk-forecast-panel"')
+    assert html.index('id="medical-guidance-detail"') > html.index('id="future-risk-category"')
     assert html.index('id="medical-guidance-detail"') < html.index('id="to-challenges"')
     assert 'next: "검사·상담 안내 보기"' in script
     assert '$("#medical-guidance-detail").hidden = true;' in script
@@ -479,7 +459,7 @@ def test_local_model_preview_shows_category_without_exposing_numeric_score() -> 
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert 'id="development-preview-notice"' in html
-    assert "개발 확인용 모델 결과입니다" in html
+    assert "개발 확인용 결과 화면입니다" in html
     assert "job.development_preview_risk_category" in script
     assert "developmentPreviewRiskCategory" in script
     assert "개발 확인용 위험 범주만 표시합니다." in script
@@ -572,7 +552,7 @@ def test_returning_user_routes_from_persisted_eligibility_state() -> None:
     assert "if (state.currentHealthOnly)" in script
     assert "if (state.returningUser && shouldRunPredictionAfterHealthEdit())" in script
     assert 'return "저장하고 다시 분석하기"' in script
-    assert 'showMessage("로컬 미리보기에서는 승인되지 않은 예측 수치를 표시하지 않습니다."' in script
+    assert "실제 모델을 호출하지 않았습니다" in script
     assert "if (state.cycle?.user_challenges?.length)" in script
     assert "이어서 4주 생활습관 챌린지를 선택해 주세요" in script
 
@@ -585,8 +565,10 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
         assert sample_value not in html
     assert 'id="report-week-period">기간 확인 중' in html
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
-    assert "4주 전체 기록을 모으고 있어요" in html
-    assert "챌린지를 완료하면 회차별 기록" in html
+    assert "지난 4주" in html
+    assert "전체" in html
+    assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
+    assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
     assert "report.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
@@ -650,13 +632,12 @@ def test_local_forecast_preview_opens_safe_result_layout() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "function resumeForecastPreview()" in script
-    assert 'params.get("preview") !== "forecast"' in script
+    assert 'includes(params.get("preview")) || !isDemoEnvironment()' in script
     assert 'result_status: "development_only"' in script
-    assert 'output_status: "uncalibrated_research_probability_only"' in script
-    assert '{ display_label: "2년 뒤", signal_level: "low" }' in script
-    assert '{ display_label: "4년 뒤", signal_level: "caution" }' in script
-    assert '{ display_label: "6년 뒤", signal_level: "high" }' in script
-    assert "실제 분석값이 아닙니다" in script
+    assert "renderMvpResultPreview();" in script
+    assert "display_allowed: false" in script
+    assert "operational_model_activated: false" in script
+    assert "실제 모델을 호출하지 않았습니다" in script
     assert "resumeForecastPreview();" in script
 
 

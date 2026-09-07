@@ -14,7 +14,10 @@ for (const checked of [true, false]) {
     const stopAfterCapture = new Error('Stop before any real account creation');
     let handler, request, released = false;
     const nodes = {
-      '#signup-form': { addEventListener: (name, callback) => { assert.equal(name, 'submit'); handler = callback; } },
+      '#signup-form': {
+        getAttribute: () => null,
+        addEventListener: (name, callback) => { assert.equal(name, 'submit'); handler = callback; },
+      },
       '#eligibility-guidance': { hidden: false },
       '#email': { value: 'payload-fixture@example.com' },
       '#password': { value: 'FixtureOnly123!' },

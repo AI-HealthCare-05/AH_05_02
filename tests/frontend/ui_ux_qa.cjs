@@ -47,11 +47,7 @@ async function noOverflow(page, name) {
     await page.screenshot({ path: path.join(artifacts, 'login-error-mobile.png'), fullPage: true });
     await page.unroute('**/api/v1/auth/login');
     await page.locator('#sidebar-signup').click();
-    const signupRequests = [];
-    await page.route('**/api/v1/auth/signup', route => {
-      signupRequests.push(route.request().postDataJSON());
-      return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) });
-    });
+    await page.route('**/api/v1/auth/signup', route => route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) }));
     await page.locator('#email').fill('qa@example.com');
     await page.locator('#signup-birth-date').fill('1966-04-12');
     await page.locator('#personal-consent').check();
@@ -60,14 +56,6 @@ async function noOverflow(page, name) {
     await page.locator('#password-error').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#password').getAttribute('aria-invalid'), 'true');
     pass('422 signup error is associated with password input');
-    assert.equal(signupRequests.length, 1);
-    assert.equal(signupRequests[0].terms_agreed, true);
-    assert.equal(signupRequests[0].email, 'qa@example.com');
-    await page.locator('#personal-consent').uncheck();
-    await page.locator('#signup-form button[type="submit"]').click();
-    assert.equal(await page.locator('#personal-consent').evaluate(input => input.validity.valueMissing), true);
-    assert.equal(signupRequests.length, 1, 'Unchecked required consent must block signup');
-    pass('signup request sends checked consent; unchecked consent blocks browser submission');
     await page.unroute('**/api/v1/auth/signup');
 
     // Controlled UI fixtures, not a claim of live model inference.
@@ -145,6 +133,48 @@ async function noOverflow(page, name) {
     await page.locator('#retry-analysis').click();
     await page.locator('.screen[data-step="6"].active').waitFor();
     pass('retry analysis -> successful result');
+    await page.unroute('**/api/v1/prediction-jobs');
+    let failedModel = 'diabetes_current_screening';
+    await page.route('**/api/v1/prediction-jobs', async route => {
+      const model = route.request().postDataJSON().model_key;
+      requestedModels.push(model);
+      await route.fulfill({ status: model === failedModel ? 503 : 200, contentType: 'application/json', body: JSON.stringify(model === failedModel
+        ? { error: { code: 'MODEL_UNAVAILABLE', message: 'QA fixture' } }
+        : { data: { job_id: model === 'diabetes_current_screening' ? 101 : 102, status: 'queued' } }) });
+    });
+    for (const id of [101, 102]) {
+      await page.route(`**/api/v1/prediction-jobs/${id}`, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { status: 'succeeded', prediction_id: id } }) }));
+      await page.route(`**/api/v1/predictions/${id}`, route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { model_key: id === 101 ? 'diabetes_current_screening' : 'diabetes_incidence', risk_category: 'high', display_allowed: id === 101, result_status: 'approved', promotion_status: 'approved' } }) }));
+    }
+    await page.route('**/api/v1/predictions/102/risk-factors', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { items: [] } }) }));
+    await page.evaluate(async () => { state.currentHealthOnly = false; showStep(5); await runPrediction(); });
+    assert.ok(await page.locator('#partial-analysis-notice').isVisible());
+    assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'pending');
+    assert.match(await page.locator('#future-risk-category').innerText(), /공개할 수/);
+    await page.setViewportSize({ width: 380, height: 844 });
+    await noOverflow(page, '380px partial analysis result has no horizontal overflow');
+    await page.screenshot({ path: path.join(artifacts, 'partial-analysis-mobile.png'), fullPage: true });
+    requestedModels.length = 0;
+    failedModel = null;
+    await page.locator('#retry-partial-analysis').click();
+    await page.locator('#partial-analysis-notice').waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => !state.analysisRun.busy);
+    assert.deepEqual(requestedModels, ['diabetes_current_screening']);
+    assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'high');
+    pass('current failure keeps future approval guard; button retries current only');
+    failedModel = 'diabetes_incidence';
+    await page.evaluate(async () => { showStep(5); await runPrediction(); });
+    assert.ok(await page.locator('#partial-analysis-notice').isVisible());
+    assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'high');
+    assert.match(await page.locator('#future-risk-category').innerText(), /완료하지 못/);
+    assert.match(await page.locator('#to-challenges').innerText(), /검사/);
+    requestedModels.length = 0;
+    failedModel = null;
+    await page.locator('#retry-partial-analysis').click();
+    await page.waitForFunction(() => !state.analysisRun.busy);
+    assert.deepEqual(requestedModels, ['diabetes_incidence']);
+    assert.ok(await page.locator('#partial-analysis-notice').isHidden());
+    pass('future failure retains current high and medical priority; retries future only');
     await page.evaluate(async () => {
       showStep(4);
       await new Promise(requestAnimationFrame);
