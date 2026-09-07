@@ -47,7 +47,11 @@ async function noOverflow(page, name) {
     await page.screenshot({ path: path.join(artifacts, 'login-error-mobile.png'), fullPage: true });
     await page.unroute('**/api/v1/auth/login');
     await page.locator('#sidebar-signup').click();
-    await page.route('**/api/v1/auth/signup', route => route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) }));
+    const signupRequests = [];
+    await page.route('**/api/v1/auth/signup', route => {
+      signupRequests.push(route.request().postDataJSON());
+      return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) });
+    });
     await page.locator('#email').fill('qa@example.com');
     await page.locator('#signup-birth-date').fill('1966-04-12');
     await page.locator('#personal-consent').check();
@@ -56,6 +60,14 @@ async function noOverflow(page, name) {
     await page.locator('#password-error').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#password').getAttribute('aria-invalid'), 'true');
     pass('422 signup error is associated with password input');
+    assert.equal(signupRequests.length, 1);
+    assert.equal(signupRequests[0].terms_agreed, true);
+    assert.equal(signupRequests[0].email, 'qa@example.com');
+    await page.locator('#personal-consent').uncheck();
+    await page.locator('#signup-form button[type="submit"]').click();
+    assert.equal(await page.locator('#personal-consent').evaluate(input => input.validity.valueMissing), true);
+    assert.equal(signupRequests.length, 1, 'Unchecked required consent must block signup');
+    pass('signup request sends checked consent; unchecked consent blocks browser submission');
     await page.unroute('**/api/v1/auth/signup');
 
     // Controlled UI fixtures, not a claim of live model inference.
