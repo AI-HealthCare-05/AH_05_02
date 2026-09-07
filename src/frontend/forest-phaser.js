@@ -92,23 +92,25 @@
     }
 
     preload() {
-      this.load.image("world-bg", "/static/assets/carrot-forest-world-v3.png?v=20260831-1");
-      this.load.image("home-bg", "/static/assets/carrot-forest-home-v1.png");
-      this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v1.png");
+      this.load.image("world-bg", "/static/assets/carrot-forest-world-v5.png?v=20260907-1");
+      this.load.image("home-bg", "/static/assets/carrot-forest-home-v2.png?v=20260907-1");
+      this.load.image("home-record-player", "/static/assets/home-record-player-cottage-v2.png?v=20260907-1");
+      this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
-      this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1", { frameWidth: 128, frameHeight: 128 });
-      this.load.spritesheet("storage-objects", "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1", { frameWidth: 256, frameHeight: 256 });
-      this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1");
+      this.load.spritesheet("animated-objects", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1", { frameWidth: 128, frameHeight: 128 });
+      this.load.spritesheet("storage-objects", "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1", { frameWidth: 256, frameHeight: 256 });
+      this.load.image("reward-cow", "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1");
       this.load.image("reward-cow-body", "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1");
       this.load.image("reward-cow-base", "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1");
-      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v3.png?v=20260902-1");
+      this.load.image("campfire-off", "/static/assets/carrot-forest-campfire-off-v4.png?v=20260907-1");
     }
 
     create() {
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
       this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
       this.createAnimatedObjectAnimations();
+      window.ForestFire.install(this);
       this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
       this.placementPreview = null;
       this.placedObjectActors = [];
@@ -167,6 +169,11 @@
       const formFocused = () => ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(document.activeElement?.tagName);
       this.input.keyboard.on("keydown-Q", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-interact")); });
       this.input.keyboard.on("keydown-C", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "chat" })); });
+      this.input.keyboard.on("keydown-R", (event) => {
+        if (event.repeat || formFocused()) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "run" }));
+      });
       this.input.keyboard.on("keydown-X", (event) => {
         if (event.repeat || formFocused()) return;
         window.dispatchEvent(new CustomEvent("forest-phaser-action", { detail: "sit" }));
@@ -226,39 +233,20 @@
     }
 
     createHomeRecordPlayer() {
-      const x = 610;
-      const y = 324;
-      const shadow = this.add.rectangle(0, 34, 82, 9, 0x2d2118, .22);
-      const cabinet = this.add.rectangle(0, 8, 76, 49, 0x5a321f).setStrokeStyle(3, 0x3f251b);
-      const cabinetFront = this.add.rectangle(0, 7, 66, 39, 0xb66e3e);
-      const lid = this.add.rectangle(0, -30, 60, 26, 0x633924).setStrokeStyle(3, 0x43271b);
-      const lidInset = this.add.rectangle(0, -30, 50, 18, 0x2b2425);
-      const deck = this.add.rectangle(0, -2, 58, 28, 0xe6c58f).setStrokeStyle(2, 0x96613d);
-      const disc = this.add.circle(-10, -1, 14, 0x252735).setStrokeStyle(2, 0x11141d);
-      const label = this.add.circle(-10, -1, 4, 0xd9b064);
-      const arm = this.add.rectangle(15, -3, 4, 23, 0x695847).setOrigin(.5, .1).setAngle(-18);
-      const needle = this.add.rectangle(19, 8, 12, 3, 0x695847);
-      const speaker = this.add.rectangle(0, 24, 48, 8, 0x3f2b24);
-      const speakerBars = [-18, -9, 0, 9, 18].map((offset) => this.add.rectangle(offset, 24, 3, 7, 0xd49a57));
-      const leftFoot = this.add.rectangle(-27, 35, 7, 7, 0x4b2a1c);
-      const rightFoot = this.add.rectangle(27, 35, 7, 7, 0x4b2a1c);
-      const light = this.add.rectangle(28, -8, 5, 5, 0x4c554a);
-      const note = this.add.text(34, -51, "♪", {
-        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#f0a342",
+      const x = 452;
+      const y = 320;
+      const furniture = this.add.image(0, 0, "home-record-player").setOrigin(.5, 1).setDisplaySize(76, 108);
+      const note = this.add.text(33, -112, "♪", {
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f6d795", stroke: "#775332", strokeThickness: 2,
       }).setOrigin(.5).setVisible(false);
-      this.recordPlayerActor = this.add.container(x, y, [shadow, cabinet, cabinetFront, lid, lidInset, deck, disc, label, arm, needle, speaker, ...speakerBars, leftFoot, rightFoot, light, note])
+      this.recordPlayerActor = this.add.container(x, y, [furniture, note])
         .setDepth(y - 2).setVisible(false);
-      this.recordPlayerDisc = disc;
-      this.recordPlayerLabel = label;
-      this.recordPlayerLight = light;
       this.recordPlayerNote = note;
       this.syncHomeRecordPlayer(this.homeRecordPlaying);
     }
 
     syncHomeRecordPlayer(playing) {
       this.homeRecordPlaying = Boolean(playing);
-      this.recordPlayerLabel?.setFillStyle(this.homeRecordPlaying ? 0xef9540 : 0xd9b064);
-      this.recordPlayerLight?.setFillStyle(this.homeRecordPlaying ? 0x78d68a : 0x4c554a);
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
     }
 
@@ -277,7 +265,7 @@
         } else if (item.code === "campfire") {
           const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
           const offFire = this.add.image(0, 0, "campfire-off").setOrigin(0.5, 0.86).setDisplaySize(94, 94);
-          const onFire = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.campfire).setOrigin(0.5, 0.9).setDisplaySize(94, 94);
+          const onFire = this.add.sprite(0, 0, "campfire-ripple", 0).setOrigin(0.5, 0.9).setDisplaySize(94, 94);
           actor = this.add.container(item.x, item.y, [shadow, offFire, onFire]);
           actor.setData("fireOffTarget", offFire).setData("fireOnTarget", onFire).setData("pointerTargets", [offFire, onFire]);
         } else if (item.code === "lantern") {
@@ -331,6 +319,10 @@
       if (type === "fire") {
         actor.getData("fireOffTarget")?.setVisible(!item.active);
         actor.getData("fireOnTarget")?.setVisible(Boolean(item.active));
+        const flame = actor.getData("fireOnTarget");
+        if (item.active && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          flame?.play({ key: "forest-campfire-burn", startFrame: Math.abs(Math.round(item.x + item.y)) % window.ForestFire.FRAMES });
+        } else flame?.stop().setFrame(0);
       }
       const motionTarget = actor.getData("motionTarget");
       this.tweens.killTweensOf(motionTarget || actor);
@@ -384,7 +376,7 @@
     currentLocalHour() {
       const rawHour = new URLSearchParams(window.location.search).get("hour");
       const forced = rawHour == null ? Number.NaN : Number(rawHour);
-      return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+      return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : window.ForestAtmosphere.seoulTime().hour;
     }
 
     ambientStrengthForHour(hour) {
@@ -397,10 +389,14 @@
     updateWorldAtmosphere(time) {
       if (!this.nightOverlay || !this.lightFx || !this.waterRippleFx) return;
       const worldVisible = this.sceneName === "world";
-      if (time - this.lastLightingRefresh > 30000 || this.lastLightingRefresh === 0) {
-        this.nightStrength = this.atmosphereEnabled ? this.ambientStrengthForHour(this.currentLocalHour()) : 0;
-        this.lastLightingRefresh = time;
-      }
+      const targetStrength = this.atmosphereEnabled ? this.ambientStrengthForHour(this.currentLocalHour()) : 0;
+      const elapsed = Math.max(0, Math.min(100, time - (this.lightingFrameAt ?? time)));
+      this.lightingFrameAt = time;
+      if (this.lightingTarget === undefined) this.nightStrength = targetStrength;
+      this.lightingTarget = targetStrength;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      this.nightStrength += (targetStrength - this.nightStrength) * (reducedMotion ? 1 : 1 - Math.exp(-elapsed / 850));
+      if (Math.abs(targetStrength - this.nightStrength) < .001) this.nightStrength = targetStrength;
       this.nightOverlay.setVisible(worldVisible && this.nightStrength > 0).setAlpha(this.nightStrength);
       this.waterRippleFx.clear().setVisible(worldVisible);
       this.lightFx.clear().setVisible(worldVisible);
@@ -517,8 +513,10 @@
     }
 
     playAction(pose, duration = 1100) {
+      duration = window.LpcAvatarEngine?.actionDuration(this.avatar, pose) || duration;
       this.actionPose = pose;
-      this.actionUntil = performance.now() + duration;
+      this.actionStartedAt = performance.now();
+      this.actionUntil = this.actionStartedAt + duration;
       if (pose === "jump" && !this.mountTransitioning) {
         this.tweens.killTweensOf(this.premiumAvatar);
         this.premiumAvatar.setY(0);
@@ -531,7 +529,7 @@
       if (pose === "attack") this.tryAttackRat(performance.now());
       if (pose === "attack") {
         const weapon = this.avatar.cosmetics?.lpcWeapon;
-        const name = weapon === "bow" ? "attack-bow" : ["wand", "cane"].includes(weapon) ? "attack-magic" : "attack-sword";
+        const name = !weapon || weapon === "none" ? "sit-cloth" : weapon === "bow" ? "attack-bow" : ["wand", "cane"].includes(weapon) ? "attack-magic" : "attack-sword";
         window.dispatchEvent(new CustomEvent("forest-sfx", { detail: { name, volume: 0.34, minInterval: 280 } }));
       }
       if (pose === "dance") window.dispatchEvent(new CustomEvent("forest-sfx", { detail: { name: "dance", volume: 0.28, minInterval: 900 } }));
@@ -577,7 +575,8 @@
       this.tweens.killTweensOf(this.premiumAvatar);
       this.motionFx.clear();
       this.actionPose = "jump";
-      this.actionUntil = performance.now() + 520;
+      this.actionStartedAt = performance.now();
+      this.actionUntil = this.actionStartedAt + 520;
       let swapped = false;
       this.tweens.add({
         targets: this.premiumAvatar,
@@ -637,8 +636,7 @@
     update(time, delta) {
       if (this.mountTransitioning) return;
       if (this.sceneName === "home" && this.homeRecordPlaying) {
-        this.recordPlayerDisc?.setAngle(time / 10);
-        this.recordPlayerNote?.setY(-51 + Math.sin(time / 280) * 3).setAlpha(.72 + Math.sin(time / 220) * .2);
+        this.recordPlayerNote?.setY(-112 + Math.sin(time / 420) * 2).setAlpha(.8 + Math.sin(time / 420) * .15);
       }
       this.updateWorldAtmosphere(time);
       this.updateRat(time, delta);
@@ -650,7 +648,7 @@
         else if (this.cursors.up.isDown || this.keys.W.isDown) direction = "up";
         else if (this.cursors.down.isDown || this.keys.S.isDown) direction = "down";
       }
-      const running = inputAllowed && this.keys.R.isDown;
+      const running = window.carrotForestRunning === true;
       if (!direction) {
         this.setPremiumFrame(this.avatar.direction, false, time);
         this.updatePet(time, delta, false);
@@ -835,9 +833,11 @@
       const context = this.compositeTexture.getContext();
       context.clearRect(0, 0, 224, 288);
       const pose = performance.now() < this.actionUntil ? this.actionPose : null;
+      const progress = pose && Number.isFinite(this.actionStartedAt)
+        ? Math.min(1, Math.max(0, (performance.now() - this.actionStartedAt) / (this.actionUntil - this.actionStartedAt))) : undefined;
       if (!pose) this.actionPose = null;
       const usedLpc = this.avatar.engine === "lpc" && window.LpcAvatarEngine?.draw(context, this.avatar, {
-        direction, moving, running, pose, frame: Math.floor(time / rate),
+        direction, moving, running, pose, progress, frame: Math.floor(time / rate),
       }, { x: 16, y: 58, width: 192, height: 192 });
       if (!usedLpc) this.premiumAvatar.setVisible(false);
       else this.premiumAvatar.setVisible(true);

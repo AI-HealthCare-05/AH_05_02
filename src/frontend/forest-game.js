@@ -23,6 +23,9 @@
     warm: { name: "따뜻한 오후", audioKey: "homeRecordWarm" },
     bright: { name: "밝은 샘", audioKey: "homeRecordBright" },
     untitled: { name: "무제", audioKey: "homeRecordUntitled" },
+    goingHome: { name: "집으로", audioKey: "homeRecordGoingHome" },
+    evening: { name: "나른한 저녁", audioKey: "homeRecordEvening" },
+    forestFairy: { name: "숲 속의 요정", audioKey: "homeRecordForestFairy" },
   };
 
   function generateNickname() {
@@ -267,6 +270,7 @@
       return choices.filter((choice) => (
         (!lpcCatalogMap[choice.slot] || choice.itemId === "none" || lpcChoiceSupportsBody(choice, choice.slot, bodyType))
         && (choice.slot !== "lpcShoes" || isCompleteFootwear(choice))
+        && (choice.slot !== "lpcOutfit" || isCoveredTop(choice))
       ));
     }
     if (!lpcCatalogMap[categoryId]) return choices;
@@ -274,6 +278,7 @@
     return choices.filter((choice) => (
       (choice.id === "none" || lpcChoiceSupportsBody(choice, categoryId, bodyType))
       && (categoryId !== "lpcShoes" || isCompleteFootwear(choice))
+      && (categoryId !== "lpcOutfit" || isCoveredTop(choice))
     ));
   }
 
@@ -282,6 +287,19 @@
     const definition = String(choice.definition || "").toLowerCase();
     return definition.includes("/shoes/") || definition.includes("/boots/") || definition.endsWith("feet_armour.json");
   }
+
+  function isCoveredTop(choice) {
+    const definition = String(choice.definition || "").toLowerCase();
+    return !["vneck", "scoop", "cardigan", "polo", "laced", "/vest/", "jacket_frock", "jacket_collared",
+      "dress_bodice", "dress_sash", "dress_slit", "kimono_oversize", "kimono_longsleeve", "clothes_robe",
+      "sleeveless", "tanktop", "corset"].some((token) => definition.includes(token));
+  }
+
+  function footwearPreviewCosmetics(cosmetics) {
+    return { ...cosmetics, lpcOutfit: "tshirt", outfitColor: "white", lpcBottom: "short_short", bottomColor: "black",
+      lpcArms: "none", lpcTool: "none", lpcWeapon: "none", vehicle: "none" };
+  }
+  const footwearPreviewBounds = { x: -80, y: -162, width: 256, height: 256 };
 
   // The renderer safely reuses the matching adult garment for LPC body types
   // that do not ship a dedicated clothing sheet (notably muscular). Keep the
@@ -340,6 +358,42 @@
       },
     },
   };
+
+  const fantasyPresetBase = {
+    bodyType: "female", skin: "porcelain", lpcHead: "human_female", lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button",
+    lpcEyes: "none", lpcWrinkles: "none", lpcHair: "long", lpcHat: "none", lpcGlasses: "none", lpcArms: "none",
+    lpcOutfit: "long_blouse", lpcBottom: "plain_skirt", lpcShoes: "boots", lpcTool: "none", lpcWeapon: "none",
+    vehicle: "none", pet: "none", aura: "none", effect: "none", speech: "none",
+    hairColor: "brown", outfitColor: "purple", bottomColor: "navy", shoeColor: "brown", hatColor: "purple",
+  };
+  const additionalDefaultOutfits = [
+    { role: "moon_mage", number: 3, label: "달빛 마법사", gender: "female", cosmetics: {
+      lpcHat: "celestial_moon", hairColor: "silver", lpcWeapon: "wand",
+    } },
+    { role: "forest_witch", number: 4, label: "숲의 엘프", gender: "female", cosmetics: {
+      lpcHair: "braid", lpcHat: "celestial", hatColor: "green", lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara",
+      outfitColor: "green", bottomColor: "brown", lpcWeapon: "bow",
+    } },
+    { role: "inventor", number: 5, label: "숲속 발명가", gender: "male", cosmetics: {
+      bodyType: "muscular", skin: "peach", lpcHead: "human_male", lpcHair: "messy", lpcHat: "leather_cap", hatColor: "brown",
+      lpcGlasses: "round", glassesColor: "brown", lpcOutfit: "apron_full", outfitColor: "cream", lpcBottom: "cuffed",
+      bottomColor: "navy", lpcTool: "hammer",
+    } },
+    { role: "knight", number: 6, label: "숲의 기사", gender: "male", cosmetics: {
+      bodyType: "male", skin: "peach", lpcHead: "human_male", lpcHair: "curtains", hairColor: "black", lpcHat: "cavalier",
+      hatColor: "navy", lpcOutfit: "official_torso_armour_torso_armour_plate", outfitColor: "silver", lpcBottom: "long_pants",
+      bottomColor: "navy", lpcWeapon: "arming_sword",
+    } },
+  ];
+
+  function createAdditionalDefaultLooks(history = []) {
+    return additionalDefaultOutfits.map((preset) => {
+      const avatar = { gender: preset.gender, cosmetics: { ...defaultCosmetics, ...fantasyPresetBase, ...preset.cosmetics }, tuning: { ...defaultAvatarTuning } };
+      const previous = history.find((look) => look.presetRole === preset.role);
+      return { ...createOutfitSnapshot(avatar, previous?.savedAt || Date.now(), preset.label),
+        id: `look-role-default-${preset.role}`, presetRole: preset.role, presetNumber: preset.number };
+    });
+  }
 
   function outfitSignature(avatar) {
     return JSON.stringify({ gender: avatar.gender, cosmetics: avatar.cosmetics, tuning: avatar.tuning });
@@ -410,13 +464,14 @@
       const existing = forceCanonical ? null : roleLook || namedLook;
       return normalizeGenderDefaultOutfit(existing, gender, Date.now() - index);
     });
+    defaults.push(...createAdditionalDefaultLooks(history));
     const defaultIds = new Set(defaults.map((look) => look.id));
     const remainder = history.filter((look) => !defaultIds.has(look.id) && !look.presetRole
       && !Object.values(genderDefaultOutfits).some((preset) => look.label === preset.label));
     target.outfitHistory = [
       ...defaults,
-      ...remainder.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)),
-    ].slice(0, 8);
+      ...remainder.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)).slice(0, 8),
+    ];
   }
 
   function applyGenderDefaultOutfit(target, gender) {
@@ -451,7 +506,7 @@
       signature: look.signature || outfitSignature(look),
     }));
     if (!normalized.length) normalized.push(createOutfitSnapshot(avatar));
-    return normalized.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0)).slice(0, 8);
+    return normalized.sort((left, right) => Number(right.savedAt || 0) - Number(left.savedAt || 0));
   }
 
   function nextOutfitNumber(history) {
@@ -464,7 +519,7 @@
   function rememberCurrentOutfit() {
     const previous = Array.isArray(state.outfitHistory) ? state.outfitHistory : [];
     const snapshot = createOutfitSnapshot(state.avatar, Date.now(), `나만의 코디 ${nextOutfitNumber(previous)}`);
-    state.outfitHistory = [snapshot, ...previous.filter((look) => look.presetRole || look.signature !== snapshot.signature)].slice(0, 8);
+    state.outfitHistory = [snapshot, ...previous.filter((look) => look.presetRole || look.signature !== snapshot.signature)];
     ensureGenderDefaultOutfits(state);
   }
 
@@ -501,6 +556,7 @@
       outfitHistory: [
         normalizeGenderDefaultOutfit(null, "female", Date.now()),
         normalizeGenderDefaultOutfit(null, "male", Date.now() - 1),
+        ...createAdditionalDefaultLooks(),
       ],
       placed: [],
       rewardClaimed: false,
@@ -675,6 +731,7 @@
   let placementCode = null;
   let placementDraft = null;
   let running = false;
+  window.carrotForestRunning = running;
   let musicEngine = null;
   let sfxEngine = null;
   const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
@@ -700,6 +757,7 @@
   const storageSpriteAtlas = new Image();
   const animatedObjectAtlas = new Image();
   const rewardCowImage = new Image();
+  const homeRecordPlayerImage = new Image();
   const basicWalkAtlas = new Image();
   const modularAvatarAtlas = new Image();
   const presetSpriteAtlases = {
@@ -711,12 +769,14 @@
   };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
-  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1";
-  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1";
-  rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1";
-  sceneImages.world.src = "/static/assets/carrot-forest-world-v3.png?v=20260831-1";
-  sceneImages.home.src = "/static/assets/carrot-forest-home-v1.png";
-  sceneImages.garden.src = "/static/assets/carrot-forest-garden-v1.png";
+  storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
+  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
+  rewardCowImage.src = "/static/assets/carrot-forest-reward-cow-v2.png?v=20260907-1";
+  sceneImages.world.src = "/static/assets/carrot-forest-world-v5.png?v=20260907-1";
+  sceneImages.home.src = "/static/assets/carrot-forest-home-v2.png?v=20260907-1";
+  homeRecordPlayerImage.src = "/static/assets/home-record-player-cottage-v2.png?v=20260907-1";
+  homeRecordPlayerImage.addEventListener("load", renderCanvas);
+  sceneImages.garden.src = "/static/assets/carrot-forest-garden-v2.png?v=20260907-1";
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
   animatedObjectAtlas.addEventListener("load", () => { renderInventory(); renderCanvas(); });
@@ -748,13 +808,16 @@
       this.tracks = {
         forest: new Audio("/static/assets/carrot-forest-main-theme.mp3"),
         night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav"),
-        home: new Audio("/static/assets/home-small-fire-cc0.wav"),
+        home: new Audio("/static/assets/home-drowsy-evening-cc0.wav"), // 나른한 저녁 (원곡: A Small Fire Will Do)
         homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3"),
         homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3"),
         homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3"),
         homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3"),
+        homeRecordGoingHome: new Audio("/static/assets/lp-going-home-v1.mp3"),
+        homeRecordEvening: new Audio("/static/assets/home-drowsy-evening-cc0.wav"),
+        homeRecordForestFairy: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
         garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3"),
-        avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"),
+        avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg"), // 숲 속의 요정 (원곡: Forget Me Not)
       };
       this.volume = Math.max(0, Math.min(1, Number(localStorage.getItem(BGM_VOLUME_KEY) ?? .24)));
       this.muted = localStorage.getItem(BGM_MUTED_KEY) === "true";
@@ -826,6 +889,22 @@
     effectiveVolume(volume) {
       return this.muted ? 0 : Math.max(0, Math.min(1, volume * this.volume));
     }
+    async chime() {
+      const volume = this.effectiveVolume(.16);
+      if (!volume || !this.bellContext || this.bellContext.state !== "running") return;
+      const ctx = this.bellContext, start = ctx.currentTime;
+      // One soft bell strike, with inharmonic overtones and a natural decay.
+      [523.25, 1046.5, 1465.1].forEach((frequency, index) => {
+        const oscillator = ctx.createOscillator(), gain = ctx.createGain();
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume / (index + 1), start + .008);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + 2.6);
+        oscillator.connect(gain).connect(ctx.destination);
+        oscillator.start(start); oscillator.stop(start + 2.7);
+        oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+      });
+    }
     play(name, { volume = 0.32, rate = 1, minInterval = 0 } = {}) {
       const source = this.tracks[name];
       if (!source) return;
@@ -843,8 +922,22 @@
     sfxEngine ||= new ForestSfx();
     sfxEngine.play(name, options);
   }
+  const unlockBell = () => {
+    sfxEngine ||= new ForestSfx();
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    sfxEngine.bellContext ||= new AudioContext();
+    sfxEngine.bellContext.resume().catch(() => {});
+  };
+  document.addEventListener("pointerdown", unlockBell, { once: true });
+  document.addEventListener("keydown", unlockBell, { once: true });
+  window.addEventListener("forest-hour-chime", () => sfxEngine?.chime());
+  window.addEventListener("forest-time-changed", () => {
+    if (musicEngine?.enabled && currentScene === "world" && !$("#avatar-studio").open) musicEngine.switchTo(sceneMusicName()).catch(() => {});
+  });
 
   function weaponSfxName(weapon = state.avatar.cosmetics?.lpcWeapon) {
+    if (!weapon || weapon === "none") return "sit-cloth";
     if (weapon === "bow") return "attack-bow";
     if (["wand", "cane"].includes(weapon)) return "attack-magic";
     return "attack-sword";
@@ -859,7 +952,7 @@
   function currentLocalHour() {
     const rawHour = new URLSearchParams(window.location.search).get("hour");
     const forced = rawHour == null ? Number.NaN : Number(rawHour);
-    return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : new Date().getHours();
+    return Number.isFinite(forced) && forced >= 0 && forced < 24 ? forced : window.ForestAtmosphere.seoulTime().hour;
   }
   function sceneMusicName(scene = currentScene) {
     if (scene === "home") return state.homeRecordPlaying ? homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome" : "home";
@@ -1048,28 +1141,15 @@
   }
 
   function drawHomeRecordPlayer() {
-    const x = 610;
-    const y = 324;
-    fillPixelRect(x - 39, y + 30, 78, 8, "rgba(37,31,25,.22)");
-    fillPixelRect(x - 36, y - 14, 72, 45, "#5a321f");
-    fillPixelRect(x - 31, y - 10, 62, 34, "#b66e3e");
-    fillPixelRect(x - 28, y - 35, 56, 24, "#633924");
-    fillPixelRect(x - 24, y - 31, 48, 17, "#2b2425");
-    fillPixelRect(x - 27, y - 7, 54, 25, "#e6c58f");
-    context.fillStyle = "#252735";
-    context.beginPath();
-    context.arc(x - 9, y + 5, 13, 0, Math.PI * 2);
-    context.fill();
-    context.fillStyle = state.homeRecordPlaying ? "#ef9540" : "#d9b064";
-    context.beginPath();
-    context.arc(x - 9, y + 5, 4, 0, Math.PI * 2);
-    context.fill();
-    fillPixelRect(x + 11, y - 2, 4, 20, "#695847");
-    fillPixelRect(x + 11, y + 15, 13, 3, "#695847");
-    fillPixelRect(x + 23, y - 8, 4, 4, state.homeRecordPlaying ? "#78d68a" : "#4c554a");
-    for (let stripe = -21; stripe <= 19; stripe += 8) fillPixelRect(x + stripe, y + 23, 4, 4, "#3f2b24");
-    fillPixelRect(x - 29, y + 30, 7, 7, "#4b2a1c");
-    fillPixelRect(x + 22, y + 30, 7, 7, "#4b2a1c");
+    if (!homeRecordPlayerImage.complete || !homeRecordPlayerImage.naturalWidth) return;
+    context.drawImage(homeRecordPlayerImage, 414, 212, 76, 108);
+    if (state.homeRecordPlaying) {
+      context.save();
+      context.fillStyle = "#f6d795";
+      context.font = "bold 14px sans-serif";
+      context.fillText("♪", 482, 207);
+      context.restore();
+    }
   }
 
   function drawPlacedObject(item, preview = false) {
@@ -1286,7 +1366,7 @@
       window.LpcAvatarEngine.draw(context, { ...avatar, engine: "lpc", cosmetics }, {
         direction: avatar.direction || "down",
         moving: performance.now() < walkingUntil,
-        running: avatar.running,
+        running,
         frame: walkAnimationFrame,
       }, { x: x - 48, y: y - 68, width: 96, height: 96 });
     }
@@ -1402,7 +1482,7 @@
   function renderSceneChrome() {
     const sceneCopy = {
       world: { title: "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
-      home: { title: "나의 홈피 · 포근한 거실", aria: "소파와 옷장이 있는 집 내부 장면" },
+      home: { title: "우리 집", aria: "소파와 옷장이 있는 집 내부 장면" },
       garden: { title: "당근 밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
     }[currentScene];
     $("#map-title").textContent = sceneCopy.title;
@@ -1451,7 +1531,7 @@
       renderCatalogThumbnailCanvases();
       renderAvatarPreview();
     }
-    if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : 95)) {
+    if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : running ? 90 : 140)) {
       walkAnimationFrame = (walkAnimationFrame + 1) % 4;
       lastWalkAnimationAt = timestamp;
       needsRender = true;
@@ -1499,9 +1579,9 @@
 
   function nearbyInteraction() {
     if (currentScene === "home") {
+      if (distanceTo(452, 300) < 76) return "record_player";
       if (distanceTo(292, 246) < 95) return "sofa";
       if (distanceTo(558, 205) < 100) return "wardrobe";
-      if (distanceTo(610, 324) < 82) return "record_player";
       if (distanceTo(384, 438) < 78) return "exit_home";
       return null;
     }
@@ -1556,7 +1636,12 @@
   }
 
   async function interact(target = nearbyInteraction()) {
-    if (!target) { setStatus("상호작용할 대상 가까이 이동한 뒤 Q를 눌러 주세요."); return; }
+    if (!target) {
+      window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: window.LpcAvatarEngine?.actionDuration(state.avatar, "harvest") || 1000 } }));
+      setStatus(state.avatar.cosmetics?.lpcTool && state.avatar.cosmetics.lpcTool !== "none"
+        ? "장착한 도구를 사용했습니다." : "빈손으로 손을 뻗었습니다. 대상 가까이에서 Q를 누르면 상호작용합니다.");
+      return;
+    }
     if (target.startsWith("object:")) {
       const index = Number(target.split(":")[1]);
       if (seatObjectCodes.has(state.placed[index]?.code)) await sitAtPlacedObject(index);
@@ -1704,6 +1789,17 @@
     await persist(`${name} 배치를 확정했습니다.`);
   }
 
+  function toggleRunning() {
+    running = !running;
+    // Both the Phaser world and Canvas fallback use this same latched mode.
+    window.carrotForestRunning = running;
+    document.querySelectorAll('[data-action="run"]').forEach((button) => {
+      button.setAttribute("aria-pressed", String(running));
+      button.setAttribute("aria-label", `달리기 ${running ? "켜짐" : "꺼짐"}, 단축키 R`);
+    });
+    setStatus(running ? "달리기 모드가 켜졌습니다. R을 다시 누르면 걷습니다." : "걷기 모드로 돌아왔습니다.");
+  }
+
   async function moveAvatar(direction) {
     if (window.carrotForestPhaserActive && window.carrotForestPhaserMove) {
       window.carrotForestPhaserMove(direction);
@@ -1795,7 +1891,7 @@
     const timestamp = `${savedDate.getMonth() + 1}/${savedDate.getDate()} ${String(savedDate.getHours()).padStart(2, "0")}:${String(savedDate.getMinutes()).padStart(2, "0")}`;
     const safeId = escapeMarkup(look.id);
     const safeLabel = escapeMarkup(look.label);
-    const presetLabel = look.presetRole === "female" ? "프리셋1" : "프리셋2";
+    const presetLabel = look.presetNumber ? `프리셋${look.presetNumber}` : look.presetRole === "female" ? "프리셋1" : "프리셋2";
     const nameControl = look.presetRole
       ? `<div class="outfit-name-form fixed-preset-name"><small>${presetLabel}</small></div>`
       : `<form class="outfit-name-form" data-outfit-name-form="${safeId}"><label><span class="sr-only">코디 이름</span><input name="outfit-name" value="${safeLabel}" maxlength="24" aria-label="코디 이름 수정"></label><button type="submit">이름 저장</button></form>`;
@@ -1965,21 +2061,22 @@
       if (!window.LpcAvatarEngine?.isReady()) return;
       const category = thumbnail.dataset.lpcCategory;
       const id = thumbnail.dataset.lpcItem;
-      const cosmetics = category === "lpcMobility"
+      let cosmetics = category === "lpcMobility"
         ? { ...avatarDraft, vehicle: id }
         : { ...avatarDraft, [category]: id };
       if (category === "lpcOutfit") Object.assign(cosmetics, {
         outfitColor: "blue", lpcHead: "none", lpcExpression: "none", lpcNose: "none",
         lpcEyebrow: "none", lpcEyes: "none", lpcWrinkles: "none", lpcHair: "none",
-        lpcGlasses: "none", lpcHat: "none", lpcBottom: "none", lpcShoes: "none",
+        lpcGlasses: "none", lpcHat: "none", lpcBottom: avatarDraft.lpcBottom || "short_short", bottomColor: avatarDraft.bottomColor || "black", lpcShoes: "none",
       });
+      if (category === "lpcShoes") cosmetics = footwearPreviewCosmetics(cosmetics);
       if (category === "lpcTool") cosmetics.lpcWeapon = "none";
       if (category === "lpcWeapon") cosmetics.lpcTool = "none";
-      const pose = category === "lpcTool" ? "harvest" : category === "lpcWeapon" ? "attack" : category === "lpcExpression" ? "idle" : avatarPreviewPose;
+      const pose = category === "lpcTool" ? "harvest" : category === "lpcWeapon" ? "attack" : ["lpcExpression", "lpcShoes", "lpcOutfit"].includes(category) ? "idle" : avatarPreviewPose;
       const faceCategory = ["lpcHead", "lpcExpression", "lpcEyes", "lpcEyebrow", "lpcNose", "lpcWrinkles"].includes(category);
       window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics, mounted: category === "lpcMobility" }, {
         direction: "down", pose, frame: avatarPreviewFrame, previewMobility: category === "lpcMobility",
-      }, category === "lpcOutfit"
+      }, category === "lpcShoes" ? footwearPreviewBounds : category === "lpcOutfit"
         ? { x: -18, y: -22, width: 132, height: 132 }
         : faceCategory
         ? { x: -7, y: -10, width: 110, height: 110 }
@@ -1991,12 +2088,13 @@
       target.imageSmoothingEnabled = false;
       if (!window.LpcAvatarEngine?.isReady()) return;
       const category = thumbnail.dataset.lpcColorCategory;
-      const cosmetics = { ...avatarDraft, [category]: thumbnail.dataset.lpcColorValue };
+      let cosmetics = { ...avatarDraft, [category]: thumbnail.dataset.lpcColorValue };
+      if (category === "shoeColor") cosmetics = footwearPreviewCosmetics(cosmetics);
       const headOnly = category === "hairColor";
       const mobilityPreview = category === "mobilityColor";
       window.LpcAvatarEngine.draw(target, { gender: state.avatar.gender, engine: "lpc", cosmetics, mounted: mobilityPreview }, {
         direction: "down", pose: "idle", frame: 0, previewMobility: mobilityPreview,
-      }, headOnly
+      }, category === "shoeColor" ? footwearPreviewBounds : headOnly
         ? { x: -7, y: -10, width: 110, height: 110 }
         : { x: 3, y: 3, width: 90, height: 90 });
     });
@@ -2336,6 +2434,7 @@
       const active = Number(section.dataset.flowStep) === challengeFlowStep;
       section.hidden = !active;
       section.classList.toggle("is-active", active);
+      section.querySelectorAll("input, select, textarea").forEach((control) => { control.disabled = !active; });
     });
     document.querySelectorAll("[data-flow-indicator]").forEach((indicator) => {
       const number = Number(indicator.dataset.flowIndicator);
@@ -2345,21 +2444,31 @@
     $("#challenge-flow-back").hidden = challengeFlowStep === 1;
     $("#challenge-flow-next").hidden = challengeFlowStep === 4;
     $("#challenge-flow-generate").hidden = challengeFlowStep !== 4;
+    $("#challenge-flow-error").hidden = true;
   }
 
   function openChallengeFlow() {
     const form = $("#challenge-flow-form");
     form.reset();
-    $("#custom-quest-picker").hidden = true;
-    showChallengeFlowStep(1);
+    const editing = Boolean(state.challengePlan?.onboarded);
+    const style = ["exercise", "diet", "custom"].includes(state.challengePlan?.style)
+      ? state.challengePlan.style : "custom";
+    const selectedIds = editing ? activeQuestIds() : [];
+    form.querySelectorAll('input[name="challenge-style"]').forEach((input) => {
+      input.checked = editing && input.value === style;
+    });
+    $("#custom-quest-picker").querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.checked = selectedIds.includes(input.value);
+    });
+    $("#challenge-flow-title").textContent = editing ? "오늘의 챌린지 다시 설정" : "오늘의 챌린지 만들기";
+    $("#challenge-flow-generate").textContent = editing ? "선택한 챌린지로 변경" : "3개 퀘스트 만들기";
+    $("#custom-quest-picker").hidden = !editing || style !== "custom";
+    showChallengeFlowStep(editing ? 4 : 1);
     $("#challenge-flow-dialog").showModal();
   }
 
-  async function startPredictionFlow() {
-    if (!state.challengePlan?.onboarded) { openChallengeFlow(); return; }
-    const style = state.challengePlan.style || "balanced";
-    const customIds = style === "custom" ? activeQuestIds() : [];
-    await generateChallengeQuests(style, customIds);
+  function startPredictionFlow() {
+    openChallengeFlow();
   }
 
   function validateChallengeFlowStep() {
@@ -2402,7 +2511,7 @@
   }
 
   function renderAll() {
-    $("#adapter-badge").textContent = adapter.mode === "demo" ? "Demo Adapter" : "Live API";
+    $("#adapter-badge").textContent = adapter.mode === "demo" ? "숲 체험" : "계정 연결";
     $("#carrot-balance").textContent = state.carrots;
     $("#avatar-name").value = state.avatar.name;
     syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
@@ -2509,6 +2618,7 @@
   });
   document.querySelectorAll('input[name="challenge-style"]').forEach((input) => input.addEventListener("change", () => {
     $("#custom-quest-picker").hidden = input.value !== "custom" || !input.checked;
+    $("#challenge-flow-error").hidden = true;
   }));
   $("#custom-quest-picker").addEventListener("change", (event) => {
     const checked = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')];
@@ -2516,10 +2626,16 @@
   });
   $("#challenge-flow-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!validateChallengeFlowStep()) return;
+    if (challengeFlowStep !== 4) { showChallengeFlowStep(challengeFlowStep + 1); return; }
     const style = new FormData(event.currentTarget).get("challenge-style");
     if (!style) return;
     const customIds = [...$("#custom-quest-picker").querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
-    if (style === "custom" && customIds.length !== 3) { setStatus("내가 조합하기는 챌린지 3개를 선택해 주세요."); return; }
+    if (style === "custom" && customIds.length !== 3) {
+      $("#challenge-flow-error").textContent = "내가 조합하기는 챌린지 3개를 선택해 주세요.";
+      $("#challenge-flow-error").hidden = false;
+      return;
+    }
     $("#challenge-flow-dialog").close();
     await generateChallengeQuests(style, customIds);
   });
@@ -2734,9 +2850,9 @@
     if (!placementCode) {
       canvas.focus();
       if (currentScene === "home") {
-        if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
+        if (x >= 410 && x <= 494 && y >= 208 && y <= 325) await interact("record_player");
+        else if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
-        else if (x >= 560 && x <= 670 && y >= 270 && y <= 375) await interact("record_player");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
         else setStatus("소파·옷장·LP 재생기·현관문을 클릭하거나 가까이에서 Q를 눌러 보세요.");
       } else if (currentScene === "garden") {
@@ -2910,6 +3026,7 @@
   window.addEventListener("forest-phaser-interact", () => interact());
   window.addEventListener("forest-pet-clicked", async () => feedPet());
   window.addEventListener("forest-phaser-action", async (event) => {
+    if (event.detail === "run") toggleRunning();
     if (event.detail === "chat") toggleChat();
     if (event.detail === "sit") await toggleSit();
     if (event.detail === "ride") await toggleRide();
@@ -2939,7 +3056,7 @@
     if (["q", "Q", "r", "R", "c", "C", "x", "X", "e", "E", "z", "Z", "f", "F", "j", "J", "v", "V", "0"].includes(event.key)) event.preventDefault();
     if (event.key === "v" || event.key === "V") { confirmPlacement(); return; }
     if (event.key === "q" || event.key === "Q") { interact(); return; }
-    if (event.key === "r" || event.key === "R") { running = true; setStatus("달리기 모드입니다. 방향키나 WASD로 빠르게 이동하세요."); return; }
+    if (event.code === "KeyR" || event.key === "r" || event.key === "R") { if (!event.repeat) toggleRunning(); return; }
     if (event.key === "c" || event.key === "C") { toggleChat(); return; }
     if (event.key === "x" || event.key === "X") { toggleSit(); return; }
     if (event.key === "e" || event.key === "E") { toggleRide(); return; }
@@ -2951,16 +3068,16 @@
     if (!direction) return;
     event.preventDefault(); moveAvatar(direction);
   });
-  document.addEventListener("keyup", (event) => {
-    if (window.carrotForestPhaserActive) return;
-    if (event.key === "r" || event.key === "R") { running = false; setStatus("달리기를 멈췄습니다."); }
-  });
   document.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("pointerdown", (event) => { event.preventDefault(); moveAvatar(button.dataset.move); }));
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
     const action = button.dataset.action;
     if (action === "interact") interact();
     if (action === "jump") window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "jump", duration: 620 } }));
-    if (action === "run") { running = !running; button.setAttribute("aria-pressed", String(running)); setStatus(running ? "달리기 모드가 켜졌습니다." : "달리기 모드를 껐습니다."); }
+    if (action === "run") {
+      toggleRunning();
+      const movementTarget = window.carrotForestPhaserActive ? $("#phaser-world") : canvas;
+      movementTarget?.focus({ preventScroll: true });
+    }
     if (action === "chat") toggleChat();
     if (action === "sit") await toggleSit();
     if (action === "ride") await toggleRide();
@@ -3041,12 +3158,7 @@
     });
   });
 
-  $("#zoom-toggle").addEventListener("click", (event) => {
-    const zoomed = $(".canvas-frame").classList.toggle("is-zoomed");
-    event.currentTarget.setAttribute("aria-pressed", String(zoomed));
-    event.currentTarget.textContent = zoomed ? "화면 맞춤" : "확대 보기";
-    setStatus(zoomed ? "월드 화면을 확대했습니다. 아래와 오른쪽으로 이동해 살펴보세요." : "월드 화면을 작업 영역에 맞췄습니다.");
-  });
+  // Fullscreen and Escape handling live in forest-atmosphere.js.
 
   $("#reset-position").addEventListener("click", async () => {
     const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };

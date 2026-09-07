@@ -33,7 +33,11 @@
 - 사용자 현지 시각에 따른 낮·황혼·밤 조명과 야간 등불·모닥불 주변광. 야간 음영은 지도 배경에만 적용해 캐릭터와 배치 오브젝트 본체가 가려지지 않으며, 상단 `날씨·시간 적용` 버튼으로 사용자가 ON/OFF할 수 있다.
 - 반복되는 연못 물결과 연못 전용 격자에 배치하는 오리·분수 오브젝트. 물결 좌표와 폭은 불규칙한 연못 경계 안으로 제한한다.
 - 집·당근밭·연못 클릭 및 근접 `Q` 상호작용, 소파 휴식·옷장·물주기·낚시 연결
-- `R` 달리기, `C` 채팅, `X` 앉기, `E` 탈것 승하차, `J` 점프
+- `당뇨 예방 챌린지 다시 만들기`는 기존 설정을 불러온 4단계 선택창을 열며 운동 중심·식단 중심·직접 조합으로 변경할 수 있다. 이전 버튼으로 앞 단계도 다시 확인할 수 있다. 취소하면 저장하지 않고, 확정하면 선택한 퀘스트 3개를 적용하며 기존 완료 기록·당근·보상은 보존한다. 최초 이용자는 기존 1~4단계 흐름을 유지한다. 숨겨진 단계의 필수 입력은 제출을 막지 않는다.
+- 완드는 `spellcast` 본체 모션과 주문용 소품만 사용하며 공식 slash 완드를 중복 합성하지 않는다. 도끼·망치·곡괭이도 사용자 요청에 따라 삽·괭이와 같은 thrust로 통일했다. 원본 thrust 시트가 없는 세 도구는 64px 들고 있는 도구 그림을 재사용하여 손 뻗기 진행에 맞춰 이동시키고, 128px 내려찍기 레이어는 표시하지 않는다. 물뿌리개는 공식 watering 순서 `[0,1,4,4,4,4,5]`를 유지한다(로컬 공식 저장소 `sources/state/constants.ts`). 공격/도구 사용은 시작 시점부터 한 사이클만 재생한다. 빈손 기본 동작은 서로 교환하여 Z는 소품 없는 손짓(spellcast), Q는 앞으로 손 뻗기(thrust)이며 검·도끼를 자동으로 장착하지 않는다. 대상이 없는 Q도 장착 도구를 사용하며, 대상 근처 Q는 기존 상호작용을 유지한다.
+- 상의 선택 목록에서는 앞이 열리거나 깊은 목선의 조끼·코트·브이넥·스쿱넥·일부 드레스 등을 제외한다. 같은 제외 기준을 공식 팩 빌더에도 적용하여 다시 생성해도 노출 상의가 목록에 복귀하지 않도록 한다. 기존 저장 코디나 원본 자산은 삭제하지 않는다. 상의 카드에는 편집 중인 하의·색을 유지한다. 신발·신발색 카드는 미리보기 전용 검은 짧은 반바지와 흰 티를 사용하며 원본을 4배 확대하고 하체만 잘라 발 모양을 보여 준다. 카드용 옷차림은 실제 코디를 변경하지 않는다.
+- `R` 달리기 ON/OFF, `C` 채팅, `X` 앉기, `E` 탈것 승하차, `J` 점프
+- 달리기 버튼과 R키는 같은 토글 상태를 사용한다. 키를 떼도 달리기를 유지하고 다시 누르면 걷기로 돌아오며, 길게 누를 때 반복 토글하지 않는다. Phaser에서 걷기 92px/s·달리기 150px/s와 LPC 모션·발소리를 함께 전환한다. 버튼 클릭 후 게임 영역에 포커스를 돌려 방향키 이동도 유지한다. Canvas 대체 화면도 동일 상태를 사용한다.
 - 옷장(아바타 액세서리)과 창고(숲 오브젝트)를 분리한 에셋 관리
 - 옷장은 더 이상 착용 불가능한 단품 액세서리를 보여주지 않고, 아바타 작업실에서 실제 저장한 최근 코디를 최신순으로 최대 8개 보관한다. 코디 카드를 선택하면 피부·헤어·의상·표정·튜닝을 한 번에 다시 적용한다.
 - 창고에는 텐트·캠핑 의자·피크닉 매트·연못·랜턴·울타리·꽃수레·화분·버섯·벤치·모닥불 등 20개 농장 꾸미기 오브젝트를 기본 제공한다.
@@ -66,6 +70,7 @@
 - [LPC Rat, Cat and Dog](https://opengameart.org/content/lpc-rat-cat-and-dog)의 강아지 1종·고양이 2종을 4방향 3프레임 펫 아틀라스로 재구성했다. 원저작자 표기는 `Rat/Cat/Dog by Tuomo Untinen`, 배포 라이선스는 CC-BY 3.0·CC-BY-SA 3.0·GPL 3.0·GPL 2.0이다.
 - Universal LPC 호환 레이어 팩을 도입해 몸·헤어·상의·하의·신발·모자·안경을 동일한 프레임 규격으로 실시간 합성
 - 고정 성별 프리셋은 브라우저 임시 저장값이 아닌 코드의 검증된 전체 코디로 관리한다. 최초 진입은 여성형 `농부`, 성별을 남성형으로 바꾸면 `사냥꾼` 코디가 즉시 적용되며 다시 여성형을 선택하면 농부 코디로 복귀한다.
+- 고정 코디는 프리셋1 농부, 프리셋2 사냥꾼, 프리셋3 달빛 마법사, 프리셋4 숲의 엘프, 프리셋5 숲속 발명가, 프리셋6 숲의 기사 순서다. 발명가는 근육 체형·앞치마·안경·망치 조합이며 마법사와 엘프는 여성형이다. 엘프는 활을 장착하고 Z 공격 시 shoot 모션을 사용한다. 기존 프리셋4 카드도 이름과 무기가 갱신되며, 별도 저장한 개인 코디는 유지한다. 추가 시 현재 착용 코디와 기존 프리셋1·2를 바꾸지 않는다. 고정 6개와 개인 저장 코디 최대 8개를 별도로 보존한다.
 - `농부`는 나만의 코디 10에서 확정한 여성형 튜닉·스커트·마법봉·공식 나비 날개·흰 고양이 조합, `사냥꾼`은 나만의 코디 8에서 확정한 남성형 코트·줄무늬 바지·활·흰 강아지 조합을 기준으로 한다.
 - `Q` 당근 수확·낚시·문 열기, `Z` 공격, `0` 댄스, `X` 아바타·펫 동시 앉기 동작 추가
 - 펫을 아바타에 고정하지 않고 최근 이동 경로를 시간차로 추적하는 독립 월드 액터로 변경
@@ -127,11 +132,12 @@ python scripts/build_modular_avatar_atlas.py
 - `src/frontend/assets/carrot-forest-campfire-off-v3.png`: ON 모닥불의 동일 아틀라스 셀을 기반으로 불꽃만 제거하고 재·숯을 합성한 OFF 자산. `scripts/build_campfire_off_asset.py`로 재현한다.
 - `src/frontend/assets/carrot-forest-world-v2.png`: 집·당근밭·연못·산책길이 있는 고해상도 숲 월드
 - `src/frontend/assets/carrot-forest-home-v1.png`: 소파·옷장·출구가 있는 집 내부 홈피
+- `src/frontend/assets/home-record-player-cottage-v1.png`: 실내 원목·올리브색 가구와 같은 그림체로 생성한 투명 LP 가구. 단색 도형 렌더러를 제거하고 Phaser와 Canvas 모두 동일 스프라이트를 사용한다. 책장 아래 바닥 `(452, 320)`에 76×108 크기로 배치하며 클릭·Q 선택과 4곡 재생 기능은 유지한다. 생성 프롬프트와 처리 기록은 `docs/LP_COTTAGE_ASSET.md`에 남겼다.
 - `src/frontend/assets/carrot-forest-garden-v1.png`: 당근 고랑·물뿌리개·출구가 있는 공동 당근밭
 - `src/frontend/assets/carrot-forest-main-theme.mp3`: 당근의 숲 메인 화면용 BGM. 사용자가 제공한 `Untitled.mp3`를 서비스용 파일명으로 변경해 반입했다.
-- `src/frontend/assets/home-small-fire-cc0.wav`: 집 내부 기본 BGM `A Small Fire Will Do`. Cal McEachern(Trex0n)이 CC0로 공개한 차분한 루프다. 출처: https://opengameart.org/content/a-small-fire-will-do-calming-loop
-- LP 선택곡은 사용자 제공 최신 파일 4곡으로 교체했다: `lp-our-home-v2.mp3`(우리 집), `lp-warm-afternoon-v2.mp3`(따뜻한 오후), `lp-bright-sam-v2.mp3`(밝은 샘), `lp-untitled-v2.mp3`(무제). 이전 LP 5곡은 목록·미디어 캐시·실행 자산에서 제거했다. 이전 선택곡이 삭제된 경우 `우리 집`으로 보정하며 LP를 끄면 집 기본 BGM으로 복귀한다. 업로드 파일의 외부 배포 권한은 별도 확인 대상이다.
-- `src/frontend/assets/avatar-forget-me-not-cc0.ogg`: 아바타 꾸미기 전용 BGM `Forget Me Not`. Kistol이 CC0로 공개한 잔잔한 루프다. 출처: https://opengameart.org/content/forget-me-not
+- `src/frontend/assets/home-drowsy-evening-cc0.wav`: 집 내부 기본 BGM의 앱 내 이름은 `나른한 저녁`이다. 기존 음원은 변경하지 않고 파일명과 연결만 갱신했다. 원곡은 `A Small Fire Will Do`로, Cal McEachern(Trex0n)이 CC0로 공개한 차분한 루프다. 출처: https://opengameart.org/content/a-small-fire-will-do-calming-loop
+- LP 선택곡은 7곡이다: 우리 집 → 따뜻한 오후 → 밝은 샘 → 무제 → 집으로 → 나른한 저녁 → 숲 속의 요정. 앞의 5곡은 사용자 제공 파일(`lp-our-home-v2.mp3`, `lp-warm-afternoon-v2.mp3`, `lp-bright-sam-v2.mp3`, `lp-untitled-v2.mp3`, `lp-going-home-v1.mp3`)이며, 6번째 `나른한 저녁`은 집 기본 BGM 자산 `home-drowsy-evening-cc0.wav`, 7번째 `숲 속의 요정`은 아바타 BGM 자산 `avatar-forget-me-not-cc0.ogg`를 재사용한다. 이전 LP 5곡은 목록·미디어 캐시·실행 자산에서 제거했다. 이전 선택곡이 삭제된 경우 `우리 집`으로 보정하며 LP를 끄면 집 기본 BGM으로 복귀한다. 업로드 파일의 외부 배포 권한은 별도 확인 대상이다.
+- `src/frontend/assets/avatar-forget-me-not-cc0.ogg`: 아바타 꾸미기 BGM의 앱 내 이름은 `숲 속의 요정`이며 LP에서도 선택할 수 있다. 원곡 `Forget Me Not`은 Kistol이 CC0로 공개한 잔잔한 루프다. 출처: https://opengameart.org/content/forget-me-not
 - `src/frontend/assets/town-pro-sensory-cc0.mp3`: 당근밭용 무료 BGM `Town`. Pro Sensory가 퍼블릭 도메인(CC0)으로 공개한 밝은 소도시용 게임 음악이다. 출처: https://opengameart.org/content/town
 - `src/frontend/assets/peaceful-forest-samza-cc0.wav`: 야간용 무료 BGM `Peaceful Forest`. 느린 현악·저음 중심의 차분한 곡이며 Samza가 CC0로 공개했다. 출처: https://opengameart.org/content/peaceful-forest
 - `src/frontend/assets/forest-main-breeze-original.wav`: 이전 메인 화면용 오리지널 BGM. 무료 외부 음원의 대체·장애 대응 후보로 보존한다.
@@ -236,3 +242,11 @@ node --check src/frontend/avatar-compositor.js
 .\.venv\Scripts\python.exe -m ruff check app tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```
+
+## 8. 스토리북 아트와 전체 화면 게임 UI
+
+- 메인 필드, 우리 집, 당근 밭은 동일한 짙은 숲색·당근색·굵은 픽셀 외곽선 규칙을 사용하는 전용 배경으로 통일했다.
+- 창고의 정적 오브젝트 20종과 움직이는 오브젝트, LP 플레이어, 행운의 젖소, 꺼진 모닥불도 같은 팔레트의 전용 투명 PNG를 사용한다.
+- 데스크톱에서는 월드가 브라우저의 남은 화면을 모두 채운다. 아바타, 퀘스트, 조작, 배치 목록은 월드 위에 반투명 HUD로 배치되며 작은 화면에서는 기존의 순차 레이아웃으로 돌아간다.
+- 영문 개발 라벨, 좌표·타일 정보, 중복 상태 문구는 화면에서 제거했다. 동작 상태와 의료 안전 고지는 스크린리더 또는 필요한 흐름 안에 유지한다.
+- 생성 원본의 체크 보드 배경 제거와 균등 프레임 패킹은 `scripts/process_forest_art_assets.py`로 재현할 수 있다.

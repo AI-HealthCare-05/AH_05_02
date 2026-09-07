@@ -7,12 +7,33 @@ from app.main import app, carrot_forest, forest_manifest, forest_service_worker
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_home_record_player_uses_same_transparent_cottage_sprite_in_both_renderers() -> None:
+    import struct
+
+    asset_name = "home-record-player-cottage-v2.png"
+    raw = (ROOT / "src/frontend/assets" / asset_name).read_bytes()
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+    assert struct.unpack(">II", raw[16:24]) == (1008, 1237)
+    assert raw[25] == 6  # RGBA, so no opaque rectangular background.
+
+    game = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+    assert all(asset_name in script for script in (game, phaser, worker))
+    assert "context.drawImage(homeRecordPlayerImage, 414, 212, 76, 108)" in game
+    assert 'this.add.image(0, 0, "home-record-player")' in phaser
+    assert "setDisplaySize(76, 108)" in phaser
+    assert 'distanceTo(452, 300) < 76' in game
+    assert 'x >= 410 && x <= 494 && y >= 208 && y <= 325' in game
+    assert "recordPlayerDisc" not in phaser
+
+
 def test_forest_has_independent_web_route() -> None:
     paths = {route.path for route in app.routes if hasattr(route, "path")}
     response = asyncio.run(carrot_forest())
     html = Path(response.path).read_text(encoding="utf-8")
     assert "/forest" in paths
-    assert "당근의 숲 (Beta)" in html
+    assert "<title>당근의 숲 | 간당간당</title>" in html
     assert 'id="forest-canvas"' in html
 
 
@@ -37,9 +58,8 @@ def test_pixel_game_state_reward_and_adapter_contract_are_explicit() -> None:
 
     assert "DemoForestAdapter" in script
     assert "ApiForestAdapter" in script
-    assert "/challenge-cycles/current" in html
-    assert "/user-challenges/{id}/logs/{date}" in html
-    assert "/forest/spaces/{group_id}" in html
+    assert "기록은 어디에 저장되나요?" not in html
+    assert "CARROT FOREST · WORLD STUDIO" not in html
     assert script.count("completed: 3") == 4
     assert "completed >= 15" in script
     assert "state.rewardClaimed" in script
@@ -66,13 +86,17 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
     html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    for label in ("당근의 숲 작업실", "작업 도구", "SCENE OBJECTS"):
+    for label in ("당근의 숲", "아바타", "배치한 오브젝트"):
         assert label in html
+    for removed_label in ("당근의 숲 작업실", "SCENE OBJECTS", "2× HD · 24 × 16 TILE"):
+        assert removed_label not in html
     for control_id in ("reset-position", "zoom-toggle", "avatar-coordinate", "object-count"):
         assert f'id="{control_id}"' in html
     assert html.count("data-workspace-target=") == 4
     assert "scrollIntoView" in script
-    assert 'classList.toggle("is-zoomed")' in script
+    atmosphere = (ROOT / "src/frontend/forest-atmosphere.js").read_text(encoding="utf-8")
+    assert 'await stage.requestFullscreen()' in atmosphere
+    assert 'await document.exitFullscreen()' in atmosphere
 
 
 def test_world_interactions_music_and_separated_storage_are_explicit() -> None:
@@ -283,11 +307,11 @@ def test_world_scene_transitions_visual_storage_cats_and_fishing_are_connected()
     css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
     asset_names = (
-        "carrot-forest-world-v3.png",
-        "carrot-forest-home-v1.png",
-        "carrot-forest-garden-v1.png",
+        "carrot-forest-world-v5.png",
+        "carrot-forest-home-v2.png",
+        "carrot-forest-garden-v2.png",
         "carrot-forest-cat-pets-v1.png",
-        "carrot-forest-storage-atlas-v1.png",
+        "carrot-forest-storage-atlas-v4.png",
     )
 
     assert 'id="scene-exit"' in html
@@ -376,7 +400,8 @@ def test_phaser_premium_avatar_engine_and_offline_assets_are_connected() -> None
     assert "directionRows" in phaser_script
     assert "setPremiumFrame" in phaser_script
     assert "this.compositeTexture.refresh" in phaser_script
-    assert "this.keys.R.isDown" in phaser_script
+    assert "window.carrotForestRunning === true" in phaser_script
+    assert 'this.input.keyboard.on("keydown-R"' in phaser_script
     assert 'this.load.spritesheet("lpc-pets"' in phaser_script
     assert "carrot-forest-lpc-pets-v1.png" in phaser_script
 
@@ -417,32 +442,73 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         "forest-canopy-original.wav",
         "carrot-forest-original.wav",
         "peaceful-forest-samza-cc0.wav",
-        "home-small-fire-cc0.wav",
+        "home-drowsy-evening-cc0.wav",
         "avatar-forget-me-not-cc0.ogg",
         "lp-our-home-v2.mp3",
         "lp-warm-afternoon-v2.mp3",
         "lp-bright-sam-v2.mp3",
         "lp-untitled-v2.mp3",
+        "lp-going-home-v1.mp3",
     ):
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert "gandang-carrot-forest-pwa-v138" in worker
+    assert "gandang-carrot-forest-pwa-v146" in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
     assert "carrot-forest-original.wav" in worker
     assert "peaceful-forest-samza-cc0.wav" in worker
     assert "avatar-studio-original.wav" in worker
-    assert "home-small-fire-cc0.wav" in worker
+    assert "home-drowsy-evening-cc0.wav" in worker
     assert "avatar-forget-me-not-cc0.ogg" in worker
     assert "lp-our-home-v2.mp3" in worker
     assert "lp-warm-afternoon-v2.mp3" in worker
     assert "lp-bright-sam-v2.mp3" in worker
     assert "lp-untitled-v2.mp3" in worker
-    assert "home-record-" not in worker
+    assert "lp-going-home-v1.mp3" in worker
+    assert "home-record-player-simple-loop-cc0.ogg" not in worker
+    assert "home-record-elfwood-nexon.mp3" not in worker
     assert "reward-chest-success.mp3" in worker
+
+
+def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> None:
+    html = (ROOT / "src/frontend/forest.html").read_text(encoding="utf-8")
+    game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
+    phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
+    css = (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
+    worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
+
+    assets = ROOT / "src/frontend/assets"
+    expected = {
+        "carrot-forest-world-v5.png": (1536, 1024),
+        "carrot-forest-home-v2.png": (1536, 1024),
+        "carrot-forest-garden-v2.png": (1536, 1024),
+        "carrot-forest-storage-atlas-v4.png": (1280, 1024),
+        "carrot-forest-animated-objects-v2.png": (512, 512),
+        "home-record-player-cottage-v2.png": (1008, 1237),
+    }
+    from PIL import Image
+
+    for filename, size in expected.items():
+        path = assets / filename
+        assert path.is_file()
+        with Image.open(path) as image:
+            assert image.size == size
+        assert filename in worker
+
+    for source in (game_script, phaser_script):
+        assert "carrot-forest-world-v5.png" in source
+        assert "carrot-forest-home-v2.png" in source
+        assert "carrot-forest-garden-v2.png" in source
+    assert "carrot-forest-storage-atlas-v4.png" in game_script
+    assert "carrot-forest-animated-objects-v2.png" in phaser_script
+    assert "home-record-player-cottage-v2.png" in phaser_script
+    assert "Full-screen game shell" in css
+    assert '<h1 id="forest-title">당근의 숲</h1>' in html
+    assert "CARROT FOREST · WORLD STUDIO" not in html
+    assert "2× HD · 24 × 16 TILE" not in html
 
 
 def test_face_editor_outfit_expansion_and_polish_contract() -> None:
@@ -473,11 +539,20 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script
     assert 'avatar: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg")' in game_script
     assert '(hour >= 20 || hour < 5)) return "night"' in game_script
-    assert 'home: new Audio("/static/assets/home-small-fire-cc0.wav")' in game_script
+    assert 'home: new Audio("/static/assets/home-drowsy-evening-cc0.wav")' in game_script
     assert 'homeRecordHome: new Audio("/static/assets/lp-our-home-v2.mp3")' in game_script
     assert 'homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3")' in game_script
     assert 'homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3")' in game_script
     assert 'homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3")' in game_script
+    assert 'homeRecordGoingHome: new Audio("/static/assets/lp-going-home-v1.mp3")' in game_script
+    assert 'goingHome: { name: "집으로", audioKey: "homeRecordGoingHome" }' in game_script
+    assert 'homeRecordEvening: new Audio("/static/assets/home-drowsy-evening-cc0.wav")' in game_script
+    catalog = game_script.split("const homeRecordCatalog = {", 1)[1].split("};", 1)[0]
+    assert catalog.count("audioKey:") == 7
+    assert catalog.index('name: "집으로"') < catalog.index('name: "나른한 저녁"')
+    assert catalog.index('name: "나른한 저녁"') < catalog.index('name: "숲 속의 요정"')
+    assert 'forestFairy: { name: "숲 속의 요정", audioKey: "homeRecordForestFairy" }' in catalog
+    assert 'homeRecordForestFairy: new Audio("/static/assets/avatar-forget-me-not-cc0.ogg")' in game_script
     assert 'homeRecordSimple' not in game_script
     assert 'homeRecordElfwood' not in game_script
     assert 'garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
@@ -784,7 +859,7 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
 def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
-    assert 'wand: ["spellcast", "slash", "thrust"]' in engine_script
+    assert 'if (weapon === "wand") return "spellcast"' in engine_script
     assert "function sharedAnimation(avatar, options, candidates)" in engine_script
     assert "sharedAnimation(avatar, options, weaponAnimations)" in engine_script
     assert 'pose === "attack" && cosmetics.lpcWeapon === "wand"' in engine_script
@@ -793,7 +868,7 @@ def test_equipped_weapons_use_matching_lpc_motion_and_are_transient() -> None:
     assert 'cane: ["thrust", "slash"]' in engine_script
     assert 'dagger: ["slash", "thrust", "halfslash"]' in engine_script
     assert 'arming_sword: ["slash", "halfslash", "backslash"]' in engine_script
-    assert 'options.pose === "attack" && cosmetics.lpcWeapon !== "none"' in engine_script
+    assert '!["none", "wand"].includes(cosmetics.lpcWeapon)' in engine_script
     assert "supported.includes(animation)" in engine_script
 
 
@@ -810,7 +885,7 @@ def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_o
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
 
-    assert '["axe", "hammer", "pickaxe"].includes(tool)' in engine_script
+    assert 'new Set(["axe", "hammer", "pickaxe"])' in engine_script
     assert 'drawPixel(context, destination, side, 44, 4, 7, "#ed7c2e")' not in engine_script
     assert 'activeAvatarCategory === "tools"' in game_script
     assert 'avatarPreviewPose = "harvest"' in game_script
@@ -991,7 +1066,7 @@ def test_official_lpc_mobility_aprons_and_transient_actions_are_complete() -> No
     assert len(aprons) >= 3
     assert "carrot" not in tools
     assert 'options.pose === "attack"' in engine
-    assert '["harvest", "fishing"].includes(options.pose)' in engine
+    assert 'options.pose === "harvest" && cosmetics.lpcTool' in engine
     assert 'outfitIsOverlay ? [["outfit", "tshirt"' in engine
     assert "this.premiumAvatar.setVisible(false)" in phaser
     assert '{ id: "vehicle", label: "탈것", icon: "▸" }' in game
@@ -1035,7 +1110,7 @@ def test_pwa_route_response_contracts() -> None:
 def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     import struct
 
-    atlas = ROOT / "src/frontend/assets/carrot-forest-animated-objects-v1.png"
+    atlas = ROOT / "src/frontend/assets/carrot-forest-animated-objects-v2.png"
     raw = atlas.read_bytes()
     width, height = struct.unpack(">II", raw[16:24])
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
@@ -1053,7 +1128,7 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     assert 'this.load.spritesheet("animated-objects"' in phaser_script
     assert "repeat: -1" in phaser_script
     assert "syncPlacedObjects" in phaser_script
-    assert "carrot-forest-animated-objects-v1.png" in worker
+    assert "carrot-forest-animated-objects-v2.png" in worker
     assert 'data-animated-object-row="${animatedRow}"' in game_script
     assert "drawAnimatedObjectThumbnails" in game_script
     assert "animated-object-thumbnail-canvas" in css
@@ -1062,7 +1137,7 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
 def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None:
     import struct
 
-    atlas = ROOT / "src/frontend/assets/carrot-forest-storage-atlas-v3.png"
+    atlas = ROOT / "src/frontend/assets/carrot-forest-storage-atlas-v4.png"
     raw = atlas.read_bytes()
     width, height = struct.unpack(">II", raw[16:24])
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
@@ -1079,7 +1154,7 @@ def test_storage_objects_use_isolated_cells_and_recent_outfit_wardrobe() -> None
     assert "applyOutfitLook" in game_script
     assert "data-outfit-look" in game_script
     assert "inventory: [...storageObjectCodes]" in game_script
-    assert "carrot-forest-storage-atlas-v3.png" in css
+    assert "carrot-forest-storage-atlas-v4.png" in css
 
 
 def test_avatar_catalog_cards_render_actual_lpc_previews_instead_of_emoji() -> None:

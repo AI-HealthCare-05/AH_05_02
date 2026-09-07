@@ -1,4 +1,7 @@
 [data-challenge-v2]{font-family:inherit;color:#193d32;min-width:0;text-align:left}
+[data-challenge-v2] [hidden]{display:none!important}
+[data-challenge-v2] [data-settings]{background:#fff;border:1px solid #d9e5dd;border-radius:14px;padding:16px;margin:12px 0;scroll-margin-top:90px}
+[data-challenge-v2] .v2-setup-link,[data-challenge-v2] .v2-settings-button{display:block;width:100%;padding:14px;border:1px solid #8cad97;border-radius:10px;background:#edf5ef;color:#193d32;text-align:center;font-weight:700;text-decoration:none;box-sizing:border-box}
 [data-challenge-v2] .v2-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 [data-challenge-v2] h3{font-size:20px;margin:12px 0}[data-challenge-v2] h4{font-size:17px;line-height:1.5;margin:12px 0}
 [data-challenge-v2] .v2-card,[data-challenge-v2]>details{background:#fff;border:1px solid #d9e5dd;border-radius:14px;padding:16px;margin:12px 0}

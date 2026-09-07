@@ -1,5 +1,13 @@
 const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, sharedGroups: [], forestGroupId: null, forestCatalog: null, forestHome: null };
 window.challengeV2TokenProvider = () => state.token;
+// Only this fixed return destination is accepted; never redirect to arbitrary query URLs.
+const returningToForest = new URLSearchParams(window.location.search).get("returnTo") === "forest-challenges";
+function returnToForestSettings(eligibility) {
+  const blocked = (eligibility.reason_codes || []).some(code => ["DIAGNOSED_DIABETES", "URGENT_MEDICAL_ATTENTION", "CONSENT_REQUIRED", "UNDER_MINIMUM_SERVICE_AGE"].includes(code));
+  if (!returningToForest || !eligibility.service_eligible || blocked) return false;
+  window.location.assign("/forest?challenge=settings-v139#daily-settings");
+  return true;
+}
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -418,6 +426,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
       has_urgent_warning_sign: $("#urgent-warning").checked,
       population_in_scope: true,
     }) });
+    if (returnToForestSettings(result)) return;
     if (!result.model_eligible) {
       showEligibilityGuidance(result.reason_codes);
       return;
@@ -564,8 +573,18 @@ $("#login-existing").addEventListener("click", async () => {
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#email").value, password: $("#password").value }) });
     state.token = login.access_token;
     const consents = await api("/consents");
-    if (!consents.items.some((item) => item.is_agreed && !item.withdrawn_at)) {
+    if (!consents.items.some((item) => item.consent_item === "health_data" && item.is_agreed && !item.withdrawn_at)) {
       showMessage("활성 건강정보 동의가 없습니다. 새 동의 절차를 진행해 주세요.");
+      return;
+    }
+    if (returningToForest) {
+      // Re-check eligibility on the server, not from the displayed profile defaults.
+      try {
+        const eligibility = await api("/eligibility-checks/latest");
+        if (returnToForestSettings(eligibility)) return;
+        showStep(3);
+        showEligibilityGuidance(eligibility.reason_codes);
+      } catch { showStep(3); }
       return;
     }
     try {
@@ -716,6 +735,10 @@ $("#download-report").addEventListener("click", async () => {
 $("#restart").addEventListener("click", () => window.location.reload());
 
 const requestedView = new URLSearchParams(window.location.search);
+if (returningToForest) {
+  showStep(2);
+  showMessage("로그인과 이용 확인을 마치면 숲의 챌린지 설정으로 돌아가요.", "success");
+}
 const requestedStep = Number(requestedView.get("step"));
 if (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 8) showStep(requestedStep);
 const requestedWorkspace = requestedView.get("workspace");
