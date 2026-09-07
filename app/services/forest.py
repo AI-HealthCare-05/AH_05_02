@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from app.dtos.forest import ForestAvatarUpdateRequest, ForestObjectCreateRequest, ForestSpaceCreateRequest
 from app.models.forest import ForestAvatar, ForestSpace
 from app.models.users import User
-from app.repositories.forest_repository import ForestRepository
+from app.repositories.forest_repository import ForestRepository, forest_display_name
 
 DAILY_QUEST_COUNT = 3
 WELCOME_CARROTS = 100
@@ -102,7 +102,7 @@ class ForestService:
             rows.append(
                 {
                     "user_id": member.user_id,
-                    "display_name": avatar.display_name or person.name or "구성원",
+                    "display_name": forest_display_name(person),
                     "today_completed": completed,
                     "today_target": DAILY_QUEST_COUNT,
                     "avatar": self._avatar_payload(avatar),
@@ -165,11 +165,10 @@ class ForestService:
         if not accessory["default"] and not await self.repo.has_item(user.id, request.accessory_code):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="아직 획득하지 않은 액세서리입니다.")
         avatar = await self.repo.avatar(user)
-        avatar.display_name = request.display_name
         avatar.hair_code = request.hair_code
         avatar.outfit_code = request.outfit_code
         avatar.accessory_code = request.accessory_code
-        await avatar.save(update_fields=["display_name", "hair_code", "outfit_code", "accessory_code", "updated_at"])
+        await avatar.save(update_fields=["hair_code", "outfit_code", "accessory_code", "updated_at"])
         return self._avatar_payload(avatar)
 
     async def claim_group_reward(self, user: User, group_id: int) -> dict[str, object]:

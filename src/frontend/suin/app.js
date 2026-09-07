@@ -15,6 +15,8 @@ const safeExternalUrl = (value) => {
 const isDemoEnvironment = () => false;
 const isLocalPreview = () => isDemoEnvironment() && state.token === "local-demo-token";
 const returningToForest = new URLSearchParams(window.location.search).get("returnTo") === "forest-challenges";
+// A fixed account view, never an arbitrary redirect or a health/challenge shortcut.
+const openingAccountProfile = new URLSearchParams(window.location.search).get("account") === "profile";
 
 async function returnToForestSettings(eligibility) {
   if (!returningToForest) return false;
@@ -869,14 +871,60 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
 }
 
 function openProfileEditor() {
+  if (!state.token || !state.userProfile) {
+    showStep(2);
+    showAuthMode("login", { context: "mypage" });
+    return;
+  }
   $("#header-my-page").open = false;
   const profile = state.userProfile || {};
+  $("#profile-name").value = profile.name || "";
   $("#profile-birthday").value = profile.birthday || $("#eligibility-birth-date").value || $("#signup-birth-date").value || "";
   $("#profile-gender").value = profile.gender || $("#gender").value || $("#signup-gender").value || "FEMALE";
   $("#profile-editor-message").hidden = true;
   $("#profile-editor").hidden = false;
   document.body.classList.add("dialog-open");
-  $("#profile-birthday").focus();
+  $("#profile-name").focus();
+}
+
+function showRequestedAccountProfile() {
+  if (!openingAccountProfile) return false;
+  // Editing account information grants no consent, eligibility, or challenge access.
+  state.accountRecovery = null;
+  showStep(1, { recordHistory: false });
+  openProfileEditor();
+  return true;
+}
+
+function notifyAccountProfileUpdated() {
+  // Only invalidate other tabs. Never persist a name, account identifier, or token here.
+  try { window.localStorage.setItem("gandang-account-profile-revision", String(Date.now())); } catch {}
+}
+
+async function resumeAccountProfileEntry() {
+  if (!openingAccountProfile) return;
+  showStep(2, { recordHistory: false });
+  showAuthMode("login", { context: "mypage", moveFocus: false });
+  const releaseBusy = setFormBusy($("#login-form"), null, "로그인 상태 확인 중…");
+  try {
+    const session = await api("/auth/token/refresh", { method: "GET" });
+    if (typeof session?.access_token !== "string" || !session.access_token) {
+      throw new Error("로그인 상태를 확인하지 못했습니다. 다시 시도해 주세요.");
+    }
+    state.token = session.access_token;
+    await resumeAuthenticatedAccount();
+  } catch (error) {
+    const loginRequired = error.status === 401 || (error.status === 400 && error.message === "Provided invalid token.");
+    if (loginRequired) {
+      state.token = null;
+      state.userProfile = null;
+      showMessage("기존 계정으로 로그인하면 개인정보 수정 화면이 열립니다.", "success");
+    } else {
+      showMessage(error.message || "계정 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    }
+  } finally {
+    releaseBusy();
+  }
 }
 
 function closeProfileEditor() {
@@ -3756,9 +3804,22 @@ document.addEventListener("keydown", (event) => {
 });
 $("#profile-editor-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (event.currentTarget.getAttribute("aria-busy") === "true") return;
+  const name = $("#profile-name").value.trim();
   const birthday = $("#profile-birthday").value;
   const gender = $("#profile-gender").value;
   const message = $("#profile-editor-message");
+  if (!state.token || !state.userProfile) {
+    message.textContent = "로그인 상태를 확인한 뒤 다시 저장해 주세요.";
+    message.hidden = false;
+    return;
+  }
+  if ((name && (Array.from(name).length < 2 || Array.from(name).length > 20)) || (!name && state.userProfile?.name)) {
+    message.textContent = "닉네임은 2~20자로 입력해 주세요. 기존 닉네임은 빈 값으로 변경할 수 없습니다.";
+    message.hidden = false;
+    $("#profile-name").focus();
+    return;
+  }
   if (getAgeFromBirth(birthday) < 14) {
     message.textContent = "서비스 약관에 따라 만 14세 미만은 생년월일로 변경할 수 없습니다.";
     message.hidden = false;
@@ -3766,15 +3827,17 @@ $("#profile-editor-form")?.addEventListener("submit", async (event) => {
   }
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "저장 중…");
   try {
+    const updates = { birthday, gender, ...(name ? { name } : {}) };
     const profile = isLocalPreview()
-      ? { ...(state.userProfile || {}), birthday, gender }
-      : await api("/users/me", { method: "PATCH", body: JSON.stringify({ birthday, gender }) });
-    state.userProfile = { ...(state.userProfile || {}), ...(profile || {}), birthday, gender };
+      ? { ...(state.userProfile || {}), ...updates }
+      : await api("/users/me", { method: "PATCH", body: JSON.stringify(updates) });
+    state.userProfile = { ...(state.userProfile || {}), ...updates, ...(profile || {}) };
+    notifyAccountProfileUpdated();
     $("#eligibility-birth-date").value = birthday;
     $("#gender").value = gender;
     syncLifestyleAvatar();
     closeProfileEditor();
-    showMessage("생년월일과 성별을 수정했습니다. 다음 분석부터 변경된 정보를 사용합니다.", "success");
+    showMessage("개인정보를 수정했습니다. 닉네임은 당근의 숲에도 반영되며, 생년월일과 성별은 다음 분석부터 사용됩니다.", "success");
   } catch (error) {
     message.textContent = error.message || "기본정보를 저장하지 못했습니다.";
     message.hidden = false;
@@ -4609,6 +4672,7 @@ async function resumeAuthenticatedAccount() {
     if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
     if (profile.gender) $("#gender").value = profile.gender;
     syncLifestyleAvatar();
+    if (showRequestedAccountProfile()) return;
     const consents = await api("/consents");
     if (!Array.isArray(consents?.items)) throw new Error("동의 정보를 확인하지 못했습니다.");
     const profileSaved = Boolean(profile.birthday && ["FEMALE", "MALE"].includes(profile.gender));
@@ -4975,3 +5039,4 @@ if (returningToForest) {
   showAuthMode("login");
   showMessage("로그인하고 이용 가능 확인을 마치면 당근의 숲 챌린지 설정으로 돌아갑니다. 실제 활동 기록은 직접 입력해 주세요.", "success");
 }
+void resumeAccountProfileEntry();

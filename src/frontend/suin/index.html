@@ -7,7 +7,7 @@
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
   <link rel="stylesheet" href="/static/suin/styles.css?v=20260907-guest-header-right-v1">
-  <script src="/static/suin/app.js?v=20260907-priority-flow-v1" defer></script>
+  <script src="/static/suin/app.js?v=20260907-account-name-v2" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -38,7 +38,7 @@
     <div class="header-utilities">
       <details class="header-my-page" id="header-my-page" hidden>
         <summary id="header-my-page-toggle">마이페이지</summary>
-        <div class="header-my-page-menu"><button class="text-button" id="profile-edit" type="button">생년월일·성별 수정</button></div>
+        <div class="header-my-page-menu"><button class="text-button" id="profile-edit" type="button">개인정보 수정</button></div>
       </details>
       <button class="text-button font-toggle-button" id="font-toggle" type="button" aria-pressed="false">글자 크게</button>
     </div>
@@ -47,13 +47,14 @@
     <div class="profile-editor-card">
       <button class="profile-editor-close" id="profile-editor-close" type="button" aria-label="마이페이지 닫기">×</button>
       <p class="eyebrow">마이페이지</p>
-      <h2 id="profile-editor-title">기본정보 수정</h2>
-      <p class="lead">생년월일과 성별을 수정하면 다음 건강정보 분석부터 변경된 정보가 사용됩니다.</p>
+      <h2 id="profile-editor-title">개인정보 수정</h2>
+      <p class="lead">닉네임은 당근의 숲에서도 함께 사용합니다. 생년월일과 성별은 다음 건강정보 분석부터 변경된 정보가 사용됩니다.</p>
       <form id="profile-editor-form" class="two-column">
+        <div class="form-row full"><label for="profile-name">닉네임 (선택)</label><input id="profile-name" minlength="2" maxlength="20" autocomplete="nickname" aria-describedby="profile-name-help"><small id="profile-name-help">실명 대신 별명을 사용해도 됩니다. 2~20자로 입력해 주세요.</small></div>
         <div class="form-row"><label for="profile-birthday">생년월일</label><input id="profile-birthday" type="date" autocomplete="bday" required></div>
         <div class="form-row"><label for="profile-gender">성별</label><select id="profile-gender" required><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
         <p class="profile-editor-message full" id="profile-editor-message" role="alert" hidden></p>
-        <div class="actions full"><button class="secondary" id="profile-editor-cancel" type="button">취소</button><button class="primary" type="submit">수정 내용 저장</button></div>
+        <div class="actions full"><button class="secondary" id="profile-editor-cancel" type="button">취소</button><button class="primary" type="submit">수정 내용 저장</button><a class="text-button" href="/forest">당근의 숲으로 돌아가기</a></div>
       </form>
     </div>
   </div>

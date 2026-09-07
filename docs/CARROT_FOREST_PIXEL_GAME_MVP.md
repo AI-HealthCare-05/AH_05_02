@@ -208,9 +208,12 @@ $env:SECRET_KEY="local-demo-only-change-before-deployment"
 | `GET` | `/api/v1/forest/catalog` | 아바타·오브젝트 카탈로그 |
 | `POST` | `/api/v1/forest/spaces` | 공동 챌린지 그룹의 숲 생성 |
 | `GET` | `/api/v1/forest/spaces/{group_id}` | 숲·5명 진행률·인벤토리·배치 상태 |
-| `PATCH` | `/api/v1/forest/avatar` | 표시 이름과 코디 저장 |
+| `PATCH` | `/api/v1/users/me` | 메인 서비스 개인정보에서 공통 닉네임(`name`, 2~20자) 저장 |
+| `PATCH` | `/api/v1/forest/avatar` | 코디만 저장 |
 | `POST` | `/api/v1/forest/spaces/{group_id}/rewards/group-daily` | 공동 목표 보상 수령 |
 | `POST` | `/api/v1/forest/spaces/{group_id}/objects` | 숲 오브젝트 배치 |
+
+닉네임의 기준은 `User.name` 하나이며, 숲의 내 아바타와 구성원 표시 이름에도 동일하게 반영한다. 개인정보 수정 시 해당 사용자의 기존 아바타 이름만 함께 갱신하고, 숲 조회 시 과거에 저장된 별도 이름을 정리한다. 이름이 없는 계정은 이메일 대신 `숲지기`로 표시한다. 구형 클라이언트의 아바타 요청에 포함된 `display_name`은 선택 필드로 수신하지만 무시하며, 코디·인벤토리·당근은 이름 동기화로 바뀌지 않는다.
 
 현재 정식 API는 공동 챌린지 로그로 구성원별 완료 수를 계산하며, 사용자당 일일 3개를 상한으로 적용한다. 독립 게임 화면은 시연 안정성을 위해 Demo Adapter가 기본이고, 인증 세션과 그룹 선택 UX가 확정되면 `ApiForestAdapter`로 전환한다.
 

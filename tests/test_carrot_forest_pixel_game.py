@@ -172,17 +172,13 @@ def test_group_tabs_reward_ceremony_and_profile_are_interactive() -> None:
         "reward-celebration",
         "reward-reveal-name",
         "open-profile",
-        "profile-dialog",
-        "profile-nickname",
-        "profile-avatar-canvas",
     ):
         assert f'id="{control_id}"' in html
     for behavior in (
         "activateInspectorPanel",
         "playRewardCelebration",
         "generateNickname",
-        "renderProfileAvatar",
-        "profile-form",
+        "applyAccountNickname",
     ):
         assert behavior in script
     assert "renderInventory(reward)" in script
@@ -218,7 +214,7 @@ def test_forest_onboarding_rag_collaboration_and_tool_routes_are_connected() -> 
     assert "당뇨 예방 챌린지" in html
     assert "who.int/publications" in script
     assert "cdc.gov/diabetes-prevention" in script
-    assert 'window.location.href = "/?step=2"' in script
+    assert 'window.location.href = window.ForestProfile.PROFILE_URL' in script
     assert "/?step=8&amp;workspace=together" in html
     assert "renderInventoryDialog" in script
     assert "groupGoalMemo" in script
@@ -456,7 +452,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v153-shell2";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v154";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -975,7 +971,9 @@ def test_gender_defaults_open_with_farmer_and_switch_to_hunter() -> None:
     assert 'lpcBottom: "official_legs_pants_legs_formal_striped"' in game_script
     assert 'lpcTool: "none", lpcWeapon: "bow", vehicle: "none", pet: "white_pup"' in game_script
     assert 'id="avatar-gender"' not in html
-    assert '>닉네임<input id="avatar-name"' in html
+    assert 'id="avatar-name"' not in html
+    assert 'id="profile-nickname"' not in html
+    assert 'id="open-avatar-studio"' in html
     assert '<h2 id="avatar-title">아바타</h2>' in html
     assert "기본 프리셋 이름은 변경할 수 없습니다." in game_script
     assert "fixed-preset-name" in game_script

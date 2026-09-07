@@ -693,11 +693,14 @@
       let loaded;
       try { loaded = normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
       catch { loaded = defaultState(); }
+      this.guestName = loaded.avatar.name;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
       return loaded;
     }
     async save(state) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      // Account names are read-only session data, never copied into the guest save.
+      const saved = { ...state, avatar: { ...state.avatar, name: this.guestName || state.avatar.name } };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
       return state;
     }
   }
@@ -795,20 +798,17 @@
     renderCanvas();
     drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
-    if ($("#profile-dialog").open) renderProfileAvatar();
   });
   window.LpcAvatarEngine?.ready().then(() => {
     syncLpcCatalog();
     renderCanvas();
     drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
-    if ($("#profile-dialog").open) renderProfileAvatar();
   });
   window.addEventListener("lpc-avatar-assets-updated", () => {
     renderCanvas();
     drawWardrobeLookThumbnails();
     if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
-    if ($("#profile-dialog").open) renderProfileAvatar();
   });
 
   class CozyForestMusic {
@@ -2484,45 +2484,18 @@
     musicEngine?.switchTo("avatar", { restart: true }).catch(() => setStatus("아바타 음악을 재생하지 못했지만 꾸미기는 계속할 수 있어요."));
   }
 
-  function renderProfileAvatar() {
-    const canvas = $("#profile-avatar-canvas");
-    if (!canvas) return;
-    const target = canvas.getContext("2d");
-    target.clearRect(0, 0, canvas.width, canvas.height);
-    target.setTransform(2, 0, 0, 2, 0, 0);
-    target.imageSmoothingEnabled = false;
-    const cosmetics = { ...defaultCosmetics, ...(state.avatar.cosmetics || {}) };
-    if (window.LpcAvatarEngine?.isReady()) {
-      window.LpcAvatarEngine.draw(target, { ...state.avatar, engine: "lpc", cosmetics, sitting: false, mounted: false }, {
-        direction: "down", pose: "idle", frame: avatarPreviewFrame,
-      }, { x: 24, y: 32, width: 176, height: 176 });
-      target.setTransform(1, 0, 0, 1, 0, 0);
-      return;
-    }
-    if (!modularAvatarAtlas.complete || !modularAvatarAtlas.naturalWidth || !window.CarrotAvatarCompositor) return;
-    window.CarrotAvatarCompositor.drawFrame(target, { modular: { image: modularAvatarAtlas, rows: 11 } }, {
-      preset: state.avatar.preset,
-      hairPreset: stylePresetByItem[cosmetics.hair] || state.avatar.preset,
-      outfitPreset: stylePresetByItem[cosmetics.outfit] || state.avatar.preset,
-      direction: "down", mounted: false, moving: false, frame: 0,
-      accessory: cosmetics.accessory, hat: cosmetics.hat, glasses: cosmetics.glasses,
-      ...state.avatar.tuning,
-    }, { x: 22, y: 28, width: 180, height: 232 });
-    target.setTransform(1, 0, 0, 1, 0, 0);
-  }
-
   function updateProfileUI() {
     if (!state?.avatar) return;
     $("#topbar-nickname").textContent = state.avatar.name;
-    $("#profile-nickname").value = state.avatar.name;
-    $("#profile-carrots").textContent = String(state.carrots);
-    if ($("#profile-dialog").open) renderProfileAvatar();
   }
 
-  function openProfile() {
+  function applyAccountNickname(name) {
+    const nextName = name || adapter.guestName;
+    if (!nextName || nextName === state.avatar.name) return;
+    state.avatar.name = nextName;
     updateProfileUI();
-    renderProfileAvatar();
-    $("#profile-dialog").showModal();
+    renderCanvas();
+    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
   }
 
   let challengeFlowStep = 1;
@@ -2611,7 +2584,6 @@
   function renderAll() {
     $("#adapter-badge").textContent = adapter.mode === "demo" ? "숲 체험" : "계정 연결";
     $("#carrot-balance").textContent = state.carrots;
-    $("#avatar-name").value = state.avatar.name;
     syncActiveQuests(); renderQuests(); renderGroup(); renderInventory(); renderPlaced(); renderCanvas(); renderGardenHarvest(); updateProfileUI();
   }
 
@@ -2751,16 +2723,6 @@
     await persist("오늘의 슬로건을 저장했습니다.");
   });
 
-  $("#avatar-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const nextName = $("#avatar-name").value.trim();
-    if (!nextName) { setStatus("닉네임을 입력해 주세요."); return; }
-    state.avatar.name = nextName;
-    renderCanvas();
-    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    await persist(`${state.avatar.name} 닉네임을 저장했습니다.`);
-  });
-
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
   $("#avatar-studio-close").addEventListener("click", () => $("#avatar-studio").close());
   $("#avatar-studio").addEventListener("click", (event) => {
@@ -2769,30 +2731,7 @@
   $("#avatar-studio").addEventListener("close", () => {
     musicEngine?.switchTo(sceneMusicName()).catch(() => setStatus("장면 음악을 다시 재생하지 못했습니다."));
   });
-  $("#open-profile").addEventListener("click", () => { window.location.href = "/?step=2"; });
-  $("#profile-close").addEventListener("click", () => $("#profile-dialog").close());
-  $("#profile-dialog").addEventListener("click", (event) => {
-    if (event.target === $("#profile-dialog")) $("#profile-dialog").close();
-  });
-  $("#profile-open-avatar").addEventListener("click", () => {
-    $("#profile-dialog").close();
-    openAvatarStudio();
-  });
-  $("#profile-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const nickname = $("#profile-nickname").value.trim().replace(/\s+/g, " ");
-    if (nickname.length < 2 || nickname.length > 14) {
-      $("#profile-nickname").setCustomValidity("닉네임은 2~14자로 입력해 주세요.");
-      $("#profile-nickname").reportValidity();
-      return;
-    }
-    $("#profile-nickname").setCustomValidity("");
-    state.avatar.name = nickname;
-    $("#avatar-name").value = nickname;
-    window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
-    await persist(`${nickname}(으)로 닉네임을 변경했습니다.`);
-    $("#profile-dialog").close();
-  });
+  $("#open-profile").addEventListener("click", () => { window.location.href = window.ForestProfile.PROFILE_URL; });
   $("#avatar-category-nav").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-category]");
     if (!button) return;
@@ -3539,6 +3478,7 @@
       window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
     }
     renderAll();
+    window.ForestProfile.watch(applyAccountNickname);
     setStatus(localReset ? "오늘의 과업과 공동 진행, 보물상자 수령 상태를 초기화했습니다." : "당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
     window.requestAnimationFrame(() => document.documentElement.classList.add("forest-script-ready"));
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);

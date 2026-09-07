@@ -61,7 +61,8 @@
   <script src="/static/forest-animals.js?v=20260907-1" defer></script>
   <script src="/static/forest-phaser.js?v=20260907-42" defer></script>
   <script src="/static/forest-hud.js?v=20260907-4" defer></script>
-  <script src="/static/forest-game.js?v=20260907-95" defer></script>
+  <script src="/static/forest-profile.js?v=20260907-1" defer></script>
+  <script src="/static/forest-game.js?v=20260907-96" defer></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.2">
   <script src="/static/challenge-v2.js?v=2.1.4" defer></script>
 </head>
@@ -94,7 +95,7 @@
       </div>
       <button id="atmosphere-toggle" class="icon-button" type="button" aria-pressed="true" aria-label="날씨·시간 효과 켜짐">날씨·시간</button>
       <label class="font-size-control" for="font-size-select"><span>글자 크기</span><select id="font-size-select" aria-label="글자 크기"><option value="small">작게</option><option value="default" selected>보통</option><option value="large">크게</option></select></label>
-      <button id="open-profile" class="profile-button" type="button"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
+      <button id="open-profile" class="profile-button" type="button" aria-label="메인 MVP 개인정보 열기"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
     </div>
   </header>
 
@@ -127,11 +128,9 @@
 
         <section id="avatar-editor" class="rail-editor" aria-labelledby="avatar-title">
           <h2 id="avatar-title">아바타</h2>
-          <form id="avatar-form" class="avatar-form">
-            <label>닉네임<input id="avatar-name" maxlength="12" value="세준" required></label>
-            <button class="primary-button" type="submit">닉네임 저장</button>
+          <div class="avatar-form">
             <button id="open-avatar-studio" class="avatar-studio-button" type="button"><span aria-hidden="true">✦</span> 아바타 꾸미기</button>
-          </form>
+          </div>
         </section>
         <section id="asset-dock" class="asset-dock rail-assets" aria-labelledby="inventory-title">
           <h2 id="inventory-title" class="sr-only">옷장과 창고</h2>
@@ -313,20 +312,6 @@
     <div class="inventory-dialog-tabs"><button class="is-active" type="button" data-inventory-view="storage">창고</button><button type="button" data-inventory-view="wardrobe">옷장</button></div>
     <div id="inventory-dialog-grid" class="inventory-dialog-grid"></div>
     <p>오브젝트를 선택하면 숲 배치 모드로 전환됩니다. 옷장 아이템은 아바타에 바로 적용됩니다.</p>
-  </dialog>
-
-  <dialog id="profile-dialog" class="profile-dialog" aria-labelledby="profile-title">
-    <header class="profile-header"><div><p class="eyebrow">MY PAGE</p><h2 id="profile-title">마이페이지</h2></div><button id="profile-close" class="dialog-close" type="button" aria-label="마이페이지 닫기">×</button></header>
-    <div class="profile-avatar-stage">
-      <canvas id="profile-avatar-canvas" width="448" height="576" aria-label="내 캐릭터 미리보기"></canvas>
-      <button id="profile-open-avatar" class="plain-button" type="button">캐릭터 꾸미기</button>
-    </div>
-    <form id="profile-form" class="profile-form">
-      <label for="profile-nickname">닉네임</label>
-      <div class="nickname-editor"><input id="profile-nickname" minlength="2" maxlength="14" autocomplete="nickname" required><button class="primary-button" type="submit">닉네임 저장</button></div>
-      <small>처음에는 자동 생성되며 언제든지 바꿀 수 있어요. 2~14자로 입력해 주세요.</small>
-    </form>
-    <div class="profile-summary"><div><span aria-hidden="true">🔥</span><small>연속 참여</small><strong>6일</strong></div><div><span aria-hidden="true">🥕</span><small>보유 당근</small><strong id="profile-carrots">100</strong></div><div><span aria-hidden="true">👥</span><small>모임</small><strong>5명</strong></div></div>
   </dialog>
 
   <section id="reward-celebration" class="reward-celebration" role="dialog" aria-modal="true" aria-labelledby="reward-celebration-title" hidden>

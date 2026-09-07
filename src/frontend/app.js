@@ -327,7 +327,6 @@ function renderForest(home) {
   const rewardButton = $("#forest-reward");
   rewardButton.disabled = !home.today.group_reward_ready || home.today.group_reward_claimed;
   rewardButton.textContent = home.today.group_reward_claimed ? "오늘 보상 받음" : home.today.group_reward_ready ? "보상 상자 열기" : "공동 목표 진행 중";
-  $("#forest-display-name").value = home.me.display_name;
   $("#forest-hair").innerHTML = forestOptions(state.forestCatalog.hair, home.me.hair_code);
   $("#forest-outfit").innerHTML = forestOptions(state.forestCatalog.outfits, home.me.outfit_code);
   const allowedAccessories = new Set(["none", ...home.inventory]);
@@ -633,7 +632,6 @@ $("#forest-avatar-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     await api("/forest/avatar", { method: "PATCH", body: JSON.stringify({
-      display_name: $("#forest-display-name").value,
       hair_code: $("#forest-hair").value,
       outfit_code: $("#forest-outfit").value,
       accessory_code: $("#forest-accessory").value,

@@ -9,6 +9,10 @@ from app.models.health import ChallengeLog
 from app.models.users import User
 
 
+def forest_display_name(user: User) -> str:
+    return user.name or "숲지기"
+
+
 class ForestRepository:
     async def active_member(self, group_id: int, user_id: int) -> SharedChallengeMember | None:
         return await SharedChallengeMember.get_or_none(group_id=group_id, user_id=user_id, status="active")
@@ -29,12 +33,22 @@ class ForestRepository:
         return await ForestSpace.create(**values)
 
     async def avatar(self, user: User) -> ForestAvatar:
-        display_name = user.name or user.email.split("@", 1)[0][:20]
+        display_name = forest_display_name(user)
         avatar, _ = await ForestAvatar.get_or_create(
             user_id=user.id,
             defaults={"display_name": display_name, "carrot_balance": 100},
         )
+        if avatar.display_name != display_name:
+            avatar.display_name = display_name
+            await avatar.save(update_fields=["display_name", "updated_at"])
         return avatar
+
+    async def sync_existing_avatar_name(self, user: User) -> None:
+        # Profile edits must not initialize a forest avatar or change its cosmetics/wallet.
+        avatar = await ForestAvatar.get_or_none(user_id=user.id)
+        if avatar is not None and avatar.display_name != forest_display_name(user):
+            avatar.display_name = forest_display_name(user)
+            await avatar.save(update_fields=["display_name", "updated_at"])
 
     async def avatars(self, users: list[User]) -> dict[int, ForestAvatar]:
         result: dict[int, ForestAvatar] = {}
