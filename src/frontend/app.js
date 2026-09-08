@@ -2,7 +2,7 @@ const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], tok
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const challengeV3 = { active: false, busy: false, rotation: 0, focus: "balanced", difficulty: "easy", policy: null };
+const challengeV3 = { active: false, busy: false, rotation: 0, focus: "balanced", difficulty: "easy", policy: null, owner: null, request: 0 };
 const challengeDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const challengeLevelLabel = (level) => ({ easy: "쉬움", moderate: "보통", advanced: "도전" }[level] || "공통");
 const challengeProofLabel = (type) => ({ 1: "1유형 · 사진 + 채소 확인", 2: "2유형 · 사진 제출", 3: "3유형 · 자가 체크" }[type] || "기존 기록 방식");
@@ -2701,9 +2701,20 @@ async function runPrediction({ retryFailed = false } = {}) {
   }
 }
 async function loadChallenges() {
-  if (challengeV3.busy) return;
-  challengeV3.busy = true;
   const token = state.token;
+  if (challengeV3.busy && challengeV3.owner === token) return;
+  if (challengeV3.owner !== token) {
+    challengeV3.active = false;
+    state.challengeRecommendations = [];
+    state.challengeCatalog = [];
+    state.selectedChallengeIds = new Set();
+    state.openFollowUpActionIds = [];
+    $("#challenge-list").replaceChildren();
+  }
+  challengeV3.owner = token;
+  challengeV3.busy = true;
+  const request = ++challengeV3.request;
+  const isCurrent = () => state.token === token && challengeV3.request === request;
   const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
   controls.forEach((control) => { control.disabled = true; });
   $("#retry-challenges").hidden = true;
@@ -2719,7 +2730,7 @@ async function loadChallenges() {
       const catalog = await api("/challenges?catalog_version=evidence-v3");
       result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
     } else result = await api(`/challenge-recommendations?${query}`);
-    if (state.token !== token) return;
+    if (!isCurrent()) return;
     if (result.items?.length !== 3 || !result.items.every((item) => item.catalog_version === "evidence-v3")) {
       throw new Error("새 챌린지 응답을 확인할 수 없습니다. 통합 서버 버전을 확인해 주세요.");
     }
@@ -2736,21 +2747,24 @@ async function loadChallenges() {
     if (result.medical_guidance_required_first) {
       $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
       const actions = await api("/follow-up-actions");
+      if (!isCurrent()) return;
       state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
       $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
     }
     renderChallengeChoices();
   } catch (error) {
-    if (state.token !== token) return;
+    if (!isCurrent()) return;
     $("#challenge-v3-focus").value = challengeV3.focus;
     $("#challenge-v3-difficulty").value = challengeV3.difficulty;
     $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
     $("#retry-challenges").hidden = false;
     showMessage(error.message);
   } finally {
-    challengeV3.busy = false;
-    controls.forEach((control) => { control.disabled = false; });
-    $("#start-challenge").disabled = !challengeV3.active || !$("#challenge-follow-up").hidden;
+    if (challengeV3.request === request) {
+      challengeV3.busy = false;
+      controls.forEach((control) => { control.disabled = false; });
+      $("#start-challenge").disabled = !isCurrent() || !challengeV3.active || !$("#challenge-follow-up").hidden;
+    }
   }
 }
 
@@ -3058,7 +3072,7 @@ async function loadDailyRecords() {
   const token = state.token;
   const request = (state.dailyRecordsRequest || 0) + 1;
   state.dailyRecordsRequest = request;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = challengeDay();
   const isCurrent = () => state.cycle === cycle && state.token === token && state.dailyRecordsRequest === request;
   state.dailyRecordsStatus = "loading";
   renderDailyRecordList();
@@ -3101,12 +3115,15 @@ function renderDailyRecordList() {
     const done = state.dailyCompleted.has(id);
     const presentation = type === "simple" ? simpleRecordPresentation(item) : null;
     const icon = habitRecordIcon(type === "photo" ? "photo" : presentation.kind);
+    const v3 = item.catalog_version === "evidence-v3";
+    const recordHint = v3 ? `${item.daily_goal} · ${item.verification_scope}`
+      : type === "photo" ? "식사 사진을 올리거나 간편 체크로 기록해요." : "사진 없이 간편 체크로 바로 기록해요.";
     return `<article class="daily-record-card ${done ? "done" : ""}" data-user-challenge-id="${escapeHtml(id)}" data-record-type="${type}">
       <span class="daily-record-icon" aria-hidden="true"><b>${done ? "✓" : icon}</b></span>
       <div>
         <strong>${escapeHtml(item.title)}</strong>
-        <small>${done ? "오늘 실천을 기록했어요." : type === "photo" ? "식사 사진을 올리거나 간편 체크로 기록해요." : "사진 없이 간편 체크로 바로 기록해요."}</small>
-        <em class="record-type-badge ${type === "photo" ? "photo" : ""}">${recordTypeLabel(type)}</em>
+        <small>${done ? "오늘 실천을 기록했어요." : escapeHtml(recordHint)}</small>
+        <em class="record-type-badge ${type === "photo" ? "photo" : ""}">${v3 ? challengeProofLabel(item.verification_type) : recordTypeLabel(type)}</em>
       </div>
       <button class="${done ? "secondary" : "primary"} daily-record-open" type="button" ${done ? "disabled" : ""}>${done ? "완료" : recordActionLabel(type)}</button>
     </article>`;
@@ -3299,7 +3316,7 @@ function updateDailyRecordSummary() {
 async function completeDailyRecord(target, source = "self_report") {
   if (!target?.id) return;
   if (target.item?.catalog_version === "evidence-v3" && target.item.verification_type !== 3) throw new Error("사진 제출 절차로 완료해 주세요.");
-  const today = target.item?.catalog_version === "evidence-v3" ? challengeDay() : new Date().toISOString().slice(0, 10);
+  const today = challengeDay();
   if (!isLocalPreview()) {
     await api(`/user-challenges/${target.id}/logs/${today}`, {
       method: "PUT",
@@ -4778,6 +4795,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     return;
   }
   const ids = [...state.selectedChallengeIds];
+  if (challengeV3.active && challengeV3.owner !== state.token) return showMessage("로그인한 계정의 후보를 다시 불러와 주세요.");
   if (challengeV3.active && ids.length !== 3) return showMessage("음료·식단·운동 각 1개가 필요합니다.");
   const customSelected = state.customChallengeSelected;
   if (!ids.length && !customSelected) return showMessage("챌린지를 하나 이상 선택해 주세요.");
@@ -4795,7 +4813,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
-      start_date: challengeV3.active ? challengeDay() : new Date().toISOString().slice(0, 10), challenge_ids: ids, prediction_id: state.predictionId,
+      start_date: challengeDay(), challenge_ids: ids, prediction_id: state.predictionId,
       ...(challengeV3.active ? { catalog_version: "evidence-v3", focus: challengeV3.focus, difficulty: challengeV3.difficulty } : {}),
     }) });
     renderCycle(cycle); await refreshDashboard(); showStep(8);
@@ -4915,7 +4933,7 @@ $("#daily-log-form")?.addEventListener("submit", async (event) => {
       showMessage("오늘 기록을 화면 확인용으로 저장했습니다.", "success");
       return;
     }
-    const today = new Date().toISOString().slice(0, 10);
+    const today = challengeDay();
     await Promise.all($$("input[name='daily']").map((input) => api(`/user-challenges/${input.value}/logs/${today}`, {
       method: "PUT", body: JSON.stringify({ is_completed: input.checked, source: "self_report", note: null }),
     })));
@@ -4932,7 +4950,7 @@ $("#barrier-form").addEventListener("submit", async (event) => {
       return;
     }
     const result = await api(`/user-challenges/${$("#barrier-challenge").value}/barriers`, { method: "POST", body: JSON.stringify({
-      log_date: new Date().toISOString().slice(0, 10), reason_code: $("#barrier-reason").value,
+      log_date: challengeDay(), reason_code: $("#barrier-reason").value,
     }) });
     $("#barrier-suggestion").textContent = result.suggestion;
     await loadWeeklyReport();

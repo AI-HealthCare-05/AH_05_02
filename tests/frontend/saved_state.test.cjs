@@ -52,7 +52,9 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
 function dailyHarness(api) {
   const state = { token: 'test-only', cycle: { user_challenges: [{ user_challenge_id: 1 }, { user_challenge_id: 2 }] }, dailyCompleted: new Set(['old']) };
   const context = load(['loadDailyRecords'], {
-    state, api, isLocalPreview: () => false, renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    state, api, isLocalPreview: () => false,
+    challengeDay: () => new Date().toISOString().slice(0, 10),
+    renderDailyRecordList() {}, renderTodayTaskStatus() {},
   });
   return { state, read: context.loadDailyRecords };
 }
