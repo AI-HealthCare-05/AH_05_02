@@ -375,6 +375,55 @@ async def test_fetching_additional_cycles_page_does_not_change_top_level_summary
 
 
 @pytest.mark.asyncio
+async def test_weekly_report_pdf_never_leaks_another_users_content() -> None:
+    """The existing `/weekly-reports/current/pdf` endpoint (untouched by this feature, and
+    out of scope for the report-v1.4-draft PDF work) takes no report_id/user_id from the
+    request at all — it always builds the *authenticated caller's own* active-cycle report
+    (`EngagementService.weekly_report(user)` keyed only by `user.id` from the auth
+    dependency). So there is no identifier a client could swap to fetch someone else's PDF;
+    this test confirms that structurally by checking each user's PDF bytes contain only
+    that user's own report text and never the other user's, and that an unauthenticated
+    request is rejected outright."""
+    from app.apis.v1.wellness_routers import _pdf_text
+
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers_a = await signup_and_login(client, "pdfuser_a@example.com")
+        user_a = await _user_id_by_email("pdfuser_a@example.com")
+        headers_b = await signup_and_login(client, "pdfuser_b@example.com")
+
+        today = date.today()
+        cycle = await _make_cycle(user_a, today - timedelta(days=6), codes=["regular_meals_log"])
+        user_challenge = await UserChallenge.get(cycle_id=cycle.id)
+        for offset in range(7):
+            await _log(user_a, user_challenge.id, today - timedelta(days=offset), True)
+        # user_b never started a cycle -> weekly_report() returns the "empty" shape.
+
+        unauthenticated = await client.get("/api/v1/weekly-reports/current/pdf")
+        assert unauthenticated.status_code == status.HTTP_401_UNAUTHORIZED
+
+        pdf_a = await client.get("/api/v1/weekly-reports/current/pdf", headers=headers_a)
+        pdf_b = await client.get("/api/v1/weekly-reports/current/pdf", headers=headers_b)
+        assert pdf_a.status_code == status.HTTP_200_OK
+        assert pdf_b.status_code == status.HTTP_200_OK
+        assert pdf_a.content != pdf_b.content
+
+        ready_marker = _pdf_text("상태: ready").encode("ascii")
+        empty_marker = _pdf_text("상태: empty").encode("ascii")
+        record_marker = _pdf_text("기록 요약: 최근 7일 동안 계획한 활동의 100.0%를 기록했습니다. 현재 실천 목표를 이어가 보세요.").encode(
+            "ascii"
+        )
+        empty_message_marker = _pdf_text(
+            "기록 요약: 진행 중인 챌린지를 시작하면 주간 리포트를 확인할 수 있습니다."
+        ).encode("ascii")
+
+        assert ready_marker in pdf_a.content and record_marker in pdf_a.content
+        assert empty_marker not in pdf_a.content and empty_message_marker not in pdf_a.content
+
+        assert empty_marker in pdf_b.content and empty_message_marker in pdf_b.content
+        assert ready_marker not in pdf_b.content and record_marker not in pdf_b.content
+
+
+@pytest.mark.asyncio
 async def test_empty_report_when_no_cycle_ever_started() -> None:
     async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         headers = await signup_and_login(client, "empty@example.com")
