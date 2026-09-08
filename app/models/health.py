@@ -187,6 +187,17 @@ class Challenge(Model):
     title = fields.CharField(max_length=100)
     category = fields.CharField(max_length=30)
     daily_goal = fields.CharField(max_length=50)
+    # Structured evaluation cadence for the lifestyle report (report-v1.4-draft).
+    # frequency is one of "daily" / "weekly" / None. None (reported to the API as
+    # "unconfirmed") means the catalog wording never states an unambiguous day/week
+    # cadence for this challenge, so the report must not guess a denominator for it —
+    # see docs/frontend/REPORT_CHALLENGE_FREQUENCY_MAPPING_20260908.md for the
+    # per-challenge classification rationale. target_count is the count implied by
+    # "weekly" (e.g. target_count=2 for "주 2회"); it is meaningless for "daily"
+    # (always evaluated once per day) and must stay None for None frequency.
+    frequency = fields.CharField(max_length=20, null=True)
+    target_count = fields.IntField(null=True)
+    definition_version = fields.CharField(max_length=20, default="v1")
     description = fields.TextField()
     safety_copy = fields.TextField()
     source_title = fields.CharField(max_length=200)
@@ -219,6 +230,15 @@ class UserChallenge(Model):
     user_id = fields.BigIntField(db_index=True)
     cycle_id = fields.BigIntField(db_index=True)
     challenge_id = fields.BigIntField(db_index=True)
+    # Snapshot of the Challenge's goal definition as of the moment this challenge was
+    # selected into this cycle (report-v1.4-draft §5.1). Selecting the same catalog
+    # challenge again later, or a future catalog wording change, must not retroactively
+    # alter what an already-selected cycle's report shows — so the report reads these
+    # snapshot columns, never the live `Challenge` row, once a selection exists.
+    frequency = fields.CharField(max_length=20, null=True)
+    target_count = fields.IntField(null=True)
+    title_snapshot = fields.CharField(max_length=100, null=True)
+    definition_version = fields.CharField(max_length=20, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
