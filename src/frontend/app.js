@@ -3315,6 +3315,8 @@ function updateDailyRecordSummary() {
 }
 async function completeDailyRecord(target, source = "self_report") {
   if (!target?.id) return;
+  const token = state.token;
+  const cycle = state.cycle;
   if (target.item?.catalog_version === "evidence-v3" && target.item.verification_type !== 3) throw new Error("사진 제출 절차로 완료해 주세요.");
   const today = challengeDay();
   if (!isLocalPreview()) {
@@ -3323,6 +3325,7 @@ async function completeDailyRecord(target, source = "self_report") {
       body: JSON.stringify({ is_completed: true, source, note: null }),
     });
   }
+  if (state.token !== token || state.cycle !== cycle) return;
   state.dailyCompleted.add(String(target.id));
   renderDailyRecordList();
   updateDailyRecordSummary();
@@ -4789,6 +4792,7 @@ $("#walking-level-picker").addEventListener("change", (event) => {
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (challengeV3.busy) return;
+  const token = state.token;
   if (!$("#challenge-follow-up").hidden) {
     $("#challenge-follow-up").focus({ preventScroll: true });
     showMessage("이전 의료기관 안내를 먼저 확인해 주세요.");
@@ -4816,8 +4820,10 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       start_date: challengeDay(), challenge_ids: ids, prediction_id: state.predictionId,
       ...(challengeV3.active ? { catalog_version: "evidence-v3", focus: challengeV3.focus, difficulty: challengeV3.difficulty } : {}),
     }) });
+    if (state.token !== token) return;
     renderCycle(cycle); await refreshDashboard(); showStep(8);
   } catch (error) {
+    if (state.token !== token) return;
     const hasActiveCycle = error.status === 409 && (
       error.code === "ACTIVE_CHALLENGE_CYCLE_EXISTS"
       || error.message.includes("진행 중인 4주 챌린지")
@@ -4828,6 +4834,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     }
     try {
       const currentCycle = await api("/challenge-cycles/current");
+      if (state.token !== token) return;
       renderCycle(currentCycle);
       await refreshDashboard();
       showWorkspace("home", { moveFocus: false });

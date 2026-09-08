@@ -14,7 +14,7 @@ FOCUSES = ("balanced", "diet", "activity")
 SOURCES = {
     "drink": {
         "title": "대한당뇨병학회: 당뇨인 제로칼로리 음료 괜찮을까",
-        "url": "https://new.diabetes.or.kr/bbs/?code=news&mode=view&number=2030",
+        "url": "https://diabetes.or.kr/bbs/?code=news&mode=view&number=2030",
     },
     "fiber": {
         "title": "미국당뇨병학회(ADA): 식이섬유와 탄수화물",

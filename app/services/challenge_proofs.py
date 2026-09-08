@@ -12,7 +12,7 @@ from PIL import Image, UnidentifiedImageError
 from tortoise.transactions import in_transaction
 
 from app.core import config
-from app.models.health import Challenge, ChallengeLog, ChallengeVerification
+from app.models.health import Challenge, ChallengeCycle, ChallengeLog, ChallengeVerification, UserChallenge
 from app.services.challenge_catalog import metadata_for
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
 
@@ -42,12 +42,20 @@ async def sanitized_photo(file: UploadFile) -> bytes:
         raise HTTPException(status_code=422, detail="읽을 수 있는 사진 파일이 아닙니다.") from exc
 
 
-async def _context(service, user, selected_id, proof_date):
-    await service._v3_health_permission(user)
-    selected = await service.repo.get_user_challenge(selected_id, user.id)
+async def _context(service, user, selected_id, proof_date, *, for_update=False):
+    # Lock an existing parent row so simultaneous first submissions cannot both
+    # create a proof, and a late rejected review cannot overwrite an acceptance.
+    if for_update:
+        selected = await UserChallenge.filter(id=selected_id, user_id=user.id).select_for_update().first()
+    else:
+        selected = await service.repo.get_user_challenge(selected_id, user.id)
     if selected is None:
         raise HTTPException(status_code=404, detail="선택한 챌린지를 찾을 수 없습니다.")
-    cycle = await service.repo.get_cycle(selected.cycle_id, user.id)
+    if for_update:
+        cycle = await ChallengeCycle.filter(id=selected.cycle_id, user_id=user.id).select_for_update().first()
+    else:
+        cycle = await service.repo.get_cycle(selected.cycle_id, user.id)
+    await service._v3_health_permission(user)
     if cycle is None or cycle.status not in {"active", "scheduled"}:
         raise HTTPException(status_code=409, detail="진행 중인 챌린지가 아닙니다.")
     if not cycle.start_date <= proof_date <= min(cycle.end_date, challenge_today()):
@@ -67,15 +75,21 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str]:
             status_code=503, detail="사진 검토 서비스가 연결되지 않았습니다. 완료로 처리하지 않았습니다."
         )
     try:
-        result = await get_food_vision_provider().analyze(photo, "image/jpeg", "challenge.jpg")
+        provider = get_food_vision_provider()
+        if provider.provider_kind != "openai_vision":
+            raise FoodVisionError("A real image-review provider is required")
+        result = await provider.analyze(photo, "image/jpeg", "challenge.jpg")
+        if result.provider_kind != "openai_vision":
+            raise FoodVisionError("The image-review result is not from a real provider")
     except FoodVisionError as exc:
         raise HTTPException(
             status_code=502, detail="사진 검토에 실패했습니다. 완료되지 않았으니 다시 시도해 주세요."
         ) from exc
     accepted = (
         result.contains_vegetable is True
-        and result.vegetable_confidence is not None
-        and result.vegetable_confidence >= 0.5
+        and type(result.vegetable_confidence) in (int, float)
+        and 0.5 <= result.vegetable_confidence <= 1
+        and math.isfinite(result.vegetable_confidence)
     )
     return (
         "accepted" if accepted else "needs_review",
@@ -83,6 +97,22 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str]:
         if accepted
         else "사진의 채소 포함 여부를 확인하지 못했습니다. 완료로 처리하지 않았습니다.",
     )
+
+
+async def _accepted_submission(user_id, selected_id, proof_date):
+    existing = await ChallengeVerification.get_or_none(
+        user_id=user_id, user_challenge_id=selected_id, verification_date=proof_date
+    )
+    log = await ChallengeLog.get_or_none(user_id=user_id, user_challenge_id=selected_id, log_date=proof_date)
+    if existing and log and log.is_completed and existing.review_status == "accepted":
+        return {
+            "challenge_completed": True,
+            "review_status": "accepted",
+            "already_recorded": True,
+            "verification_id": existing.id,
+            "notice": "이미 저장된 인증입니다. 보상을 추가 지급하지 않습니다.",
+        }
+    return None
 
 
 async def verify_photo(service, user, selected_id, proof_date, file, actual_value):
@@ -93,25 +123,21 @@ async def verify_photo(service, user, selected_id, proof_date, file, actual_valu
     photo = await sanitized_photo(file)
     digest = sha256_digest(photo)
     try:
-        existing = await ChallengeVerification.get_or_none(
-            user_id=user.id,
-            user_challenge_id=selected_id,
-            verification_date=proof_date,
-        )
-        log = await ChallengeLog.get_or_none(user_id=user.id, user_challenge_id=selected_id, log_date=proof_date)
-        if existing and log and log.is_completed and existing.review_status == "accepted":
-            return {
-                "challenge_completed": True,
-                "review_status": "accepted",
-                "already_recorded": True,
-                "verification_id": existing.id,
-                "notice": "이미 저장된 인증입니다. 보상을 추가 지급하지 않습니다.",
-            }
+        existing = await _accepted_submission(user.id, selected_id, proof_date)
+        if existing is not None:
+            return existing
         review_status, notice = await _review(photo, metadata["verification_type"])
     finally:
         del photo
     completed = review_status == "accepted"
     async with in_transaction():
+        # The external review can take time. Honor any consent, eligibility or
+        # cycle changes before recording its result, then preserve a concurrent
+        # successful submission without changing its evidence or quantity.
+        await _context(service, user, selected_id, proof_date, for_update=True)
+        existing = await _accepted_submission(user.id, selected_id, proof_date)
+        if existing is not None:
+            return existing
         verification = await service.repo.upsert_verification(
             user_challenge_id=selected_id,
             user_id=user.id,

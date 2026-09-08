@@ -19,6 +19,7 @@ from app.services.challenge_catalog import (
     recommend_codes,
     recommendation_policy,
 )
+from app.services.challenge_proofs import challenge_today
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
 
 CHALLENGE_CATALOG = (
@@ -461,7 +462,7 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
         end_date = request.start_date + timedelta(days=27)
         cycle_number = await self.repo.count_cycles(user.id) + 1
-        cycle_status = "active" if request.start_date <= date.today() else "scheduled"
+        cycle_status = "active" if request.start_date <= challenge_today() else "scheduled"
         async with in_transaction():
             cycle = await ChallengeCycle.create(
                 user_id=user.id,
@@ -482,7 +483,7 @@ class ChallengeService:
         log_date: date,
         request: ChallengeLogUpsertRequest,
     ) -> object:
-        if log_date > date.today():
+        if log_date > challenge_today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 기록할 수 없습니다."
             )
@@ -521,7 +522,7 @@ class ChallengeService:
         user_challenges = await self.repo.list_user_challenges(cycle.id, user_id)
         challenge_map = await self.repo.challenge_map([item.challenge_id for item in user_challenges])
         logs = await self.repo.logs_for_cycle(cycle.id, user_id)
-        planned = len(user_challenges) * max(0, min((date.today() - cycle.start_date).days + 1, 28))
+        planned = len(user_challenges) * max(0, min((challenge_today() - cycle.start_date).days + 1, 28))
         completed = sum(1 for item in logs if item.is_completed)
         return {
             "cycle_id": cycle.id,
@@ -542,7 +543,7 @@ class ChallengeService:
         }
 
     async def refresh_cycle_status(self, cycle: ChallengeCycle) -> ChallengeCycle:
-        today = date.today()
+        today = challenge_today()
         next_status = cycle.status
         if cycle.status == "scheduled" and cycle.start_date <= today <= cycle.end_date:
             next_status = "active"
@@ -556,7 +557,7 @@ class ChallengeService:
     async def create_verification(
         self, user: User, user_challenge_id: int, request: ChallengeVerificationCreateRequest
     ) -> dict[str, object]:
-        if request.verification_date > date.today():
+        if request.verification_date > challenge_today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
             )
@@ -568,6 +569,7 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="진행 중인 챌린지 사이클이 아닙니다.")
         if request.verification_date < cycle.start_date or request.verification_date > cycle.end_date:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="챌린지 기간 밖의 날짜입니다.")
+        await self._reject_v3_legacy_verification(user_challenge.challenge_id)
         values = request.model_dump(exclude={"verification_date"})
         values["review_status"] = "accepted"
         async with in_transaction():
@@ -606,7 +608,7 @@ class ChallengeService:
         칼로리·영양소·치료 효과는 계산하지 않습니다(REQ-CV-001). 업로드된 원본 이미지 바이트는
         분석 직후 폐기하며 서버에 저장하지 않고, 판별 결과와 SHA-256 다이제스트만 남깁니다.
         """
-        if verification_date > date.today():
+        if verification_date > challenge_today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
             )
@@ -618,6 +620,7 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="진행 중인 챌린지 사이클이 아닙니다.")
         if verification_date < cycle.start_date or verification_date > cycle.end_date:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="챌린지 기간 밖의 날짜입니다.")
+        await self._reject_v3_legacy_verification(user_challenge.challenge_id)
 
         content_type = file.content_type or ""
         if not content_type.startswith("image/"):
@@ -712,6 +715,13 @@ class ChallengeService:
             ),
         }
 
+    async def _reject_v3_legacy_verification(self, challenge_id: int) -> None:
+        challenge = await Challenge.get(id=challenge_id)
+        if metadata_for(challenge.code):
+            raise HTTPException(
+                status_code=422, detail="새 챌린지는 지정된 사진 제출 또는 자가 체크 절차를 이용해 주세요."
+            )
+
     async def daily_reward_status(self, user: User, reward_date: date) -> dict[str, object]:
         cycle = await self.repo.cycle_for_date(user.id, reward_date)
         selected = await self.repo.list_user_challenges(cycle.id, user.id) if cycle else []
@@ -732,7 +742,7 @@ class ChallengeService:
         }
 
     async def claim_daily_reward(self, user: User, reward_date: date) -> dict[str, object]:
-        if reward_date > date.today():
+        if reward_date > challenge_today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜의 보상은 받을 수 없습니다."
             )
