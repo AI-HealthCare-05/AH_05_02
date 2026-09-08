@@ -3,7 +3,6 @@
 
   if (!window.Phaser || !document.getElementById("phaser-world")) return;
 
-  const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const WORLD = { width: 768, height: 512 };
   const AVATAR_RENDER_SCALE = 0.43;
@@ -46,7 +45,7 @@
   };
 
   function storedState() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+    return window.carrotForestRuntimeState || {};
   }
 
   function normalizedAvatar(source = {}) {

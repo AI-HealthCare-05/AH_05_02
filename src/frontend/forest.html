@@ -22,6 +22,7 @@
     @keyframes forestBootPulse{to{opacity:.48;transform:scale(.84)}}@keyframes forestBootLoad{0%{transform:translateX(-100%)}55%,100%{transform:translateX(220%)}}
     @media(max-width:760px){#forest-boot{align-items:flex-end;padding:18px;background-position:67% center}#forest-boot::after{background:linear-gradient(0deg,rgba(255,249,231,.98) 0%,rgba(255,249,231,.78) 42%,transparent 78%)}.forest-boot-panel{width:100%;padding:22px}.forest-boot-title{font-size:46px}.forest-boot-copy{margin:12px 0 18px}}
     @media(prefers-reduced-motion:reduce){.forest-boot-progress i,.forest-boot-status span{animation:none}.forest-boot-progress i{width:72%}}
+    .forest-access-error{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;padding:24px;background:#f3f7f2;color:#173d2b;font:700 18px/1.6 Pretendard,"Noto Sans KR",system-ui,sans-serif}.forest-access-error[hidden]{display:none}.forest-access-error-card{width:min(620px,100%);padding:clamp(28px,5vw,52px);border:1px solid #cadbd2;border-radius:28px;background:#fff;box-shadow:0 22px 70px rgba(30,70,50,.16);text-align:center}.forest-access-error-card h1{margin:0 0 12px;font-size:clamp(30px,5vw,46px)}.forest-access-error-card p{margin:0 0 24px;color:#52685d}.forest-access-error-card a,.forest-access-error-card button{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 24px;border:0;border-radius:14px;background:#176b54;color:#fff;font:inherit;font-weight:900;text-decoration:none;cursor:pointer}
   </style>
   <script>
     (() => {
@@ -42,15 +43,16 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260902-34" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260908-palette-restored-v1" onload="document.documentElement.classList.add('forest-style-ready')">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260901-25" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-phaser.js?v=20260902-29" defer></script>
-  <script src="/static/forest-game.js?v=20260902-71" defer></script>
+  <script src="/static/forest-phaser.js?v=20260908-api-30" defer></script>
+  <script src="/static/forest-game.js?v=20260908-api-72" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand">간당<b>간당</b> <small>생활습관 챌린지</small></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">같이 실천하고, 함께 키우는 우리들의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲과 아바타를 준비하고 있어요</div></div></div>
+  <section class="forest-access-error" id="forest-access-error" role="alert" hidden><div class="forest-access-error-card"><h1 id="forest-access-error-title">당근의 숲에 입장할 수 없어요</h1><p id="forest-access-error-copy">로그인한 뒤 함께하기에서 그룹을 선택해 주세요.</p><a href="/?workspace=together">함께하기로 돌아가기</a></div></section>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
 
   <header class="studio-topbar">
@@ -130,6 +132,10 @@
               <div id="storage-list" class="inventory-list"></div>
             </section>
           </div>
+          <section class="asset-group forest-api-shop" id="forest-api-shop" aria-labelledby="forest-api-shop-title" hidden>
+            <div class="asset-group-title"><span aria-hidden="true">🥕</span><div><h3 id="forest-api-shop-title">상점</h3><p>서버에 저장되는 보유 아이템</p></div></div>
+            <div class="forest-api-shop-list" id="forest-api-shop-list" aria-live="polite"></div>
+          </section>
         </section>
       </aside>
 

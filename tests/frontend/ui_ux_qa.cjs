@@ -59,24 +59,28 @@ async function noOverflow(page, name) {
     await page.unroute('**/api/v1/auth/signup');
 
     // Controlled UI fixtures, not a claim of live model inference.
-    let failCatalog = true;
-    const items = [1, 2, 3, 4].map(id => ({ challenge_id: id, category: 'activity', title: `걷기 ${id}`, daily_goal: '10분 걷기' }));
-    await page.route('**/api/v1/challenges', route => route.fulfill({ status: failCatalog ? 503 : 200, contentType: 'application/json', body: JSON.stringify(failCatalog ? {} : { data: { items } }) }));
-    await page.route('**/api/v1/challenge-recommendations*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { items, personalized: false } }) }));
+    let failRecommendations = true;
+    const items = [
+      { challenge_id: 1, catalog_version: 'evidence-v3', domain: 'hydration', always_include: true, difficulty: 'easy', title: '물 선택하기', daily_goal: '당 음료 대신 물 선택', description: '무리 없이 음료를 점검합니다.', verification_type: 3, verification_scope: '자가 체크', goal_basis: '공통 목표', safety: '수분 제한이 있으면 의료진 지침을 우선합니다.' },
+      { challenge_id: 2, catalog_version: 'evidence-v3', domain: 'fiber_diet', difficulty: 'easy', title: '식이섬유 식사', daily_goal: '채소 반찬 챙기기', description: '식사 구성을 천천히 점검합니다.', verification_type: 2, verification_scope: '사진 제출', goal_basis: '식사 기록', safety: '처방 식이가 있으면 우선합니다.' },
+      { challenge_id: 3, catalog_version: 'evidence-v3', domain: 'aerobic_activity', difficulty: 'easy', title: '가볍게 걷기', daily_goal: '10분 걷기', description: '몸 상태에 맞게 움직입니다.', verification_type: 3, verification_scope: '자가 체크', goal_basis: '활동 기록', safety: '통증이 있으면 중단합니다.' },
+    ];
+    await page.route('**/api/v1/challenges', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { items } }) }));
+    await page.route('**/api/v1/challenge-recommendations*', route => route.fulfill({
+      status: failRecommendations ? 503 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify(failRecommendations ? {} : { data: { items, personalized: false, policy: { notice: 'QA 추천입니다.' }, photo_review_available: false } }),
+    }));
     await page.evaluate(async () => { state.capabilities.challenge = true; state.returningUser = true; showStep(7); await loadChallenges(); });
     assert.ok(await page.locator('#retry-challenges').isVisible());
     assert.ok(await page.locator('#start-challenge').isDisabled());
-    failCatalog = false;
+    failRecommendations = false;
     await page.locator('#retry-challenges').click();
-    await page.locator('[data-challenge-category="activity"]').waitFor();
-    await page.locator('[data-challenge-category="activity"]').click();
-    await page.locator('.challenge-detail-option').nth(0).click();
-    assert.equal(await page.locator('#challenge-selection-count').innerText(), '1/3 선택');
-    await page.locator('.challenge-detail-option').nth(1).click();
-    await page.locator('.challenge-detail-option').nth(2).click();
-    await page.locator('.challenge-detail-option').nth(3).click();
+    await page.locator('.challenge-v3-card').first().waitFor();
+    assert.equal(await page.locator('.challenge-v3-card').count(), 3);
     assert.equal(await page.locator('#challenge-selection-count').innerText(), '3/3 선택');
-    pass('challenge failure -> retry -> selection, maximum three retained');
+    assert.equal(await page.locator('#start-challenge').isEnabled(), true);
+    pass('challenge failure -> retry -> V3 recommendations ready');
     await noOverflow(page, '380px challenge has no horizontal overflow');
     await page.screenshot({ path: path.join(artifacts, 'challenge-mobile.png'), fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -89,7 +93,7 @@ async function noOverflow(page, name) {
     });
     await page.route('**/api/v1/prediction-jobs/99', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { status: 'succeeded', prediction_id: 99 } }) }));
     await page.route('**/api/v1/predictions/99', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: { model_key: 'diabetes_current_screening', display_allowed: false, operational_model_activated: false } }) }));
-    assert.equal(await page.evaluate(() => { state.currentHealthOnly = true; state.capabilities.currentHealth = true; state.medicalGuidanceRequired = false; return shouldRunPredictionAfterHealthEdit(); }), true);
+    assert.equal(await page.evaluate(() => { state.currentHealthOnly = true; state.capabilities.currentHealth = true; state.healthConsentStatus = 'active'; state.medicalGuidanceRequired = false; return shouldRunPredictionAfterHealthEdit(); }), true);
     await page.evaluate(async () => { state.checkupId = 1; showStep(5); await runPrediction(); });
     assert.deepEqual(requestedModels, ['diabetes_current_screening']);
     assert.equal(await page.evaluate(() => state.step), 6);
@@ -114,10 +118,18 @@ async function noOverflow(page, name) {
     assert.ok(await page.locator('#medical-guidance-detail').isVisible());
     pass('current low / future high stay separate; medical guidance has priority');
     assert.ok(await page.locator('#medical-to-challenges').isVisible());
+    await page.route('**/api/v1/challenge-cycles/current', route => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: '진행 중인 챌린지가 없습니다.' }) }));
+    await page.evaluate(() => {
+      clearCurrentChallengeCycle();
+      state.selectedChallengeIds.clear();
+      state.customChallengeSelected = false;
+      state.customChallenge = null;
+    });
     await page.locator('#medical-to-challenges').click();
     await page.locator('.screen[data-step="7"].active').waitFor();
     assert.equal(await page.evaluate(() => state.step), 7);
     pass('medical guidance -> allowed challenge selection without location permission');
+    await page.unroute('**/api/v1/challenge-cycles/current');
     await page.evaluate(() => { state.currentScreeningPrediction = null; updateResultConfirmation(); });
     assert.equal(await page.locator('#risk-confirm-card').getAttribute('data-risk'), 'pending');
     pass('missing current result is not replaced by future result');

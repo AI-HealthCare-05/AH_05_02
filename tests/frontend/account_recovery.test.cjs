@@ -5,11 +5,11 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../src/frontend/app.js'), 'utf8');
 function harness(api = async () => ({})) {
-  const state = { token: 'session' };
+  const state = { token: 'session', capabilities: { challenge: true, currentHealth: true, futurePrediction: true } };
   const nodes = {};
   const context = vm.createContext({ state, api, $: key => nodes[key] ||= {}, getAgeFromBirth: () => 52,
     resetEligibilityAnswers() {}, syncLifestyleAvatar() {}, showStep: step => { state.step = step; } });
-  for (const name of ['hasHealthDataConsent', 'saveAccountSetup']) {
+  for (const name of ['hasHealthDataConsent', 'healthDataConsentItems', 'syncHealthConsentState', 'saveAccountSetup']) {
     const fn = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
     assert.ok(fn, name);
     vm.runInContext(fn[0], context);
@@ -25,6 +25,22 @@ test('only active health-data consent of the current contract permits continuati
     assert.equal(context.hasHealthDataConsent({ items: [{ ...active, ...patch }] }), false);
   }
   assert.equal(context.hasHealthDataConsent({}), false);
+});
+test('withdrawn consent keeps account history but closes all new health capabilities', () => {
+  const { context, state } = harness();
+  const withdrawn = { consent_id: 9, consent_item: 'health_data', version: '1.0', is_agreed: false, withdrawn_at: '2026-09-08T01:00:00Z' };
+  assert.equal(context.syncHealthConsentState({ items: [withdrawn] }), 'withdrawn');
+  assert.equal(state.healthConsent.consent_id, 9);
+  assert.equal(state.capabilities.challenge, false);
+  assert.equal(state.capabilities.currentHealth, false);
+  assert.equal(state.capabilities.futurePrediction, false);
+});
+test('a newer active consent restores active status after withdrawal', () => {
+  const { context, state } = harness();
+  const withdrawn = { consent_id: 9, consent_item: 'health_data', version: '1.0', is_agreed: false, withdrawn_at: '2026-09-08T01:00:00Z' };
+  const active = { consent_id: 10, consent_item: 'health_data', version: '1.0', is_agreed: true, withdrawn_at: null };
+  assert.equal(context.syncHealthConsentState({ items: [active, withdrawn] }), 'active');
+  assert.equal(state.healthConsent.consent_id, 10);
 });
 test('unchecked consent causes no request and never advances', async () => {
   const calls = [];

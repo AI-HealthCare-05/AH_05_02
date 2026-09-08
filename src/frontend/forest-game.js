@@ -1,7 +1,10 @@
 (() => {
   "use strict";
 
+  // Game-domain state is server-owned in API mode. This key is used only when
+  // a developer explicitly opens /forest?demo=1; API failures never fall back.
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
+  const FOREST_SESSION_KEY = "gandang-forest-api-session-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const BGM_VOLUME_KEY = "gandang-carrot-forest-bgm-volume-v1";
   const BGM_MUTED_KEY = "gandang-carrot-forest-bgm-muted-v1";
@@ -57,6 +60,8 @@
     lantern: { name: "숲 등불", kind: "object", icon: "🏮" },
     mushroom: { name: "버섯 장식", kind: "object", icon: "🍄" },
     bench: { name: "나무 벤치", kind: "object", icon: "🪵" },
+    sunflower: { name: "해바라기", kind: "object", icon: "🌻" },
+    rabbit: { name: "토끼 친구", kind: "object", icon: "🐇" },
     stone_path: { name: "돌길", kind: "object", icon: "🪨" },
     bird_bath: { name: "새 물그릇", kind: "object", icon: "⛲" },
     carrot_crate: { name: "당근 상자", kind: "object", icon: "🥕" },
@@ -634,43 +639,141 @@
   class DemoForestAdapter {
     constructor() { this.mode = "demo"; }
     async load() {
-      let loaded;
-      try { loaded = normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
-      catch { loaded = defaultState(); }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
-      return loaded;
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be unavailable */ }
+      return defaultState();
     }
     async save(state) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return state;
     }
   }
 
   class ApiForestAdapter {
-    constructor(token) { this.mode = "api"; this.token = token; }
+    constructor(token, groupId, userId = null) { this.mode = "api"; this.token = token; this.groupId = Number(groupId); this.userId = Number(userId) || null; }
     async request(path, options = {}) {
       const response = await fetch(`/api/v1${path}`, {
         ...options,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.token}` },
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail?.message || payload.detail || "당근의 숲 API 요청에 실패했습니다.");
+      let payload = {};
+      try { payload = await response.json(); } catch { payload = {}; }
+      if (!response.ok) {
+        const error = new Error(payload.detail?.message || payload.detail || "당근의 숲 API 요청에 실패했습니다.");
+        error.status = response.status;
+        if (response.status === 401) {
+          try { sessionStorage.removeItem(FOREST_SESSION_KEY); } catch { /* storage may be unavailable */ }
+          error.code = "FOREST_SESSION_EXPIRED";
+        } else if (response.status === 403) error.code = "FOREST_FORBIDDEN";
+        throw error;
+      }
       return payload.data ?? payload;
     }
+    async optional(path) {
+      try { return await this.request(path); }
+      catch (error) { if (error.status === 404) return null; throw error; }
+    }
     loadForest(groupId) { return this.request(`/forest/spaces/${groupId}`); }
+    createForest(groupId, name = "당근의 숲") {
+      return this.request("/forest/spaces", { method: "POST", body: JSON.stringify({ group_id: Number(groupId), name }) });
+    }
+    catalog() { return this.request("/forest/catalog"); }
+    updateSlogan(groupId, slogan) {
+      return this.request(`/forest/spaces/${groupId}/slogan`, { method: "PATCH", body: JSON.stringify({ slogan }) });
+    }
     updateAvatar(body) { return this.request("/forest/avatar", { method: "PATCH", body: JSON.stringify(body) }); }
     updateQuest(userChallengeId, logDate, completed) {
       return this.request(`/user-challenges/${userChallengeId}/logs/${logDate}`, {
-        method: "PUT", body: JSON.stringify({ is_completed: completed, input_source: "manual" }),
+        method: "PUT", body: JSON.stringify({ is_completed: completed, source: "self_report", note: null }),
       });
     }
     claimReward(groupId) { return this.request(`/forest/spaces/${groupId}/rewards/group-daily`, { method: "POST" }); }
     placeObject(groupId, body) {
       return this.request(`/forest/spaces/${groupId}/objects`, { method: "POST", body: JSON.stringify(body) });
     }
+    removeObject(groupId, objectId) {
+      return this.request(`/forest/spaces/${groupId}/objects/${objectId}`, { method: "DELETE" });
+    }
+    wallet() { return this.request("/wallet"); }
+    shopItems() { return this.request("/inventory-items"); }
+    inventory() { return this.request("/inventory"); }
+    purchase(itemId) { return this.request(`/inventory/items/${itemId}/purchase`, { method: "POST" }); }
+    avatar() { return this.request("/avatar"); }
+    equipAvatar(itemIds) {
+      return this.request("/avatar/equipment", { method: "PUT", body: JSON.stringify({ item_ids: itemIds }) });
+    }
+    async load() {
+      let home;
+      try { home = await this.loadForest(this.groupId); }
+      catch (error) {
+        if (error.status !== 404) throw error;
+        home = await this.createForest(this.groupId);
+      }
+      const [catalog, wallet, shop, inventory, avatar, cycle] = await Promise.all([
+        this.catalog(), this.wallet(), this.shopItems(), this.inventory(), this.avatar(), this.optional("/challenge-cycles/current"),
+      ]);
+      const next = defaultState();
+      next.server = { groupId: this.groupId, home, catalog, wallet, shop, inventory, avatar, userChallenges: cycle?.user_challenges || [] };
+      const challengeRows = next.server.userChallenges.slice(0, 3);
+      const usedQuestIds = new Set();
+      const questIds = challengeRows.map((item, index) => {
+        const title = String(item.title || "");
+        const preferred = /걷|움직|운동/.test(title) ? "walk" : /식사|채소|물|음료/.test(title) ? "meal" : "check";
+        const resolved = usedQuestIds.has(preferred) ? ["walk", "meal", "check"].find(id => !usedQuestIds.has(id)) || ["walk", "meal", "check"][index] : preferred;
+        usedQuestIds.add(resolved);
+        return resolved;
+      });
+      next.challengePlan = { onboarded: challengeRows.length > 0, style: "server", questIds, lastGeneratedAt: Date.now() };
+      await Promise.all(challengeRows.map(async (item, index) => {
+        const userChallengeId = Number(item.user_challenge_id || item.id);
+        if (!Number.isInteger(userChallengeId)) return;
+        const logs = await this.optional(`/user-challenges/${userChallengeId}/logs?start_date=${TODAY}&end_date=${TODAY}`);
+        next.quests[questIds[index]] = Boolean(logs?.items?.some(log => log.log_date === TODAY && log.is_completed === true));
+      }));
+      next.avatar.name = home.me?.display_name || next.avatar.name;
+      next.avatar.forestCodes = {
+        hair: home.me?.hair_code || "midnight_short",
+        outfit: home.me?.outfit_code || "orange_hoodie",
+        accessory: home.me?.accessory_code || "none",
+      };
+      next.avatar.cosmetics.lpcHair = { midnight_short: "messy", silver_bob: "bob", carrot_bob: "long" }[next.avatar.forestCodes.hair] || "messy";
+      next.avatar.cosmetics.lpcOutfit = { orange_hoodie: "tshirt", garden_overall: "overalls", green_knit: "cardigan" }[next.avatar.forestCodes.outfit] || "tshirt";
+      next.carrots = Number(wallet?.carrot_balance ?? home.me?.carrot_balance ?? 0);
+      next.members = (home.members || []).map(member => ({
+        id: String(member.user_id), name: member.display_name || "구성원",
+        completed: Number(member.today_completed || 0), target: Number(member.today_target || 3),
+        me: this.userId != null && Number(member.user_id) === this.userId,
+      }));
+      if (!next.members.length) next.members = [{ id: "me", name: next.avatar.name, completed: 0, me: true }];
+      else if (!next.members.some(member => member.me)) next.members[0].me = true;
+      next.rewardClaimed = Boolean(home.today?.group_reward_claimed);
+      next.inventory = (catalog?.objects || []).map(item => item.code).filter(code => itemCatalog[code]);
+      next.placed = (home.objects || []).filter(item => itemCatalog[item.object_code]).map(item => ({
+        objectId: Number(item.object_id), code: item.object_code,
+        x: Math.round(Number(item.position_x) / 100 * WORLD_WIDTH),
+        y: Math.round(Number(item.position_y) / 100 * WORLD_HEIGHT), rotation: 0,
+      }));
+      next.shopItems = shop?.items || [];
+      next.ownedItems = inventory?.items || [];
+      next.equippedItemIds = avatar?.equipped_item_ids || [];
+      return next;
+    }
+    async save(current) { return current; }
   }
 
-  const adapter = new DemoForestAdapter();
+  function storedForestSession() {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(FOREST_SESSION_KEY) || "null");
+      if (!value || value.version !== 1 || !value.token || !Number.isInteger(Number(value.groupId)) || Date.now() >= Number(value.expiresAt || 0)) {
+        sessionStorage.removeItem(FOREST_SESSION_KEY);
+        return null;
+      }
+      return value;
+    } catch { return null; }
+  }
+  const initialParams = new URLSearchParams(window.location.search);
+  const explicitDemoMode = ["127.0.0.1", "localhost"].includes(window.location.hostname) && initialParams.get("demo") === "1";
+  const forestSession = storedForestSession();
+  const adapter = explicitDemoMode ? new DemoForestAdapter()
+    : forestSession ? new ApiForestAdapter(forestSession.token, forestSession.groupId, forestSession.userId) : null;
   let state = defaultState();
   let placementCode = null;
   let placementDraft = null;
@@ -856,6 +959,15 @@
   });
 
   function setStatus(message) { $("#game-status").textContent = message; }
+  async function saveApiForestAvatar(displayName, cosmetics = state.avatar.cosmetics) {
+    const current = state.avatar.forestCodes || {};
+    const hair = { bob: "silver_bob", long: "carrot_bob" }[cosmetics?.lpcHair] || "midnight_short";
+    const outfit = { overalls: "garden_overall", cardigan: "green_knit" }[cosmetics?.lpcOutfit] || "orange_hoodie";
+    const accessory = current.accessory || "none";
+    const result = await adapter.updateAvatar({ display_name: displayName, hair_code: hair, outfit_code: outfit, accessory_code: accessory });
+    state.avatar.forestCodes = { hair: result.hair_code || hair, outfit: result.outfit_code || outfit, accessory: result.accessory_code || accessory };
+    return result;
+  }
   function currentLocalHour() {
     const rawHour = new URLSearchParams(window.location.search).get("hour");
     const forced = rawHour == null ? Number.NaN : Number(rawHour);
@@ -880,6 +992,7 @@
   function groupCompleted() { return state.members.reduce((total, member) => total + member.completed, 0); }
   async function persist(message = null) {
     await adapter.save(state);
+    window.carrotForestRuntimeState = state;
     updateProfileUI();
     window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
     if (message) setStatus(message);
@@ -1694,6 +1807,20 @@
       ...(interactiveObjectTypes[placementCode] ? { active: previousActive } : {}),
     };
     const name = itemCatalog[placementCode].name;
+    if (adapter.mode === "api") {
+      try {
+        const result = await adapter.placeObject(adapter.groupId, {
+          object_code: placementCode,
+          position_x: Math.max(0, Math.min(100, Math.round(placementDraft.x / WORLD_WIDTH * 100))),
+          position_y: Math.max(0, Math.min(100, Math.round(placementDraft.y / WORLD_HEIGHT * 100))),
+        });
+        placed.objectId = Number(result.object_id);
+        state.carrots = Number(result.carrot_balance ?? state.carrots);
+      } catch (error) {
+        setStatus(error.message || "오브젝트를 배치하지 못했어요.");
+        return;
+      }
+    }
     state.placed.push(placed);
     placementCode = null;
     placementDraft = null;
@@ -1733,24 +1860,28 @@
     $("#quest-list").innerHTML = ready
       ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")
       : '<div class="quest-empty"><span aria-hidden="true">🌱</span><strong>첫 챌린지를 준비해 주세요</strong><p>이동 가능 확인부터 챌린지 방식 선택까지 마치면 오늘의 퀘스트 3개가 생성됩니다.</p></div>';
-    const completed = personalCompleted();
-    state.members.find((member) => member.me).completed = completed;
-    $("#personal-progress").textContent = `${completed}/3`;
-    $("#heading-personal-progress").textContent = `${completed} / 3`;
+    const completed = adapter.mode === "api"
+      ? Number(state.members.find((member) => member.me)?.completed || 0)
+      : personalCompleted();
+    if (adapter.mode === "demo") state.members.find((member) => member.me).completed = completed;
+    const target = Number(state.members.find((member) => member.me)?.target || quests.length || 3);
+    $("#personal-progress").textContent = `${completed}/${target}`;
+    $("#heading-personal-progress").textContent = `${completed} / ${target}`;
   }
 
   function renderGroup() {
     const completed = groupCompleted();
-    $("#group-progress").textContent = `${completed}/15`;
-    $("#heading-group-progress").textContent = `${completed} / 15`;
+    const target = Number(state.server?.home?.today?.target || 15);
+    $("#group-progress").textContent = `${completed}/${target}`;
+    $("#heading-group-progress").textContent = `${completed} / ${target}`;
     const progressbar = $(".progress-track[role='progressbar']");
     progressbar.setAttribute("aria-valuenow", String(completed));
-    $("#group-progress-bar").style.width = `${completed / 15 * 100}%`;
-    $("#group-remaining").textContent = completed >= 15 ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
-    $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed === 3 ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/3</span></li>`).join("");
+    $("#group-progress-bar").style.width = `${target ? Math.min(100, completed / target * 100) : 0}%`;
+    $("#group-remaining").textContent = completed >= target ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${target - completed}개 남았어요.`;
+    $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed >= (member.target || 3) ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/${member.target || 3}</span></li>`).join("");
     const rewardButton = $("#reward-button");
-    rewardButton.disabled = completed < 15 || state.rewardClaimed;
-    rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
+    rewardButton.disabled = completed < target || state.rewardClaimed;
+    rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= target ? "무료 보물상자 열기" : `${target - completed}개 더 완료하면 보물상자 열기`;
     $("#group-goal-memo").value = state.groupGoalMemo || "";
   }
 
@@ -1875,6 +2006,22 @@
     else animatedObjectAtlas.addEventListener("load", draw, { once: true });
   }
 
+  function renderApiShop() {
+    const section = $("#forest-api-shop");
+    const list = $("#forest-api-shop-list");
+    if (!section || !list) return;
+    section.hidden = adapter.mode !== "api";
+    if (adapter.mode !== "api") return;
+    const ownedIds = new Set((state.ownedItems || []).map(item => Number(item.item_id)));
+    const equippedIds = new Set((state.equippedItemIds || []).map(Number));
+    list.innerHTML = (state.shopItems || []).map(item => {
+      const owned = ownedIds.has(Number(item.item_id));
+      const equipped = equippedIds.has(Number(item.item_id));
+      const action = owned ? (equipped ? "해제하기" : "착용하기") : `당근 ${Number(item.price_carrots || 0)}개로 구매`;
+      return `<article class="forest-api-shop-item"><span><strong>${escapeMarkup(item.name)}</strong><small>${escapeMarkup(item.category)} · ${owned ? "보유 중" : `필요 당근 ${Number(item.price_carrots || 0)}개`}</small></span><button type="button" data-shop-item-id="${Number(item.item_id)}" data-shop-action="${owned ? "equip" : "purchase"}" aria-pressed="${equipped}">${action}</button></article>`;
+    }).join("") || "<p>상점 아이템을 불러오지 못했어요.</p>";
+  }
+
   function renderInventory(highlightCode = null) {
     const renderItems = (kind) => state.inventory.filter((code) => itemCatalog[code].kind === kind).map((code) => {
       const item = itemCatalog[code];
@@ -1886,15 +2033,16 @@
         const animatedRow = animatedObjectRows[code];
         if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas></button>`;
         const storageIndex = storageObjectIndex[code];
-        const column = storageIndex % 5;
-        const row = Math.floor(storageIndex / 5);
-        const backgroundPosition = `${column * 25}% ${row * 100 / 3}%`;
-        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><span class="storage-sprite-thumb" style="background-position:${backgroundPosition}" aria-hidden="true"></span></button>`;
+        const visual = storageIndex == null
+          ? `<span class="storage-fallback-icon" aria-hidden="true">${item.icon || "🌿"}</span>`
+          : `<span class="storage-sprite-thumb" style="background-position:${storageIndex % 5 * 25}% ${Math.floor(storageIndex / 5) * 100 / 3}%" aria-hidden="true"></span>`;
+        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}">${visual}</button>`;
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
     $("#wardrobe-list").innerHTML = state.outfitHistory.map((look) => outfitCardMarkup(look)).join("") || "<p class=\"empty-assets\">최근 저장한 코디가 없습니다.</p>";
     $("#storage-list").innerHTML = renderItems("object") || "<p class=\"empty-assets\">보관 중인 오브젝트가 없습니다.</p>";
+    renderApiShop();
     drawWardrobeLookThumbnails();
     drawAnimatedObjectThumbnails($("#storage-list"));
     renderPlacementUI();
@@ -2480,7 +2628,37 @@
     if (!checkbox) return;
     const wasChecked = Boolean(state.quests[checkbox.dataset.quest]);
     state.quests[checkbox.dataset.quest] = checkbox.checked;
-    const grown = checkbox.checked && !wasChecked ? accrueChallengeCarrots(checkbox.dataset.quest) : 0;
+    if (adapter.mode === "api") {
+      const questIndex = activeQuestIds().indexOf(checkbox.dataset.quest);
+      const selected = state.server?.userChallenges?.[questIndex];
+      const userChallengeId = Number(selected?.user_challenge_id || selected?.id);
+      if (!Number.isInteger(userChallengeId)) {
+        checkbox.checked = wasChecked;
+        state.quests[checkbox.dataset.quest] = wasChecked;
+        setStatus("연결된 챌린지 기록을 찾지 못했어요. 건강 홈에서 챌린지를 확인해 주세요.");
+        return;
+      }
+      try {
+        await adapter.updateQuest(userChallengeId, TODAY, checkbox.checked);
+        const wallet = await adapter.wallet();
+        state.carrots = Number(wallet.carrot_balance ?? state.carrots);
+        const home = await adapter.loadForest(adapter.groupId);
+        state.server.home = home;
+        state.members = (home.members || []).map(member => ({
+          id: String(member.user_id), name: member.display_name || "구성원",
+          completed: Number(member.today_completed || 0), target: Number(member.today_target || 3),
+          me: adapter.userId != null && Number(member.user_id) === adapter.userId,
+        }));
+        if (!state.members.some(member => member.me) && state.members.length) state.members[0].me = true;
+      } catch (error) {
+        checkbox.checked = wasChecked;
+        state.quests[checkbox.dataset.quest] = wasChecked;
+        setStatus(error.message || "챌린지 기록을 저장하지 못했어요.");
+        renderQuests();
+        return;
+      }
+    }
+    const grown = adapter.mode === "demo" && checkbox.checked && !wasChecked ? accrueChallengeCarrots(checkbox.dataset.quest) : 0;
     renderQuests(); renderGroup();
     renderGardenHarvest();
     await persist(grown
@@ -2520,6 +2698,10 @@
 
   $("#group-goal-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (adapter.mode === "api") {
+      setStatus("숲 슬로건 수정 API가 현재 통합 브랜치에 없어 저장하지 않았어요.");
+      return;
+    }
     state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 80);
     await persist("오늘의 슬로건을 저장했습니다.");
   });
@@ -2528,6 +2710,14 @@
     event.preventDefault();
     const nextName = $("#avatar-name").value.trim();
     if (!nextName) { setStatus("닉네임을 입력해 주세요."); return; }
+    if (adapter.mode === "api") {
+      try {
+        await saveApiForestAvatar(nextName);
+      } catch (error) {
+        setStatus(error.message || "닉네임을 저장하지 못했어요.");
+        return;
+      }
+    }
     state.avatar.name = nextName;
     renderCanvas();
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
@@ -2560,6 +2750,10 @@
       return;
     }
     $("#profile-nickname").setCustomValidity("");
+    if (adapter.mode === "api") {
+      try { await saveApiForestAvatar(nickname); }
+      catch (error) { setStatus(error.message || "닉네임을 저장하지 못했어요."); return; }
+    }
     state.avatar.name = nickname;
     $("#avatar-name").value = nickname;
     window.dispatchEvent(new CustomEvent("forest-avatar-updated", { detail: state.avatar }));
@@ -2654,6 +2848,10 @@
     renderAvatarStudio();
   });
   $("#avatar-studio-save").addEventListener("click", async () => {
+    if (adapter.mode === "api") {
+      try { await saveApiForestAvatar(state.avatar.name, avatarDraft); }
+      catch (error) { setStatus(error.message || "아바타를 저장하지 못했어요."); return; }
+    }
     state.avatar.engine = "lpc";
     state.avatar.cosmetics = { ...avatarDraft };
     state.avatar.tuning = { ...avatarTuningDraft };
@@ -2667,6 +2865,36 @@
   });
 
   $("#asset-dock").addEventListener("click", async (event) => {
+    const shopButton = event.target.closest("[data-shop-item-id]");
+    if (shopButton && adapter.mode === "api") {
+      const itemId = Number(shopButton.dataset.shopItemId);
+      const item = state.shopItems.find(entry => Number(entry.item_id) === itemId);
+      if (!item) return;
+      shopButton.disabled = true;
+      try {
+        if (shopButton.dataset.shopAction === "purchase") {
+          const result = await adapter.purchase(itemId);
+          if (Number.isFinite(Number(result.carrot_balance))) state.carrots = Number(result.carrot_balance);
+        } else {
+          const equipped = new Set((state.equippedItemIds || []).map(Number));
+          const sameCategoryIds = new Set(state.shopItems.filter(entry => entry.category === item.category).map(entry => Number(entry.item_id)));
+          [...equipped].filter(id => sameCategoryIds.has(id)).forEach(id => equipped.delete(id));
+          if (!state.equippedItemIds.map(Number).includes(itemId)) equipped.add(itemId);
+          await adapter.equipAvatar([...equipped]);
+        }
+        const [wallet, inventory, avatar] = await Promise.all([adapter.wallet(), adapter.inventory(), adapter.avatar()]);
+        state.carrots = Number(wallet.carrot_balance ?? state.carrots);
+        state.ownedItems = inventory.items || [];
+        state.equippedItemIds = avatar.equipped_item_ids || [];
+        renderInventory();
+        updateProfileUI();
+        setStatus("상점·아바타 변경을 서버에 저장했어요.");
+      } catch (error) {
+        setStatus(error.message || "아이템 변경을 저장하지 못했어요.");
+        shopButton.disabled = false;
+      }
+      return;
+    }
     const lookButton = event.target.closest("[data-outfit-look]");
     if (lookButton) {
       await applyOutfitLook(lookButton.dataset.outfitLook);
@@ -2711,7 +2939,14 @@
   $("#placed-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-remove]");
     if (!button) return;
-    const [removed] = state.placed.splice(Number(button.dataset.remove), 1);
+    const index = Number(button.dataset.remove);
+    const removed = state.placed[index];
+    if (!removed) return;
+    if (adapter.mode === "api") {
+      try { await adapter.removeObject(adapter.groupId, Number(removed.objectId)); }
+      catch (error) { setStatus(error.message || "오브젝트를 회수하지 못했어요."); return; }
+    }
+    state.placed.splice(index, 1);
     renderPlaced(); renderCanvas(); await persist(`${itemCatalog[removed.code].name}을 창고로 돌려놓았습니다.`);
   });
 
@@ -2777,10 +3012,20 @@
   });
 
   $("#reward-button").addEventListener("click", async () => {
-    if (groupCompleted() < 15 || state.rewardClaimed) return;
-    const reward = deterministicReward();
+    const target = Number(state.server?.home?.today?.target || 15);
+    if (groupCompleted() < target || state.rewardClaimed) return;
+    let reward = deterministicReward();
+    let rewardName = reward ? itemCatalog[reward]?.name : null;
+    if (adapter.mode === "api") {
+      try {
+        const result = await adapter.claimReward(adapter.groupId);
+        state.carrots = Number(result.carrot_balance ?? state.carrots);
+        reward = result.item_code || null;
+        rewardName = result.item_name || reward;
+      } catch (error) { setStatus(error.message || "보상을 받지 못했어요."); return; }
+    }
     state.rewardClaimed = true;
-    state.carrots += 50;
+    if (adapter.mode === "demo") state.carrots += 50;
     if (reward) state.inventory.push(reward);
     renderGroup();
     $("#carrot-balance").textContent = String(state.carrots);
@@ -2788,7 +3033,7 @@
     await adapter.save(state);
     await playRewardCelebration(reward);
     if (!reward) renderInventory();
-    await persist(reward ? `${itemCatalog[reward].name}과 당근 50개를 받았습니다!` : "당근 50개를 받았습니다!");
+    await persist(reward ? `${rewardName || "보상 아이템"}과 당근 50개를 받았습니다!` : "당근 50개를 받았습니다!");
   });
 
   $("#reward-skip").addEventListener("click", () => {
@@ -3261,11 +3506,28 @@
   }
 
   window.CarrotForestAdapters = { DemoForestAdapter, ApiForestAdapter };
+  function showForestAccessError(error) {
+    const panel = $("#forest-access-error");
+    const copy = $("#forest-access-error-copy");
+    if (copy) copy.textContent = error?.code === "FOREST_SESSION_EXPIRED"
+      ? "로그인 시간이 만료됐어요. 다시 로그인한 뒤 함께하기에서 그룹을 선택해 주세요."
+      : error?.code === "FOREST_FORBIDDEN"
+        ? "선택한 그룹에 접근할 권한이 없어요. 함께하기에서 참여 상태를 확인해 주세요."
+        : error?.message || "로그인한 뒤 함께하기에서 입장할 그룹을 선택해 주세요.";
+    if (panel) panel.hidden = false;
+    document.documentElement.classList.add("forest-script-ready");
+  }
+  if (!adapter) {
+    showForestAccessError();
+    return;
+  }
   adapter.load().then(async (loaded) => {
     await window.LpcAvatarEngine?.ready();
     const params = new URLSearchParams(window.location.search);
     const localReset = localDemoOrigin && params.get("resetToday") === "1";
     state = localReset ? resetTodayProgress(loaded) : loaded;
+    window.carrotForestRuntimeState = state;
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, placed: state.placed, scene: "world" } }));
     window.carrotForestHomeRecordPlaying = state.homeRecordPlaying;
     if (localReset) {
       adapter.save(state);
@@ -3278,7 +3540,6 @@
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);
   }).catch((error) => {
     console.error(error);
-    document.documentElement.classList.add("forest-script-ready");
-    setStatus("일부 자산을 불러오지 못했습니다. 새로고침해 주세요.");
+    showForestAccessError(error);
   });
 })();
