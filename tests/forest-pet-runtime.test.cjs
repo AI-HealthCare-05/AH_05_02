@@ -274,6 +274,12 @@ test('a successful catch plays one finite planted-foot paw reaction and feeding 
   assert.equal(events.filter(event => event.type === 'forest-rat-caught').length, 1);
 });
 
+test('pet auto-hunting begins only inside the reduced 92.5px player radius', () => {
+  const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
+  assert.match(source, /ratDistanceFromPlayer < 92\.5/);
+  assert.doesNotMatch(source, /ratDistanceFromPlayer < 185/);
+});
+
 test('installed production kitten manifest can drive all four runtime variants without synthetic frame assumptions', t => {
   const modulePath = path.join(__dirname, '../src/frontend/forest-pets.js');
   if (!existsSync(modulePath)) { t.skip('production manifest has not landed yet'); return; }

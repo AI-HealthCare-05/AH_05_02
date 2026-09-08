@@ -29,7 +29,7 @@
     { id: "last_tick_white", name: "눈꽃 고양이", color: "white", fallbackColumn: 0 },
     { id: "last_tick_gray", name: "구름 고양이", color: "gray", fallbackColumn: 0 },
     { id: "last_tick_ginger", name: "살구 고양이", color: "ginger", fallbackColumn: 3 },
-  ].map(item => Object.freeze({ ...item, key: `forest-kitten-${item.color}`, scale: SCALE, legacy: false, group: "새 고양이 · 원본 애니메이션" })));
+  ].map(item => Object.freeze({ ...item, key: `forest-kitten-${item.color}`, scale: SCALE, legacy: false, group: "고양이" })));
   const equipment = Object.freeze([
     { id: "none", name: "장비 없음", sheet: null },
     { id: "winter_antlers_green", name: "초록 사슴뿔 머리띠", sheet: "winter-antlers-green" },
@@ -48,7 +48,7 @@
     { id: "valentine_bow_red", name: "빨간 리본", sheet: "valentine-bow-red" },
     { id: "valentine_glasses_red", name: "빨간 하트 안경", sheet: "valentine-glasses-red" },
   ].map(item => Object.freeze({ ...item, key: item.sheet ? `forest-kitten-${item.sheet}` : null,
-    slot: "petAccessory", itemId: item.id, group: "고양이 장비 · 공식 무료 홀리데이" })));
+    slot: "petAccessory", itemId: item.id, group: "펫 장비" })));
   // Only authored animated pets are selectable. Old saved IDs remain readable
   // through a rendering alias; opening the menu never rewrites saved outfits.
   const aliases = Object.freeze({ white_pup: "lpc_brown_dog", brown_pup: "lpc_brown_dog",
@@ -60,7 +60,7 @@
     { id: "lpc_orange_cat", name: "주황 고양이 · 보행", fallbackColumn: 3 },
     { id: "lpc_brown_dog", name: "갈색 강아지 · 보행", fallbackColumn: 6 },
   ].map(item => Object.freeze({ ...item, key: "lpc-pets", scale: 1.2, legacy: true,
-    supportsSit: false, group: "기존 펫 · 네 방향 보행", description: "기존 LPC · 네 방향 걷기" })));
+    supportsSit: false, group: "강아지", description: "기존 LPC · 네 방향 걷기" })));
 
   function canonicalId(id) {
     return Object.hasOwn(aliases, id) ? aliases[id] : id;

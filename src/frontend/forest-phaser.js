@@ -1504,13 +1504,12 @@
       const [x, y] = Phaser.Utils.Array.GetRandom(candidates.length ? candidates : spawnPoints);
       this.ratEventId += 1;
       this.ratActive = true;
-      this.ratDespawnAt = time + 12000;
+      this.ratDespawnAt = Infinity;
       this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
       this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
       this.setRatSpecies(Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]), null, time);
       if (this.rabbitVariant) {
-        const behaviorDuration = this.rabbitBehaviorSequence.reduce((total, action) => total + action.durationMs, 0);
-        this.ratDespawnAt = time + Math.min(45000, Math.max(12000, behaviorDuration + 1200));
+        this.ratDespawnAt = Infinity;
       }
       this.ratActor.setPosition(x, y).setDepth(y - 2).setAlpha(1).setScale(1).setVisible(true);
       const variant = window.ForestAnimals.rabbitVariants?.find(item => item.id === this.rabbitVariant);
@@ -1662,10 +1661,6 @@
         return;
       }
       this.ratActor.setVisible(true);
-      if (time >= this.ratDespawnAt) {
-        this.dismissRat(time);
-        return;
-      }
       const rabbitAction = this.advanceRabbitBehavior(time);
       const wantsMove = !rabbitAction || rabbitAction.moves;
       const fixedDirection = Object.hasOwn(encounterVectors, rabbitAction?.direction) ? rabbitAction.direction : null;
@@ -1752,7 +1747,7 @@
         : null;
       const petActor = this.pet?.visible ? this.pet : this.petEmoji;
       const ratDistanceFromPlayer = this.ratActive ? Phaser.Math.Distance.Between(this.ratActor.x, this.ratActor.y, this.avatar.x, this.avatar.y) : Infinity;
-      const autoHunting = stepMs > 0 && !feeding && !attacking && !togetherSitting && this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
+      const autoHunting = stepMs > 0 && !feeding && !attacking && !togetherSitting && this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 92.5;
       const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
       const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
       const follow = feeding || attacking || togetherSitting ? 0 : 1 - Math.exp(-stepMs / (autoHunting ? 260 : playerMoving ? 120 : 210));

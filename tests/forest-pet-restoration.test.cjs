@@ -17,6 +17,9 @@ test('pet menu contains three LPC walkers, three free-color kittens and all free
   assert.equal(companions.length, 7);
   assert.equal(companions[0].itemId, 'none');
   assert.equal(equipment.length, 16);
+  assert.ok(pets.catalog.every(pet => pet.group === '고양이'));
+  assert.ok(pets.classicCatalog.every(pet => pet.group === '강아지'));
+  assert.ok(pets.equipment.every(item => item.group === '펫 장비'));
   for (const pet of companions.slice(1)) {
     assert.ok(!pet.static);
     assert.ok(!Object.hasOwn(pets.aliases, pet.itemId), 'compatibility IDs do not duplicate menu cards');

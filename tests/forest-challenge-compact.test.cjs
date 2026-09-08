@@ -129,12 +129,13 @@ function today(overrides = {}) {
   };
 }
 
-async function widget({ forestView = true, plan = today(), authenticated = true, hash = '', requestHook } = {}) {
+async function widget({ forestView = true, plan = today(), authenticated = true, hash = '', requestHook, storedCompletions = null } = {}) {
   const parent = element('section', { id: 'quest-panel' });
   const root = element('div', { 'data-challenge-v2': '', ...(forestView ? { 'data-challenge-v2-view': 'forest' } : {}) }, parent);
   parent.children.push(root);
   const settingsButton = element('button', { id: 'forest-quest-settings', hidden: '' });
-  const windowHandlers = {}, requests = [];
+  const windowHandlers = {}, requests = [], storage = new Map();
+  if (storedCompletions) storage.set('gandang.challenge-v2.mvp-completions.v1', JSON.stringify(storedCompletions));
   const document = {
     hidden: false, activeElement: null, documentElement: element('html'),
     querySelector: selector => selector === '[data-challenge-v2]' ? root : selector === '#forest-quest-settings' ? settingsButton : null,
@@ -146,7 +147,8 @@ async function widget({ forestView = true, plan = today(), authenticated = true,
     [Symbol.iterator]() { return Object.entries(this.values)[Symbol.iterator](); }
     get(key) { return this.values[key]; }
   }
-  const window = { addEventListener: (type, handler) => { windowHandlers[type] = handler; }, dispatchEvent() {} };
+  const window = { addEventListener: (type, handler) => { windowHandlers[type] = handler; }, dispatchEvent() {},
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } };
   vm.runInNewContext(source, {
     document, window, location: { hash }, FormData: TestFormData, CustomEvent: class {}, Event: class {},
     fetch: async (url, options = {}) => {
@@ -161,7 +163,7 @@ async function widget({ forestView = true, plan = today(), authenticated = true,
     },
   });
   await settled();
-  return { root, settingsButton, requests, windowHandlers, document };
+  return { root, settingsButton, requests, windowHandlers, document, storage };
 }
 
 test('only the forest opts into the compact challenge view', () => {
@@ -174,6 +176,8 @@ test('enrolled forest shows three short quests while preserving every original d
   const { root } = await widget();
   const cards = root.querySelectorAll('.v2-quest-card');
   assert.equal(cards.length, 3);
+  assert.ok(root.innerHTML.indexOf('class="v2-compact-cards"') < root.innerHTML.indexOf('id="forest-quest-settings"'));
+  assert.match(root.querySelector('#forest-quest-settings').textContent, /나에게 맞게 다시 설정하기/);
   for (const [index, card] of cards.entries()) {
     const id = index + 1;
     const details = card.querySelector('.v2-quest-details');
@@ -208,16 +212,48 @@ test('direct-record quests save an honest self-attestation and optional detail w
   assert.equal(Number.isNaN(Date.parse(payload.performed_at)), false);
 });
 
-test('photo and measurement-heavy quests still open their real inputs instead of fabricating proof', async () => {
+test('MVP certify immediately completes photo and measurement cards while preserving optional detail locally', async () => {
   const photo = assignment(1); photo.goal.proof_type = 'T2'; photo.goal.required_uploads = 1;
   const drink = assignment(2); drink.goal.family_id = 'H02'; drink.goal.goal_unit = 'count';
-  const { root, requests } = await widget({ plan: today({ items: [photo, drink, assignment(3)] }) });
+  const { root, requests, storage } = await widget({ plan: today({ items: [photo, drink, assignment(3)] }) });
   const before = requests.length;
   await root.listeners.click({ target: root.querySelector('[data-certify="1"]') });
   await root.listeners.click({ target: root.querySelector('[data-certify="2"]') });
+  const laterNote = root.querySelector('[data-session="1"] [name="note"]');
+  laterNote.value = '채소가 있는 점심을 먹었어요.';
+  root.listeners.input({ target: laterNote });
   assert.equal(requests.length, before);
-  assert.equal(root.querySelector('[data-quest-details="1"]').open, true);
-  assert.equal(root.querySelector('[data-quest-details="2"]').open, true);
+  assert.equal(root.querySelector('[data-certify="1"]').textContent.trim(), '인증완료');
+  assert.equal(root.querySelector('[data-certify="2"]').textContent.trim(), '인증완료');
+  const saved = JSON.parse(storage.get('gandang.challenge-v2.mvp-completions.v1'));
+  assert.equal(saved['1:1'].note, '채소가 있는 점심을 먹었어요.');
+});
+
+test('a server-completed MVP quest keeps an editable optional note under details', async () => {
+  const completed = assignment(1, { status: 'completed', completed_sessions: 1, sessions: [{ index: 1 }] });
+  const initial = { '1:1': { assignmentId: 1, domain: 'activity', note: '처음 기록', completedAt: '2026-09-08T00:00:00.000Z' } };
+  const { root, storage } = await widget({ plan: today({ items: [completed, assignment(2), assignment(3)] }), storedCompletions: initial });
+  const note = root.querySelector('[data-mvp-note="1"]');
+  assert.ok(note);
+  assert.equal(note.textContent, '처음 기록');
+  note.value = '완료 후에 추가한 기록';
+  root.listeners.input({ target: note });
+  const saved = JSON.parse(storage.get('gandang.challenge-v2.mvp-completions.v1'));
+  assert.equal(saved['1:1'].note, '완료 후에 추가한 기록');
+});
+
+test('compact quests expose the V3 water diet activity labels and three distinct garden celebrations', async () => {
+  const water = assignment(1); water.goal.domain = 'routine';
+  const diet = assignment(2); diet.goal.domain = 'diet';
+  const activity = assignment(3); activity.goal.domain = 'activity';
+  const { root } = await widget({ plan: today({ items: [water, diet, activity] }) });
+  assert.deepEqual(root.querySelectorAll('.v2-domain-badge').map(node => node.textContent.trim()), ['물', '식단', '운동']);
+  assert.match(source, /당근 밭에 물을 주었습니다/);
+  assert.match(source, /당근 밭에 거름을 주었습니다/);
+  assert.match(source, /당근 밭에 잡초를 제거했습니다/);
+  for (const name of ['challenge-water-team-v171.webp', 'challenge-compost-team-v171.webp', 'challenge-weeding-team-v171.webp']) {
+    assert.ok(fs.existsSync(path.join(__dirname, `../src/frontend/assets/${name}`)));
+  }
 });
 
 test('only server-completed assignments show certification complete; review stays pending', async () => {
@@ -268,7 +304,7 @@ test('full MVP and first setup retain the complete preferences interface', async
 
 test('saving first setup loads the server plan and returns to three collapsed quests', async () => {
   let todayLoads = 0;
-  const { root, settingsButton, requests } = await widget({
+  const { root, requests } = await widget({
     requestHook: url => {
       if (url.endsWith('/today')) {
         todayLoads++;
@@ -285,7 +321,8 @@ test('saving first setup loads the server plan and returns to three collapsed qu
   assert.equal(root.querySelectorAll('.v2-quest-details[open]').length, 0);
   assert.equal(root.querySelector('[data-settings]').hidden, true);
   assert.equal(root.querySelector('[data-compact-settings]').hidden, true);
-  assert.equal(settingsButton.hidden, false);
+  const settingsButton = root.querySelector('#forest-quest-settings');
+  assert.ok(settingsButton);
   assert.equal(settingsButton.getAttribute('aria-expanded'), 'false');
   const save = requests.filter(request => request.url.endsWith('/preferences'));
   assert.equal(save.length, 1);
@@ -298,17 +335,19 @@ test('saving first setup loads the server plan and returns to three collapsed qu
   assert.equal(requests.some(request => /\/sessions\/|\/evidence\//.test(request.url)), false);
 });
 
-test('forest heading settings toggles the existing form and retained guidance without discarding edits', async () => {
-  const { root, settingsButton } = await widget();
+test('settings below all three quests toggle the existing form and retain unsaved edits', async () => {
+  const { root } = await widget();
   const form = root.querySelector('[data-preferences]');
   form.unsavedDraft = 'keep this edit';
-  await settingsButton.listeners.click({ target: settingsButton });
+  let settingsButton = root.querySelector('#forest-quest-settings');
+  await root.listeners.click({ target: settingsButton });
   assert.equal(root.querySelector('[data-settings]').hidden, false);
   assert.equal(root.querySelector('[data-compact-settings]').hidden, false);
   assert.match(visibleText(root), /진단·처방/);
   assert.match(visibleText(root), /계정 당근/);
   assert.equal(settingsButton.getAttribute('aria-expanded'), 'true');
-  await settingsButton.listeners.click({ target: settingsButton });
+  settingsButton = root.querySelector('#forest-quest-settings');
+  await root.listeners.click({ target: settingsButton });
   assert.equal(root.querySelector('[data-preferences]'), form);
   assert.equal(form.unsavedDraft, 'keep this edit');
   assert.equal(root.querySelector('[data-settings]').hidden, true);
@@ -341,7 +380,7 @@ test('record submission waits for authoritative completion and preserves the exi
   await saving;
   assert.equal(root.querySelector('[data-certify="1"]').textContent.trim(), '인증완료');
   assert.equal(root.querySelector('[data-certify="1"]').disabled, true);
-  assert.equal(root.querySelector('[data-quest-details="1"]').open, false);
+  assert.equal(root.querySelector('[data-quest-details="1"]').open, true);
   assert.match(root.querySelector('[data-message]').textContent, /저장했어요/);
 });
 

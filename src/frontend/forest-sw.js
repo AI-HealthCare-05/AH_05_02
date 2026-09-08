@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v170-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v171-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -15,16 +15,16 @@ const CORE_SHELL = [
   "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
   "/static/forest-animals.js?v=20260908-4",
-  "/static/forest-pets.js?v=20260908-5",
+  "/static/forest-pets.js?v=20260908-6",
   "/static/forest-riverduck.js?v=20260908-1",
   "/static/forest-riverduck-art.js?v=20260908-1",
   "/static/forest-memories.js?v=20260908-7",
   "/static/forest-garden.js?v=20260908-1",
-  "/static/forest-phaser.js?v=20260908-20",
+  "/static/forest-phaser.js?v=20260908-21",
   "/static/forest-profile.js?v=20260907-1",
   "/static/forest-game.js?v=20260908-18",
-  "/static/challenge-v2.js?v=2.1.6",
-  "/static/challenge-v2.css?v=2.1.2",
+  "/static/challenge-v2.js?v=2.1.7",
+  "/static/challenge-v2.css?v=2.1.3",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
@@ -44,6 +44,9 @@ const MEDIA_ASSETS = [
     "valentine-glasses-gold", "valentine-bow-green", "valentine-bow-pink-2", "valentine-bow-pink",
     "valentine-bow-red", "valentine-glasses-red"].map(name => `/static/assets/animals/licensed-kittens/${name}.png?v=20260908-2`),
   "/static/assets/animals/cow-moo-joseph-sardin-cc0.mp3",
+  "/static/assets/challenge-water-team-v171.webp?v=20260908-1",
+  "/static/assets/challenge-compost-team-v171.webp?v=20260908-1",
+  "/static/assets/challenge-weeding-team-v171.webp?v=20260908-1",
   "/static/assets/home-record-player-v159.png?v=20260908-1",
   "/static/assets/forest-memory-camera-v159.png?v=20260908-1",
   "/static/assets/town-pro-sensory-cc0.mp3",

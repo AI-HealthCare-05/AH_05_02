@@ -277,11 +277,11 @@ test('reduced motion keeps source frames still without disabling behavior', () =
   assert.deepEqual([scene.ratActor.x, scene.ratActor.y, scene.ratSprite.frame, scene.ratSprite.scaleX], before);
 });
 
-test('encounters announce their variant and last long enough for every finite source action', () => {
+test('encounters announce their variant and remain until the player or pet removes them', () => {
   const { scene, events } = setup();
   scene.spawnRat(1000);
   assert.equal(scene.ratSpecies, 'rabbit');
-  assert.equal(scene.ratDespawnAt, 18200);
+  assert.equal(scene.ratDespawnAt, Infinity);
   assert.equal(events[0].type, 'forest-rat-appeared');
   assert.equal(events[0].detail.variant, 'bunbun');
   assert.equal(events[0].detail.variantLabel, 'Bunbun');
