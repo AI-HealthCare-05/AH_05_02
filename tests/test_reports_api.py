@@ -544,10 +544,26 @@ async def test_invalid_period_is_rejected() -> None:
 @pytest.mark.asyncio
 async def test_generated_at_is_utc_and_response_is_marked_private_no_store() -> None:
     """§3 API 공통 조건: 시각(timestamp)은 ISO 8601 UTC로, 민감 응답은
-    Cache-Control: private, no-store로 반환한다."""
+    Cache-Control: private, no-store로 반환한다 — 성공 응답뿐 아니라 이 라우트들이 던지는
+    에러 응답(422/404)에도 app/main.py의 미들웨어를 통해 똑같이 적용돼야 한다."""
     async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         headers = await signup_and_login(client, "cachecontrol@example.com")
-        response = await client.get("/api/v1/reports", params={"period": "week"}, headers=headers)
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["data"]["generated_at"].endswith("Z")
-        assert response.headers["cache-control"] == "private, no-store"
+
+        ok = await client.get("/api/v1/reports", params={"period": "week"}, headers=headers)
+        assert ok.status_code == status.HTTP_200_OK
+        assert ok.json()["data"]["generated_at"].endswith("Z")
+        assert ok.headers["cache-control"] == "private, no-store"
+
+        invalid_period = await client.get("/api/v1/reports", params={"period": "month"}, headers=headers)
+        assert invalid_period.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert invalid_period.headers["cache-control"] == "private, no-store"
+
+        wrong_period_cycles = await client.get(
+            "/api/v1/reports/rpt-week-2026-09-08/cycles", headers=headers
+        )
+        assert wrong_period_cycles.status_code == status.HTTP_404_NOT_FOUND
+        assert wrong_period_cycles.headers["cache-control"] == "private, no-store"
+
+        unauthenticated_pdf = await client.get("/api/v1/weekly-reports/current/pdf")
+        assert unauthenticated_pdf.status_code == status.HTTP_401_UNAUTHORIZED
+        assert unauthenticated_pdf.headers["cache-control"] == "private, no-store"
