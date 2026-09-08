@@ -358,7 +358,11 @@
         if (this.session !== session) return;
         const dataUrl = image.src;
         const blob = pngBlob(dataUrl);
-        this.restore(session);
+        // The offscreen render above is the immutable colour original. Keep
+        // the live portrait tableau in place until the UI explicitly emits a
+        // cancel/exit event; the gradual monochrome effect is display-only CSS.
+        session.target?.destroy();
+        session.target = null;
         this.emit("forest-memory-ready", session, { blob, dataUrl, width: FRAME.width * FRAME.scale, height: FRAME.height * FRAME.scale });
       } catch (error) {
         if (this.session === session) {

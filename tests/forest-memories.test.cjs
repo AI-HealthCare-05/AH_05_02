@@ -212,7 +212,7 @@ test('invalid portrait bounds are safe and a failed bounds lookup falls back to 
   }
 });
 
-test('overlapping furniture regains its exact previous visibility after cancel, snapshot failure, and success', async () => {
+test('overlapping furniture stays staged after success and regains exact visibility only when the studio exits', async () => {
   for (const finish of ['cancel', 'failure', 'success']) {
     const { controller, scene, renders } = setup({ snapshotError: finish === 'failure' });
     const large = scene.add.sprite(680, 410, 'large-rotated-furniture');
@@ -236,6 +236,11 @@ test('overlapping furniture regains its exact previous visibility after cancel, 
         renders[0].callback({ src: 'data:image/png;base64,iVBORw0KGgo=' });
       }
       await tick();
+    }
+    if (finish === 'success') {
+      assert.equal(controller.active, true);
+      assert.deepEqual(scene.placedObjectActors.map(actor => actor.visible), [false, false, true, false]);
+      controller.cancel();
     }
     assert.equal(controller.active, false);
     assert.deepEqual(scene.placedObjectActors.map(actor => ({ x: actor.x, y: actor.y, angle: actor.angle, visible: actor.visible })), original);
@@ -449,9 +454,13 @@ test('one actual field render yields one PNG, no HUD, original actors, or respon
   const ready = events.filter(event => event.type === 'forest-memory-ready');
   assert.equal(ready.length, 1); assert.equal(ready[0].detail.requestId, 'snapshot');
   assert.equal(ready[0].detail.blob.type, 'image/png');
+  assert.equal(scene.memoryCapturing, true); assert.equal(scene.player.visible, false);
+  assert.equal(controller.active, true, 'the portrait tableau remains until the studio exits');
+  assert.equal(target.destroyed, true); assert.notEqual(scene.cameras.main.width, 1536);
+  assert.ok(!source.includes('localStorage') && !source.includes('scale.resize') && !source.includes('grayscale'));
+  controller.cancel();
   assert.equal(scene.memoryCapturing, false); assert.equal(scene.player.visible, true);
-  assert.equal(target.destroyed, true); assert.equal(scene.cameras.main.width, 1536);
-  assert.ok(!source.includes('localStorage') && !source.includes('scale.resize'));
+  assert.equal(scene.cameras.main.width, 1536);
 });
 
 test('double start, cancel during preload, and a late prior snapshot cannot create a second/stale photo', async () => {
@@ -486,6 +495,8 @@ test('Canvas fallback reads the full offscreen backing instead of Phaser main-vi
   assert.equal(renders[0].canvasFormat, 'image/png');
   assert.equal(renders[0].callback, undefined, 'never use the clamping snapshot path');
   assert.equal(events.filter(event => event.type === 'forest-memory-ready').length, 1);
+  assert.notEqual(scene.cameras.main.width, 640);
+  controller.cancel();
   assert.equal(scene.cameras.main.width, 640);
 });
 

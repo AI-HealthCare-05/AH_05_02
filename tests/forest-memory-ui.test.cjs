@@ -143,7 +143,10 @@ test('camera double clicks and duplicate ready events produce exactly one automa
   assert.equal(env.elements.figure.hidden, false);
   assert.equal(env.elements.progress.hidden, true);
   assert.equal(env.elements.save.attrs['aria-disabled'], 'false');
-  assert.equal(env.bodyClasses.has('forest-memory-shooting'), false);
+  assert.equal(env.bodyClasses.has('forest-memory-shooting'), true);
+  assert.equal(env.bodyClasses.has('forest-memory-developing'), true);
+  assert.match(env.elements.status.textContent, /컬러 PNG/);
+  assert.match(env.elements.status.textContent, /사진관에서 나가기/);
   assert.match(env.downloads[0].filename, /^당근의숲_추억사진_\d{8}_\d{6}\.png$/);
   assert.equal(JSON.stringify(env.state), before);
   env.elements.save.click();
@@ -245,8 +248,9 @@ test('background interactions freeze during assembly without hiding the field or
   assert.equal(env.world.hidden, false);
   assert.notEqual(env.elements.dialog.inert, true);
   env.emit('forest-memory-ready', { requestId, dataUrl: png });
-  assert.equal(env.world.inert, false);
-  assert.equal(env.wardrobe.inert, false);
+  assert.equal(env.world.inert, true);
+  assert.equal(env.wardrobe.inert, true);
+  assert.equal(env.bodyClasses.has('forest-memory-developing'), true);
   assert.equal(env.previouslyInert.inert, true);
   env.elements.retake.click();
   assert.equal(env.world.inert, true);
@@ -254,6 +258,7 @@ test('background interactions freeze during assembly without hiding the field or
   assert.equal(env.world.inert, false);
   assert.equal(env.wardrobe.inert, false);
   assert.equal(env.previouslyInert.inert, true);
+  assert.equal(env.bodyClasses.has('forest-memory-developing'), false);
 });
 
 test('a synchronous reentrant ready callback inside the download cannot trigger a second save', () => {
@@ -304,7 +309,10 @@ test('photo UI is nonmodal, in the fullscreen field, accessible and entirely loc
   assert.ok(html.indexOf('id="forest-memory-dialog"') < html.indexOf('class="right-hud"'));
   assert.match(html, /id="forest-memory-status" role="status" aria-live="polite"/);
   assert.match(html, /id="forest-memory-preview" alt="[^"]+"/);
+  assert.match(html, /id="forest-memory-close"[^>]*aria-label="사진관에서 나가기"[^>]*>사진관에서 나가기<\/button>/);
   assert.match(css, /\.forest-memory-dialog\{[^}]*position:absolute;[^}]*width:min\(310px/);
+  assert.match(css, /\.forest-memory-developing #phaser-world canvas[^}]*animation:forestMemoryToMonochrome 5\.2s/);
+  assert.match(css, /@keyframes forestMemoryToMonochrome\{[^}]*grayscale\(0\)[^}]*\}100%\{[^}]*grayscale\(1\)/);
   assert.doesNotMatch(css, /\.forest-memory-dialog::backdrop/);
   assert.doesNotMatch(memoryCode, /showModal\(|localStorage|sessionStorage|fetch\(|adapter\.save|innerHTML/);
 });

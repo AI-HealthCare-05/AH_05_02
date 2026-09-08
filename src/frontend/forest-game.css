@@ -464,7 +464,7 @@ body{display:flex;flex-direction:column;height:100dvh}
 .forest-memory-dialog[open]{display:block}
 .forest-memory-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .forest-memory-dialog h2{margin:0;font-size:18px;line-height:1.3}
-.forest-memory-dialog header button{flex:none;width:32px;height:32px;padding:0;border:1px solid #c8bba0;border-radius:8px;background:#fffdf4;color:#60482f;font-size:24px;line-height:1}
+.forest-memory-dialog header button{flex:none;min-height:34px;padding:6px 10px;border:1px solid #c8bba0;border-radius:8px;background:#fffdf4;color:#60482f;font-size:12px;font-weight:900;line-height:1.2}
 .forest-memory-dialog p{margin:8px 0}
 .forest-memory-dialog progress{width:100%;height:8px;accent-color:#799c53}
 .forest-memory-dialog figure{margin:10px 0}
@@ -476,6 +476,9 @@ body{display:flex;flex-direction:column;height:100dvh}
 .forest-memory-dialog :is(button:disabled,a[aria-disabled="true"]){opacity:.5;cursor:wait}
 .forest-memory-dialog :is(button,a):focus-visible{outline:3px solid #bb792f;outline-offset:2px}
 .forest-memory-shooting .canvas-frame :is(.viewport-tools,.map-label,.interaction-prompt,.game-controls-overlay,.garden-harvest-panel,.forest-time-toast,.forest-catch-toast){visibility:hidden;pointer-events:none}
+.forest-memory-developing #phaser-world canvas,.forest-memory-developing #forest-canvas{animation:forestMemoryToMonochrome 5.2s cubic-bezier(.3,.05,.25,1) forwards;transform:translateZ(0)}
+@keyframes forestMemoryToMonochrome{0%,8%{filter:grayscale(0) saturate(1) contrast(1)}100%{filter:grayscale(1) saturate(.18) contrast(1.08) sepia(.08)}}
+@media(prefers-reduced-motion:reduce){.forest-memory-developing #phaser-world canvas,.forest-memory-developing #forest-canvas{animation:none;filter:grayscale(1) saturate(.18) contrast(1.08) sepia(.08)}}
 @media(max-width:520px){.forest-memory-dialog{inset:auto 8px 8px auto;width:min(270px,calc(100% - 16px));padding:10px;font-size:12px}.forest-memory-dialog h2{font-size:16px}.forest-memory-dialog img{max-height:25vh}}
 
 /* Capture results stay visible without restoring the old persistent guidance bar. */

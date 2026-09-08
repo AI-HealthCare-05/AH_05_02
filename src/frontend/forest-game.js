@@ -96,13 +96,17 @@
         if (branch === doc.body) break;
       }
     }
-    function stopWaiting() {
+    function finishWaiting() {
       clearTimer(timeout); timeout = 0;
+      dialog.setAttribute("aria-busy", "false");
+      progress.hidden = true;
+    }
+    function leaveStudio() {
+      finishWaiting();
       for (const [element, inert] of backgroundInert) element.inert = inert;
       backgroundInert.clear();
       doc.body.classList.remove("forest-memory-shooting");
-      dialog.setAttribute("aria-busy", "false");
-      progress.hidden = true;
+      doc.body.classList.remove("forest-memory-developing");
     }
     function releasePhoto() {
       preview.removeAttribute("src"); figure.hidden = true; setSaveEnabled(false);
@@ -121,7 +125,7 @@
       previous.stage = "closed";
       emit("forest-memory-cancel", { requestId: previous.requestId });
       releasePhoto(); session = null;
-      stopWaiting();
+      leaveStudio();
     }
     function close() {
       cancelCurrent();
@@ -133,7 +137,7 @@
     function fail(message) {
       if (!session) return;
       session.stage = "error";
-      stopWaiting(); retake.disabled = false; setSaveEnabled(false);
+      leaveStudio(); retake.disabled = false; setSaveEnabled(false);
       status.textContent = String(message || "사진을 만들지 못했어요. 다시 찍기를 눌러 주세요.").slice(0, 240);
       emit("forest-memory-cancel", { requestId: session.requestId });
     }
@@ -148,6 +152,7 @@
       status.textContent = "여섯 친구와 숲속 동물들이 모이고 있어요. 잠시 기다려 주세요.";
       progress.hidden = false; retake.disabled = true; setSaveEnabled(false);
       dialog.setAttribute("aria-busy", "true");
+      doc.body.classList.remove("forest-memory-developing");
       doc.body.classList.add("forest-memory-shooting");
       freezeBackground();
       closeButton.focus({ preventScroll: true });
@@ -189,7 +194,8 @@
         session.photo = photo;
         session.filename = memoryPhotoFilename();
         session.stage = "ready";
-        stopWaiting();
+        finishWaiting();
+        doc.body.classList.add("forest-memory-developing");
         preview.src = photo.url; figure.hidden = false;
         // Inline PNG avoids a blob navigation dependency in embedded browsers.
         // Blob-only captures remain supported, with the existing revoke grace.
@@ -210,7 +216,7 @@
     save.addEventListener("click", (event) => {
       if (session?.stage !== "ready" || !session.photo) { event.preventDefault(); return; }
       session.photo.lastDownloadAt = now();
-      status.textContent = "PNG 사진 저장을 요청했어요. 파일이 보이지 않으면 ‘사진 저장’을 눌러 주세요.";
+      status.textContent = "컬러 PNG 저장을 요청했어요. 촬영 장면은 추억처럼 천천히 흑백으로 바뀌어요. ‘사진관에서 나가기’를 누르면 숲으로 돌아가요.";
       // Do not preventDefault or synthesize another click: native download wins.
     });
     save.addEventListener("keydown", (event) => {
