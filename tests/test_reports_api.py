@@ -119,6 +119,45 @@ async def test_week_period_anchors_to_cycle_start_weekday_and_marks_daily_status
         assert challenge["evaluated_target_count"] == 3  # wed/thu/fri already ended
         assert challenge["evaluated_completed_count"] == 2
         assert challenge["completion_rate"] == pytest.approx(66.7, abs=0.05)
+        # Item 13 of §5 완료 조건: the safety disclaimer must also appear on a "ready" (non-empty)
+        # report, not just on the empty-state response (already covered separately).
+        assert "치료" in data["disclaimer"] or "진단" in data["disclaimer"]
+
+
+@pytest.mark.asyncio
+async def test_unrecorded_day_status_is_distinct_from_explicit_miss() -> None:
+    """§5.2/item 3: a past day with NO log at all ("unrecorded") must render a different
+    goal_window status than a past day explicitly logged as not completed ("not_completed") —
+    the earlier anchor test only exercised completed/not_completed/pending/future, so this
+    closes the one status value ("unrecorded") that test never actually asserted per-day."""
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers = await signup_and_login(client, "unrecordedday@example.com")
+        user_id = await _user_id_by_email("unrecordedday@example.com")
+
+        monday = date(2026, 8, 24)
+        assert monday.weekday() == 0
+        cycle = await _make_cycle(user_id, monday, codes=["regular_meals_log"])
+        user_challenge = await UserChallenge.get(cycle_id=cycle.id)
+
+        await _log(user_id, user_challenge.id, monday, True)  # Mon: completed
+        await _log(user_id, user_challenge.id, monday + timedelta(days=1), False)  # Tue: explicit miss
+        # Wed/Thu/Fri (offsets 2-4): no log created at all -> must be "unrecorded", not "not_completed".
+
+        import app.services.reports as reports_module
+
+        saturday = monday + timedelta(days=5)
+        reports_module.today_kst = lambda: saturday
+
+        response = await client.get("/api/v1/reports", params={"period": "week"}, headers=headers)
+        data = response.json()["data"]
+        windows = {w["start_date"]: w["status"] for w in data["challenges"][0]["goal_windows"]}
+
+        assert windows[monday.isoformat()] == "completed"
+        assert windows[(monday + timedelta(days=1)).isoformat()] == "not_completed"
+        for offset in (2, 3, 4):
+            assert windows[(monday + timedelta(days=offset)).isoformat()] == "unrecorded"
+        assert windows[saturday.isoformat()] == "pending"
+        assert windows[(saturday + timedelta(days=1)).isoformat()] == "future"
 
 
 @pytest.mark.asyncio
@@ -258,6 +297,36 @@ async def test_all_period_paginates_cycles_and_rejects_cross_user_report_id() ->
 
 
 @pytest.mark.asyncio
+async def test_all_period_cycle_selected_challenges_keep_their_title_snapshot() -> None:
+    """Item 9 of §5 완료 조건: a cycle's `selected_challenges` must show the challenge title
+    exactly as it was when the user picked it (`title_snapshot`), not whatever the catalog
+    calls it later — otherwise a past cycle's report would silently reword itself whenever
+    the product team edits the catalog's wording."""
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers = await signup_and_login(client, "titlesnapshot@example.com")
+        user_id = await _user_id_by_email("titlesnapshot@example.com")
+
+        cycle = await _make_cycle(user_id, date(2026, 6, 1), codes=["regular_meals_log"], status_="completed")
+
+        # The catalog wording changes AFTER selection (e.g. a later product-copy edit).
+        challenge = await Challenge.get(code="regular_meals_log")
+        original_title = challenge.title
+        challenge.title = "완전히 새로운 문구로 바뀐 제목"
+        await challenge.save(update_fields=["title"])
+
+        import app.services.reports as reports_module
+
+        reports_module.today_kst = lambda: date(2026, 7, 1)
+
+        response = await client.get("/api/v1/reports", params={"period": "all"}, headers=headers)
+        data = response.json()["data"]
+        item = next(c for c in data["cycles"]["items"] if c["cycle_id"] == str(cycle.id))
+        assert item["selected_challenges"] == [
+            {"challenge_code": "regular_meals_log", "title": original_title}
+        ]
+
+
+@pytest.mark.asyncio
 async def test_four_week_bucket_sums_match_top_level_summary() -> None:
     """R09/R10: the 4 trend buckets partition the exact same date range the four-week
     summary covers, so their per-bucket evaluated_target/completed/unrecorded counts must
@@ -299,6 +368,33 @@ async def test_four_week_bucket_sums_match_top_level_summary() -> None:
         summary = data["summary"]
         for key in ("evaluated_completed_count", "evaluated_target_count", "completed_count", "unrecorded_count"):
             assert sum(b[key] for b in buckets) == summary[key], key
+
+
+@pytest.mark.asyncio
+async def test_period_challenges_exclude_non_overlapping_old_cycle_selection() -> None:
+    """Item 4 of §5 완료 조건: the response's `challenges` array must only include challenges
+    actually selected in a cycle overlapping the requested period — a challenge the same user
+    picked in an old, already-ended cycle that does not overlap the four-week window must not
+    reappear just because the user selected it once before."""
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers = await signup_and_login(client, "periodscope@example.com")
+        user_id = await _user_id_by_email("periodscope@example.com")
+        anchor = date(2026, 8, 3)
+
+        # Old cycle, long ended before the four-week window, picked a DIFFERENT challenge.
+        await _make_cycle(user_id, anchor - timedelta(days=60), codes=["brisk_walk_30m"], status_="completed")
+        # Current cycle overlapping the period picked only regular_meals_log.
+        await _make_cycle(user_id, anchor, codes=["regular_meals_log"], status_="active")
+
+        import app.services.reports as reports_module
+
+        as_of = anchor + timedelta(days=35)
+        reports_module.today_kst = lambda: as_of  # four-week period == [anchor+7, anchor+34]
+
+        response = await client.get("/api/v1/reports", params={"period": "four-week"}, headers=headers)
+        data = response.json()["data"]
+        codes = {c["challenge_code"] for c in data["challenges"]}
+        assert codes == {"regular_meals_log"}
 
 
 @pytest.mark.asyncio
