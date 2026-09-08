@@ -104,6 +104,8 @@
       this.ratHovered = false;
       this.ratAttackHovered = false;
       this.ratAttackPinned = false;
+      this.ratAttackPressedUntil = 0;
+      this.ratAttackVisualState = "";
       this.homeRecordPlaying = Boolean(storedState().homeRecordPlaying);
     }
 
@@ -397,7 +399,7 @@
 
     splitStaticPinwheelPixels(pixels) {
       const base = new Uint8ClampedArray(pixels), blades = new Uint8ClampedArray(pixels.length);
-      // Audited against the complete v153 PNG after 6px-padded normalization:
+      // Audited against v153 and the v156 replacement after 6px-padded normalization:
       // hub ~64,44; lowest blade ~78; exposed stem x61..67 from y68 down.
       // Partition actual colored blade pixels only. Never reconstruct a support
       // or rotate geometry; recombining these two layers exactly recovers source.
@@ -739,6 +741,7 @@
       if (this.placementActive) {
         this.cancelPointerMovement();
         this.ratAttackButton?.setVisible(false);
+        this.ratAttackPlate?.setVisible(false);
       }
       this.placementGrid.clear().setVisible(Boolean(detail.active) && this.sceneName === "world");
       this.placementPreview?.destroy();
@@ -945,7 +948,9 @@
         // room change should cancel a click-to-move or click-to-attack intent.
         this.cancelPointerMovement();
         this.ratAttackPinned = false;
+        this.ratAttackPressedUntil = 0;
         this.ratAttackButton?.setVisible(false);
+        this.ratAttackPlate?.setVisible(false);
       }
       this.sceneName = nextSceneName;
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
@@ -1047,12 +1052,14 @@
     }
 
     createRatAttackButton() {
-      this.ratAttackButton = this.add.text(0, 0, "공격", {
+      this.ratAttackPlate = this.add.graphics().setDepth(1000).setVisible(false);
+      this.ratAttackButton = this.add.text(0, 0, "✦ 공격  ›", {
         resolution: TEXT_RESOLUTION,
-        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "15px", fontStyle: "bold",
-        color: "#ffffff", backgroundColor: "#bd4636", padding: { x: 18, y: 9 },
+        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
+        color: "#603013", align: "center", fixedWidth: 112, fixedHeight: 38, padding: { x: 7, y: 10 },
       }).setOrigin(.5).setDepth(1001).setVisible(false).setInteractive({ useHandCursor: true });
       const keepVisible = () => { this.ratHoverUntil = performance.now() + 650; };
+      const press = () => { this.ratAttackPressedUntil = performance.now() + 140; };
       this.ratSprite.setInteractive({ useHandCursor: true })
         .on("pointerover", () => { this.ratHovered = true; keepVisible(); })
         .on("pointermove", keepVisible)
@@ -1061,6 +1068,7 @@
           if (this.placementActive || (!pointer.wasTouch && pointer.button !== 0)) return;
           event?.stopPropagation?.();
           keepVisible();
+          press();
           // Clicking the animal and its visible button share one action.
           // A distant target is approached before the equipped attack plays.
           this.requestRatAttack();
@@ -1069,15 +1077,21 @@
       this.ratAttackButton.on("pointerover", () => {
         this.ratAttackHovered = true;
         keepVisible();
-        this.ratAttackButton.setBackgroundColor("#df6047");
+        this.updateRatAttackButton();
       }).on("pointermove", keepVisible).on("pointerout", () => {
         this.ratAttackHovered = false;
         keepVisible();
-        this.ratAttackButton.setBackgroundColor("#bd4636");
+        this.ratAttackPressedUntil = 0;
+        this.updateRatAttackButton();
       }).on("pointerdown", (pointer, _x, _y, event) => {
         if (!pointer.wasTouch && pointer.button !== 0) return;
         event?.stopPropagation?.();
+        press();
         this.requestRatAttack();
+        this.updateRatAttackButton();
+      }).on("pointerup", () => {
+        this.ratAttackPressedUntil = 0;
+        this.updateRatAttackButton();
       });
     }
 
@@ -1086,9 +1100,27 @@
       const visible = this.sceneName === "world" && this.ratActive && !this.placementActive && !this.isWorldInputBlocked()
         && (this.ratHovered || this.ratAttackHovered || this.ratAttackPinned || this.pointerAttackEventId != null || performance.now() < this.ratHoverUntil);
       this.ratAttackButton.setVisible(visible);
-      if (visible) this.ratAttackButton.setPosition(
-        Math.max(40, Math.min(WORLD.width - 40, this.ratActor.x)), Math.max(24, this.ratActor.y - 72),
-      );
+      this.ratAttackPlate.setVisible(visible);
+      if (!visible) return;
+      const approaching = this.pointerAttackEventId === this.ratEventId;
+      const pressed = performance.now() < this.ratAttackPressedUntil;
+      const highlighted = this.ratAttackHovered || approaching;
+      const visualState = `${approaching}:${pressed}:${highlighted}`;
+      if (visualState !== this.ratAttackVisualState) {
+        this.ratAttackVisualState = visualState;
+        this.ratAttackButton.setText(approaching ? "↗ 접근 중…" : "✦ 공격  ›");
+        // Fixed text dimensions preserve the same hit area while the label changes.
+        const plate = this.ratAttackPlate.clear();
+        plate.fillStyle(0x54280f, .28).fillRoundedRect(-56, -16, 112, 38, 10);
+        plate.fillStyle(pressed ? 0xe9a64b : highlighted ? 0xffdfa0 : 0xf7c777, 1).fillRoundedRect(-56, -19, 112, 38, 10);
+        plate.lineStyle(highlighted ? 2 : 1.5, highlighted ? 0xfff3cd : 0x975020, 1).strokeRoundedRect(-56, -19, 112, 38, 10);
+        plate.lineStyle(1, 0xffffff, pressed ? .15 : .4).strokeRoundedRect(-53, -16, 106, 32, 8);
+      }
+      const pressOffset = pressed && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
+      const x = Math.max(60, Math.min(WORLD.width - 60, this.ratActor.x));
+      const y = Math.max(24, this.ratActor.y - 72) + pressOffset;
+      this.ratAttackButton.setPosition(x, y);
+      this.ratAttackPlate.setPosition(x, y);
     }
 
     requestRatAttack() {
@@ -1246,7 +1278,9 @@
       this.ratHovered = false;
       this.ratAttackHovered = false;
       this.ratHoverUntil = 0;
+      this.ratAttackPressedUntil = 0;
       this.ratAttackButton?.setVisible(false);
+      this.ratAttackPlate?.setVisible(false);
       if (this.pointerAttackEventId != null) this.cancelPointerMovement();
       this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
       if (!caught) {

@@ -452,7 +452,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.FIT" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v155";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v156-2";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -781,8 +781,10 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     for action in ("jump", "run", "interact", "ride", "attack"):
         assert f'data-action="{action}"' in html
     assert '<button class="arcade-action action-jump"' in html
-    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)", "공격 (Z)"):
+    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)"):
         assert f"<span>{label}</span>" in html
+    assert 'data-action="attack" aria-label="공격, 단축키 Z"' in html
+    assert '<i class="attack-spark" aria-hidden="true">✦</i> 공격 <kbd>Z</kbd>' in html
     assert "data-footer-tool=" not in html
     assert 'class="asset-dock rail-assets"' in html
     overlay_position = html.index('class="game-controls-overlay arcade-deck"')
@@ -1211,9 +1213,12 @@ process.stdout.write(JSON.stringify({
     individual_assets = inventory["assets"]
     assert len(individual_assets) == 24
     assert len({asset["url"] for asset in individual_assets}) == 24
+    assert sum("/furniture-v156/" in asset["url"] for asset in individual_assets) == 22
     for asset in individual_assets:
         url = asset["url"]
-        assert url == f'/static/assets/furniture-v153/{asset["code"]}.png?v=20260907-1'
+        retained = asset["code"] in {"campfire", "animated_fountain"}
+        version, revision = ("v153", "20260907-1") if retained else ("v156", "20260908-2")
+        assert url == f'/static/assets/furniture-{version}/{asset["code"]}.png?v={revision}'
         assert asset["key"] == f'furniture-{asset["code"]}'
         path = frontend / url.partition("?")[0].removeprefix("/static/")
         assert path.is_file(), f"Missing independent furniture asset: {path.name}"
@@ -1225,7 +1230,7 @@ process.stdout.write(JSON.stringify({
         assert url in inventory["cachedAssets"], f"Furniture missing from offline cache: {url}"
     assert "await window.ForestObjects.loadIndividualAssets()" in game
     assert "window.ForestObjects.INDIVIDUAL_ASSETS.forEach" in phaser
-    assert 'furniture-v153/duck_float.png' in game
+    assert 'furniture-v156/duck_float.png?v=20260908-2' in game
     assert 'createIndividualTile(individualImages.duck_float, 128)' in phaser
     assert 'furniture-v153/campfire.png' in game and 'furniture-v153/campfire.png' in phaser
     # Only flame extraction retains the old atlas; new furniture uses whole PNGs.
@@ -1234,7 +1239,7 @@ process.stdout.write(JSON.stringify({
     assert "ForestObjects.createLegacyStorageAtlas(storageSource)" in phaser
     assert 'ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" })' in phaser
     assert html.index("forest-objects.js") < html.index("forest-phaser.js")
-    assert "forest-objects.js?v=20260907-2" in worker
+    assert "forest-objects.js?v=20260908-2" in worker
     assert "canvas[data-storage-object]" in game
     assert 'background-position:${backgroundPosition}' not in game
     assert "ForestFire.burningTile" in game and "ForestFire.offTile" in game

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const zlib = require('node:zlib');
+const { createHash } = require('node:crypto');
 
 // Read actual PNG pixels with Node's built-ins; no browser/native dependency.
 function readRgbaPng(file) {
@@ -33,7 +34,7 @@ function readRgbaPng(file) {
       pixels[i] = (packed[y * (stride + 1) + 1 + x] + prediction) & 255;
     }
   }
-  return { width, height, naturalWidth: width, naturalHeight: height, complete: true, pixels };
+  return { width, height, naturalWidth: width, naturalHeight: height, complete: true, pixels, src: file.replace(/\\/g, '/') };
 }
 
 function setup({ ImageClass } = {}) {
@@ -222,9 +223,44 @@ test('individual manifest names one independent PNG for each storage and animate
   const { api } = setup();
   assert.equal(api.INDIVIDUAL_ASSETS.length, 24);
   assert.equal(new Set(api.INDIVIDUAL_ASSETS.map(asset => asset.url)).size, 24);
+  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v156/')).length, 22);
   for (const asset of api.INDIVIDUAL_ASSETS) {
     assert.equal(asset.key, `furniture-${asset.code}`);
-    assert.equal(asset.url, `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
+    const retained = ['campfire', 'animated_fountain'].includes(asset.code);
+    assert.equal(asset.url, retained
+      ? `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`
+      : `/static/assets/furniture-v156/${asset.code}.png?v=20260908-2`);
+  }
+});
+
+function independentAssetFile(asset) {
+  return path.join(__dirname, '../src/frontend', asset.url.split('?')[0].replace(/^\/static\//, ''));
+}
+
+test('v156 preserves the exact fire, fountain and world art and the unchanged flame effect implementation', () => {
+  const protectedHashes = {
+    'assets/furniture-v153/campfire.png': 'C12D05D4958585ED27641A5BED191F3CA5511AB73BAD94261EB34EF6DB71F0D4',
+    'assets/furniture-v153/animated_fountain.png': 'BF06DE2C7951B2B026A6AB656DD5009CE4326D5DE68F5B70296CF60B21C56120',
+    'assets/carrot-forest-world-v6.png': 'AAD5F6243CD398FD37638AD6BE105E0D64D84B8649720611D0BF5A87B4B19A42',
+    'forest-fire.js': '0A5E0BF030F5541BC5DEAA937F31262937841CCA2A19933F407FA809C70911DA',
+  };
+  for (const [relative, expected] of Object.entries(protectedHashes)) {
+    const bytes = fs.readFileSync(path.join(__dirname, '../src/frontend', relative));
+    // Text checkout line endings are not effect-code changes; PNG bytes are exact.
+    const content = relative.endsWith('.js') ? bytes.toString('utf8').replace(/\r\n/g, '\n') : bytes;
+    assert.equal(createHash('sha256').update(content).digest('hex').toUpperCase(), expected, relative);
+  }
+});
+
+test('the archived 24 pre-v156 originals are byte-for-byte identical to the retained v153 sources', () => {
+  const { api } = setup();
+  const archive = path.join(__dirname, '../art-archive/furniture-before-v156');
+  const files = fs.readdirSync(archive).filter(name => name.endsWith('.png')).sort();
+  assert.deepEqual(files, Array.from(api.INDIVIDUAL_ASSETS, asset => `${asset.code}.png`).sort());
+  for (const file of files) {
+    const original = fs.readFileSync(path.join(__dirname, '../src/frontend/assets/furniture-v153', file));
+    const archived = fs.readFileSync(path.join(archive, file));
+    assert.equal(archived.equals(original), true, `${file}: never overwrite or transform archived art`);
   }
 });
 
@@ -243,6 +279,50 @@ test('individual alpha bounds include faint edge pixels and aspect-fit the compl
     assert.ok(Math.abs(width / 75 - height / 36) < 1 / 36, 'rounding may differ by less than one pixel; body must not stretch');
   }
   assert.equal(api.alphaBounds(new Uint8ClampedArray(16), 2, 2), null);
+});
+
+test('only v156 uses alpha 16 for fitting while protected v153 and default bounds retain alpha 1', () => {
+  const { api } = setup(), width = 80, height = 80;
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  pixels[(1 * width + 1) * 4 + 3] = 1;
+  pixels[(78 * width + 78) * 4 + 3] = 15;
+  for (let y = 20; y < 60; y++) for (let x = 25; x < 55; x++) pixels.set([120, 70, 50, 255], (y * width + x) * 4);
+  pixels[(19 * width + 24) * 4 + 3] = 16;
+  assert.deepEqual({ ...api.alphaBounds(pixels, width, height) }, { x: 1, y: 1, width: 78, height: 78 });
+  assert.deepEqual({ ...api.alphaBounds(pixels, width, height, 16) }, { x: 24, y: 19, width: 31, height: 41 });
+  const images = ['/static/assets/furniture-v156/tent.png?v=20260908-2',
+    '/static/assets/furniture-v153/campfire.png?v=20260907-1',
+    '/static/assets/furniture-v153/animated_fountain.png?v=20260907-1', ''].map(src => ({
+    width, height, naturalWidth: width, naturalHeight: height, complete: true, pixels, src,
+  }));
+  const original = new Uint8ClampedArray(pixels);
+  for (const [index, image] of images.entries()) {
+    const tile = api.createIndividualTile(image, 128);
+    assert.deepEqual(tile.calls[0].slice(1, 5), index === 0 ? [24, 19, 31, 41] : [1, 1, 78, 78]);
+    assert.deepEqual(pixels, original, 'fitting may not alter PNG source alpha or RGB pixels');
+  }
+  images[1].currentSrc = images[0].src;
+  assert.deepEqual(api.createIndividualTile(images[1], 128).calls[0].slice(1, 5), [24, 19, 31, 41], 'currentSrc change invalidates cached v153 bounds');
+});
+
+test('Phaser blob images inherit v156 or protected v153 fitting from the manifest and invalidate prior caches', () => {
+  const { api } = setup(), images = individualImages(api);
+  for (const [code, image] of Object.entries(images)) {
+    image.src = `blob:https://forest.test/${code}`;
+    image.pixels[3] = 1;
+    image.pixels[image.pixels.length - 1] = 15;
+  }
+  const before = api.createStorageAtlasFromImages(images);
+  assert.deepEqual(before.calls[0][0].calls[0].slice(1, 5), [0, 0, 40, 80]);
+  api.registerIndividualImages(images);
+  const after = api.createStorageAtlasFromImages(images);
+  assert.notEqual(after, before, 'registering manifest identity invalidates blob-only atlas cache');
+  assert.deepEqual(after.calls[0][0].calls[0].slice(1, 5), [2, 1, 36, 78]);
+  for (const asset of api.INDIVIDUAL_ASSETS) {
+    const tile = api.createIndividualTile(images[asset.code], 128);
+    const retained = ['campfire', 'animated_fountain'].includes(asset.code);
+    assert.deepEqual(tile.calls[0].slice(1, 5), retained ? [0, 0, 40, 80] : [2, 1, 36, 78], asset.code);
+  }
 });
 
 test('independent normalized tiles cannot inherit neighbors and retain padded top and bottom edges', () => {
@@ -317,11 +397,12 @@ test('async art boot blocks legacy flashes and registers nothing until every req
   assert.ok(api.createStorageAtlas(source));
 });
 
-test('every shipped standalone PNG is nonempty RGBA and normalizes its complete alpha extent', () => {
+test('every shipped standalone PNG is nonempty RGBA and normalizes its version-specific visible alpha extent', () => {
   const { api } = setup();
   for (const asset of api.INDIVIDUAL_ASSETS) {
-    const image = readRgbaPng(path.join(__dirname, `../src/frontend/assets/furniture-v153/${asset.code}.png`));
-    const tile = api.createIndividualTile(image, 128), bounds = api.alphaBounds(image.pixels, image.width, image.height);
+    const image = readRgbaPng(independentAssetFile(asset));
+    const tile = api.createIndividualTile(image, 128);
+    const bounds = api.alphaBounds(image.pixels, image.width, image.height, asset.url.includes('/furniture-v156/') ? 16 : 1);
     assert.ok(bounds.width > 0 && bounds.height > 0, asset.code);
     assert.deepEqual(tile.calls[0].slice(1, 5), [bounds.x, bounds.y, bounds.width, bounds.height]);
     for (let x = 0; x < 128; x++) for (const y of [0, 5, 122, 127]) assert.equal(alpha(tile, x, y), 0, `${asset.code} padding`);
@@ -337,9 +418,20 @@ function phaserSceneForPixels() {
   return new window.carrotForestPhaserGame.config.scene();
 }
 
+test('v156 visible silhouettes retain source margins before runtime normalization', () => {
+  const { api } = setup();
+  for (const asset of api.INDIVIDUAL_ASSETS.filter(item => item.url.includes('/furniture-v156/'))) {
+    const image = readRgbaPng(independentAssetFile(asset));
+    const bounds = api.alphaBounds(image.pixels, image.width, image.height, 16);
+    assert.ok(bounds.x > 0 && bounds.y > 0, `${asset.code}: complete top/left edge`);
+    assert.ok(bounds.x + bounds.width < image.width, `${asset.code}: complete right edge`);
+    assert.ok(bounds.y + bounds.height < image.height, `${asset.code}: complete feet or lower edge`);
+  }
+});
+
 test('new pinwheel art partitions without fabricated stem pixels or changes to its whole lower base', () => {
   const { api } = setup(), scene = phaserSceneForPixels();
-  const image = readRgbaPng(path.join(__dirname, '../src/frontend/assets/furniture-v153/garden_pinwheel.png'));
+  const image = readRgbaPng(independentAssetFile(api.INDIVIDUAL_ASSETS.find(asset => asset.code === 'garden_pinwheel')));
   const tile = api.createIndividualTile(image, 128), { base, blades } = scene.splitStaticPinwheelPixels(tile.pixels);
   let coloredBladePixels = 0;
   for (let i = 0; i < tile.pixels.length; i += 4) {
@@ -353,7 +445,7 @@ test('new pinwheel art partitions without fabricated stem pixels or changes to i
 
 test('new fountain animation changes only original cyan water pixels, never stone, moss, alpha, or position', () => {
   const { api } = setup(), scene = phaserSceneForPixels();
-  const image = readRgbaPng(path.join(__dirname, '../src/frontend/assets/furniture-v153/animated_fountain.png'));
+  const image = readRgbaPng(independentAssetFile(api.INDIVIDUAL_ASSETS.find(asset => asset.code === 'animated_fountain')));
   const tile = api.createIndividualTile(image, 128), original = new Uint8ClampedArray(tile.pixels);
   for (let frame = 1; frame < 8; frame++) {
     const output = scene.fountainFlowPixels(original, frame);

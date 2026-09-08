@@ -1,30 +1,32 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v155";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v156-2";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260907-45",
+  "/static/forest-game.css?v=20260908-2",
   "/static/forest-atmosphere.css?v=20260903-2",
   "/static/forest-atmosphere.js?v=20260907-4",
-  "/static/forest-hud.js?v=20260907-4",
+  "/static/forest-hud.js?v=20260908-1",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260902-28",
-  "/static/forest-objects.js?v=20260907-2",
+  "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
   "/static/forest-animals.js?v=20260907-1",
-  "/static/forest-phaser.js?v=20260908-1",
+  "/static/forest-phaser.js?v=20260908-3",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260908-1",
+  "/static/forest-game.js?v=20260908-3",
   "/static/challenge-v2.js?v=2.1.4",
   "/static/challenge-v2.css?v=2.1.2",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
-  ...["tent", "light_tent", "picnic_table", "bbq_table", "chair_green", "chair_red", "picnic_blanket", "pond", "lantern", "fence", "flower_cart", "flower_pot", "mushroom", "bench", "campfire", "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow", "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"].map(code => `/static/assets/furniture-v153/${code}.png?v=20260907-1`),
+  ...["tent", "light_tent", "picnic_table", "bbq_table", "chair_green", "chair_red", "picnic_blanket", "pond", "lantern", "fence", "flower_cart", "flower_pot", "mushroom", "bench", "campfire", "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow", "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"].map(code => ["campfire", "animated_fountain"].includes(code)
+    ? `/static/assets/furniture-v153/${code}.png?v=20260907-1`
+    : `/static/assets/furniture-v156/${code}.png?v=20260908-2`),
   "/static/assets/animals/lpc-cow-eat.png",
   "/static/assets/animals/lpc-cow-walk.png",
   "/static/assets/animals/lpc-rabbit.png",

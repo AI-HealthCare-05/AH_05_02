@@ -50,19 +50,19 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260907-45" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260908-2" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260902-28" defer></script>
   <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
   <script src="/static/forest-atmosphere.js?v=20260907-4" defer></script>
-  <script src="/static/forest-objects.js?v=20260907-2" defer></script>
+  <script src="/static/forest-objects.js?v=20260908-2" defer></script>
   <script src="/static/forest-fire.js?v=20260907-3" defer></script>
   <script src="/static/forest-animals.js?v=20260907-1" defer></script>
-  <script src="/static/forest-phaser.js?v=20260908-1" defer></script>
-  <script src="/static/forest-hud.js?v=20260907-4" defer></script>
+  <script src="/static/forest-phaser.js?v=20260908-3" defer></script>
+  <script src="/static/forest-hud.js?v=20260908-1" defer></script>
   <script src="/static/forest-profile.js?v=20260907-1" defer></script>
-  <script src="/static/forest-game.js?v=20260908-1" defer></script>
+  <script src="/static/forest-game.js?v=20260908-3" defer></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.2">
   <script src="/static/challenge-v2.js?v=2.1.4" defer></script>
 </head>
@@ -170,7 +170,6 @@
                 <output id="zoom-level" aria-live="polite">100%</output>
                 <button id="zoom-in" class="toolbar-button" type="button" aria-label="게임 화면 확대">+</button>
               </div>
-              <button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기(0)</button>
             </div>
             <div id="forest-time-toast" class="forest-time-toast" role="status" aria-live="polite" hidden><span class="time-toast-icon" aria-hidden="true"></span><div><strong></strong><small></small></div></div>
             <div id="phaser-world" role="application" tabindex="0" aria-label="고해상도 4방향 픽셀 아바타로 이동하는 당근의 숲 월드"></div>
@@ -188,7 +187,7 @@
             <div class="canvas-hud sr-only"><span id="avatar-coordinate">X 384 · Y 352</span></div>
             <div class="game-controls-overlay arcade-deck" aria-label="게임 조작 버튼">
               <div class="control-cluster">
-                <div class="hud-panel-heading"><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">버튼 숨기기(8)</button><button id="reset-position" class="toolbar-button" type="button" title="페이지 새로고침">초기화(9)</button></div>
+                <div class="hud-panel-heading" role="group" aria-label="조작 버튼과 UI 표시"><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">버튼 숨기기(8)</button><button id="reset-position" class="toolbar-button" type="button" title="페이지 새로고침">초기화(9)</button><button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기(0)</button></div>
                 <div id="controls-content" class="touch-controls" aria-label="아바타 이동 버튼">
                   <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
                   <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
@@ -198,7 +197,7 @@
                   <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
                   <button class="arcade-action action-ride" type="button" data-action="ride" aria-label="탈것, 단축키 E"><span>탈것 (E)</span></button>
                   <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
-                  <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span>공격 (Z)</span></button>
+                  <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span><i class="attack-spark" aria-hidden="true">✦</i> 공격 <kbd>Z</kbd></span></button>
                 </div>
               </div>
             </div>

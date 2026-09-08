@@ -52,10 +52,14 @@
   ])));
   const animatedAtlasCache = new WeakMap();
   const INDIVIDUAL_ASSETS = Object.freeze([...STORAGE_CODES, ...ANIMATED_CODES].map(code => Object.freeze({
-    code, key: `furniture-${code}`, url: `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
+    code, key: `furniture-${code}`,
+    // Fire and fountain are protected: retain their exact v153 bytes and URLs.
+    url: ["campfire", "animated_fountain"].includes(code)
+      ? `/static/assets/furniture-v153/${code}.png?v=20260907-1`
+      : `/static/assets/furniture-v156/${code}.png?v=20260908-2`,
     kind: Object.hasOwn(STORAGE_INDEX, code) ? "storage" : "animated",
   })));
-  const individualAtlasCache = new WeakMap(), alphaBoundsCache = new WeakMap();
+  const individualAtlasCache = new WeakMap(), alphaBoundsCache = new WeakMap(), individualImageSources = new WeakMap();
   let individualImages = null, individualLoadRequired = false, individualLoadPromise = null;
 
   function imageDimensions(image) {
@@ -64,10 +68,11 @@
     return width > 0 && height > 0 ? { width, height } : null;
   }
 
-  function alphaBounds(pixels, width, height) {
+  function alphaBounds(pixels, width, height, minimumAlpha = 1) {
+    const threshold = Number.isFinite(minimumAlpha) ? Math.max(1, Math.min(255, Math.round(minimumAlpha))) : 1;
     let left = width, top = height, right = -1, bottom = -1;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      if (!pixels[(y * width + x) * 4 + 3]) continue;
+      if (pixels[(y * width + x) * 4 + 3] < threshold) continue;
       left = Math.min(left, x); right = Math.max(right, x);
       top = Math.min(top, y); bottom = Math.max(bottom, y);
     }
@@ -89,14 +94,22 @@
   function measuredImageBounds(image) {
     const size = imageDimensions(image);
     if (!size) throw new Error("Individual furniture image is not loaded");
-    const sourceKey = `${image.currentSrc || image.src || ""}:${size.width}:${size.height}`;
+    const source = String(image.currentSrc || image.src || "");
+    // Phaser's XHR image loader replaces original URLs with blob: URLs. Keep
+    // the trusted manifest identity separately rather than relying on .src.
+    const manifestSource = individualImageSources.get(image) || "";
+    // v156 generators may leave nearly invisible alpha-1 halos far from the
+    // object. Only those new files use a visible-alpha fitting threshold;
+    // v153 fire/fountain and every existing caller retain their original fit.
+    const minimumAlpha = (manifestSource || source).includes("/furniture-v156/") ? 16 : 1;
+    const sourceKey = `${manifestSource}:${source}:${size.width}:${size.height}:${minimumAlpha}`;
     const cached = alphaBoundsCache.get(image);
     if (cached?.sourceKey === sourceKey) return cached.bounds;
     const canvas = document.createElement("canvas");
     canvas.width = size.width; canvas.height = size.height;
     const context = canvas.getContext("2d", { willReadFrequently: true });
     context.drawImage(image, 0, 0, size.width, size.height, 0, 0, size.width, size.height);
-    const bounds = alphaBounds(context.getImageData(0, 0, size.width, size.height).data, size.width, size.height);
+    const bounds = alphaBounds(context.getImageData(0, 0, size.width, size.height).data, size.width, size.height, minimumAlpha);
     if (!bounds) throw new Error("Individual furniture image is fully transparent");
     alphaBoundsCache.set(image, { sourceKey, bounds });
     return bounds;
@@ -117,7 +130,7 @@
     if (!images || codes.some(code => !imageDimensions(images[code]))) throw new Error(`Missing required ${kind} furniture PNG`);
     const sourceKey = codes.map(code => {
       const image = images[code], size = imageDimensions(image);
-      return `${code}:${image.currentSrc || image.src || ""}:${size.width}:${size.height}`;
+      return `${code}:${individualImageSources.get(image) || ""}:${image.currentSrc || image.src || ""}:${size.width}:${size.height}`;
     }).join("|");
     let cached = individualAtlasCache.get(images);
     if (cached?.[kind]?.sourceKey === sourceKey) return cached[kind].canvas;
@@ -150,6 +163,7 @@
 
   function registerIndividualImages(images) {
     if (INDIVIDUAL_ASSETS.some(asset => !imageDimensions(images?.[asset.code]))) throw new Error("All 24 individual furniture PNGs must be loaded before registration");
+    INDIVIDUAL_ASSETS.forEach(asset => individualImageSources.set(images[asset.code], asset.url));
     individualImages = Object.freeze(Object.fromEntries(INDIVIDUAL_ASSETS.map(asset => [asset.code, images[asset.code]])));
     individualLoadRequired = true;
     return individualImages;

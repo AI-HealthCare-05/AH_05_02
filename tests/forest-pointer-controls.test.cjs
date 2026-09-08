@@ -20,6 +20,7 @@ function setup() {
   };
   const window = {
     Phaser, dispatchEvent: (event) => events.push(event),
+    matchMedia: () => ({ matches: false }),
     addEventListener: (type, handler) => listeners.set(type, handler),
     removeEventListener: (type) => listeners.delete(type),
   };
@@ -39,7 +40,31 @@ function actor() {
     setOrigin() { return this; }, setDepth() { return this; }, setInteractive() { return this; },
     setVisible(value) { this.visible = value; return this; },
     setPosition(x, y) { this.x = x; this.y = y; return this; },
-    setBackgroundColor() { return this; },
+  };
+}
+
+function attackFactory() {
+  return {
+    text(x, y, text, style) {
+      return Object.assign(actor(), {
+        x, y, text, style, width: style.fixedWidth, height: style.fixedHeight,
+        setText(value) { this.text = value; return this; },
+        setInteractive(options) {
+          this.input = { hitArea: { x: 0, y: 0, width: this.width, height: this.height }, cursor: options.useHandCursor ? 'pointer' : '' };
+          return this;
+        },
+      });
+    },
+    graphics() {
+      return Object.assign(actor(), {
+        commands: [],
+        clear() { this.commands = []; return this; },
+        fillStyle(...args) { this.commands.push(['fillStyle', ...args]); return this; },
+        fillRoundedRect(...args) { this.commands.push(['fillRoundedRect', ...args]); return this; },
+        lineStyle(...args) { this.commands.push(['lineStyle', ...args]); return this; },
+        strokeRoundedRect(...args) { this.commands.push(['strokeRoundedRect', ...args]); return this; },
+      });
+    },
   };
 }
 
@@ -103,7 +128,7 @@ test('the exact fractional destination is emitted once after the final throttled
 
 test('hover reveals attack and tapping the animal starts the same action as its button', () => {
   const { scene } = setup();
-  scene.add = { text: () => actor() };
+  scene.add = attackFactory();
   scene.ratSprite = actor();
   scene.ratActor = { x: 440, y: 350 };
   scene.ratActive = true;
@@ -137,7 +162,7 @@ test('animal and button clicks approach and catch once through real update/actio
     scene.avatar.cosmetics.lpcWeapon = 'wand';
     scene.ratActor = Object.assign(actor(), { x: 620, y: 350 });
     scene.ratSprite = actor();
-    scene.add = { text: () => actor() };
+    scene.add = attackFactory();
     scene.ratActive = true;
     scene.ratSpecies = 'rabbit';
     scene.ratEventId = 9;
@@ -168,6 +193,62 @@ test('animal and button clicks approach and catch once through real update/actio
     assert.equal(scene.avatar.direction, 'right');
     assert.equal(scene.pointerAttackEventId, null);
   }
+});
+
+test('rounded attack plate shows hover, pressed and approaching feedback without changing its hit area', () => {
+  const { scene, context, window } = setup();
+  let now = 2000;
+  context.performance.now = () => now;
+  scene.add = attackFactory();
+  scene.ratSprite = actor();
+  scene.ratActor = { x: 620, y: 350 };
+  scene.ratActive = true;
+  scene.ratEventId = 4;
+  scene.createRatAttackButton();
+  scene.ratSprite.handlers.pointerover();
+  scene.updateRatAttackButton();
+  const button = scene.ratAttackButton, plate = scene.ratAttackPlate;
+  assert.equal(button.text, '✦ 공격  ›');
+  assert.equal(plate.visible, true);
+  assert.equal(button.input.cursor, 'pointer');
+  const hitArea = { ...button.input.hitArea };
+  assert.deepEqual(hitArea, { x: 0, y: 0, width: 112, height: 38 });
+  const idleCommands = JSON.stringify(plate.commands);
+  button.handlers.pointerover();
+  assert.notEqual(JSON.stringify(plate.commands), idleCommands);
+  button.handlers.pointerdown({ wasTouch: false, button: 2 }, 0, 0, { stopPropagation() { throw Error('right click must be ignored'); } });
+  assert.equal(scene.pointerAttackEventId, null);
+  button.handlers.pointerdown({ wasTouch: false, button: 0 }, 0, 0, { stopPropagation() {} });
+  assert.equal(scene.pointerAttackEventId, 4);
+  assert.equal(button.text, '↗ 접근 중…');
+  assert.equal(button.y, 279);
+  assert.equal(plate.y, button.y);
+  assert.deepEqual(button.input.hitArea, hitArea);
+  const pressedCommands = JSON.stringify(plate.commands);
+  window.matchMedia = () => ({ matches: true });
+  scene.updateRatAttackButton();
+  assert.equal(button.y, 278, 'reduced motion retains color feedback but removes press displacement');
+  assert.equal(JSON.stringify(plate.commands), pressedCommands);
+  button.handlers.pointerup();
+  assert.notEqual(JSON.stringify(plate.commands), pressedCommands);
+  button.handlers.pointerout();
+  now += 1000;
+  scene.updateRatAttackButton();
+  assert.equal(button.visible, true, 'a selected target remains visible while approaching');
+  assert.equal(button.text, '↗ 접근 중…');
+  scene.cancelPointerMovement();
+  scene.updateRatAttackButton();
+  assert.equal(button.text, '✦ 공격  ›');
+  scene.ratActor.x = 0;
+  scene.updateRatAttackButton();
+  assert.equal(button.x, 60, 'the full fixed-size button remains inside the left map edge');
+  scene.ratActor.x = 768;
+  scene.updateRatAttackButton();
+  assert.equal(button.x, 708);
+  scene.placementActive = true;
+  scene.updateRatAttackButton();
+  assert.equal(button.visible, false);
+  assert.equal(plate.visible, false);
 });
 
 test('same-scene sync preserves a path, but entering a different room cancels path and attack', () => {
@@ -220,7 +301,7 @@ test('stationary hover keeps attack visible; only crossing the gap uses the grac
   const { scene, context } = setup();
   let now = 2000;
   context.performance.now = () => now;
-  scene.add = { text: () => actor() };
+  scene.add = attackFactory();
   scene.ratSprite = actor();
   scene.ratActor = Object.assign(actor(), { x: 440, y: 350 });
   scene.ratActive = true;
@@ -264,6 +345,7 @@ test('stationary hover keeps attack visible; only crossing the gap uses the grac
   assert.equal(scene.ratAttackHovered, false);
   assert.equal(scene.ratHoverUntil, 0);
   assert.equal(scene.ratAttackButton.visible, false);
+  assert.equal(scene.ratAttackPlate.visible, false);
 });
 
 test('canvas event converts through the camera and ignores right clicks', () => {

@@ -778,7 +778,7 @@
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
-  duckCutoutImage.src = "/static/assets/furniture-v153/duck_float.png?v=20260907-1";
+  duckCutoutImage.src = "/static/assets/furniture-v156/duck_float.png?v=20260908-2";
   campfireBaseImage.src = "/static/assets/furniture-v153/campfire.png?v=20260907-1";
   rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";

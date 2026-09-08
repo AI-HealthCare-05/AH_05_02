@@ -12,6 +12,26 @@ const response = (body, { status = 200, redirected = false } = {}) => ({
 });
 const keyOf = request => typeof request === 'string' ? request : request.url;
 
+test('offline shell versions match every HTML script and stylesheet and the mixed 22-new 2-retained art manifest', () => {
+  const context = { self: { addEventListener() {} } };
+  vm.runInNewContext(source + ';globalThis.shell = CORE_SHELL;globalThis.media = MEDIA_ASSETS;', context);
+  const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
+  const htmlSources = [...html.matchAll(/\b(?:href|src)="(\/static\/[^"\s]+\.(?:js|css)(?:\?[^"\s]*)?)"/g)].map(match => match[1]);
+  const cachedSources = Array.from(context.shell).filter(url => /\.(?:js|css)(?:\?|$)/.test(url));
+  assert.ok(htmlSources.length >= 12, 'inspect the full shell rather than a handpicked script');
+  assert.deepEqual(cachedSources.sort(), htmlSources.sort(), 'no old script or CSS query may remain in the offline shell');
+  const objects = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-objects.js'), 'utf8'), objects);
+  const manifest = Array.from(objects.window.ForestObjects.INDIVIDUAL_ASSETS, asset => asset.url).sort();
+  const cachedFurniture = Array.from(context.media).filter(url => /\/furniture-v\d+\//.test(url)).sort();
+  assert.deepEqual(cachedFurniture, manifest);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v156/')).length, 22);
+  assert.deepEqual(cachedFurniture.filter(url => url.includes('/furniture-v153/')), [
+    '/static/assets/furniture-v153/animated_fountain.png?v=20260907-1',
+    '/static/assets/furniture-v153/campfire.png?v=20260907-1',
+  ]);
+});
+
 function worker({ network = async () => response('fresh forest'), failPut = false } = {}) {
   const handlers = {}, stores = new Map(), fetches = [], deleted = [], writes = [];
   let claims = 0;

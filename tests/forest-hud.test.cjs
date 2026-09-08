@@ -247,10 +247,11 @@ test('HTML exposes three font choices and places one translucent control pad in 
   assert.equal((html.match(/id="controls-content"/g) || []).length, 1);
   assert.ok(!html.slice(right).includes('id="controls-content"'));
   assert.ok(css.includes('background:rgba(245,244,239,.58)'));
-  assert.ok(css.includes('.game-controls-overlay{position:absolute;z-index:18;left:10px;bottom:10px;'));
+  assert.ok(css.includes('.game-controls-overlay{position:absolute;z-index:24;left:10px;bottom:10px;'));
   assert.ok(css.includes('box-shadow:inset 0 1px rgba(255,255,255,.3);pointer-events:auto'));
   assert.ok(css.includes('text-align:center;white-space:normal;word-break:keep-all'));
-  assert.ok(css.includes('body.forest-ui-hidden .game-controls-overlay{display:none!important}'));
+  assert.ok(!css.includes('body.forest-ui-hidden .game-controls-overlay{display:none!important}'));
+  assert.ok(css.includes('body.forest-ui-hidden .game-controls-overlay #ui-toggle{grid-column:3;'));
   assert.ok(css.includes('overflow:hidden;border-radius:16px;border:1px solid var(--line)'));
   assert.ok(css.includes('.right-hud .inspector-tabs{overflow:hidden;border-radius:15px 15px 0 0;'));
   assert.ok(html.indexOf('forest-animals.js') < html.indexOf('forest-phaser.js'));
@@ -281,6 +282,46 @@ test('shortcuts respect editors, forms, dialogs, IME, modifiers, repeats, and pr
   for (const key of ['Escape', 'Enter', ' ', 'c', 'C', '7']) assert.equal(app.key(key).defaultPrevented, false);
   assert.equal(app.elements['controls-content'].hidden, false);
   assert.equal(app.classes.has('forest-ui-hidden'), false); assert.equal(resets, 0);
+});
+
+test('8, 9 and 0 are one equal-size responsive row and hiding UI retains its restore button', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
+  const heading = html.match(/<div class="hud-panel-heading"[^>]*>([\s\S]*?)<\/div>/)[1];
+  assert.deepEqual([...heading.matchAll(/id="([^"]+)"/g)].map(match => match[1]), ['controls-toggle', 'reset-position', 'ui-toggle']);
+  assert.equal((html.match(/id="ui-toggle"/g) || []).length, 1);
+  const viewportTools = html.slice(html.indexOf('<div class="viewport-tools"'), html.indexOf('id="forest-time-toast"'));
+  assert.ok(!viewportTools.includes('id="ui-toggle"'));
+  assert.ok(css.includes('.game-controls-overlay .hud-panel-heading{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;'));
+  const buttonRule = css.match(/\.game-controls-overlay \.hud-panel-heading \.toolbar-button\{([^}]+)\}/)[1];
+  assert.ok(buttonRule.includes('min-width:0;width:100%;height:36px;min-height:36px;'));
+  assert.ok(buttonRule.includes('word-break:keep-all'));
+  assert.ok(!css.includes('body.forest-ui-hidden .game-controls-overlay{display:none'));
+  for (const id of ['controls-content', 'controls-toggle', 'reset-position']) {
+    assert.ok(css.includes(`body.forest-ui-hidden .game-controls-overlay #${id}`));
+  }
+  assert.ok(css.includes('body.forest-ui-hidden .game-controls-overlay #ui-toggle{grid-column:3;'));
+  const app = createHud();
+  app.elements['controls-toggle'].focus();
+  app.key('0');
+  assert.equal(app.classes.has('forest-ui-hidden'), true);
+  assert.equal(app.elements['ui-toggle'].disabled, false);
+  assert.equal(app.elements['ui-toggle'].textContent, 'UI 보이기(0)');
+  app.click('ui-toggle');
+  assert.equal(app.classes.has('forest-ui-hidden'), false);
+  assert.equal(app.elements['ui-toggle'].textContent, 'UI 숨기기(0)');
+});
+
+test('native attack is keyboard accessible and has distinct non-looping hover, focus and pressed feedback', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
+  assert.ok(html.includes('data-action="attack" aria-label="공격, 단축키 Z"'));
+  assert.ok(html.includes('class="attack-spark" aria-hidden="true"'));
+  for (const state of [':hover', ':focus-visible', ':active']) {
+    assert.ok(css.includes(`.game-controls-overlay .touch-controls button.action-attack${state}`));
+  }
+  assert.ok(css.includes('@media(prefers-reduced-motion:reduce){.game-controls-overlay .touch-controls button.action-attack{transition:none}'));
+  assert.ok(css.includes('.game-controls-overlay .touch-controls button.action-attack:active{transform:none}'));
 });
 
 test('native Enter and Space activation do not double-toggle a focused button', () => {
