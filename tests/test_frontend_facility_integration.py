@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,10 +68,20 @@ def test_existing_frontend_contracts_remain_visible() -> None:
     assert 'id="risk-hyeoldangi"' in html
     assert "hyeoldangi-face-high.png" in html
     assert 'id="rag-challenge-generator"' in html
-    assert "birth_date: birthDate" in script
-    assert 'terms_agreed: $("#personal-consent").checked' in script
     assert 'id="medical-guidance-detail"' in html
     assert 'tabindex="-1"' in html
+
+
+def test_signup_transmits_checkbox_value_in_request_body() -> None:
+    result = subprocess.run(
+        ["node", "--test", str(ROOT / "tests/frontend/signup_payload.test.cjs")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_rag_challenge_states_include_grounding_failure() -> None:

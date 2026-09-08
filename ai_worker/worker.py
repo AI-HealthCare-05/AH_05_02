@@ -244,9 +244,10 @@ class StreamWorker:
         for message_id, fields in claimed[1]:
             await self.handle_message(message_id, fields)
 
-    async def run(self) -> None:
+    async def run(self, *, prepare_schema: bool = True) -> None:
         await self.redis.ping()
-        await ensure_schema()
+        if prepare_schema:
+            await ensure_schema()
         await self.ensure_group()
         await self.reclaim_pending()
         Path("/tmp/ai-worker-ready").touch()
@@ -267,11 +268,11 @@ class StreamWorker:
             await self.redis.aclose()
 
 
-async def run_worker() -> None:
+async def run_worker(*, prepare_schema: bool = True) -> None:
     worker = StreamWorker()
     while True:
         try:
-            await worker.run()
+            await worker.run(prepare_schema=prepare_schema)
             return
         except (RedisConnectionError, RedisTimeoutError, ConnectionError, OSError) as exc:
             logger.warning("Worker dependency unavailable; retrying in 3 seconds: %s", exc)

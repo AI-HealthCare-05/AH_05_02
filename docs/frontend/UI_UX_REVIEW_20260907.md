@@ -1,5 +1,7 @@
 # 9/7 프론트 UI/UX 1차 수정 및 사용자 흐름 점검
 
+> 후속 전체 흐름 점검은 [오늘 우선순위 체크리스트](DAILY_PRIORITY_CHECKLIST_20260907.md)를 참고한다. 아래는 최초 점검 기록이며, 이후 실제 로컬 API 8단계·브라우저 16개·단위 14개가 통과했다. 기존 integration_refresh 실패도 현재 단위 테스트 재실행에서는 해결됐다. 추가 스냅샷 API404와 정책·후반 QA 미완료 항목은 계속 남아 있다.
+
 ## 후속 수정: 비로그인 헤더 오른쪽 정렬
 
 - 가이드 3-1의 미반영 항목을 보완: 로고는 왼쪽, 로그인 → 회원가입은 오른쪽으로 이동했다.
@@ -84,12 +86,14 @@
 ## 실행한 테스트
 
 - `node --check src/frontend/app.js`, `git diff --check` 통과.
-- `node --test tests/frontend/ui_ux_rules.test.cjs`: 5개 통과.
-- `tests/frontend/ui_ux_qa.cjs`: 13개 브라우저 확인 통과(제어 API 응답 사용, 모델 성능 검증 아님).
+- `node --test tests/frontend/*.test.cjs`: 프론트 단위 테스트 49개 통과.
+- `tests/frontend/ui_ux_qa.cjs`: 19개 브라우저 확인 통과(제어 API 응답 사용, 모델 성능 검증 아님).
 - `tests/frontend/local_flow_smoke.cjs`: 실제 로컬 HTTP E2E 7개 단계 통과. 첫 실행의 프로필 405를 발견·수정한 뒤 재실행했다. 로컬 가상 계정이 생성되며 운영 계정/개인정보는 사용하지 않는다.
 - pytest: `test_s2_api002_contract.py`, `backend/test_prediction_job_contract.py`, `test_research_model_api.py`, `test_dual_model_integration.py`, `test_frontend_integration_runtime.py::test_current_result_and_medical_guidance_are_not_hidden_with_future_results`: 20개 통과.
 - 기존 내부 가칭을 요구하던 HTML 테스트는 현재 사용자용 명칭과 모델별 영역을 검증하도록 수정했다.
-- **전체 테스트 통과 아님**: 기존 `tests/frontend/integration_refresh.test.cjs` 실행은 1개 통과/7개 실패였다. 현재 프론트에 없는 위치 재시도·확률 함수와 옛 테스트 컨텍스트 의존성이 남아 있다. 삭제하거나 통과로 처리하지 않았다. 해당 테스트와 실제 기능을 함께 재정합해야 한다.
+- `tests/frontend/integration_refresh.test.cjs`를 현재 모델 분리·모레노 제외 정책에 맞춰 재정합했으며 8개 테스트가 통과한다.
+- MySQL 연결이 필요 없는 Pytest 전체 범위는 352개 통과, 4개 건너뜀이다. MySQL 기반 전체 CI는 GitHub Actions에서 최종 확인한다.
+- 가입 복구, 안전 분기 6종, 홈 내비게이션, 챌린지 토글, 리포트 기간, 비밀번호 아이콘, 서비스 소개, 당근의 숲 진입 브라우저 QA가 통과했다.
 - 스크린샷/응답 상태 증거: 로컬 `tmp/ui-ux-qa/`의 `results.json`, `live-flow.json`, 각 PNG. 테스트 파일에 실제 비밀번호/토큰 응답을 기록하지 않는다.
 
 ## 다음 우선순위 — 완료로 체크하지 않은 항목
@@ -113,3 +117,11 @@ node tests/frontend/local_flow_smoke.cjs
 ```
 
 두 브라우저 스크립트는 localhost/127.0.0.1만 허용한다. 기본 URL은 8022이며 `QA_BASE_URL`로 다른 로컬 서버를 지정할 수 있다.
+
+## PR #23 재구성 기준
+
+- 기존 PR #23의 원격 커밋 `a9a0d29`는 `codex/backup-pr23-a9a0d29` 브랜치로 보존했다.
+- PR #23은 `codex/e2e-integration`을 기준으로 하는 PR #36의 최신 커밋 `17c0a20`을 선행 이력으로 사용한다.
+- PR #36의 모델·워커·API 코드는 수정하지 않고, 그 위에 프론트 UI·접근성·예외 처리와 관련 테스트만 한 커밋으로 정리했다.
+- 이전 PR #23에 섞여 있던 PDF 생성, 폰트, 백엔드 서비스, 의존성 변경은 프론트 변경 묶음에서 제외했다.
+- PR #36을 먼저 병합하면 동일 선행 커밋은 PR #23 비교 화면에서 자동으로 빠지고 프론트 변경만 남는다.

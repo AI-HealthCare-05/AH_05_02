@@ -22,8 +22,9 @@ def test_prediction_job_request_accepts_current_and_future_model_keys() -> None:
 def test_localhost_does_not_automatically_bypass_prediction_jobs() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "const canUseLocalModelPreview = () => {" in script
-    assert 'params.get("preview") === "forecast"' in script
-    assert 'params.get("model_preview") === "junhyuk"' in script
-    assert 'requestPredictionModel("diabetes_current_screening")' in script
-    assert 'requestPredictionModel("diabetes_incidence")' in script
+    assert "const canUseLocalModelPreview" not in script
+    assert 'api("/research/models/junhyuk-local-demo"' not in script
+    assert "if (isLocalPreview())" in script
+    assert '...(state.capabilities.currentHealth ? ["diabetes_current_screening"] : [])' in script
+    assert '...(!state.currentHealthOnly ? ["diabetes_incidence"] : [])' in script
+    assert "requestPredictionModel(modelKey)" in script

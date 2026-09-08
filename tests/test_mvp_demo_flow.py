@@ -10,6 +10,7 @@ from tortoise import Tortoise
 from app.core import config
 from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
+from app.prediction import ACTIVE_MODEL
 
 
 @pytest.mark.asyncio
@@ -20,9 +21,7 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
     await Tortoise.generate_schemas()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            birth_date = "1965-04-12"
             signup = {
-                "name": "MVP 사용자",
                 "email": "mvp-flow@example.com",
                 "password": "Password123!",
                 "terms_agreed": True,
@@ -32,7 +31,7 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                 "/api/v1/auth/login", json={"email": signup["email"], "password": signup["password"]}
             )
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-
+            birth_date = "1965-04-12"
             profile = await client.patch(
                 "/api/v1/users/me/profile",
                 headers=headers,
@@ -72,12 +71,12 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                     "diastolic_bp": 78,
                     "self_rated_health": "fair",
                     "meal_count_yesterday": 3,
-                    "regular_exercise": False,
                     "smoking_status": "never",
+                    "regular_exercise": False,
                     "current_drinker": False,
                     "exercise_days_per_week": 0,
                     "exercise_minutes": 0,
-                    "feature_schema_version": "klosa_stage3_25features_v1",
+                    "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED
@@ -119,8 +118,18 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             dashboard = await client.get("/api/v1/dashboard/summary", headers=headers)
             assert dashboard.status_code == status.HTTP_200_OK
             weekly = await client.get("/api/v1/weekly-reports/current", headers=headers)
-            assert weekly.json()["data"]["status"] == "ready"
-            assert weekly.json()["data"]["summary_method"] == "deterministic_template_v1"
+            weekly_data = weekly.json()["data"]
+            assert weekly_data["status"] == "ready"
+            assert weekly_data["summary_method"] == "deterministic_template_v1"
+            assert weekly_data["completion"]["completed"] == 1
+            assert weekly_data["challenge_details"][0]["completed"] == 1
+            assert "recent_risk_category" not in weekly_data
+
+            pdf = await client.get("/api/v1/weekly-reports/current/pdf", headers=headers)
+            assert pdf.status_code == status.HTTP_200_OK
+            assert pdf.headers["content-type"] == "application/pdf"
+            assert pdf.content.startswith(b"%PDF")
+            assert len(pdf.content) > 1000
     finally:
         config.DEMO_MODE = previous_demo_mode
         await Tortoise.close_connections()
