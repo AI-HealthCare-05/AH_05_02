@@ -301,7 +301,7 @@ test('reduced-motion water and light accents do not change between updates', () 
   assert.deepEqual(actors.map(actor => actor.getData('ambientFx').operations), before);
 });
 
-test('transparent cow stays still until touched, reacts with natural frames, and has no grass base', () => {
+test('cow grazes occasionally and responds to touch with separate original look and hoof frames', () => {
   const { scene, place, tweens, setReduced } = setup();
   const actor = place('reward_cow'), body = actor.getData('motionTarget');
   const origin = actor.getData('motionOrigin');
@@ -309,27 +309,58 @@ test('transparent cow stays still until touched, reacts with natural frames, and
   assert.equal(body.texture, 'forest-cow-eat'); assert.equal(body.frame, 4);
   assert.deepEqual([body.scaleX, body.scaleY], [1.25, 1.25]);
   assert.equal(body.originY, 88 / 128);
-  for (const time of [0, 9999, 99000]) {
+  let time = 0;
+  const actions = new Set(), grazingFrames = new Set();
+  for (; time < 30000; time += 40) {
     scene.updatePlacedObjectMotion(time);
-    assert.equal(body.frame, 4, 'untouched cow remains in exactly the same idle pose');
+    actions.add(actor.getData('cowState').action);
+    if (actor.getData('cowState').action === 'graze') grazingFrames.add(body.frame);
+    assert.deepEqual([actor.x, actor.y, body.x, body.y, body.scaleX, body.scaleY], [300, 400, 0, 0, 1.25, 1.25]);
   }
+  assert.deepEqual([...actions].sort(), ['graze', 'idle']);
+  assert.ok(grazingFrames.size >= 3);
   for (const reaction of ['head', 'body']) {
-    scene.time.now = 1000;
+    actor.setData('cowState', { ...actor.getData('cowState'), action: 'graze', elapsedMs: 1700 });
     scene.reactCow(0, reaction);
-    const frames = [];
-    for (let time = 1000; time <= 2360; time += 170) {
-      scene.updatePlacedObjectMotion(time); frames.push(body.frame);
+    assert.equal(actor.getData('cowState').action, reaction);
+    const frames = new Set();
+    const end = time + 1500;
+    for (; time <= end; time += 40) {
+      scene.updatePlacedObjectMotion(time); frames.add(`${body.texture}:${body.frame}`);
       assert.deepEqual([body.x, body.y, body.scaleX, body.scaleY, body.angle], [0, 0, origin.scaleX, origin.scaleY, 0]);
     }
-    assert.deepEqual(frames, [4, 5, 6, 7, 7, 6, 5, 4, 4]);
-    assert.equal(actor.getData('cowReactionStartedAt'), null);
+    assert.ok(frames.has(reaction === 'head' ? 'forest-cow-walk:8' : 'forest-cow-walk:6'));
+    assert.equal(actor.getData('cowState').action, 'idle');
   }
   scene.applyPlacedObjectState(actor, { ...actor.getData('item'), active: false });
   assert.deepEqual([body.x, body.y, body.scaleX], [0, 0, 1.25]);
   setReduced(true);
   scene.applyPlacedObjectState(actor, { ...actor.getData('item'), active: true });
-  scene.reactCow(0, 'head'); scene.updatePlacedObjectMotion(1200);
+  scene.reactCow(0, 'head'); scene.updatePlacedObjectMotion(time + 40);
   assert.equal(body.frame, 4); assert.equal(tweens.length, 0, 'cow never uses whole-image bob/scale/rotation tweens');
+});
+
+test('cow clocks pause and survive unrelated saves without changing the placed anchor', () => {
+  const { scene, place, setHidden, setReduced } = setup();
+  const actor = place('reward_cow');
+  const item = { ...actor.getData('item') };
+  scene.updatePlacedObjectMotion(0);
+  scene.updatePlacedObjectMotion(40);
+  const before = actor.getData('cowState');
+  setHidden(true); scene.updatePlacedObjectMotion(90);
+  assert.equal(actor.getData('cowState').elapsedMs, before.elapsedMs);
+  setHidden(false); scene.sceneName = 'home'; scene.updatePlacedObjectMotion(140);
+  assert.equal(actor.getData('cowState').elapsedMs, before.elapsedMs);
+  scene.sceneName = 'world'; scene.placementActive = true; scene.updatePlacedObjectMotion(180);
+  assert.equal(actor.getData('cowState').elapsedMs, before.elapsedMs);
+  scene.placementActive = false;
+  scene.reactCow(0, 'body'); scene.updatePlacedObjectMotion(220);
+  const response = structuredClone(actor.getData('cowState'));
+  scene.syncPlacedObjects([item]);
+  assert.deepEqual(scene.placedObjectActors[0].getData('cowState'), response);
+  assert.deepEqual({ ...scene.placedObjectActors[0].getData('item') }, item);
+  setReduced(true); scene.updatePlacedObjectMotion(260);
+  assert.equal(scene.placedObjectActors[0].getData('cowState').action, 'idle');
 });
 
 test('rabbit uses directional hop frames while its body scale and foot origin remain stable', () => {

@@ -95,6 +95,114 @@
     };
   }
 
+  // Live cows own this immutable, scene-local clock. The saved furniture anchor
+  // never moves, and the legacy cowFrame above remains the photo/thumbnail API.
+  const cowBehavior = Object.freeze({
+    idleMinMs: 12000, idleMaxMs: 22000, maxDeltaMs: 50, touchDebounceMs: 250,
+    grazeMs: 3200, headMs: 1050, bodyMs: 840,
+  });
+  const cowGrazeFrames = Object.freeze([4, 5, 6, 7, 6, 7, 6, 5, 4]);
+  const cowGrazeEnds = Object.freeze([250, 650, 1100, 1450, 1800, 2150, 2550, 2900, 3200]);
+  const cowBodyFrames = Object.freeze([4, 5, 6, 7, 4]);
+  const cowBodyEnds = Object.freeze([170, 340, 510, 680, 840]);
+  const cowActions = new Set(["idle", "graze", "head", "body"]);
+
+  function nextCowRandom(state) {
+    let value = state.rng >>> 0 || 0x9e3779b9;
+    value ^= value << 13; value ^= value >>> 17; value ^= value << 5;
+    state.rng = value >>> 0;
+    return state.rng / 4294967296;
+  }
+
+  function restCow(state) {
+    state.action = "idle"; state.elapsedMs = 0; state.liftFromColumn = 0;
+    state.waitMs = cowBehavior.idleMinMs
+      + Math.floor(nextCowRandom(state) * (cowBehavior.idleMaxMs - cowBehavior.idleMinMs + 1));
+    return state;
+  }
+
+  function createCowState(anchor = {}) {
+    const anchorX = Number.isFinite(anchor.x) ? anchor.x : 0;
+    const anchorY = Number.isFinite(anchor.y) ? anchor.y : 0;
+    const seed = Number.isFinite(anchor.seed) ? anchor.seed >>> 0
+      : (Math.imul(Math.round(anchorX * 100), 73856093) ^ Math.imul(Math.round(anchorY * 100), 19349663)) >>> 0;
+    return Object.freeze(restCow({ anchorX, anchorY, seed, rng: seed || 0x9e3779b9,
+      action: "idle", elapsedMs: 0, waitMs: 0, liftFromColumn: 0 }));
+  }
+
+  function copyCowState(state) {
+    if (!state || !Number.isFinite(state.anchorX) || !Number.isFinite(state.anchorY)
+      || !Number.isFinite(state.rng) || !Number.isFinite(state.elapsedMs) || state.elapsedMs < 0
+      || !Number.isFinite(state.waitMs) || state.waitMs < cowBehavior.idleMinMs
+      || state.waitMs > cowBehavior.idleMaxMs || !cowActions.has(state.action)) {
+      return { ...createCowState({ x: state?.anchorX ?? state?.x, y: state?.anchorY ?? state?.y, seed: state?.seed }) };
+    }
+    return { ...state };
+  }
+
+  function cowActionDuration(actionName) {
+    return { graze: cowBehavior.grazeMs, head: cowBehavior.headMs, body: cowBehavior.bodyMs }[actionName] || 0;
+  }
+
+  function updateCowState(previous, deltaMs, { hidden = false, reducedMotion = false } = {}) {
+    const state = copyCowState(previous);
+    if (hidden) return Object.freeze(state);
+    if (reducedMotion) {
+      // Discard interrupted actions instead of playing a delayed reaction when
+      // the motion preference is changed back. Quiet idle clocks stay paused.
+      if (state.action !== "idle") restCow(state);
+      return Object.freeze(state);
+    }
+    const delta = Number.isFinite(deltaMs) ? Math.max(0, Math.min(cowBehavior.maxDeltaMs, deltaMs)) : 0;
+    if (!delta) return Object.freeze(state);
+    state.elapsedMs += delta;
+    if (state.action === "idle" && state.elapsedMs >= state.waitMs) {
+      state.action = "graze"; state.elapsedMs -= state.waitMs;
+    } else if (state.action !== "idle" && state.elapsedMs >= cowActionDuration(state.action)) restCow(state);
+    return Object.freeze(state);
+  }
+
+  function touchCowState(previous, reaction = "body", { hidden = false, reducedMotion = false } = {}) {
+    const state = copyCowState(previous);
+    if (hidden) return Object.freeze(state); // No queued indoor/hidden click.
+    if (reducedMotion) return Object.freeze(restCow(state));
+    const nextAction = reaction === "head" ? "head" : "body";
+    const alreadyReacting = state.action === "head" || state.action === "body";
+    // Same-reaction spam cannot keep the animal reacting indefinitely. A
+    // different touch may replace it only after the initial debounce window.
+    if (alreadyReacting && (state.elapsedMs < cowBehavior.touchDebounceMs || state.action === nextAction)) return Object.freeze(state);
+    const previousPose = cowPose(state);
+    state.liftFromColumn = previousPose.key === "forest-cow-eat" && previousPose.frame >= 4 && previousPose.frame <= 7
+      ? previousPose.frame - 4 : 0;
+    state.action = nextAction; state.elapsedMs = 0;
+    return Object.freeze(state);
+  }
+
+  function cowPose(previous, { reducedMotion = false } = {}) {
+    const state = copyCowState(previous);
+    const actionName = reducedMotion || (state.action !== "idle" && state.elapsedMs >= cowActionDuration(state.action))
+      ? "idle" : state.action;
+    let key = "forest-cow-eat", frame = 4, row = rows.left;
+    if (actionName === "graze") {
+      const index = cowGrazeEnds.findIndex(end => state.elapsedMs < end);
+      frame = cowGrazeFrames[index < 0 ? cowGrazeFrames.length - 1 : index];
+    } else if (actionName === "head") {
+      const from = Number.isFinite(state.liftFromColumn) ? Math.max(0, Math.min(3, Math.floor(state.liftFromColumn))) : 0;
+      if (state.elapsedMs < 300) {
+        // Lift from the interrupted grazing frame, never lower the head again.
+        frame = 4 + Math.max(0, from - (Math.floor(state.elapsedMs / 100) + 1));
+      } else if (state.elapsedMs < 750) {
+        key = "forest-cow-walk"; frame = 8; row = rows.down;
+      } else key = "forest-cow-walk";
+    } else if (actionName === "body") {
+      key = "forest-cow-walk";
+      const index = cowBodyEnds.findIndex(end => state.elapsedMs < end);
+      frame = cowBodyFrames[index < 0 ? cowBodyFrames.length - 1 : index];
+    }
+    return Object.freeze({ key, frame, originX: .5, originY: cowFootY[row],
+      action: actionName, moving: false, done: actionName === "idle" });
+  }
+
   // The sheet contains the natural hop displacement already. Do not add a sine
   // bounce or stretch the body. Lower rows are the source's grazing poses.
   function rabbitFrame(direction = "down", moving = false, elapsedMs = 0, reducedMotion = false) {
@@ -140,7 +248,9 @@
     return true;
   }
 
-  const api = Object.freeze({ assets, rabbitAssets, rabbitVariants, rabbitAction, rabbitPose, cowFrame, rabbitFrame, frameRect, mooUrl, playMoo, cowReactionDurationMs });
+  const api = Object.freeze({ assets, rabbitAssets, rabbitVariants, rabbitAction, rabbitPose, cowFrame,
+    createCowState, updateCowState, touchCowState, cowPose, cowBehavior,
+    rabbitFrame, frameRect, mooUrl, playMoo, cowReactionDurationMs });
   root.ForestAnimals = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(typeof window === "object" ? window : globalThis);

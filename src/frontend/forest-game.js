@@ -970,8 +970,8 @@
   const riverDuckStates = new WeakMap();
   const campfireBaseImage = new Image();
   const rewardCowImage = new Image();
-  const cowReactions = new WeakMap();
-  let cowReactionUntil = 0;
+  const rewardCowWalkImage = new Image();
+  const cowStates = new WeakMap();
   const homeRecordPlayerImage = new Image();
   let homeRecordPlayerBounds = null;
   const basicWalkAtlas = new Image();
@@ -990,6 +990,7 @@
   riverDuckImage.src = window.ForestRiverDuckArt.asset.url;
   campfireBaseImage.src = "/static/assets/furniture-v153/campfire.png?v=20260907-1";
   rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
+  rewardCowWalkImage.src = "/static/assets/animals/lpc-cow-walk.png";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v3.png?v=20260907-1";
   homeRecordPlayerImage.src = "/static/assets/home-record-player-v159.png?v=20260908-1";
@@ -1011,6 +1012,7 @@
   riverDuckImage.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
   campfireBaseImage.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
   rewardCowImage.addEventListener("load", () => { renderInventory(); drawAnimalThumbnails(); renderCanvas(); });
+  rewardCowWalkImage.addEventListener("load", renderCanvas);
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
   window.addEventListener("lpc-avatar-ready", () => {
     syncLpcCatalog();
@@ -1448,6 +1450,32 @@
     return true;
   }
 
+  function fallbackCowEntry(item) {
+    let entry = cowStates.get(item);
+    if (!entry || entry.anchorX !== item.x || entry.anchorY !== item.y) {
+      entry = { state: window.ForestAnimals.createCowState(item), lastAt: null, anchorX: item.x, anchorY: item.y };
+      cowStates.set(item, entry);
+    }
+    return entry;
+  }
+
+  function updateFallbackCows(timestamp) {
+    if (window.carrotForestPhaserActive || !window.ForestAnimals?.updateCowState) return false;
+    const hidden = document.hidden || currentScene !== "world" || Boolean(placementCode);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let changed = false;
+    state.placed.forEach(item => {
+      if (item.code !== "reward_cow") return;
+      const entry = fallbackCowEntry(item), before = window.ForestAnimals.cowPose(entry.state);
+      const delta = entry.lastAt == null ? 0 : Math.max(0, Math.min(50, timestamp - entry.lastAt));
+      entry.lastAt = timestamp;
+      entry.state = window.ForestAnimals.updateCowState(entry.state, delta, { hidden, reducedMotion });
+      const after = window.ForestAnimals.cowPose(entry.state, { reducedMotion });
+      if (!hidden && (before.key !== after.key || before.frame !== after.frame)) changed = true;
+    });
+    return changed;
+  }
+
   function drawPlacedObject(item, preview = false) {
       const x = 0;
       const y = 0;
@@ -1477,12 +1505,17 @@
         return;
       }
       if (item.code === "reward_cow" && rewardCowImage.complete && rewardCowImage.naturalWidth && window.ForestAnimals) {
-        const started = preview ? null : cowReactions.get(item);
-        const sample = window.ForestAnimals.cowFrame(started == null ? -1 : performance.now() - started, {
+        const cowState = preview || window.carrotForestPhaserActive ? window.ForestAnimals.createCowState(item) : fallbackCowEntry(item).state;
+        let sample = window.ForestAnimals.cowPose(cowState, {
           reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         });
+        let cowImage = sample.key === "forest-cow-walk" ? rewardCowWalkImage : rewardCowImage;
+        if (!cowImage.complete || !cowImage.naturalWidth) {
+          sample = window.ForestAnimals.cowFrame();
+          cowImage = rewardCowImage;
+        }
         const frame = window.ForestAnimals.frameRect(sample.key, sample.frame), size = 160;
-        context.drawImage(rewardCowImage, frame.x, frame.y, frame.width, frame.height,
+        context.drawImage(cowImage, frame.x, frame.y, frame.width, frame.height,
           x - size * sample.originX, y - size * sample.originY, size, size);
         context.restore(); return;
       }
@@ -1862,13 +1895,18 @@
     const item = state.placed[index];
     if (item?.code !== "reward_cow") return;
     const headTouch = reaction === "head";
-    const startedAt = performance.now();
-    cowReactions.set(item, startedAt);
-    cowReactionUntil = startedAt + (window.ForestAnimals?.cowReactionDurationMs || 1360);
+    if (!window.carrotForestPhaserActive) {
+      const entry = fallbackCowEntry(item);
+      entry.state = window.ForestAnimals.touchCowState(entry.state, reaction, {
+        hidden: document.hidden || currentScene !== "world" || Boolean(placementCode),
+        reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      });
+      entry.lastAt = performance.now();
+    }
     sfxEngine ||= new ForestSfx();
     window.ForestAnimals?.playMoo({ enabled: !sfxEngine.muted, volume: sfxEngine.effectiveVolume(.4) });
     window.dispatchEvent(new CustomEvent("forest-cow-react", { detail: { index, reaction } }));
-    setStatus(headTouch ? "행운의 젖소를 쓰다듬었어요. 음메 하고 고개를 움직인 뒤 다시 쉬어요." : "행운의 젖소를 토닥였어요. 음메 하고 반응한 뒤 편안히 쉬어요.");
+    setStatus(headTouch ? "행운의 젖소를 쓰다듬었어요. 음메 하고 고개를 들어 바라봐요." : "행운의 젖소를 토닥였어요. 음메 하고 발을 고쳐 디딘 뒤 다시 쉬어요.");
     renderCanvas();
   }
 
@@ -1877,10 +1915,7 @@
   function animateWorld(timestamp) {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let needsRender = updateFallbackRiverDucks(timestamp);
-    if (!document.hidden && !window.carrotForestPhaserActive && cowReactionUntil > 0) {
-      needsRender = true;
-      if (timestamp >= cowReactionUntil) cowReactionUntil = 0;
-    }
+    if (updateFallbackCows(timestamp)) needsRender = true;
     if (!document.hidden && !reducedMotion && timestamp - lastAnimationAt > 420) {
       animationFrame = (animationFrame + 1) % 4;
       lastAnimationAt = timestamp;
@@ -2412,7 +2447,7 @@
     $("#object-count").textContent = `${state.placed.length}개`;
     $("#placed-list").innerHTML = state.placed.length
       ? state.placed.map((item, index) => {
-        const stateLabel = item.code === "reward_cow" ? "<small>편안히 쉬는 중 · 쓰다듬어 주세요</small>"
+        const stateLabel = item.code === "reward_cow" ? "<small>가끔 풀을 먹어요 · 쓰다듬어 주세요</small>"
           : interactiveObjectTypes[item.code] ? `<small>${item.active ? "작동 중" : "꺼짐·정지"}</small>` : "";
         return `<div class="placed-object-row"><span aria-hidden="true">${itemCatalog[item.code].icon}</span><div class="placed-object-copy"><strong>${itemCatalog[item.code].name}</strong>${stateLabel}</div><button class="remove-object" type="button" data-remove="${index}">창고로 돌려놓기</button></div>`;
       }).join("")
@@ -3251,7 +3286,7 @@
       return;
     }
     if (item.code === "reward_cow") {
-      const reaction = Number(detail.y) < item.y - 28 ? "head" : "body";
+      const reaction = ["head", "body"].includes(detail.reaction) ? detail.reaction : Number(detail.y) < item.y - 28 ? "head" : "body";
       reactToCow(index, reaction);
       return;
     }

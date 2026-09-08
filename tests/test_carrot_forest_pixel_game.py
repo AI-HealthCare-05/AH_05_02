@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v160-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v161-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -1149,8 +1149,9 @@ def test_looping_animated_objects_are_buildable_placeable_and_cached() -> None:
     assert 'this.load.image("animated-objects-source"' in phaser_script
     assert 'window.ForestObjects.createAnimatedAtlas(animatedSource)' in phaser_script
     assert 'window.ForestObjects.drawAnimatedItem' in game_script
-    assert 'actor.setData("cowReactionStartedAt", null)' in phaser_script
-    assert 'if (frame.done) actor.setData("cowReactionStartedAt", null)' in phaser_script
+    assert 'window.ForestAnimals.updateCowState(' in phaser_script
+    assert 'window.ForestAnimals.touchCowState(' in phaser_script
+    assert 'window.ForestAnimals.cowPose(' in phaser_script
     animals = (ROOT / "src/frontend/forest-animals.js").read_text(encoding="utf-8")
     assert "elapsedMs < cowReactionDurationMs" in animals
     assert "syncPlacedObjects" in phaser_script

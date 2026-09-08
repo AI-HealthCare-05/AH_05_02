@@ -589,7 +589,8 @@
             .setOrigin(frame.originX, frame.originY).setScale(1.25);
           // A complete transparent cow sprite has no attached grass/ground.
           actor = this.add.container(item.x, item.y, [body]);
-          actor.setData("motionTarget", body).setData("pointerTargets", [body]).setData("cowReactionStartedAt", null);
+          actor.setData("motionTarget", body).setData("pointerTargets", [body])
+            .setData("cowState", window.ForestAnimals.createCowState(item)).setData("cowLastAt", null);
           actor.setData("motionOrigin", { x: 0, y: 0, scaleX: body.scaleX, scaleY: body.scaleY });
         } else if (item.code === "campfire") {
           const shadow = this.add.ellipse(0, -2, 58, 16, 0x1b241d, .34);
@@ -641,7 +642,9 @@
                 return; // A decorative friend, never a hunt target or an on/off fixture.
               }
               window.dispatchEvent(new CustomEvent("forest-placed-object-pointer", {
-                detail: { index: placedIndex, x: point.x, y: point.y },
+                detail: { index: placedIndex, x: point.x, y: point.y,
+                  ...(item.code === "reward_cow" ? { reaction: _localX < 48 ? "head" : "body" } : {}),
+                },
               }));
             },
           ));
@@ -680,42 +683,56 @@
         if (origin) motionTarget.setScale(origin.scaleX, origin.scaleY);
       }
       if (type === "cow" && motionTarget) {
-        const frame = window.ForestAnimals.cowFrame();
+        const frame = window.ForestAnimals.cowPose(actor.getData("cowState"), {
+          reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        });
         motionTarget.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
-        actor.setData("cowReactionStartedAt", null);
       }
     }
 
     reactCow(index, reaction = "body") {
       const actor = this.placedObjectActors[index];
       const item = actor?.getData?.("item");
-      if (!actor || item?.code !== "reward_cow") return;
+      if (!actor || item?.code !== "reward_cow" || this.memoryCapturing || this.placementActive || this.sceneName !== "world") return;
       const target = actor.getData("motionTarget");
       this.tweens.killTweensOf(target);
       const origin = actor.getData("motionOrigin");
       target.setPosition(origin?.x ?? 0, origin?.y ?? 0).setAngle(0);
       if (origin) target.setScale(origin.scaleX, origin.scaleY);
-      actor.setData("cowReactionStartedAt", window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? null : (this.time?.now ?? performance.now()));
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const state = window.ForestAnimals.touchCowState(actor.getData("cowState"), reaction, { hidden: document.hidden, reducedMotion });
+      actor.setData("cowState", state);
+      const pose = window.ForestAnimals.cowPose(state, { reducedMotion });
+      target.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY);
     }
 
     syncPlacedObjects(placed = []) {
       const duckStates = new Map();
+      const cowStates = new Map();
       const anchorKey = item => `${item.code}:${item.x}:${item.y}`;
       this.placedObjectActors?.forEach((actor) => {
         const item = actor.getData?.("item");
         if (item?.code === "duck_float") duckStates.set(anchorKey(item), {
           state: actor.getData("riverDuckState"), clock: actor.getData("riverDuckClock"),
         });
+        if (item?.code === "reward_cow") cowStates.set(anchorKey(item), actor.getData("cowState"));
         this.tweens.killTweensOf(actor);
         this.tweens.killTweensOf(actor.getData?.("motionTarget"));
         actor.destroy();
       });
       this.placedObjectActors = placed.map((item, index) => this.createPlacedObjectActor(item, false, index)).filter(Boolean);
       this.placedObjectActors.forEach(actor => {
-        const saved = duckStates.get(anchorKey(actor.getData("item")));
+        const key = anchorKey(actor.getData("item"));
+        const saved = duckStates.get(key);
         if (saved?.state) actor.setData("riverDuckState", saved.state).setData("riverDuckClock", saved.clock)
           .setPosition(saved.state.x, saved.state.y);
+        if (cowStates.has(key)) {
+          actor.setData("cowState", cowStates.get(key));
+          const pose = window.ForestAnimals.cowPose(cowStates.get(key), {
+            reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+          });
+          actor.getData("motionTarget").setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY);
+        }
       });
     }
 
@@ -738,10 +755,14 @@
           return;
         }
         if (item.code === "reward_cow") {
-          const started = actor.getData("cowReactionStartedAt");
-          const frame = window.ForestAnimals.cowFrame(started == null ? -1 : Math.max(0, time - started), { reducedMotion });
+          const last = actor.getData("cowLastAt");
+          actor.setData("cowLastAt", time);
+          const hidden = document.hidden || this.sceneName !== "world" || this.placementActive || actor.visible === false;
+          const state = window.ForestAnimals.updateCowState(actor.getData("cowState"), last == null ? 0 : time - last, { hidden, reducedMotion });
+          actor.setData("cowState", state);
+          const frame = window.ForestAnimals.cowPose(state, { reducedMotion });
           actor.getData("motionTarget")?.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
-          if (frame.done) actor.setData("cowReactionStartedAt", null);
+          return;
         }
         const accents = actor.getData("ambientFx");
         if (!accents) return;

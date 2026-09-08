@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
 const animals = require('../src/frontend/forest-animals.js');
+const cowHelpers = source.slice(source.indexOf('  function fallbackCowEntry('), source.indexOf('  function drawPlacedObject('));
 
 test('all cow inventory and Canvas rendering uses the downloaded body, never the old grass tile', () => {
   assert.doesNotMatch(source, /carrot-forest-reward-cow-v[12]|storage-reward-cow|cow-toggle/);
@@ -17,10 +18,10 @@ test('all cow inventory and Canvas rendering uses the downloaded body, never the
   const context = vm.createContext({
     context: { save() {}, restore() {}, translate() {}, rotate() {}, drawImage: (...args) => drawn.push(args) },
     interactiveObjectTypes: { reward_cow: 'cow' }, animatedObjectRows: {},
-    rewardCowImage: { complete: true, naturalWidth: 512 }, cowReactions: new WeakMap(),
+    rewardCowImage: { complete: true, naturalWidth: 512 }, cowStates: new WeakMap(),
     performance: { now: () => 1000 }, window: { ForestAnimals: animals, matchMedia: () => ({ matches: false }) },
   });
-  vm.runInContext(drawSource, context);
+  vm.runInContext(cowHelpers + drawSource, context);
   context.drawPlacedObject(item);
   assert.deepEqual(drawn[0].slice(1, 5), [0, 128, 128, 128]);
   assert.deepEqual(drawn[0].slice(5), [-80, -110, 160, 160]);
@@ -31,17 +32,18 @@ test('touch reaction is finite, respects existing sound preferences, and does no
   const item = { code: 'reward_cow', active: false, x: 400, y: 320 };
   const before = JSON.stringify(item), sounds = [], events = [];
   const context = vm.createContext({
-    state: { placed: [item] }, cowReactions: new WeakMap(), cowReactionUntil: 0,
+    state: { placed: [item] }, cowStates: new WeakMap(), document: { hidden: false }, currentScene: 'world', placementCode: null,
     performance: { now: () => 100 },
     sfxEngine: { muted: true, effectiveVolume: () => 0 },
-    window: { ForestAnimals: { cowReactionDurationMs: 1360, playMoo: options => sounds.push(options) }, dispatchEvent: event => events.push(event) },
+    window: { ForestAnimals: { ...animals, playMoo: options => sounds.push(options) },
+      matchMedia: () => ({ matches: false }), dispatchEvent: event => events.push(event) },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     setStatus() {}, renderCanvas() {},
   });
-  vm.runInContext(react, context);
+  vm.runInContext(cowHelpers + react, context);
   context.reactToCow(0, 'head');
-  assert.equal(context.cowReactionUntil, 1460);
-  assert.equal(context.cowReactions.get(item), 100);
+  assert.equal(context.cowStates.get(item).lastAt, 100);
+  assert.equal(context.cowStates.get(item).state.action, 'head');
   assert.equal(sounds[0].enabled, false);
   assert.equal(sounds[0].volume, 0);
   assert.equal(events[0].type, 'forest-cow-react');
