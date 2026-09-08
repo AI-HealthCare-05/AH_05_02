@@ -58,7 +58,7 @@ function actor(x = 0, y = 0) {
 
 function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(variant => variant.key) || [] } = {}) {
   let reduced = false;
-  const events = [], listeners = new Map();
+  const events = [], labels = [], listeners = new Map();
   const Phaser = {
     Scene: class {}, AUTO: 0, Scale: { FIT: 1, CENTER_BOTH: 1 },
     Game: class { constructor(config) { this.config = config; } },
@@ -81,7 +81,7 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   scene.ratSprite = actor();
   scene.ratShadow = actor();
   scene.textures = { exists: key => loaded.includes(key) };
-  scene.add = { text: (x, y) => actor(x, y) };
+  scene.add = { text: (x, y, text) => { labels.push(text); return actor(x, y); } };
   scene.tweens = { add() {} };
   scene.time = { now: 1000 };
   scene.isBlocked = () => false;
@@ -89,7 +89,7 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   scene.ratDespawnAt = Infinity;
   scene.ratActive = true;
   scene.avatar = { x: 400, y: 350, direction: 'right', cosmetics: {} };
-  return { scene, events, listeners, window, setReduced: value => { reduced = value; } };
+  return { scene, events, labels, listeners, window, setReduced: value => { reduced = value; } };
 }
 
 test('optional rabbit packs preload separately and loaded variants alternate without starvation', () => {
@@ -277,10 +277,11 @@ test('explicit variant and action state updates select supported poses without a
   assert.equal(events.length, 0);
 });
 
-test('both new rabbit variants preserve one manual or automatic pet reward through the existing event', () => {
-  for (const variant of fixtureVariants) for (const method of ['manual', 'pet']) {
-    const { scene, events } = setup();
-    scene.setRatSpecies('rabbit', variant.id, 1000);
+test('manual and pet catches give each rabbit one carrot, each mouse zero, and emit only once', () => {
+  const encounters = [...fixtureVariants.map(variant => ({ species: 'rabbit', variant: variant.id })), { species: 'mouse', variant: null }];
+  for (const encounter of encounters) for (const method of ['manual', 'pet']) {
+    const { scene, events, labels } = setup();
+    scene.setRatSpecies(encounter.species, encounter.variant, 1000);
     scene.ratEventId = 7;
     scene.ratActor.setPosition(420, 350);
     if (method === 'manual') {
@@ -295,12 +296,24 @@ test('both new rabbit variants preserve one manual or automatic pet reward throu
       scene.updatePet(5500, 40, false);
     }
     const catches = events.filter(event => event.type === 'forest-rat-caught');
-    assert.equal(catches.length, 1, `${variant.id}/${method}`);
-    assert.equal(catches[0].detail.species, 'rabbit');
+    assert.equal(catches.length, 1, `${encounter.variant || encounter.species}/${method}`);
+    assert.equal(catches[0].detail.species, encounter.species);
     assert.equal(catches[0].detail.eventId, 7);
-    assert.equal(catches[0].detail.amount, 5);
+    assert.equal(catches[0].detail.amount, encounter.species === 'rabbit' ? 1 : 0);
     assert.equal(catches[0].detail.source, method === 'pet' ? 'pet' : undefined);
     assert.equal(scene.ratActive, false);
+    assert.deepEqual(labels, encounter.species === 'rabbit' ? ['+1 🥕'] : [], 'a mouse must not show a carrot reward popup');
+  }
+});
+
+test('uncaught expiry never creates a reward event or carrot popup for either species', () => {
+  for (const species of ['mouse', 'rabbit']) {
+    const { scene, events, labels } = setup();
+    scene.setRatSpecies(species, species === 'rabbit' ? 'bunbun' : null, 1000);
+    scene.dismissRat(5000, false);
+    assert.equal(scene.ratActive, false);
+    assert.deepEqual(labels, []);
+    assert.equal(events.some(event => event.type === 'forest-rat-caught'), false);
   }
 });
 

@@ -152,8 +152,8 @@ test('hover reveals attack and tapping the animal starts the same action as its 
   assert.equal(scene.ratAttackButton.visible, false);
 });
 
-test('animal and button clicks approach and catch once through real update/action despite same-scene saves', () => {
-  for (const target of ['ratSprite', 'ratAttackButton']) for (const wasTouch of [false, true]) {
+test('animal and button clicks catch rabbit +1 and mouse +0 exactly once despite same-scene saves', () => {
+  for (const species of ['rabbit', 'mouse']) for (const target of ['ratSprite', 'ratAttackButton']) for (const wasTouch of [false, true]) {
     const { scene, context, events } = setup();
     let now = 2000;
     context.performance.now = () => now;
@@ -164,7 +164,7 @@ test('animal and button clicks approach and catch once through real update/actio
     scene.ratSprite = actor();
     scene.add = attackFactory();
     scene.ratActive = true;
-    scene.ratSpecies = 'rabbit';
+    scene.ratSpecies = species;
     scene.ratEventId = 9;
     scene.player = actor();
     scene.background = { setTexture() { return this; }, setDisplaySize() { return this; } };
@@ -184,11 +184,11 @@ test('animal and button clicks approach and catch once through real update/actio
       if (i % 5 === 0) scene.setScene('world');
       scene.update(now, 20);
     }
-    assert.deepEqual(catches, [true], `${target}, touch=${wasTouch}`);
+    assert.deepEqual(catches, [true], `${species}/${target}, touch=${wasTouch}`);
     const rewards = events.filter(event => event.type === 'forest-rat-caught');
     assert.equal(rewards.length, 1);
-    assert.equal(rewards[0].detail.species, 'rabbit');
-    assert.equal(rewards[0].detail.amount, 5);
+    assert.equal(rewards[0].detail.species, species);
+    assert.equal(rewards[0].detail.amount, species === 'rabbit' ? 1 : 0);
     assert.equal(scene.actionPose, 'attack');
     assert.equal(scene.avatar.direction, 'right');
     assert.equal(scene.pointerAttackEventId, null);

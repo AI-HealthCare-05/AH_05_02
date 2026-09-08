@@ -3447,6 +3447,16 @@
     if (event.detail === "feed") await feedPet();
   });
   let currentWildEncounter = null;
+  const caughtWildEncounters = new Set();
+  let catchNoticeTimer = null;
+  function showCatchNotice(message) {
+    const toast = $("#forest-catch-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.hidden = false;
+    window.clearTimeout(catchNoticeTimer);
+    catchNoticeTimer = window.setTimeout(() => { toast.hidden = true; }, 4000);
+  }
   window.addEventListener("forest-rat-appeared", (event) => {
     currentWildEncounter = { eventId: event.detail?.eventId, species: event.detail?.species === "rabbit" ? "rabbit" : "mouse" };
     if (event.detail?.species === "rabbit") {
@@ -3459,17 +3469,21 @@
       : "숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
   });
   window.addEventListener("forest-rat-caught", async (event) => {
-    const rabbit = event.detail?.species === "rabbit" || (!event.detail?.species
-      && currentWildEncounter?.eventId === event.detail?.eventId && currentWildEncounter?.species === "rabbit");
-    currentWildEncounter = null;
-    const amount = Math.max(1, Math.min(20, Number(event.detail?.amount) || 5));
-    state.carrots += amount;
+    const eventId = event.detail?.eventId;
+    if (eventId == null || caughtWildEncounters.has(eventId)) return;
+    const encounter = currentWildEncounter?.eventId === eventId ? currentWildEncounter : null;
+    const rabbit = (encounter?.species || event.detail?.species) === "rabbit";
+    // Resolve the reward here, not from a possibly stale renderer's amount.
+    // Claim before saving so a click and a pet cannot reward the same encounter twice.
+    caughtWildEncounters.add(eventId);
+    if (encounter) currentWildEncounter = null;
+    if (rabbit) state.carrots += 1;
     playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
-    await persist(rabbit ? `야생 토끼와 만나 당근 ${amount}개를 얻었습니다!` : event.detail?.source === "pet"
-      ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
-      : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);
+    const message = rabbit ? "토끼가 당근 1개를 놓고 갔습니다." : "쥐를 잡았습니다.";
+    await persist(message);
+    showCatchNotice(message);
   });
   window.addEventListener("forest-placement-confirm", confirmPlacement);
 

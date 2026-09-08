@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v161-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v162-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -746,8 +746,10 @@ def test_wild_rat_is_a_separate_attack_reward_event() -> None:
     assert 'pose === "attack"' in phaser_script
     assert 'new CustomEvent("forest-rat-caught"' in phaser_script
     assert 'window.addEventListener("forest-rat-caught"' in game_script
-    assert "state.carrots += amount" in game_script
-    assert "야생 쥐를 잡고 당근" in game_script
+    assert "if (rabbit) state.carrots += 1;" in game_script
+    assert "토끼가 당근 1개를 놓고 갔습니다." in game_script
+    assert "쥐를 잡았습니다." in game_script
+    assert "야생 쥐를 잡고 당근" not in game_script
     assert "RAT_OUTPUT" in pet_builder
     assert "carrot-forest-lpc-rat-v1.png" in worker
     assert (ROOT / "src/frontend/assets/carrot-forest-lpc-rat-v1.png").is_file()

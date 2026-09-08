@@ -69,13 +69,14 @@ test('rabbit encounter keeps the spawn species and does not call it a mouse on c
     window: { addEventListener: (name, listener) => { handlers[name] = listener; } },
     state: { carrots: 10, avatar: { cosmetics: { pet: 'none' } } },
     setStatus: message => messages.push(message), persist: async message => messages.push(message),
-    playSfx() {}, $: () => ({}),
+    playSfx() {}, $: selector => selector === '#forest-catch-toast' ? null : ({}),
   });
   vm.runInContext(eventsSource, context);
   handlers['forest-rat-appeared']({ detail: { species: 'rabbit', eventId: 'test-encounter' } });
-  await handlers['forest-rat-caught']({ detail: { eventId: 'test-encounter', amount: 5 } });
+  await handlers['forest-rat-caught']({ detail: { eventId: 'test-encounter', amount: 500 } });
   assert.ok(messages.every(message => message.includes('토끼')));
-  assert.equal(context.state.carrots, 15);
+  assert.equal(messages.at(-1), '토끼가 당근 1개를 놓고 갔습니다.');
+  assert.equal(context.state.carrots, 11);
 });
 
 test('night BGM starts at 19:00 and remains optional without affecting indoor tracks', () => {

@@ -483,5 +483,9 @@ body{display:flex;flex-direction:column;height:100dvh}
 .forest-memory-actions #forest-memory-save{border-color:#597747;background:#66864f;color:#fff}
 .forest-memory-dialog :is(button:disabled,a[aria-disabled="true"]){opacity:.5;cursor:wait}
 .forest-memory-dialog :is(button,a):focus-visible{outline:3px solid #bb792f;outline-offset:2px}
-.forest-memory-shooting .canvas-frame :is(.viewport-tools,.map-label,.interaction-prompt,.game-controls-overlay,.garden-harvest-panel,.forest-time-toast){visibility:hidden;pointer-events:none}
+.forest-memory-shooting .canvas-frame :is(.viewport-tools,.map-label,.interaction-prompt,.game-controls-overlay,.garden-harvest-panel,.forest-time-toast,.forest-catch-toast){visibility:hidden;pointer-events:none}
 @media(max-width:520px){.forest-memory-dialog{inset:auto 8px 8px auto;width:min(270px,calc(100% - 16px));padding:10px;font-size:12px}.forest-memory-dialog h2{font-size:16px}.forest-memory-dialog img{max-height:25vh}}
+
+/* Capture results stay visible without restoring the old persistent guidance bar. */
+.forest-catch-toast{position:absolute;z-index:44;top:56px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);box-sizing:border-box;padding:10px 16px;border:1px solid #c4d7b7;border-radius:12px;background:#fffbeef5;color:#294c37;box-shadow:0 4px 14px #18382530;font-size:14px;font-weight:800;line-height:1.5;text-align:center;overflow-wrap:anywhere;pointer-events:none}
+.forest-catch-toast[hidden]{display:none}

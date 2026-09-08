@@ -1537,19 +1537,21 @@
       }
       const x = this.ratActor.x;
       const y = this.ratActor.y;
-      const rewardText = this.add.text(x, y - 30, "+5 🥕", {
-        resolution: TEXT_RESOLUTION,
-        fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
-        color: "#fff7bd", stroke: "#5c3511", strokeThickness: 4,
-      }).setOrigin(0.5).setDepth(999);
       this.tweens.add({
         targets: this.ratActor, alpha: 0, duration: 180,
         onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
       });
-      this.tweens.add({
-        targets: rewardText, y: y - 58, alpha: 0, duration: 850,
-        onComplete: () => rewardText.destroy(),
-      });
+      if (this.ratSpecies === "rabbit") {
+        const rewardText = this.add.text(x, y - 30, "+1 🥕", {
+          resolution: TEXT_RESOLUTION,
+          fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
+          color: "#fff7bd", stroke: "#5c3511", strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(999);
+        this.tweens.add({
+          targets: rewardText, y: y - 58, alpha: 0, duration: 850,
+          onComplete: () => rewardText.destroy(),
+        });
+      }
     }
 
     tryAttackRat(time) {
@@ -1564,7 +1566,7 @@
       if (distance > 76 || facingScore < -0.1) return;
       const eventId = this.ratEventId;
       this.dismissRat(time, true);
-      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, species: this.ratSpecies } }));
+      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, species: this.ratSpecies } }));
     }
 
     updateRat(time, delta) {
@@ -1675,7 +1677,7 @@
         this.petActionUntil = time + 760;
         const eventId = this.ratEventId;
         this.dismissRat(time, true);
-        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: 5, source: "pet", species: this.ratSpecies } }));
+        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, source: "pet", species: this.ratSpecies } }));
       }
     }
 
