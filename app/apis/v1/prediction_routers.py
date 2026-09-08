@@ -190,7 +190,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "calibration_version": item.calibration_version,
         "model_artifact_digest": item.model_artifact_digest,
         "threshold_version": item.threshold_version,
-        "threshold_scope": item.threshold_scope,
+        "threshold_scope": getattr(item, "threshold_scope", None),
         "decision_threshold": item.decision_threshold if public_result_available else None,
         "output_status": item.output_status,
         "model_population": item.model_population,
