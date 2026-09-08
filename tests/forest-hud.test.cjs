@@ -348,6 +348,35 @@ test('native attack returns to the same pad shape and label treatment as the oth
   assert.doesNotMatch(html, /attack-spark/);
   assert.doesNotMatch(css, /\.game-controls-overlay \.touch-controls button\.action-attack/);
   assert.doesNotMatch(css, /ffe0a1|efae54|attack-spark/);
+  assert.match(css, /\.action-attack\.is-monster-ready\{[^}]*background:#e9ad35/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8'), /forest-monster-presence/);
+});
+
+test('monster presence highlights the relocated in-game attack button', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
+  const game = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
+  const phaser = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
+  assert.match(css, /\.touch-controls \.action-attack\.is-monster-ready\{[^}]*background:#e9ad35!important/);
+  assert.doesNotMatch(css, /\.right-hud \.touch-controls \.action-attack\.is-monster-ready/);
+  assert.match(game, /renderMonsterAttackState\(window\.ForestMonsterPresence === true\)/);
+  assert.match(phaser, /window\.ForestMonsterPresence = true/);
+});
+
+test('daily reward is a large shared-panel action that reuses the existing chest ceremony without duplicate V2 carrots', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
+  const game = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
+  const tabsAt = html.indexOf('class="inspector-tabs"');
+  const rewardAt = html.indexOf('id="reward-button"');
+  const questsAt = html.indexOf('id="quests-panel"');
+  assert.ok(tabsAt < rewardAt && rewardAt < questsAt, 'the reward stays visible above both challenge panels');
+  assert.equal((html.match(/id="reward-button"/g) || []).length, 1);
+  assert.match(html, /id="reward-button"[^>]*daily-reward-button[^>]*>일일 보상 받기</);
+  assert.match(css, /\.daily-reward-panel \.daily-reward-button\{[^}]*min-height:54px;[^}]*font-size:calc\(18px/);
+  assert.match(game, /const ready = Boolean\(v2Plan\.chest_issued\)/);
+  assert.match(game, /await playRewardCelebration\(null\)/);
+  const v2Claim = game.slice(game.indexOf('if (v2Plan) {', game.indexOf('$("#reward-button")')), game.indexOf('if (groupCompleted()', game.indexOf('$("#reward-button")')));
+  assert.doesNotMatch(v2Claim, /state\.carrots \+= 50/);
 });
 
 test('native Enter and Space activation do not double-toggle a focused button', () => {

@@ -159,7 +159,7 @@
         scene.children.list.forEach(freezeAnimations);
         this.progress(session, "loading", "공식 의상과 숲 친구들을 준비하고 있어요.");
         if (this.session !== session) return false;
-        const required = ["forest-rabbit-bunbun", "forest-rabbit-last-tick", "lpc-rat", "lpc-pets", "forest-cow-eat", "forest-cow-walk"];
+        const required = ["forest-rabbit-bunbun", "forest-rabbit-last-tick", "lpc-pets", "forest-cow-eat", "forest-cow-walk"];
         if (required.some(key => !scene.textures.exists(key))) throw new Error("Bunbun·Last tick과 모든 동물의 원본 이미지가 있어야 촬영할 수 있어요.");
         if (typeof root.LpcAvatarEngine?.prepare !== "function") throw new Error("공식 의상 준비 기능을 불러오지 못했어요. 새로고침해 주세요.");
         await this.bounded(session, root.LpcAvatarEngine.prepare(session.presets.map(item => item.avatar)), 20000, "의상 이미지 로딩 시간이 길어지고 있어요. 다시 시도해 주세요.");
@@ -226,23 +226,37 @@
         }).setOrigin(.5, 1).setDepth(1000));
         return { ...preset, x, y, startX: x + (index < 3 ? -36 : 36), startY: y, sprite, shadow, label, texture };
       });
-      session.animals = [
+      const animalDefinitions = [
         { kind: "bunbun", x: 87, y: 302, key: "forest-rabbit-bunbun", scale: 1.4 },
         { kind: "last-tick", x: 152, y: 301, key: "forest-rabbit-last-tick", scale: 1.4 },
-        { kind: "mouse", x: 187, y: 300, key: "lpc-rat", scale: 1.4 },
-        { kind: "pet", column: 0, x: 238, y: 331, key: "lpc-pets", scale: 1.2 },
         { kind: "pet", column: 3, x: 294, y: 336, key: "lpc-pets", scale: 1.2 },
         { kind: "pet", column: 6, x: 353, y: 338, key: "lpc-pets", scale: 1.2 },
         { kind: "cow", x: 500, y: 330, key: "forest-cow-eat", scale: 1.12 },
-      ].map((animal, index) => ({ ...animal, startX: animal.x + (index < 4 ? -22 : 25), startY: animal.y,
-        sprite: add(scene.add.sprite(animal.x, animal.y, animal.key, 0).setOrigin(.5, 1).setScale(animal.scale).setDepth(animal.y)),
-      }));
+      ];
+      session.animals = animalDefinitions.map((animal) => {
+        const approachesFromLeft = animal.kind === "bunbun" || animal.kind === "last-tick";
+        const staged = { ...animal, startX: animal.x + (approachesFromLeft ? -22 : 25), startY: animal.y,
+          sprite: add(scene.add.sprite(animal.x, animal.y, animal.key, 0).setOrigin(.5, 1).setScale(animal.scale).setDepth(animal.y)),
+        };
+        return staged;
+      });
       // Each added preset brings its selected kitten. Optional licensed sheets
       // never block the portrait; the existing LPC companion remains a fallback.
+      const portraitPetActions = Object.freeze({
+        3: Object.freeze({ action: "idle", direction: "right", rest: "curled" }),
+        4: Object.freeze({ action: "sit", direction: "down" }),
+        5: Object.freeze({ action: "idle", direction: "left", rest: "stretched" }),
+        6: Object.freeze({ action: "idle", direction: "down", rest: "grooming" }),
+      });
       session.people.filter(person => person.number >= 3 && root.ForestPets?.definition(person.avatar.cosmetics?.pet)).forEach(person => {
-        const x = person.x + 17, y = person.y + 20;
+        // Preset 3 rests at the water's edge while the other kittens remain
+        // beside their own guests.
+        const x = person.number === 3 ? 250 : person.x + 17;
+        const y = person.number === 3 ? 330 : person.y + 20;
+        const portrait = portraitPetActions[person.number];
         session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet,
           petAccessory: person.avatar.cosmetics.petAccessory || (person.avatar.cosmetics.pet === "last_tick_ribbon" ? "valentine_bow_red" : "none"),
+          portraitAction: portrait.action, portraitDirection: portrait.direction, portraitRest: portrait.rest || null,
           x, y, startX: x + 22, startY: y,
           sprite: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y)),
           overlay: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y + .01).setVisible(false)),
@@ -303,8 +317,23 @@
       const animals = root.ForestAnimals;
       const travelDirection = animal.startX < animal.x ? "right" : "left";
       if (animal.kind === "preset-pet") {
-        const pose = root.ForestPets?.pose(animal.petId, { action: moving ? "walk" : "sit", direction: moving ? travelDirection : "down", elapsed,
-          equipment: animal.petAccessory, reducedMotion });
+        const comicPounce = false;
+        const portraitPose = animal.kind === "preset-pet" && !moving;
+        const action = moving ? "walk" : comicPounce ? "attack" : portraitPose ? animal.portraitAction : "sit";
+        const direction = comicPounce ? "left" : portraitPose ? animal.portraitDirection : moving ? travelDirection : "down";
+        const actionDuration = root.ForestPets?.actionDurations?.[action];
+        let actionElapsed = !moving && Number.isFinite(actionDuration)
+          ? Math.max(0, elapsed - 1600) % actionDuration
+          : elapsed;
+        let idleMs = actionElapsed;
+        if (portraitPose && animal.portraitRest === "curled") idleMs = 60000 + Math.max(0, elapsed - 1600) % 1800;
+        if (portraitPose && animal.portraitRest === "stretched") idleMs = 120000 + Math.max(0, elapsed - 1600) % 2000;
+        if (portraitPose && animal.portraitRest === "grooming") {
+          actionElapsed = 7200 + Math.max(0, elapsed - 1600) % 1260;
+          idleMs = actionElapsed;
+        }
+        const pose = root.ForestPets?.pose(animal.petId, { action, direction, elapsed: actionElapsed,
+          idleMs, equipment: animal.petAccessory, reducedMotion });
         if (pose && this.scene.textures.exists(pose.key) && (!pose.overlay || this.scene.textures.exists(pose.overlay.key))) {
           sprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.flipX));
           const visible = Boolean(pose.overlay && this.scene.textures.exists(pose.overlay.key));
@@ -312,7 +341,8 @@
           if (visible) animal.overlay.setTexture(pose.overlay.key, pose.overlay.frame).setPosition(x, y).setDepth(y + .01)
             .setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.overlay.flipX ?? pose.flipX));
         } else {
-          sprite.setTexture("lpc-pets", animal.petId === "last_tick_ginger" ? 4 : 1).setOrigin(.5, 1).setScale(1.2).setFlipX(false);
+          const fallbackFrame = animal.petId === "last_tick_ginger" ? 4 : 1;
+          sprite.setTexture("lpc-pets", fallbackFrame).setOrigin(.5, 1).setScale(1.2).setFlipX(false);
           animal.overlay.setVisible(false);
         }
       } else if (animal.kind === "bunbun" || animal.kind === "last-tick") {

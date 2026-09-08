@@ -2,6 +2,7 @@
   "use strict";
 
   if (!window.Phaser || !document.getElementById("phaser-world")) return;
+  window.ForestMonsterPresence = false;
 
   const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
@@ -123,6 +124,8 @@
       this.rabbitDefeatStartedAt = 0;
       this.rabbitDefeatUntil = 0;
       this.ratEventId = 0;
+      this.mouseCrowd = [];
+      this.nextForcedSpecies = null;
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
       this.lastStepSfxAt = 0;
@@ -1530,7 +1533,24 @@
       this.emitPosition();
     }
 
-    spawnRat(time) {
+    addMouseCrowdReplica(time) {
+      if (!this.add?.container || !this.add?.sprite || !this.ratActor) return;
+      const actor = this.add.container(this.ratActor.x, this.ratActor.y).setDepth(this.ratActor.y - 3);
+      const sprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
+      actor.add(sprite);
+      this.mouseCrowd.push({ actor, sprite, bornAt: time });
+      while (this.mouseCrowd.length > 7) this.mouseCrowd.shift()?.actor?.destroy?.();
+    }
+
+    updateMouseCrowd(time) {
+      const visible = this.sceneName === "world" && !this.memoryCapturing;
+      for (const mouse of this.mouseCrowd) {
+        mouse.actor?.setVisible(visible);
+        mouse.sprite?.setFrame(1 + Math.floor((time - mouse.bornAt) / 260) % 2);
+      }
+    }
+
+    spawnRat(time, forcedSpecies = null) {
       const spawnPoints = [
         [374, 286], [420, 420], [540, 330], [650, 365], [690, 445], [355, 470],
       ];
@@ -1543,15 +1563,17 @@
       this.ratDespawnAt = Infinity;
       this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
       this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
-      this.setRatSpecies(Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]), null, time);
-      if (this.rabbitVariant) {
-        this.ratDespawnAt = Infinity;
-      }
+      this.setRatSpecies(forcedSpecies || Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]), null, time);
+      this.ratDespawnAt = time + (this.ratSpecies === "rabbit"
+        ? Phaser.Math.Between(15000, 23000)
+        : Phaser.Math.Between(12000, 18000));
       this.ratActor.setPosition(x, y).setDepth(y - 2).setAlpha(1).setScale(1).setVisible(true);
       const variant = window.ForestAnimals.rabbitVariants?.find(item => item.id === this.rabbitVariant);
       window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: {
         eventId: this.ratEventId, species: this.ratSpecies, variant: variant?.id, variantLabel: variant?.label,
       } }));
+      window.ForestMonsterPresence = true;
+      window.dispatchEvent(new CustomEvent("forest-monster-presence", { detail: { active: true } }));
     }
 
     setRatSpecies(species, variantId = null, time = this.time?.now ?? performance.now()) {
@@ -1675,6 +1697,10 @@
       this.ratAttackPlate?.setVisible(false);
       if (this.pointerAttackEventId != null) this.cancelPointerMovement();
       this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
+      window.ForestMonsterPresence = this.mouseCrowd.length > 0 && this.ratSpecies === "mouse";
+      window.dispatchEvent(new CustomEvent("forest-monster-presence", {
+        detail: { active: window.ForestMonsterPresence },
+      }));
       if (!caught) {
         this.rabbitDefeating = false;
         this.rabbitDefeatAction = null;
@@ -1732,6 +1758,7 @@
 
     updateRat(time, delta) {
       if (this.memoryCapturing) return;
+      this.updateMouseCrowd(time);
       if (this.sceneName !== "world") {
         this.ratActor?.setVisible(false);
         return;
@@ -1744,7 +1771,29 @@
       }
       if (!this.ratActive) {
         if (!this.ratNextSpawnAt) this.ratNextSpawnAt = time + Phaser.Math.Between(3500, 7000);
-        if (time >= this.ratNextSpawnAt) this.spawnRat(time);
+        if (time >= this.ratNextSpawnAt) {
+          const forcedSpecies = this.nextForcedSpecies;
+          this.nextForcedSpecies = null;
+          this.spawnRat(time, forcedSpecies);
+        }
+        return;
+      }
+      if (time >= this.ratDespawnAt) {
+        if (this.ratSpecies === "rabbit") {
+          const available = (window.ForestAnimals.rabbitVariants || [])
+            .filter(variant => this.textures?.exists(variant.key));
+          const expiredIndex = available.findIndex(variant => variant.id === this.rabbitVariant);
+          if (expiredIndex >= 0 && available.length > 1) {
+            this.rabbitVariantCursor = expiredIndex + 1;
+          }
+          this.nextForcedSpecies = "rabbit";
+          this.dismissRat(time, false);
+          this.ratNextSpawnAt = time + Phaser.Math.Between(2200, 4200);
+        }
+        else {
+          this.addMouseCrowdReplica(time);
+          this.spawnRat(time, "mouse");
+        }
         return;
       }
       this.ratActor.setVisible(true);

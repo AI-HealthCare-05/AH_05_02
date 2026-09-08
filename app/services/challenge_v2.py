@@ -43,6 +43,7 @@ from app.services.challenge_v2_catalog import (
 from app.services.forest import REWARD_ITEMS
 
 KST = ZoneInfo("Asia/Seoul")
+DOMAIN_MIX_POLICY_VERSION = "2.2-domain-mix"
 
 
 def now_kst():
@@ -102,6 +103,39 @@ async def recent_goals(user_id, today):
     return await Assignment.filter(day_id__in=ids).exclude(status="replaced").values_list("goal", flat=True)
 
 
+async def replace_day_plan(day, pref, user_id):
+    """Publish a fresh active trio without deleting the day's audit history."""
+    plan = select_plan(
+        pref,
+        day.assigned_date.toordinal(),
+        await recent_goals(user_id, day.assigned_date),
+        await review_available(),
+    )
+    if len(plan["items"]) != 3 or {x["domain"] for x in plan["items"]} != {"diet", "activity", "routine"}:
+        return False
+    active = await active_assignments(day.id)
+    revisions = {item.slot: item.revision for item in active}
+    for item in active:
+        item.status = "replaced"
+        await item.save()
+    for slot, goal in enumerate(plan["items"], 1):
+        await Assignment.create(
+            day_id=day.id,
+            slot=slot,
+            revision=revisions.get(slot, 0) + 1,
+            replacement_reason="preference",
+            goal=goal,
+        )
+    snapshot = dict(day.eligibility_snapshot or {})
+    snapshot["preferences"] = pref.model_dump()
+    snapshot["substitutions"] = plan["substitutions"]
+    day.eligibility_snapshot = snapshot
+    day.exception_reasons = plan["proof_mix_exception_reason"]
+    day.policy_version = DOMAIN_MIX_POLICY_VERSION
+    await day.save()
+    return True
+
+
 async def enroll(user, pref):
     if not pref.transition_consent:
         raise HTTPException(422, "기존 기록을 유지하는 V2 전환에 동의해 주세요.")
@@ -118,6 +152,12 @@ async def enroll(user, pref):
                 "preferences": pref.model_dump(),
             },
         )
+        current_day = await Day.get_or_none(user_id=user.id, assigned_date=now_kst().date())
+        if current_day and starts_on <= now_kst().date():
+            # Defer publication until /today is read, so the preferences write
+            # remains compatible with in-flight evidence and audit operations.
+            current_day.policy_version = "2.1-preference-pending"
+            await current_day.save(update_fields=["policy_version"])
         # Withdrawal destroys private photos immediately; goal/session history stays intact.
         if not pref.photo_consent:
             await Evidence.filter(user_id=user.id).update(content=None)
@@ -165,9 +205,23 @@ async def today(user, create=False):
                     "substitutions": plan["substitutions"],
                 },
                 exception_reasons=plan["proof_mix_exception_reason"],
+                policy_version=DOMAIN_MIX_POLICY_VERSION,
             )
             for slot, goal in enumerate(plan["items"], 1):
                 await Assignment.create(day_id=day.id, slot=slot, goal=goal)
+        if day:
+            # Plans created by the older policy can contain two cards from one
+            # domain. Replace only their active view; prior assignments,
+            # sessions and rewards remain immutable history.
+            active = await active_assignments(day.id)
+            domains = {item.goal.get("domain") for item in active}
+            if (
+                day.policy_version != DOMAIN_MIX_POLICY_VERSION
+                or len(active) != 3
+                or domains != {"diet", "activity", "routine"}
+            ):
+                pref = V2Preferences(**enrollment.preferences)
+                await replace_day_plan(day, pref, user.id)
         result = await day_payload(day) if day else {"items": [], "completed": 0}
         return {
             **result,

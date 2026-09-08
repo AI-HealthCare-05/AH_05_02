@@ -114,16 +114,32 @@ async def reviewer(monkeypatch):
 @pytest.mark.parametrize(
     "mode,expected",
     [
-        ("balanced", ["H01-E", "D01-M", "A01-H"]),
-        ("activity_focus", ["D01-E", "A01-M", "A02-H"]),
-        ("diet_focus", ["D03-E", "H01-M", "D01-H"]),
+        ("balanced", {"routine": "E", "diet": "M", "activity": "H"}),
+        ("activity_focus", {"diet": "E", "routine": "M", "activity": "H"}),
+        ("diet_focus", {"activity": "E", "routine": "M", "diet": "H"}),
     ],
 )
 async def test_joint_constraints_and_modes(mode, expected):
     plan = select_plan(full_pref(mode=mode), 1, review_available=True)
-    assert [x["code"] for x in plan["items"]] == expected
+    assert {x["domain"]: x["difficulty"] for x in plan["items"]} == expected
+    assert {x["domain"] for x in plan["items"]} == {"diet", "activity", "routine"}
     assert mix_valid(plan["items"])
     assert plan["proof_mix_exception_reason"] == []
+
+
+async def test_equally_ranked_catalog_choices_vary_by_day_but_stay_stable_within_day():
+    daily = [tuple(x["code"] for x in select_plan(full_pref(), ordinal, review_available=True)["items"]) for ordinal in range(1, 15)]
+    assert len(set(daily)) > 1
+    assert select_plan(full_pref(), 8, review_available=True) == select_plan(full_pref(), 8, review_available=True)
+
+
+async def test_custom_family_choices_are_honored_across_all_three_domains():
+    plan = select_plan(
+        full_pref(diet_family="D02", activity_family="A02", routine_family="R01"), 1, review_available=True
+    )
+    assert {item["domain"]: item["family_id"] for item in plan["items"]} == {
+        "diet": "D02", "activity": "A02", "routine": "R01"
+    }
 
 
 async def test_drink_nonconsumer_same_difficulty_substitute():
@@ -162,6 +178,31 @@ async def test_today_stable_and_old_wallet_preserved(db):
     assert len({x["day_id"] for x in results}) == 1
     assert await svc.Day.all().count() == 1
     assert (await ForestAvatar.get(user_id=db.id)).carrot_balance == 987
+
+
+async def test_today_migrates_old_duplicate_domains_without_deleting_history(db):
+    user = await User.create(
+        email="v2-domain-migration@example.com", hashed_password="not-a-login", gender="FEMALE", birthday=date(1970, 1, 1)
+    )
+    await Consent.create(user_id=user.id, version="test")
+    await EligibilityCheck.create(
+        user_id=user.id, age=56, service_eligible=True, target_segment="test", model_eligible=True,
+        next_action="continue", model_key="test", model_version="test", feature_schema_version="test",
+        threshold_version="test", safety_copy_version="test",
+    )
+    await svc.enroll(user, full_pref())
+    day = await svc.Day.create(user_id=user.id, assigned_date=NOW.date(), eligibility_snapshot={}, policy_version="2.1")
+    old_codes = ["D01-E", "D02-M", "H01-H"]
+    old = [
+        await svc.Assignment.create(day_id=day.id, slot=slot, goal=next(x for x in catalog() if x["code"] == code))
+        for slot, code in enumerate(old_codes, 1)
+    ]
+    result = await svc.today(user, True)
+    assert {item["goal"]["domain"] for item in result["items"]} == {"diet", "activity", "routine"}
+    assert result["policy_version"] == svc.DOMAIN_MIX_POLICY_VERSION
+    old_after = [await svc.Assignment.get(id=item.id) for item in old]
+    assert all(item.status == "replaced" for item in old_after)
+    assert await svc.Assignment.filter(day_id=day.id).count() == 6
 
 
 async def test_walk_per_session_t2_upload_then_completion_and_overlap(db):

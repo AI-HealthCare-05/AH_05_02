@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v174-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v178-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -745,7 +745,7 @@ def test_wild_rat_is_a_separate_attack_reward_event() -> None:
     pet_builder = (ROOT / "scripts/build_lpc_pet_pack.py").read_text(encoding="utf-8")
 
     assert 'this.load.spritesheet("lpc-rat"' in phaser_script
-    assert "spawnRat(time)" in phaser_script
+    assert "spawnRat(time, forcedSpecies = null)" in phaser_script
     assert "tryAttackRat(time)" in phaser_script
     assert 'pose === "attack"' in phaser_script
     assert 'new CustomEvent("forest-rat-caught"' in phaser_script
@@ -960,7 +960,11 @@ def test_saved_outfits_are_numbered_renameable_and_keep_body_previews_clothed() 
     assert 'label: "사냥꾼"' in game_script
     assert 'sourceLabel: "나만의 코디 8"' in game_script
     assert 'lpcOutfit: "none", lpcBottom: "none", lpcShoes: "none"' not in game_script
-    assert "아이템을 선택해주세요" in html
+    assert "아이템을 선택해주세요" not in html
+    assert "피부색 함께 적용" not in html
+    assert "2× PIXEL PREVIEW" not in html
+    assert 'id="pet-art-credit"' not in html
+    assert 'name: "선택 안함"' in game_script
     assert "record?.sources?.[gender] || record?.sources?.male" in (
         ROOT / "src/frontend/lpc-avatar-engine.js"
     ).read_text(encoding="utf-8")
@@ -1225,12 +1229,10 @@ process.stdout.write(JSON.stringify({
     individual_assets = inventory["assets"]
     assert len(individual_assets) == 24
     assert len({asset["url"] for asset in individual_assets}) == 24
-    assert sum("/furniture-v156/" in asset["url"] for asset in individual_assets) == 22
+    assert sum("/furniture-v153/" in asset["url"] for asset in individual_assets) == 24
     for asset in individual_assets:
         url = asset["url"]
-        retained = asset["code"] in {"campfire", "animated_fountain"}
-        version, revision = ("v153", "20260907-1") if retained else ("v156", "20260908-2")
-        assert url == f'/static/assets/furniture-{version}/{asset["code"]}.png?v={revision}'
+        assert url == f'/static/assets/furniture-v153/{asset["code"]}.png?v=20260907-1'
         assert asset["key"] == f'furniture-{asset["code"]}'
         path = frontend / url.partition("?")[0].removeprefix("/static/")
         assert path.is_file(), f"Missing independent furniture asset: {path.name}"
@@ -1253,7 +1255,7 @@ process.stdout.write(JSON.stringify({
     assert "ForestObjects.createLegacyStorageAtlas(storageSource)" in phaser
     assert 'ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" })' in phaser
     assert html.index("forest-objects.js") < html.index("forest-phaser.js")
-    assert "forest-objects.js?v=20260908-2" in worker
+    assert "forest-objects.js?v=20260908-4" in worker
     assert "canvas[data-storage-object]" in game
     assert 'background-position:${backgroundPosition}' not in game
     assert "ForestFire.burningTile" in game and "ForestFire.offTile" in game

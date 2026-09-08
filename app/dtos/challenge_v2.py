@@ -20,6 +20,9 @@ class V2Preferences(BaseModel):
     photo_accessible: bool = False
     transition_consent: bool = False
     max_difficulty: Literal["E", "M", "H"] = "E"
+    diet_family: Literal["random", "D01", "D02", "D03"] = "random"
+    activity_family: Literal["random", "A01", "A02"] = "random"
+    routine_family: Literal["random", "H01", "H02", "R01"] = "random"
 
 
 class V2SessionInput(BaseModel):

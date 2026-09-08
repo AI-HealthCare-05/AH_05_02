@@ -223,13 +223,10 @@ test('individual manifest names one independent PNG for each storage and animate
   const { api } = setup();
   assert.equal(api.INDIVIDUAL_ASSETS.length, 24);
   assert.equal(new Set(api.INDIVIDUAL_ASSETS.map(asset => asset.url)).size, 24);
-  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v156/')).length, 22);
+  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v153/')).length, 24);
   for (const asset of api.INDIVIDUAL_ASSETS) {
     assert.equal(asset.key, `furniture-${asset.code}`);
-    const retained = ['campfire', 'animated_fountain'].includes(asset.code);
-    assert.equal(asset.url, retained
-      ? `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`
-      : `/static/assets/furniture-v156/${asset.code}.png?v=20260908-2`);
+    assert.equal(asset.url, `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
   }
 });
 
@@ -281,7 +278,7 @@ test('individual alpha bounds include faint edge pixels and aspect-fit the compl
   assert.equal(api.alphaBounds(new Uint8ClampedArray(16), 2, 2), null);
 });
 
-test('only v156 uses alpha 16 for fitting while protected v153 and default bounds retain alpha 1', () => {
+test('restored v153 furniture retains every non-transparent edge pixel', () => {
   const { api } = setup(), width = 80, height = 80;
   const pixels = new Uint8ClampedArray(width * height * 4);
   pixels[(1 * width + 1) * 4 + 3] = 1;
@@ -290,7 +287,7 @@ test('only v156 uses alpha 16 for fitting while protected v153 and default bound
   pixels[(19 * width + 24) * 4 + 3] = 16;
   assert.deepEqual({ ...api.alphaBounds(pixels, width, height) }, { x: 1, y: 1, width: 78, height: 78 });
   assert.deepEqual({ ...api.alphaBounds(pixels, width, height, 16) }, { x: 24, y: 19, width: 31, height: 41 });
-  const images = ['/static/assets/furniture-v156/tent.png?v=20260908-2',
+  const images = ['/static/assets/furniture-v153/tent.png?v=20260907-1',
     '/static/assets/furniture-v153/campfire.png?v=20260907-1',
     '/static/assets/furniture-v153/animated_fountain.png?v=20260907-1', ''].map(src => ({
     width, height, naturalWidth: width, naturalHeight: height, complete: true, pixels, src,
@@ -298,14 +295,14 @@ test('only v156 uses alpha 16 for fitting while protected v153 and default bound
   const original = new Uint8ClampedArray(pixels);
   for (const [index, image] of images.entries()) {
     const tile = api.createIndividualTile(image, 128);
-    assert.deepEqual(tile.calls[0].slice(1, 5), index === 0 ? [24, 19, 31, 41] : [1, 1, 78, 78]);
+    assert.deepEqual(tile.calls[0].slice(1, 5), [1, 1, 78, 78]);
     assert.deepEqual(pixels, original, 'fitting may not alter PNG source alpha or RGB pixels');
   }
   images[1].currentSrc = images[0].src;
-  assert.deepEqual(api.createIndividualTile(images[1], 128).calls[0].slice(1, 5), [24, 19, 31, 41], 'currentSrc change invalidates cached v153 bounds');
+  assert.deepEqual(api.createIndividualTile(images[1], 128).calls[0].slice(1, 5), [1, 1, 78, 78], 'currentSrc change invalidates cached v153 bounds');
 });
 
-test('Phaser blob images inherit v156 or protected v153 fitting from the manifest and invalidate prior caches', () => {
+test('Phaser blob images inherit restored v153 fitting from the manifest and invalidate prior caches', () => {
   const { api } = setup(), images = individualImages(api);
   for (const [code, image] of Object.entries(images)) {
     image.src = `blob:https://forest.test/${code}`;
@@ -317,11 +314,10 @@ test('Phaser blob images inherit v156 or protected v153 fitting from the manifes
   api.registerIndividualImages(images);
   const after = api.createStorageAtlasFromImages(images);
   assert.notEqual(after, before, 'registering manifest identity invalidates blob-only atlas cache');
-  assert.deepEqual(after.calls[0][0].calls[0].slice(1, 5), [2, 1, 36, 78]);
+  assert.deepEqual(after.calls[0][0].calls[0].slice(1, 5), [0, 0, 40, 80]);
   for (const asset of api.INDIVIDUAL_ASSETS) {
     const tile = api.createIndividualTile(images[asset.code], 128);
-    const retained = ['campfire', 'animated_fountain'].includes(asset.code);
-    assert.deepEqual(tile.calls[0].slice(1, 5), retained ? [0, 0, 40, 80] : [2, 1, 36, 78], asset.code);
+    assert.deepEqual(tile.calls[0].slice(1, 5), [0, 0, 40, 80], asset.code);
   }
 });
 
@@ -373,6 +369,15 @@ test('registered images are shared by normal DOM drawing while explicit legacy f
   assert.notEqual(flame, storage);
   assert.equal(flame.calls[14][0], source, 'the original flame pixels never come from new OFF-only artwork');
   assert.throws(() => api.registerIndividualImages({}), /All 24/);
+});
+
+test('ordinary furniture uses the pre-carrot-house atlas while campfire keeps its current art', () => {
+  const { api } = setup(), images = individualImages(api);
+  api.registerIndividualImages(images);
+  const legacy = api.createLegacyStorageAtlas(source);
+  const restored = api.createStorageAtlas(source);
+  assert.equal(restored.calls[13][0], legacy, 'bench is copied from the old furniture atlas');
+  assert.notEqual(restored.calls[14][0], legacy, 'campfire remains the approved current illustration');
 });
 
 test('async art boot blocks legacy flashes and registers nothing until every required PNG is ready', async () => {

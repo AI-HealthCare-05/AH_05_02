@@ -306,17 +306,41 @@ test('reduced motion keeps source frames still without disabling behavior', () =
   assert.deepEqual([scene.ratActor.x, scene.ratActor.y, scene.ratSprite.frame, scene.ratSprite.scaleX], before);
 });
 
-test('encounters announce their variant and remain until the player or pet removes them', () => {
+test('encounters announce their variant and rabbits receive a bounded roaming lifetime', () => {
   const { scene, events } = setup();
   scene.spawnRat(1000);
   assert.equal(scene.ratSpecies, 'rabbit');
-  assert.equal(scene.ratDespawnAt, Infinity);
+  assert.equal(scene.ratDespawnAt, 16000);
   assert.equal(events[0].type, 'forest-rat-appeared');
   assert.equal(events[0].detail.variant, 'bunbun');
   assert.equal(events[0].detail.variantLabel, 'Bunbun');
   scene.spawnRat(3000);
   assert.equal(scene.rabbitVariant, 'last-tick');
-  assert.equal(events[1].detail.eventId, events[0].detail.eventId + 1);
+  const appearances = events.filter(event => event.type === 'forest-rat-appeared');
+  assert.equal(appearances[1].detail.eventId, appearances[0].detail.eventId + 1);
+});
+
+test('ignored mice accumulate while an expired rabbit is replaced by the other rabbit variant', () => {
+  const { scene, events } = setup();
+  scene.add.container = (x, y) => Object.assign(actor(x, y), { list: [], add(children) { this.list.push(children); return this; } });
+  scene.add.sprite = (x, y) => actor(x, y);
+  scene.setRatSpecies('mouse', null, 1000);
+  scene.ratDespawnAt = 1200;
+  scene.updateRat(1201, 40);
+  assert.equal(scene.mouseCrowd.length, 1);
+  assert.equal(scene.ratActive, true);
+  assert.equal(scene.ratSpecies, 'mouse');
+
+  scene.mouseCrowd.length = 0;
+  scene.setRatSpecies('rabbit', 'bunbun', 2000);
+  scene.ratDespawnAt = 2100;
+  scene.updateRat(2101, 40);
+  assert.equal(scene.ratActive, false);
+  assert.equal(scene.nextForcedSpecies, 'rabbit');
+  scene.updateRat(scene.ratNextSpawnAt, 40);
+  assert.equal(scene.ratSpecies, 'rabbit');
+  assert.equal(scene.rabbitVariant, 'last-tick');
+  assert.equal(events.some(event => event.type === 'forest-rat-caught'), false);
 });
 
 test('explicit variant and action state updates select supported poses without a new reward event', () => {

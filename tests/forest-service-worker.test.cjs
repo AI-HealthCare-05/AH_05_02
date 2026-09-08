@@ -12,7 +12,7 @@ const response = (body, { status = 200, redirected = false } = {}) => ({
 });
 const keyOf = request => typeof request === 'string' ? request : request.url;
 
-test('offline shell versions match every HTML script and stylesheet and the mixed 22-new 2-retained art manifest', () => {
+test('offline shell versions match every HTML script, stylesheet, and restored furniture asset', () => {
   const context = { self: { addEventListener() {} } };
   vm.runInNewContext(source + ';globalThis.shell = CORE_SHELL;globalThis.media = MEDIA_ASSETS;', context);
   const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
@@ -25,11 +25,8 @@ test('offline shell versions match every HTML script and stylesheet and the mixe
   const manifest = Array.from(objects.window.ForestObjects.INDIVIDUAL_ASSETS, asset => asset.url).sort();
   const cachedFurniture = Array.from(context.media).filter(url => /\/furniture-v\d+\//.test(url)).sort();
   assert.deepEqual(cachedFurniture, manifest);
-  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v156/')).length, 22);
-  assert.deepEqual(cachedFurniture.filter(url => url.includes('/furniture-v153/')), [
-    '/static/assets/furniture-v153/animated_fountain.png?v=20260907-1',
-    '/static/assets/furniture-v153/campfire.png?v=20260907-1',
-  ]);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v153/')).length, 24);
+  assert.equal(cachedFurniture.some(url => url.includes('/furniture-v156/')), false);
   const animals = require('../src/frontend/forest-animals.js');
   assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-rabbits/')).sort(),
     animals.rabbitAssets.map(asset => asset.url).sort(), 'both optional packs use the same URLs in preload and offline cache');

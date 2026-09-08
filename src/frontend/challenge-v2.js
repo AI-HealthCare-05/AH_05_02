@@ -11,19 +11,36 @@
   const statusLabel = {assigned:"기록 준비",in_progress:"진행 중",submitted:"검토 대기",completed:"완료",not_required:"기록 제출 완료",pending:"검토 대기",passed:"사진 조건 확인",needs_retry:"재제출 필요",inconclusive:"판단 어려움"};
   const reasonLabel = {real_visual_review_unavailable:"지금은 사진 확인 대신 직접 기록하는 챌린지를 드려요.",photo_consent_or_accessibility:"사진 없이도 할 수 있는 챌린지로 바꿨어요.",difficulty_safety_or_preference_limit:"몸 상태와 선택에 맞춰 난이도를 조정했어요.",proof_mix_safety_accessibility_or_weekly_limit:"이번 주에 무리 없이 할 수 있는 챌린지로 골랐어요.",replacement_accessibility:"사진 없이 기록하기",replacement_safety:"몸 상태에 맞게 바꾸기",replacement_too_hard:"난이도 낮추기",replacement_preference:"다른 활동 선택"};
   const domainView = {
-    routine:{label:"물",message:"당근 밭에 물을 주었습니다.",image:"/static/assets/challenge-water-team-v171.webp?v=20260908-1"},
+    routine:{label:"음료",message:"당근 밭에 물을 주었습니다.",image:"/static/assets/challenge-water-team-v171.webp?v=20260908-1"},
     diet:{label:"식단",message:"당근 밭에 거름을 주었습니다.",image:"/static/assets/challenge-compost-team-v171.webp?v=20260908-1"},
     activity:{label:"운동",message:"당근 밭에 잡초를 제거했습니다.",image:"/static/assets/challenge-weeding-team-v171.webp?v=20260908-1"},
   };
   const mvpStorageKey="gandang.challenge-v2.mvp-completions.v1";
+  const mvpCycleStorageKey="gandang.challenge-v2.daily-cycle.v1";
   const setupUrl = "/service?returnTo=forest-challenges";
   let token=null, plan=null, busy=false, needsSetup=false, connectionFailed=false, settingsOpen=location.hash==="#daily-settings";
   let mvpCompletions=readMvpCompletions();
+  let mvpCycles=readMvpCycles();
   const channel=typeof BroadcastChannel==="function"?new BroadcastChannel("challenge-v2-refresh"):null;
   window.ForestChallengeV2={enabled:false,plan:null};
   function readMvpCompletions(){try{return JSON.parse(window.localStorage?.getItem(mvpStorageKey)||"{}")||{};}catch{return {};}}
-  function completionKey(item){return `${plan?.day_id||plan?.starts_on||new Date().toISOString().slice(0,10)}:${item.id}`;}
-  function isMvpCompleted(item){return Boolean(mvpCompletions[completionKey(item)]);}
+  function readMvpCycles(){try{return JSON.parse(window.localStorage?.getItem(mvpCycleStorageKey)||"{}")||{};}catch{return {};}}
+  function planDayKey(){return String(plan?.day_id||plan?.starts_on||new Date().toISOString().slice(0,10));}
+  function currentCycle(){return Math.max(0,Math.trunc(Number(mvpCycles[planDayKey()])||0));}
+  function completionKey(item){return `${planDayKey()}:cycle-${currentCycle()}:${item.id}`;}
+  function legacyCompletionKey(item){return `${planDayKey()}:${item.id}`;}
+  function completionRecord(item){return mvpCompletions[completionKey(item)]||(currentCycle()===0?mvpCompletions[legacyCompletionKey(item)]:null);}
+  function isMvpCompleted(item){return Boolean(completionRecord(item));}
+  function isCompleted(item){return Boolean(isMvpCompleted(item)||(currentCycle()===0&&item.status==="completed"));}
+  function visibleItems(){
+    const items=Array.isArray(plan?.items)?plan.items:[];
+    const byDomain=new Map();
+    for(const item of items)if(!byDomain.has(item.goal?.domain))byDomain.set(item.goal?.domain,item);
+    const balanced=[byDomain.get("diet"),byDomain.get("activity"),byDomain.get("routine")].filter(Boolean);
+    // Old already-issued plans can predate the balanced policy. Keep their
+    // three real assignments visible rather than inventing mismatched cards.
+    return balanced.length===3?balanced:items.slice(0,3);
+  }
   function detailNote(item){return Array.from(root.querySelectorAll?.(`[data-session="${item.id}"] [name="note"]`)||[]).map(field=>field.value?.trim()).filter(Boolean).join("\n");}
   function saveMvpCompletion(item){
     const record={assignmentId:item.id,domain:item.goal.domain,note:detailNote(item),completedAt:new Date().toISOString()};
@@ -33,7 +50,7 @@
   }
   function showCelebration(item){
     const view=domainView[item.goal.domain]||domainView.routine;
-    window.dispatchEvent(new CustomEvent("forest-challenge-celebrated",{detail:{assignmentId:item.id,domain:item.goal.domain,label:view.label,message:view.message,image:view.image}}));
+    window.dispatchEvent(new CustomEvent("forest-challenge-celebrated",{detail:{assignmentId:item.id,completionKey:completionKey(item),domain:item.goal.domain,label:view.label,message:view.message,image:view.image}}));
     if(!document.body?.insertAdjacentHTML)return;
     document.getElementById?.("challenge-celebration")?.remove?.();
     document.body.insertAdjacentHTML("beforeend",`<section id="challenge-celebration" class="v2-celebration" role="dialog" aria-modal="true" aria-labelledby="challenge-celebration-title"><div class="v2-celebration-card"><img src="${view.image}" alt="프리셋 친구들이 함께 ${view.label} 챌린지를 마친 모습"><span>${view.label} 챌린지 완료</span><h2 id="challenge-celebration-title">${view.message}</h2><p>오늘의 실천을 함께 축하해요!</p><button type="button" data-celebration-close>확인</button></div></section>`);
@@ -78,6 +95,31 @@
     return result.data;
   }
   const input=(name,label,type="text",extra="")=>`<label>${label}<input name="${name}" type="${type}" ${extra} required></label>`;
+  function compactSettings(p={}) {
+    const check=(name,label,fallback=false)=>`<label class="v2-check"><input type="checkbox" name="${name}" ${(p[name]??fallback)?"checked":""}>${label}</label>`;
+    return `<section id="daily-settings" class="v2-compact-settings" data-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 다시 설정하기">
+      <div class="v2-mode-buttons" role="group" aria-label="챌린지 구성 선택">
+        <button type="button" data-quick-mode="activity_focus">운동 위주</button>
+        <button type="button" data-quick-mode="diet_focus">식단 위주</button>
+        <button type="button" data-custom-mode aria-expanded="false" aria-controls="v2-custom-preferences">나만의 챌린지</button>
+      </div>
+      <form id="v2-custom-preferences" data-preferences data-custom-preferences hidden>
+        <input type="hidden" name="mode" value="balanced">
+        <label>난이도<select name="max_difficulty">${Object.entries(levelLabel).map(([k,v])=>`<option value="${k}" ${(p.max_difficulty||"E")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <label>식단 챌린지<select name="diet_family">${Object.entries({random:"랜덤",D01:"식사 구성",D02:"영양표시",D03:"식사 기록"}).map(([k,v])=>`<option value="${k}" ${(p.diet_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <label>운동 챌린지<select name="activity_family">${Object.entries({random:"랜덤",A01:"걷기",A02:"오래 앉기 줄이기"}).map(([k,v])=>`<option value="${k}" ${(p.activity_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <label>음료 챌린지<select name="routine_family">${Object.entries({random:"랜덤",H01:"단 음료 바꾸기",H02:"수분 기록",R01:"저녁 습관"}).map(([k,v])=>`<option value="${k}" ${(p.routine_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        ${input("planned_meals","오늘 예정된 식사 횟수","number",`min="0" max="3" value="${p.planned_meals??1}"`)}
+        ${input("sugary_drink_opportunities","단 음료 기회 횟수","number",`min="0" max="3" value="${p.sugary_drink_opportunities??0}"`)}
+        ${check("safety_confirmed","안전 조건을 확인했어요")}${check("exercise_allowed","편안히 움직일 수 있어요")}
+        ${check("dietary_changes_allowed","의료진 지침 안에서 식사 구성을 바꿀 수 있어요")}${check("fluid_restriction","수분 제한이 있거나 아직 몰라요",true)}
+        ${check("swallowing_restriction","씹기·삼키기 제한이 있거나 아직 몰라요",true)}${check("therapeutic_diet","치료식이 필요하거나 아직 몰라요",true)}${check("food_allergy","음식 알레르기가 있거나 아직 몰라요",true)}
+        ${check("photo_accessible","사진·활동기록 화면을 제출할 수 있어요")}${check("photo_consent","사진 확인에 동의해요")}
+        <label class="v2-check"><input type="checkbox" name="transition_consent" required ${p.transition_consent?"checked":""}>기존 기록과 보상을 유지할게요</label>
+        <button>나만의 챌린지 저장</button>
+      </form>
+    </section>`;
+  }
   function settings(p={}) {
     const check=(name,label,fallback=false)=>`<label class="v2-check"><input type="checkbox" name="${name}" ${(p[name]??fallback)?"checked":""}>${label}</label>`;
     return `<section id="daily-settings" data-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 설정"><h4>나에게 맞게 다시 설정하기</h4><form data-preferences>
@@ -120,7 +162,7 @@
       <details><summary>근거·확인 범위</summary><p>목표 수치는 앱 시작용 설계이며 예방 효과의 순위가 아닙니다. 사진으로 실제 섭취나 걷기 진위를 증명하지 않습니다.</p>${g.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join(" · ")}</details></article>`;
   }
   function compactQuest(item,openIds) {
-    const g=item.goal, mvpRecord=mvpCompletions[completionKey(item)], complete=item.status==="completed"||Boolean(mvpRecord), domain=domainView[g.domain]||domainView.routine;
+    const g=item.goal, mvpRecord=completionRecord(item), complete=isCompleted(item), domain=domainView[g.domain]||domainView.routine;
     const pending=!complete&&item.verification_status==="pending"&&item.completed_sessions>=g.target_sessions;
     const label=complete?"인증완료":pending?"확인 중":"인증하기";
     const completedNote=item.status==="completed"&&mvpRecord?`<label class="v2-completed-note">추가 기록<textarea data-mvp-note="${esc(item.id)}" maxlength="500" placeholder="오늘 실천한 내용이나 느낀 점을 남길 수 있어요.">${esc(mvpRecord.note||"")}</textarea></label>`:"";
@@ -149,11 +191,13 @@
     return values;
   }
   function compactContent(openIds) {
+    const items=visibleItems(), cycleComplete=items.length===3&&items.every(isCompleted);
     return `<p data-message role="status" aria-live="polite"></p>
-      <div class="v2-compact-cards">${(plan.items||[]).map(item=>compactQuest(item,openIds)).join("")}</div>
-      ${!plan.items?.length?`<p class="v2-notice">설정을 저장했어요.${plan.starts_on?` ${esc(plan.starts_on)}부터 오늘의 퀘스트가 표시돼요.`:" 오늘의 퀘스트를 준비하고 있어요."}</p>`:""}
+      <div class="v2-compact-cards">${items.map(item=>compactQuest(item,openIds)).join("")}</div>
+      ${!items.length?`<p class="v2-notice">설정을 저장했어요.${plan.starts_on?` ${esc(plan.starts_on)}부터 오늘의 퀘스트가 표시돼요.`:" 오늘의 퀘스트를 준비하고 있어요."}</p>`:""}
+      ${cycleComplete?`<button class="v2-repeat-button" data-repeat-quests type="button">오늘의 퀘스트 다시 하기</button>`:""}
       <button id="forest-quest-settings" class="v2-settings-button" data-open-settings type="button" aria-label="나에게 맞게 다시 설정하기" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기"}</button>
-      ${settings(plan.preferences)}<section data-compact-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 안내와 보상">
+      ${compactSettings(plan.preferences)}<section data-compact-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 안내와 보상">
       <p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
       ${(plan.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
@@ -167,7 +211,25 @@
     const management=root.querySelector("[data-compact-settings]");if(management)management.hidden=!open;
     const toggle=button||root.querySelector("#forest-quest-settings");
     if(toggle){toggle.setAttribute("aria-expanded",String(open));toggle.textContent=open?"다시 설정 닫기":"나에게 맞게 다시 설정하기";}
-    if(open)root.querySelector("[data-settings] select")?.focus();
+    if(open)root.querySelector("[data-settings] button")?.focus();
+  }
+  function preferencePayload(overrides={}) {
+    const current=plan?.preferences||{};
+    return {
+      mode:"balanced", safety_confirmed:false, exercise_allowed:false, dietary_changes_allowed:false,
+      planned_meals:1, sugary_drink_opportunities:0, fluid_restriction:true, swallowing_restriction:true,
+      therapeutic_diet:true, food_allergy:true, photo_consent:false, photo_accessible:false,
+      transition_consent:true, max_difficulty:"E",
+      diet_family:"random", activity_family:"random", routine_family:"random", ...current, ...overrides,
+    };
+  }
+  async function savePreferences(values) {
+    await api("/preferences",{method:"PUT",body:JSON.stringify(values)});
+    plan=await api("/today",{method:"POST"});
+    settingsOpen=false;
+    render();
+    notify("오늘의 음료·식단·운동 퀘스트를 다시 골랐어요.");
+    channel?.postMessage("refresh");
   }
   function render() {
     if(!plan?.enrolled)settingsOpen=true;
@@ -181,7 +243,8 @@
       ${settings(plan?.preferences)}<div class="v2-cards">${(plan?.items||[]).map(card).join("")}</div>
       ${plan?.enrolled?`<p>오늘 ${plan.completed||0}/${plan.items.length}개 완료${!plan.day_id?` · 시작일 ${esc(plan.starts_on)}`:""}</p>`:""}
       ${plan?.day_id?`<p class="v2-wallet">계정 당근 ${plan.carrot_balance??100}개 · ${plan.chest_issued?"오늘의 보물상자를 받았어요":"오늘 할 일을 모두 마치면 보물상자를 받아요"}</p><small>숲 체험에서 모은 당근과 아이템은 따로 보관돼요.</small>`:""}`}`;
-    const effectivePlan=plan?{...plan,completed:(plan.items||[]).filter(item=>item.status==="completed"||isMvpCompleted(item)).length}:plan;
+    const items=plan?visibleItems():[];
+    const effectivePlan=plan?{...plan,items,completed:items.filter(isCompleted).length}:plan;
     window.ForestChallengeV2.plan=effectivePlan;
     if(root.parentElement.matches('[data-step="7"]'))root.insertAdjacentHTML("beforeend",'<button type="button" data-dashboard>대시보드로 이동</button>');
     window.dispatchEvent(new CustomEvent("challenge-v2-updated",{detail:effectivePlan}));
@@ -193,6 +256,12 @@
   }
   root.addEventListener("click",async event=>{
     if(event.target.closest("[data-refresh]"))return load();
+    if(event.target.closest("[data-repeat-quests]")){
+      mvpCycles={...mvpCycles,[planDayKey()]:currentCycle()+1};
+      try{window.localStorage?.setItem(mvpCycleStorageKey,JSON.stringify(mvpCycles));}catch{}
+      render();notify("오늘의 퀘스트 3개를 다시 수행할 수 있어요. 표시되는 회차는 늘어나지 않습니다.");
+      return;
+    }
     const certify=event.target.closest("[data-certify]");
     if(certify){
       if(busy||certify.disabled)return;
@@ -220,6 +289,24 @@
     const settingsButton=event.target.closest("[data-open-settings]");
     if(settingsButton){
       setSettingsOpen(!settingsOpen,settingsButton);
+      return;
+    }
+    const quickMode=event.target.closest("[data-quick-mode]");
+    if(quickMode){
+      if(busy)return;
+      busy=true;quickMode.disabled=true;
+      try{await savePreferences(preferencePayload({mode:quickMode.dataset.quickMode,diet_family:"random",activity_family:"random",routine_family:"random"}));}
+      catch(error){notify(error.message);}
+      finally{busy=false;quickMode.disabled=false;}
+      return;
+    }
+    const customMode=event.target.closest("[data-custom-mode]");
+    if(customMode){
+      const form=root.querySelector("[data-custom-preferences]");
+      const open=Boolean(form?.hidden);
+      if(form)form.hidden=!open;
+      customMode.setAttribute("aria-expanded",String(open));
+      if(open)form.querySelector("select,input:not([type=hidden])")?.focus();
       return;
     }
     if(event.target.closest("[data-dashboard]"))return window.dispatchEvent(new Event("challenge-v2-open-dashboard"));
@@ -255,7 +342,7 @@
       if(form.matches("[data-preferences]")) {
         for(const input of form.querySelectorAll('input[type="checkbox"]'))values[input.name]=input.checked;
         values.planned_meals=Number(values.planned_meals);values.sugary_drink_opportunities=Number(values.sugary_drink_opportunities);
-        await api("/preferences",{method:"PUT",body:JSON.stringify(values)});plan=await api("/today",{method:"POST"});settingsOpen=false;
+        await savePreferences(preferencePayload(values));
       }else if(form.matches("[data-session]")) {
         values.done=true;values.performed_at=new Date(`${values.performed_at}:00+09:00`).toISOString();
         for(const key of ["quantity","intake_ml","serving_amount","sugar_g","carbohydrate_g"])if(key in values)values[key]=Number(values[key]);

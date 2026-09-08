@@ -3,6 +3,7 @@
 import copy
 import itertools
 import json
+import random
 from pathlib import Path
 
 from app.dtos.challenge_v2 import V2Preferences
@@ -139,11 +140,22 @@ def select_plan(pref: V2Preferences, day_ordinal: int, recent=None, review_avail
         if code.startswith("H01") and code not in available:
             preferred[i] = code.replace("H01", "H02")
             substitutions.append({"from": code, "to": preferred[i], "reason": "no_eligible_existing_drink_opportunity"})
-    desired = {
-        "diet_focus": {"diet": 2, "routine": 1},
-        "activity_focus": {"activity": 2, "diet": 1},
-        "balanced": {"diet": 1, "activity": 1, "routine": 1},
-    }[pref.mode]
+    # The forest MVP always presents one card from each visible care domain.
+    # A preference mode still influences the preferred template codes and
+    # difficulty ranking, but must not replace the daily diet/activity/drink
+    # trio with two cards from the same domain.
+    desired = {"diet": 1, "activity": 1, "routine": 1}
+    catalog_by_code = {item["code"]: item for item in catalog()}
+    preferred_difficulty = {
+        catalog_by_code[code]["domain"]: catalog_by_code[code]["difficulty"]
+        for code in preferred
+        if code in catalog_by_code
+    }
+    preferred_family = {
+        "diet": pref.diet_family,
+        "activity": pref.activity_family,
+        "routine": pref.routine_family,
+    }
     # Enumerate complete combinations before ranking; no top-three approximation.
     choices = [
         list(combo)
@@ -157,14 +169,30 @@ def select_plan(pref: V2Preferences, day_ordinal: int, recent=None, review_avail
         domains = [x["domain"] for x in combo]
         return (
             len(combo),
-            len({x["difficulty"] for x in combo}),
-            len({x["proof_type"] for x in combo}),
             sum(min(domains.count(k), v) for k, v in desired.items()),
-            sum(x["code"] in preferred for x in combo),
-            sum(x["family_id"] in DESIGN["policy"]["core_priority_families"] for x in combo),
+            len({x["difficulty"] for x in combo}),
+            sum(
+                preferred_family.get(x["domain"], "random") != "random"
+                and x["family_id"] == preferred_family[x["domain"]]
+                for x in combo
+            ),
+            sum(x["difficulty"] == preferred_difficulty.get(x["domain"]) for x in combo),
+            len({x["proof_type"] for x in combo}),
         )
 
-    selected = sorted(max(exact or choices, key=score), key=lambda x: "EMH".index(x["difficulty"])) if choices else []
+    balanced = [combo for combo in choices if {x["domain"] for x in combo} == set(desired)]
+    difficulty_balanced = [combo for combo in balanced if {x["difficulty"] for x in combo} == {"E", "M", "H"}]
+    pool = difficulty_balanced or balanced or exact or choices
+    # Keep the result stable during a calendar day, while varying equally
+    # eligible catalog entries from day to day.  Preferences affect the score;
+    # they never remove the required drink/diet/exercise trio.
+    if pool:
+        best_score = max(score(combo) for combo in pool)
+        finalists = [combo for combo in pool if score(combo) == best_score]
+        chosen = random.Random(f"{day_ordinal}:{pref.mode}:{pref.max_difficulty}").choice(finalists)
+        selected = sorted(chosen, key=lambda x: "EMH".index(x["difficulty"]))
+    else:
+        selected = []
     return {
         "items": selected,
         "proof_mix_exception_reason": exceptions_for(selected, pref, review_available),

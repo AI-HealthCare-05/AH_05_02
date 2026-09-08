@@ -121,9 +121,12 @@ function assignment(id, overrides = {}) {
 }
 
 function today(overrides = {}) {
+  const diet = assignment(1); diet.goal.domain = 'diet'; diet.goal.family_id = 'D03'; diet.goal.goal_unit = 'count';
+  const activity = assignment(2);
+  const routine = assignment(3); routine.goal.domain = 'routine'; routine.goal.family_id = 'H02'; routine.goal.goal_unit = 'count';
   return {
     enrolled: true, day_id: 1, completed: 0, carrot_balance: 100, chest_issued: false,
-    preferences: {}, items: [assignment(1), assignment(2), assignment(3)],
+    preferences: {}, items: [diet, activity, routine],
     proof_mix_exception_reason: ['real_visual_review_unavailable'], substitutions: [],
     ...overrides,
   };
@@ -199,7 +202,7 @@ test('enrolled forest shows three short quests while preserving every original d
 test('direct-record quests save an honest self-attestation and optional detail with one certify click', async () => {
   const { root, requests } = await widget();
   const before = requests.length;
-  const card = root.querySelector('.v2-quest-card');
+  const card = root.querySelector('[data-certify="2"]').closest('.v2-quest-card');
   card.querySelector('[name="note"]').value = '저녁 산책 후 몸이 가벼웠어요.';
   await root.listeners.click({ target: card.querySelector('[data-certify]') });
   const writes = requests.slice(before).filter(request => request.url.includes('/sessions/'));
@@ -210,6 +213,20 @@ test('direct-record quests save an honest self-attestation and optional detail w
   assert.equal(payload.quantity, 5);
   assert.equal(payload.note, '저녁 산책 후 몸이 가벼웠어요.');
   assert.equal(Number.isNaN(Date.parse(payload.performed_at)), false);
+});
+
+test('three completed quests can be repeated without increasing their displayed session count', async () => {
+  const { root, storage } = await widget();
+  for (const id of ['1', '2', '3']) await root.listeners.click({ target: root.querySelector(`[data-certify="${id}"]`) });
+  const repeat = root.querySelector('[data-repeat-quests]');
+  assert.ok(repeat);
+  assert.equal(repeat.textContent.trim(), '오늘의 퀘스트 다시 하기');
+  await root.listeners.click({ target: repeat });
+  assert.equal(root.querySelectorAll('[data-certify]').filter(button => button.textContent.trim() === '인증하기').length, 3);
+  await root.listeners.click({ target: root.querySelector('[data-certify="1"]') });
+  const saved = JSON.parse(storage.get('gandang.challenge-v2.mvp-completions.v1'));
+  assert.ok(saved['1:cycle-1:1']);
+  assert.equal(root.querySelector('[data-certify="1"]').textContent.trim(), '인증완료');
 });
 
 test('MVP certify immediately completes photo and measurement cards while preserving optional detail locally', async () => {
@@ -226,7 +243,7 @@ test('MVP certify immediately completes photo and measurement cards while preser
   assert.equal(root.querySelector('[data-certify="1"]').textContent.trim(), '인증완료');
   assert.equal(root.querySelector('[data-certify="2"]').textContent.trim(), '인증완료');
   const saved = JSON.parse(storage.get('gandang.challenge-v2.mvp-completions.v1'));
-  assert.equal(saved['1:1'].note, '채소가 있는 점심을 먹었어요.');
+  assert.equal(saved['1:cycle-0:1'].note, '채소가 있는 점심을 먹었어요.');
 });
 
 test('a server-completed MVP quest keeps an editable optional note under details', async () => {
@@ -239,15 +256,15 @@ test('a server-completed MVP quest keeps an editable optional note under details
   note.value = '완료 후에 추가한 기록';
   root.listeners.input({ target: note });
   const saved = JSON.parse(storage.get('gandang.challenge-v2.mvp-completions.v1'));
-  assert.equal(saved['1:1'].note, '완료 후에 추가한 기록');
+  assert.equal(saved['1:cycle-0:1'].note, '완료 후에 추가한 기록');
 });
 
-test('compact quests expose the V3 water diet activity labels and three distinct garden celebrations', async () => {
+test('compact quests expose one diet, activity and drink label with three distinct garden celebrations', async () => {
   const water = assignment(1); water.goal.domain = 'routine';
   const diet = assignment(2); diet.goal.domain = 'diet';
   const activity = assignment(3); activity.goal.domain = 'activity';
   const { root } = await widget({ plan: today({ items: [water, diet, activity] }) });
-  assert.deepEqual(root.querySelectorAll('.v2-domain-badge').map(node => node.textContent.trim()), ['물', '식단', '운동']);
+  assert.deepEqual(root.querySelectorAll('.v2-domain-badge').map(node => node.textContent.trim()), ['식단', '운동', '음료']);
   assert.match(source, /당근 밭에 물을 주었습니다/);
   assert.match(source, /당근 밭에 거름을 주었습니다/);
   assert.match(source, /당근 밭에 잡초를 제거했습니다/);
@@ -346,6 +363,11 @@ test('settings below all three quests toggle the existing form and retain unsave
   assert.match(visibleText(root), /진단·처방/);
   assert.match(visibleText(root), /계정 당근/);
   assert.equal(settingsButton.getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(root.querySelectorAll('[data-quick-mode]').map(button => button.textContent.trim()), ['운동 위주', '식단 위주']);
+  assert.equal(root.querySelector('[data-custom-mode]').textContent.trim(), '나만의 챌린지');
+  assert.equal(root.querySelector('[data-custom-preferences]').hidden, true, 'details stay hidden until custom is selected');
+  await root.listeners.click({ target: root.querySelector('[data-custom-mode]') });
+  assert.equal(root.querySelector('[data-custom-preferences]').hidden, false);
   settingsButton = root.querySelector('#forest-quest-settings');
   await root.listeners.click({ target: settingsButton });
   assert.equal(root.querySelector('[data-preferences]'), form);

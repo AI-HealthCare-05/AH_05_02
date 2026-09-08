@@ -53,13 +53,13 @@
   const animatedAtlasCache = new WeakMap();
   const INDIVIDUAL_ASSETS = Object.freeze([...STORAGE_CODES, ...ANIMATED_CODES].map(code => Object.freeze({
     code, key: `furniture-${code}`,
-    // Fire and fountain are protected: retain their exact v153 bytes and URLs.
-    url: ["campfire", "animated_fountain"].includes(code)
-      ? `/static/assets/furniture-v153/${code}.png?v=20260907-1`
-      : `/static/assets/furniture-v156/${code}.png?v=20260908-2`,
+    // Restore the complete pre-carrot-house furniture set. Campfire and
+    // fountain already used these exact protected originals; cow and
+    // riverduck are loaded from their dedicated manifests elsewhere.
+    url: `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
     kind: Object.hasOwn(STORAGE_INDEX, code) ? "storage" : "animated",
   })));
-  const individualAtlasCache = new WeakMap(), alphaBoundsCache = new WeakMap(), individualImageSources = new WeakMap();
+  const individualAtlasCache = new WeakMap(), hybridStorageCache = new WeakMap(), alphaBoundsCache = new WeakMap(), individualImageSources = new WeakMap();
   let individualImages = null, individualLoadRequired = false, individualLoadPromise = null;
 
   function imageDimensions(image) {
@@ -101,7 +101,7 @@
     // v156 generators may leave nearly invisible alpha-1 halos far from the
     // object. Only those new files use a visible-alpha fitting threshold;
     // v153 fire/fountain and every existing caller retain their original fit.
-    const minimumAlpha = (manifestSource || source).includes("/furniture-v156/") ? 16 : 1;
+    const minimumAlpha = 1;
     const sourceKey = `${manifestSource}:${source}:${size.width}:${size.height}:${minimumAlpha}`;
     const cached = alphaBoundsCache.get(image);
     if (cached?.sourceKey === sourceKey) return cached.bounds;
@@ -158,7 +158,31 @@
     return canvas;
   }
 
-  function createStorageAtlasFromImages(images) { return createIndividualAtlas(images, "storage"); }
+  function createStorageAtlasFromImages(images, legacySource = null) {
+    if (!legacySource) return createIndividualAtlas(images, "storage");
+    const cached = hybridStorageCache.get(legacySource);
+    if (cached?.images === images) return cached.canvas;
+    const legacy = createLegacyStorageAtlas(legacySource);
+    const canvas = document.createElement("canvas");
+    canvas.width = STORAGE_COLUMNS * STORAGE_TILE_SIZE;
+    canvas.height = STORAGE_ROWS * STORAGE_TILE_SIZE;
+    const context = canvas.getContext("2d");
+    context.imageSmoothingEnabled = false;
+    STORAGE_CODES.forEach((code, index) => {
+      const x = (index % STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
+      const y = Math.floor(index / STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
+      if (code === "campfire") {
+        // The current animated campfire is intentionally retained.
+        context.drawImage(createIndividualTile(images[code]), x, y);
+      } else {
+        // Every ordinary furniture item comes from the pre-carrot-house v4
+        // atlas, not from the later individually generated illustration pack.
+        context.drawImage(legacy, x, y, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE, x, y, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE);
+      }
+    });
+    hybridStorageCache.set(legacySource, { images, canvas });
+    return canvas;
+  }
   function createAnimatedAtlasFromImages(images) { return createIndividualAtlas(images, "animated"); }
 
   function registerIndividualImages(images) {
@@ -254,7 +278,7 @@
   }
 
   function createStorageAtlas(source) {
-    if (individualImages) return createStorageAtlasFromImages(individualImages);
+    if (individualImages) return createStorageAtlasFromImages(individualImages, source);
     return individualLoadRequired ? null : createLegacyStorageAtlas(source);
   }
 

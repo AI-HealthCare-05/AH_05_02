@@ -216,7 +216,7 @@
     save.addEventListener("click", (event) => {
       if (session?.stage !== "ready" || !session.photo) { event.preventDefault(); return; }
       session.photo.lastDownloadAt = now();
-      status.textContent = "컬러 PNG 저장을 요청했어요. 촬영 장면은 추억처럼 천천히 흑백으로 바뀌어요. ‘사진관에서 나가기’를 누르면 숲으로 돌아가요.";
+      status.textContent = "사진 저장을 시작했어요.";
       // Do not preventDefault or synthesize another click: native download wins.
     });
     save.addEventListener("keydown", (event) => {
@@ -370,7 +370,7 @@
     ],
     vehicle: [],
     pet: [
-      { id: "pet:none", itemId: "none", slot: "pet", name: "함께 걷기 없음", visual: "—", group: "펫" },
+      { id: "pet:none", itemId: "none", slot: "pet", name: "선택 안함", visual: "—", group: "선택 안함" },
       ...(window.ForestPets?.classicCatalog || []).map(item => ({ ...item, id: `pet:${item.id}`, itemId: item.id, slot: "pet", group: item.group || "펫" })),
       ...(window.ForestPets?.catalog || []).map(item => ({ ...item, id: `pet:${item.id}`, itemId: item.id, slot: "pet", group: item.group || "펫" })),
       ...(window.ForestPets?.equipment || []).map(item => ({ ...item, id: `petAccessory:${item.id}` })),
@@ -775,6 +775,7 @@
       ],
       placed: [],
       rewardClaimed: false,
+      v2RewardOpenedDay: null,
       gardenWatered: false,
       fishCaught: false,
       fishing: false,
@@ -850,6 +851,7 @@
     state.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
     state.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
+    state.v2RewardOpenedDay = typeof value.v2RewardOpenedDay === "string" ? value.v2RewardOpenedDay : null;
     state.members = Array.isArray(value.members) && value.members.length === 5 ? value.members : fallback.members;
     state.members = state.members.map((member) => member.id === "m5" && member.name === "숲지기" ? { ...member, name: "세준" } : member);
     state.inventory = [...new Set([...(Array.isArray(value.inventory) ? value.inventory : fallback.inventory), ...storageObjectCodes])]
@@ -881,6 +883,7 @@
     next.challengeCarrotClaims = {};
     next.members = next.members.map((member) => ({ ...member, completed: member.me ? 0 : 3 }));
     next.rewardClaimed = false;
+    next.v2RewardOpenedDay = null;
     next.gardenWatered = false;
     next.fishCaught = false;
     next.fishing = false;
@@ -2049,9 +2052,9 @@
     }
     const placed = nearbyPlacedObject();
     if (placed) return `object:${placed.index}`;
-    if (distanceTo(200, 270) < 95) return "home";
-    if (distanceTo(600, 255) < 110) return "garden";
-    if (distanceTo(285, 405) < 105) return "pond";
+    if (distanceTo(218, 238) < 62) return "home";
+    if (distanceTo(612, 246) < 72) return "garden";
+    if (distanceTo(174, 414) < 68) return "pond";
     return null;
   }
 
@@ -2322,12 +2325,19 @@
     $("#group-remaining").textContent = completed >= 15 ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
     $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed === 3 ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/3</span></li>`).join("");
     const rewardButton = $("#reward-button");
-    rewardButton.disabled = completed < 15 || state.rewardClaimed;
-    rewardButton.textContent = state.rewardClaimed ? "오늘의 보물상자 받음" : completed >= 15 ? "무료 보물상자 열기" : `${15 - completed}개 더 완료하면 보물상자 열기`;
-    if (window.ForestChallengeV2?.enabled) {
-      rewardButton.disabled = true;
-      rewardButton.textContent = "일일 보상은 챌린지 카드에서 확인";
+    const v2Plan = window.ForestChallengeV2?.enabled ? window.ForestChallengeV2.plan : null;
+    if (v2Plan) {
+      const rewardDay = String(v2Plan.day_id || TODAY);
+      const ready = Boolean(v2Plan.chest_issued);
+      const opened = state.v2RewardOpenedDay === rewardDay;
+      rewardButton.disabled = !ready || opened;
+      rewardButton.textContent = opened ? "오늘의 일일 보상 받음" : "일일 보상 받기";
+      $("#group-reward-help").textContent = opened ? "오늘의 보상 상자를 열었어요." : ready ? "지금 바로 보상 상자를 열어 보세요." : "오늘의 퀘스트 3개를 완료하면 바로 열 수 있어요.";
+      return;
     }
+    rewardButton.disabled = completed < 15 || state.rewardClaimed;
+    rewardButton.textContent = state.rewardClaimed ? "오늘의 일일 보상 받음" : "일일 보상 받기";
+    $("#group-reward-help").textContent = state.rewardClaimed ? "오늘의 보상 상자를 열었어요." : completed >= 15 ? "지금 바로 보상 상자를 열어 보세요." : `공동 목표까지 ${15 - completed}개 남았어요.`;
     $("#group-goal-memo").value = state.groupGoalMemo || "";
   }
 
@@ -2835,7 +2845,6 @@
     const items = avatarItemsForCategory(effectiveCategory);
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
-    if ($("#pet-art-credit")) $("#pet-art-credit").hidden = effectiveCategory !== "pet";
     let previousGroup = null;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
       const itemSlot = item.slot || effectiveCategory;
@@ -2894,7 +2903,6 @@
     }).join("");
     $("#preview-carrot-balance").textContent = state.carrots;
     $("#avatar-preview-name").textContent = state.avatar.name;
-    $("#avatar-selection-name").textContent = "아이템을 선택해주세요";
     $("#avatar-undo").disabled = avatarDraftHistory.length === 0;
     renderCatalogThumbnailCanvases();
     renderAvatarPreview();
@@ -3108,7 +3116,13 @@
   });
 
   $("#start-prediction-flow").addEventListener("click", startPredictionFlow);
-  window.addEventListener("challenge-v2-updated", () => { renderQuests(); renderGroup(); });
+  window.addEventListener("challenge-v2-updated", (event) => {
+    const completed = Math.max(0, Math.min(3, Number(event.detail?.completed) || 0));
+    const me = state.members.find((member) => member.me);
+    if (me) me.completed = completed;
+    renderQuests(); renderGroup();
+    adapter.save(state);
+  });
   $("#challenge-flow-close").addEventListener("click", () => $("#challenge-flow-dialog").close());
   $("#challenge-flow-back").addEventListener("click", () => showChallengeFlowStep(challengeFlowStep - 1));
   $("#challenge-flow-next").addEventListener("click", () => {
@@ -3340,9 +3354,9 @@
           const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
           reactToCow(placedTarget.index, reaction);
         } else if (placedTarget) await interact(`object:${placedTarget.index}`);
-        else if (x >= 45 && x <= 335 && y >= 45 && y <= 300) await interact("home");
-        else if (x >= 460 && x <= 735 && y >= 45 && y <= 290) await interact("garden");
-        else if (x >= 15 && x <= 330 && y >= 285 && y <= 500) await interact("pond");
+        else if (x >= 150 && x <= 292 && y >= 120 && y <= 282) await interact("home");
+        else if (x >= 535 && x <= 704 && y >= 120 && y <= 300) await interact("garden");
+        else if (x >= 36 && x <= 252 && y >= 340 && y <= 492) await interact("pond");
         else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
       }
       return;
@@ -3391,7 +3405,17 @@
   });
 
   $("#reward-button").addEventListener("click", async () => {
-    if (window.ForestChallengeV2?.enabled) return;
+    const v2Plan = window.ForestChallengeV2?.enabled ? window.ForestChallengeV2.plan : null;
+    if (v2Plan) {
+      const rewardDay = String(v2Plan.day_id || TODAY);
+      if (!v2Plan.chest_issued || state.v2RewardOpenedDay === rewardDay) return;
+      state.v2RewardOpenedDay = rewardDay;
+      renderGroup();
+      await adapter.save(state);
+      await playRewardCelebration(null);
+      await persist("일일 보상 상자를 열었습니다!");
+      return;
+    }
     if (groupCompleted() < 15 || state.rewardClaimed) return;
     const reward = deterministicReward();
     state.rewardClaimed = true;
@@ -3564,6 +3588,27 @@
     setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"
       ? "야생 쥐가 나타났어요. 가까이 가면 펫이 자동으로 달려가고, 직접 Z로도 잡을 수 있어요!"
       : "숲 어딘가에 야생 쥐가 나타났어요. 가까이 다가가 쥐를 바라보고 Z로 잡아 보세요!");
+  });
+  function renderMonsterAttackState(active) {
+    if (typeof document === "undefined") return;
+    document.querySelectorAll('[data-action="attack"]').forEach((button) => {
+      button.classList.toggle("is-monster-ready", active === true);
+      button.setAttribute("aria-label", active === true ? "몬스터 공격 가능, 단축키 Z" : "공격, 단축키 Z");
+    });
+  }
+  window.addEventListener("forest-monster-presence", (event) => {
+    renderMonsterAttackState(event.detail?.active === true);
+  });
+  renderMonsterAttackState(window.ForestMonsterPresence === true);
+  window.addEventListener("forest-challenge-celebrated", async (event) => {
+    const claimId = String(event.detail?.completionKey || `${event.detail?.assignmentId || "quest"}:${Date.now()}`);
+    state.challengeCarrotClaims ||= {};
+    if (!state.challengeCarrotClaims[claimId]) state.challengeCarrotClaims[claimId] = { amount: 1, harvested: false };
+    const completed = Math.max(0, Math.min(3, Number(window.ForestChallengeV2?.plan?.completed) || 0));
+    const me = state.members.find((member) => member.me);
+    if (me) me.completed = completed;
+    renderGroup(); renderGardenHarvest();
+    await adapter.save(state);
   });
   window.addEventListener("forest-rat-caught", async (event) => {
     const eventId = event.detail?.eventId;

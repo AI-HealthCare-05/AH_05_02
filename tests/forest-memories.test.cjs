@@ -127,7 +127,7 @@ test('six numbered portrait aliases are detached copies of the exact current off
   assert.throws(() => memories.portraitPresets([...input.slice(0, 5), input[0]]));
 });
 
-test('preset3 through preset6 bring their four actual kittens into the photo, including a matching ribbon', async () => {
+test('preset3 through preset6 bring four separated kittens with distinct authored poses and a matching ribbon', async () => {
   const pets = require('../src/frontend/forest-pets.js');
   const input = presets(), ids = ['last_tick_white', 'last_tick_ribbon', 'last_tick_ginger', 'last_tick_gray'];
   ids.forEach((id, index) => { input[index + 2].avatar.cosmetics.pet = id; });
@@ -138,8 +138,19 @@ test('preset3 through preset6 bring their four actual kittens into the photo, in
   assert.deepEqual(Array.from(kittens, item => item.petId), ids);
   assert.equal(scene.petOverlay.visible, false);
   controller.update(controller.session.stagedAt + 1800);
+  assert.deepEqual(Array.from(kittens, animal => animal.portraitAction), ['idle', 'sit', 'idle', 'idle']);
+  assert.deepEqual(Array.from(kittens, animal => animal.portraitDirection), ['right', 'down', 'left', 'down']);
+  assert.deepEqual(Array.from(kittens, animal => animal.portraitRest), ['curled', null, 'stretched', 'grooming']);
+  assert.deepEqual([kittens[0].x, kittens[0].y], [250, 330], 'the curled kitten rests beside the water without covering another animal');
+  assert.equal(controller.session.animals.some(animal => animal.kind === 'mouse'), false);
   for (const animal of kittens) {
-    const pose = pets.pose(animal.petId, { action: 'sit', direction: 'down', elapsed: 1800 });
+    const duration = pets.actionDurations[animal.portraitAction];
+    let elapsed = Number.isFinite(duration) ? 200 % duration : 1800;
+    let idleMs = elapsed;
+    if (animal.portraitRest === 'curled') idleMs = 60200;
+    if (animal.portraitRest === 'stretched') idleMs = 120200;
+    if (animal.portraitRest === 'grooming') elapsed = idleMs = 7400;
+    const pose = pets.pose(animal.petId, { action: animal.portraitAction, direction: animal.portraitDirection, elapsed, idleMs });
     assert.equal(animal.sprite.key, pose.key); assert.equal(animal.sprite.frame, pose.frame);
     assert.equal(animal.sprite.originY, pose.originY);
     assert.equal(animal.overlay.visible, Boolean(pose.overlay));
@@ -255,7 +266,7 @@ test('house-front framing keeps gathering feet at fixed heights away from pond w
     const { controller, scene, renders } = setup({ pets, reducedMotion });
     await controller.start({ requestId: `house-front-${reducedMotion}`, presets: input });
     const session = controller.session;
-    assert.equal(session.people.length, 6); assert.equal(session.animals.length, 11);
+    assert.equal(session.people.length, 6); assert.equal(session.animals.length, 9);
     // The source roof/doorstep rectangle must be inside the export, and every
     // person stands below the doorstep rather than inside the building art.
     assert.ok(memories.FRAME.x <= 149 && memories.FRAME.y <= 0);
@@ -352,26 +363,26 @@ test('portrait live view is centered without stretching or changing export, then
   assert.deepEqual({ x: camera.x, y: camera.y, width: camera.width, height: camera.height }, { x: 7, y: 11, width: 738, height: 1100 });
 });
 
-test('photoshoot source actors are six clothed avatars plus both rabbits, three pets, mouse and cow', async () => {
+test('photoshoot source actors are six clothed avatars, both rabbits, pets, four posed kittens and the cow without a mouse', async () => {
   const { controller, scene, calls } = setup();
   const originalAvatar = JSON.stringify(scene.avatar);
   await controller.start({ requestId: 'one', presets: presets() });
   assert.equal(scene.memoryCapturing, true);
   const session = controller.session;
   assert.equal(session.people.length, 6);
-  assert.deepEqual(Array.from(session.animals, item => item.kind), ['bunbun', 'last-tick', 'mouse', 'pet', 'pet', 'pet', 'cow']);
-  assert.deepEqual(Array.from(session.animals.filter(item => item.kind === 'pet'), item => item.column), [0, 3, 6]);
+  assert.deepEqual(Array.from(session.animals, item => item.kind), ['bunbun', 'last-tick', 'pet', 'pet', 'cow']);
+  assert.deepEqual(Array.from(session.animals.filter(item => item.kind === 'pet'), item => item.column), [3, 6]);
   controller.update(session.stagedAt + 300);
   assert.ok(calls.some(call => call[2].moving && call[2].frame > 0), 'actual source walk frames, not a static avatar contact sheet');
   const lastTick = session.animals.find(animal => animal.kind === 'last-tick');
   assert.equal(lastTick.sprite.frame, animals.rabbitPose('last-tick', { action: 'hop_right', elapsedMs: 300 }).frame);
   assert.equal(session.animals.find(animal => animal.kind === 'cow').sprite.key, 'forest-cow-walk');
   const movingPets = session.animals.filter(animal => animal.kind === 'pet');
-  assert.equal(Math.floor(movingPets[0].sprite.frame / 9), 2, 'white cat approaches rightward with a right source row');
-  assert.equal(Math.floor(movingPets[1].sprite.frame / 9), 1, 'orange cat approaches leftward with a left source row');
+  assert.equal(Math.floor(movingPets[0].sprite.frame / 9), 1, 'orange cat approaches leftward with a left source row');
   controller.update(session.stagedAt + 1800);
   assert.ok(session.people.every(person => person.label.visible));
   assert.ok(session.animals.every(animal => Number.isInteger(animal.sprite.frame)));
+  assert.equal(session.animals.some(animal => animal.kind === 'mouse'), false);
   assert.equal(JSON.stringify(scene.avatar), originalAvatar);
   assert.equal(scene.player.visible, false);
   assert.equal(scene.placedObjectActors[0].visible, false);
@@ -385,8 +396,8 @@ test('portrait monsters have no ground-shadow ellipses while all six avatar shad
   const session = controller.session;
   const avatarShadows = Array.from(session.people, person => person.shadow);
   const animalKinds = Array.from(session.animals, animal => animal.kind);
-  assert.ok(['bunbun', 'last-tick', 'mouse', 'pet', 'preset-pet', 'cow'].every(kind => animalKinds.includes(kind)));
-  assert.equal(session.animals.length, 11, 'all pets and the cow remain alongside the monsters');
+  assert.ok(['bunbun', 'last-tick', 'pet', 'preset-pet', 'cow'].every(kind => animalKinds.includes(kind)));
+  assert.equal(session.animals.length, 9, 'all pets and the cow remain alongside both rabbits');
   for (const elapsed of [0, 400, 1200, 1800, 3200]) {
     controller.update(session.stagedAt + elapsed);
     assert.deepEqual(Array.from(session.objects.filter(object => object.type === 'shadow')), avatarShadows,
@@ -448,7 +459,7 @@ test('one actual field render yields one PNG, no HUD, original actors, or respon
   assert.ok(target.objects.includes(scene.background));
   assert.ok(!target.objects.includes(scene.player));
   assert.ok(!target.objects.includes(scene.ratActor));
-  assert.equal(target.objects.filter(object => object.type === 'text').length, 6);
+  assert.equal(target.objects.filter(object => object.type === 'text').length, 6, 'only the six preset names are saved');
   target.callback({ src: 'data:image/png;base64,iVBORw0KGgo=' });
   await tick();
   const ready = events.filter(event => event.type === 'forest-memory-ready');

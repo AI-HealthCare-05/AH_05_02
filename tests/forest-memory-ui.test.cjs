@@ -145,8 +145,7 @@ test('camera double clicks and duplicate ready events produce exactly one automa
   assert.equal(env.elements.save.attrs['aria-disabled'], 'false');
   assert.equal(env.bodyClasses.has('forest-memory-shooting'), true);
   assert.equal(env.bodyClasses.has('forest-memory-developing'), true);
-  assert.match(env.elements.status.textContent, /컬러 PNG/);
-  assert.match(env.elements.status.textContent, /사진관에서 나가기/);
+  assert.equal(env.elements.status.textContent, '사진 저장을 시작했어요.');
   assert.match(env.downloads[0].filename, /^당근의숲_추억사진_\d{8}_\d{6}\.png$/);
   assert.equal(JSON.stringify(env.state), before);
   env.elements.save.click();
@@ -302,18 +301,21 @@ test('photo filename contains only a Korean title and the local timestamp', () =
   assert.equal(env.context.memoryPhotoFilename(new Date(2026, 8, 8, 3, 4, 5)), '당근의숲_추억사진_20260908_030405.png');
 });
 
-test('photo UI is nonmodal, in the fullscreen field, accessible and entirely local', () => {
+test('photo UI is nonmodal, concise, has no calligraphy overlay, and keeps the colour export local', () => {
   assert.ok(html.indexOf('/static/forest-memories.js?') < html.indexOf('/static/forest-phaser.js?'));
-  assert.match(html, /id="forest-memory-dialog"[^>]*aria-labelledby="forest-memory-title"[^>]*aria-describedby="forest-memory-status"[^>]*aria-modal="false"/);
+  assert.match(html, /id="forest-memory-dialog"[^>]*aria-label="추억사진 촬영"[^>]*aria-describedby="forest-memory-status"[^>]*aria-modal="false"/);
   assert.ok(html.indexOf('id="forest-memory-dialog"') > html.indexOf('class="canvas-frame"'));
   assert.ok(html.indexOf('id="forest-memory-dialog"') < html.indexOf('class="right-hud"'));
-  assert.match(html, /id="forest-memory-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="forest-memory-status" class="sr-only" role="status" aria-live="polite"/);
+  assert.doesNotMatch(html, /forest-memory-handwriting/);
   assert.match(html, /id="forest-memory-preview" alt="[^"]+"/);
   assert.match(html, /id="forest-memory-close"[^>]*aria-label="사진관에서 나가기"[^>]*>사진관에서 나가기<\/button>/);
   assert.match(css, /\.forest-memory-dialog\{[^}]*position:absolute;[^}]*width:min\(310px/);
   assert.match(css, /\.forest-memory-developing #phaser-world canvas[^}]*animation:forestMemoryToMonochrome 5\.2s/);
+  assert.doesNotMatch(css + source, /forestMemoryHandwriting|Gaegu|Hi Melody|MEMORY_HANDWRITING/);
   assert.match(css, /@keyframes forestMemoryToMonochrome\{[^}]*grayscale\(0\)[^}]*\}100%\{[^}]*grayscale\(1\)/);
   assert.doesNotMatch(css, /\.forest-memory-dialog::backdrop/);
+  for (const removed of ['숲속 추억사진', '컬러 PNG 저장을 요청했어요.', '이 기기에만 PNG 1장으로 저장해요.']) assert.doesNotMatch(html + memoryCode, new RegExp(removed));
   assert.doesNotMatch(memoryCode, /showModal\(|localStorage|sessionStorage|fetch\(|adapter\.save|innerHTML/);
 });
 
