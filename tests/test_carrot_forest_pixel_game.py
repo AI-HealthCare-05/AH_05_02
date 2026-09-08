@@ -95,8 +95,9 @@ def test_world_studio_workspace_controls_are_explicit() -> None:
     assert html.count("data-workspace-target=") == 4
     assert "scrollIntoView" in script
     hud = (ROOT / "src/frontend/forest-hud.js").read_text(encoding="utf-8")
-    assert 'const NATIVE_WIDTH = 768' in hud
-    assert 'const NATIVE_HEIGHT = 512' in hud
+    assert 'const width = area.clientWidth' in hud
+    assert 'const height = area.clientHeight' in hud
+    assert 'MIN_ZOOM = 1, MAX_ZOOM = 4' in hud
     assert 'forest-ui-hidden' in hud
     assert 'forest-name-updated' in script
 
@@ -451,8 +452,8 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
         assert (ROOT / "src/frontend/assets" / asset).is_file()
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
-    assert "Phaser.Scale.FIT" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v156-2";' in worker
+    assert "Phaser.Scale.NONE" in phaser_script
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v157-5";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker

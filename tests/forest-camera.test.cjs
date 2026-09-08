@@ -17,6 +17,7 @@ class Camera {
     }) };
   }
   setBounds(x, y, width, height) { this.bounds = { x, y, width, height }; return this; }
+  setSize(width, height) { Object.assign(this, { width, height }); return this; }
   startFollow(target, roundPixels, lerpX, lerpY, offsetX, offsetY) {
     Object.assign(this, { target, roundPixels, lerpX, lerpY });
     return this.setFollowOffset(offsetX, offsetY);
@@ -45,10 +46,13 @@ class Camera {
   }
 }
 
-function setup({ devicePixelRatio = 1, zoom = 1 } = {}) {
+function setup({ devicePixelRatio = 1, zoom = 1, clientWidth = 768, clientHeight = 512, parentClientWidth, parentClientHeight } = {}) {
   const events = [], listeners = new Map();
+  const host = { clientWidth, clientHeight, left: 17, top: 23,
+    parentElement: { clientWidth: parentClientWidth, clientHeight: parentClientHeight },
+  };
   const Phaser = {
-    Scene: class {}, AUTO: 0, Scale: { FIT: 1, CENTER_BOTH: 1 },
+    Scene: class {}, AUTO: 0, Scale: { NONE: 0, FIT: 1, CENTER_BOTH: 1 },
     Game: class { constructor(config) { this.config = config; } },
   };
   const window = {
@@ -59,24 +63,62 @@ function setup({ devicePixelRatio = 1, zoom = 1 } = {}) {
   };
   const context = vm.createContext({
     window, Phaser, localStorage: { getItem: () => null }, performance: { now: () => 0 },
-    document: { getElementById: () => ({}), activeElement: { tagName: 'DIV' } },
+    document: { getElementById: () => host, activeElement: { tagName: 'DIV' } },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   });
   vm.runInContext(source, context);
-  const config = window.carrotForestPhaserGame.config;
+  const game = window.carrotForestPhaserGame;
+  const config = game.config;
   const scene = new config.scene();
   const camera = new Camera(config.width, config.height);
+  const canvas = {
+    width: config.width, height: config.height, style: {},
+    get clientWidth() { return host.clientWidth; },
+    get clientHeight() { return host.clientHeight; },
+    getBoundingClientRect() { return { left: host.left, top: host.top, width: host.clientWidth, height: host.clientHeight }; },
+  };
+  // Phaser NONE resizes the physical canvas, preserves the configured display
+  // zoom, then refreshes the DOM bounds used by InputManager.transformX/Y.
+  const scale = {
+    width: config.width, height: config.height, zoom: config.scale.zoom,
+    calls: [], displayScale: {},
+    setZoom(value) { this.calls.push(['setZoom', value]); this.zoom = value; return this.refresh(); },
+    resize(width, height) {
+      this.calls.push(['resize', width, height]);
+      const previousWidth = this.width, previousHeight = this.height;
+      Object.assign(this, { width, height });
+      Object.assign(canvas, { width, height });
+      canvas.style.width = `${width * this.zoom}px`;
+      canvas.style.height = `${height * this.zoom}px`;
+      // CameraManager only automatically resizes a previous full-game view.
+      if (camera.width === previousWidth && camera.height === previousHeight) camera.setSize(width, height);
+      return this.refresh();
+    },
+    refresh() {
+      this.calls.push(['refresh']);
+      this.canvasBounds = canvas.getBoundingClientRect();
+      this.displayScale = { x: canvas.width / this.canvasBounds.width, y: canvas.height / this.canvasBounds.height };
+      return this;
+    },
+    transformX(x) { return (x - this.canvasBounds.left) * this.displayScale.x; },
+    transformY(y) { return (y - this.canvasBounds.top) * this.displayScale.y; },
+  };
+  game.canvas = canvas;
+  game.scale = scale;
+  scene.game = game;
+  scene.scale = scale;
   scene.cameras = { main: camera };
   scene.player = { x: scene.avatar.x, y: scene.avatar.y };
+  scale.refresh();
   scene.configureWorldCamera();
   scene.attachWindowEvents();
-  return { scene, camera, config, window, events, listeners };
+  return { scene, camera, config, window, events, listeners, host, game, canvas, scale };
 }
 
 function near(actual, expected) { assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} should equal ${expected}`); }
 
-test('dense backing stays 3:2 without changing saved coordinates, sprite scale, or world zoom', () => {
-  for (const [devicePixelRatio, backing] of [[1, 4], [1.25, 4], [2, 4], [3, 4], [4, 4]]) {
+test('new 100 percent shows the old 50 percent world at 3:2 without changing saved coordinates or sprite scale', () => {
+  for (const [devicePixelRatio, backing] of [[1, 2], [1.25, 2], [2, 2], [3, 2], [4, 2]]) {
     const { config, scene, camera } = setup({ devicePixelRatio });
     assert.equal(config.width, 768 * backing);
     assert.equal(config.height, 512 * backing);
@@ -85,26 +127,60 @@ test('dense backing stays 3:2 without changing saved coordinates, sprite scale, 
     assert.equal(scene.avatar.y, 352);
     assert.equal(scene.avatar.tuning.worldScale, .43);
     assert.equal(scene.cameraZoom, 1);
-    assert.equal(scene.worldCameraZoom, 2);
-    assert.equal(camera.zoom, 2 * backing);
-    assert.equal(camera.width / camera.zoom, 384);
-    assert.equal(camera.height / camera.zoom, 256);
-    assert.equal(config.scale.mode, 1);
+    assert.equal(scene.worldCameraZoom, 1);
+    assert.equal(camera.zoom, backing);
+    // v156 used a 3072x2048 backing and a 4x camera at the former 50%.
+    assert.equal(camera.width / camera.zoom, 3072 / 4);
+    assert.equal(camera.height / camera.zoom, 2048 / 4);
+    assert.equal(config.scale.mode, 0);
+    assert.equal(config.scale.zoom, 1 / backing);
     assert.equal(config.pixelArt, true);
+    assert.equal(config.render.antialias, false);
+    assert.equal(config.render.roundPixels, true);
   }
 });
 
-test('50 through 200 percent changes only camera magnification and centers the stable avatar body', () => {
+test('a display-none host boots with its laid-out parent aspect and refreshes the actual canvas bounds after becoming ready', () => {
+  for (const [parentClientWidth, parentClientHeight] of [[1200, 900], [1920, 800], [390, 844], [3840, 2160]]) {
+    const { config, host, camera, scale, window } = setup({ clientWidth: 0, clientHeight: 0, parentClientWidth, parentClientHeight });
+    const density = Math.min(2, 4096 / Math.max(parentClientWidth, parentClientHeight));
+    assert.equal(config.width, Math.round(parentClientWidth * density), 'hidden host must not fall back to the authored world width');
+    assert.equal(config.height, Math.round(parentClientHeight * density), 'hidden host must not fall back to the authored world height');
+    near(camera.zoom, Math.max(config.width / 768, config.height / 512));
+    Object.assign(host, { clientWidth: parentClientWidth, clientHeight: parentClientHeight });
+    // Revealing the absolutely positioned host does not resize its frame; the
+    // ready path must explicitly refresh even when backing dimensions match.
+    window.ForestCamera.resizeViewport();
+    near(scale.displayScale.x, camera.width / parentClientWidth);
+    near(scale.displayScale.y, camera.height / parentClientHeight);
+    const projected = window.ForestCamera.worldToScreen(384, 352);
+    const inverse = camera.getWorldPoint(
+      scale.transformX(host.left + projected.x * parentClientWidth),
+      scale.transformY(host.top + projected.y * parentClientHeight),
+    );
+    near(inverse.x, 384); near(inverse.y, 352);
+  }
+  const { config } = setup({ clientWidth: 960, clientHeight: 640, parentClientWidth: 1920, parentClientHeight: 1080 });
+  assert.equal(config.width, 1920, 'a visible host takes precedence over its parent fallback');
+  assert.equal(config.height, 1280);
+});
+
+test('scene boot reveals the Phaser host before resizing and before advertising readiness', () => {
+  assert.match(source, /document\.documentElement\.classList\.add\("phaser-world-ready"\);\s*this\.resizeViewport\(\);\s*window\.carrotForestPhaserActive\s*=\s*true;/,
+    'the ready-class visibility change cannot rely on the unchanged parent ResizeObserver to refresh input bounds');
+});
+
+test('100 through 400 percent changes only camera magnification and centers the stable avatar body', () => {
   const { scene, camera, config, events, listeners, window } = setup();
   const saved = JSON.stringify(scene.avatar), backingWidth = config.width;
-  for (const zoom of [.5, .75, 1, 1.25, 1.5, 1.75, 2]) {
+  for (const zoom of [1, 1.5, 2, 2.5, 3, 3.5, 4]) {
     listeners.get('forest-camera-zoom')({ detail: { zoom } });
     assert.equal(scene.cameraZoom, zoom);
-    assert.equal(scene.worldCameraZoom, zoom * 2);
-    assert.equal(camera.zoom, zoom * 8);
+    assert.equal(scene.worldCameraZoom, zoom);
+    assert.equal(camera.zoom, zoom * 2);
     assert.equal(config.width, backingWidth);
     assert.equal(JSON.stringify(scene.avatar), saved);
-    if (zoom >= .75) {
+    if (zoom >= 1.5) {
       const center = window.ForestCamera.worldToScreen(scene.player.x, scene.player.y - scene.cameraFocusOffsetY());
       near(center.x, .5);
       near(center.y, .5);
@@ -115,27 +191,122 @@ test('50 through 200 percent changes only camera magnification and centers the s
   assert.equal(camera.roundPixels, false, 'a fractional player center must not be rounded during camera following');
 });
 
-test('world bounds fill every viewport corner at all zoom levels and following never exposes blank edges', () => {
-  const { scene, camera } = setup();
-  for (const zoom of [.5, .75, 1, 1.25, 1.5, 1.75, 2]) {
-    scene.setCameraZoom(zoom);
-    for (const [x, y] of [[28, 42], [740, 42], [28, 480], [740, 480], [384, 352]]) {
-      Object.assign(scene.player, { x, y });
-      camera.preRender();
-      const topLeft = camera.getWorldPoint(0, 0), bottomRight = camera.getWorldPoint(camera.width, camera.height);
-      assert.ok(topLeft.x >= -1e-9 && topLeft.y >= -1e-9);
-      assert.ok(bottomRight.x <= 768 + 1e-9 && bottomRight.y <= 512 + 1e-9);
-      if (zoom === .5) {
-        near(topLeft.x, 0); near(topLeft.y, 0);
-        near(bottomRight.x, 768); near(bottomRight.y, 512);
+test('world bounds fill every square, ultrawide, portrait and fullscreen corner at all zoom levels', () => {
+  for (const [clientWidth, clientHeight] of [[768, 512], [960, 960], [1920, 800], [390, 844], [3840, 2160], [7680, 4320]]) {
+    const { scene, camera } = setup({ clientWidth, clientHeight });
+    for (const zoom of [1, 1.5, 2, 2.5, 3, 3.5, 4]) {
+      scene.setCameraZoom(zoom);
+      for (const [x, y] of [[28, 42], [740, 42], [28, 480], [740, 480], [384, 352]]) {
+        Object.assign(scene.player, { x, y });
+        camera.preRender();
+        const topLeft = camera.getWorldPoint(0, 0), bottomRight = camera.getWorldPoint(camera.width, camera.height);
+        assert.ok(topLeft.x >= -1e-9 && topLeft.y >= -1e-9, `${clientWidth}x${clientHeight} must not expose its top/left edge`);
+        assert.ok(bottomRight.x <= 768 + 1e-9 && bottomRight.y <= 512 + 1e-9, `${clientWidth}x${clientHeight} must not expose its bottom/right edge`);
+        if (zoom === 1 && clientWidth / clientHeight === 1.5) {
+          near(topLeft.x, 0); near(topLeft.y, 0);
+          near(bottomRight.x, 768); near(bottomRight.y, 512);
+        }
       }
     }
   }
 });
 
+test('responsive backing covers the host uniformly with a two-pixel density and a 4096-pixel edge cap', () => {
+  for (const [clientWidth, clientHeight] of [[768, 512], [960, 960], [1920, 800], [390, 844], [3840, 1600], [7680, 4320]]) {
+    const { config, scene, camera, scale, window } = setup({ clientWidth, clientHeight });
+    const density = Math.min(2, 4096 / Math.max(clientWidth, clientHeight));
+    assert.equal(config.width, Math.round(clientWidth * density));
+    assert.equal(config.height, Math.round(clientHeight * density));
+    assert.ok(Math.max(config.width, config.height) <= 4096);
+    near(scale.zoom, 1 / density);
+    const cover = Math.max(camera.width / 768, camera.height / 512);
+    near(camera.zoom, cover);
+    near(scene.worldCameraZoom, 1);
+    // Cover fills one authored axis exactly and crops only the surplus axis.
+    assert.ok(Math.abs(camera.width / camera.zoom - 768) < 1e-9 || Math.abs(camera.height / camera.zoom - 512) < 1e-9);
+    const origin = window.ForestCamera.worldToScreen(350, 250);
+    const right = window.ForestCamera.worldToScreen(360, 250);
+    const down = window.ForestCamera.worldToScreen(350, 260);
+    const xPixels = (right.x - origin.x) * clientWidth;
+    const yPixels = (down.y - origin.y) * clientHeight;
+    // Integer backing dimensions can differ from the ideal aspect by at most
+    // one backing pixel; prohibit any meaningful independent-axis stretch.
+    assert.ok(Math.abs(xPixels - yPixels) <= Math.max(xPixels, yPixels) / Math.min(camera.width, camera.height) + 1e-9);
+  }
+});
+
+test('maximizing, rotating and leaving fullscreen resize only the viewport and immediately refresh pointer coordinates', () => {
+  const { scene, camera, window, host, canvas, scale, events } = setup({ zoom: 2 });
+  const savedAvatar = JSON.stringify(scene.avatar), playerPosition = { ...scene.player };
+  for (const [clientWidth, clientHeight] of [[1440, 900], [3440, 1440], [3840, 2160], [390, 844], [960, 960], [7680, 4320], [768, 512]]) {
+    Object.assign(host, { clientWidth, clientHeight });
+    window.ForestCamera.resizeViewport();
+    const density = Math.min(2, 4096 / Math.max(clientWidth, clientHeight));
+    assert.equal(camera.width, Math.round(clientWidth * density));
+    assert.equal(camera.height, Math.round(clientHeight * density));
+    assert.equal(canvas.width, camera.width);
+    assert.equal(canvas.height, camera.height);
+    near(scale.zoom, 1 / density);
+    near(scale.displayScale.x, camera.width / clientWidth);
+    near(scale.displayScale.y, camera.height / clientHeight);
+    near(camera.zoom, 2 * Math.max(camera.width / 768, camera.height / 512));
+    assert.equal(scene.cameraZoom, 2, 'resizing must preserve the selected HUD zoom');
+    assert.equal(JSON.stringify(scene.avatar), savedAvatar);
+    assert.deepEqual(scene.player, playerPosition);
+    assert.equal(camera.target, scene.player);
+    const body = window.ForestCamera.worldToScreen(scene.player.x, scene.player.y - scene.cameraFocusOffsetY());
+    near(body.x, .5); near(body.y, .5);
+    for (const point of [{ x: 0, y: 0 }, { x: 384, y: 352 }, { x: 650, y: 410 }]) {
+      const projected = window.ForestCamera.worldToScreen(point.x, point.y);
+      const pointerX = scale.transformX(host.left + projected.x * clientWidth);
+      const pointerY = scale.transformY(host.top + projected.y * clientHeight);
+      const inverse = camera.getWorldPoint(pointerX, pointerY);
+      near(inverse.x, point.x); near(inverse.y, point.y);
+    }
+    const view = events.at(-1);
+    assert.equal(view.type, 'forest-camera-view');
+    assert.equal(view.detail.viewportWidth, camera.width);
+    assert.equal(view.detail.viewportHeight, camera.height);
+    const count = events.length;
+    window.ForestCamera.resizeViewport();
+    assert.equal(events.length, count, 'an unchanged resize must not repeat DOM layout notifications');
+  }
+  assert.equal(scale.calls.filter(([name]) => name === 'resize').length, 7);
+  assert.equal(events.some(event => event.type === 'forest-phaser-position'), false);
+});
+
+test('capped fullscreen sizes refresh display density even when the physical backing dimensions are unchanged', () => {
+  const { host, camera, scale, window, scene } = setup({ clientWidth: 3840, clientHeight: 2160 });
+  const dimensions = [camera.width, camera.height];
+  const worldZoom = camera.zoom;
+  Object.assign(host, { clientWidth: 7680, clientHeight: 4320 });
+  window.ForestCamera.resizeViewport();
+  assert.deepEqual([camera.width, camera.height], dimensions, 'same-aspect fullscreen must retain the capped backing budget');
+  near(scale.zoom, 7680 / 4096);
+  near(scale.displayScale.x, 4096 / 7680);
+  near(scale.displayScale.y, 2304 / 4320);
+  near(camera.zoom, worldZoom);
+  assert.equal(scene.cameraZoom, 1);
+});
+
+test('position-only layout changes refresh the pointer origin and a non-default camera viewport is restored explicitly', () => {
+  const { host, camera, scale, window } = setup();
+  Object.assign(host, { left: 211, top: 109 });
+  window.ForestCamera.resizeViewport();
+  near(scale.transformX(211 + 384), 768);
+  near(scale.transformY(109 + 256), 512);
+  assert.equal(scale.calls.filter(([name]) => name === 'resize').length, 0, 'a layout offset alone must not reallocate the canvas');
+  camera.setSize(100, 100);
+  window.ForestCamera.resizeViewport();
+  assert.equal(camera.width, 1536, 'restore the whole game view even when CameraManager cannot infer an automatic resize');
+  assert.equal(camera.height, 1024);
+  near(camera.width / camera.zoom, 768);
+  near(camera.height / camera.zoom, 512);
+});
+
 test('DOM projection and pointer inverse agree immediately after zoom and avatar follow updates', () => {
   const { scene, camera, window, events } = setup();
-  for (const zoom of [.5, 1, 2]) {
+  for (const zoom of [1, 2, 4]) {
     scene.setCameraZoom(zoom);
     for (const point of [{ x: 0, y: 0 }, { x: 384, y: 352 }, { x: 650, y: 410 }]) {
       const screen = window.ForestCamera.worldToScreen(point.x, point.y);
@@ -151,14 +322,14 @@ test('DOM projection and pointer inverse agree immediately after zoom and avatar
   assert.equal(events.length, count + 1);
   const update = events.at(-1);
   assert.equal(update.type, 'forest-camera-view');
-  assert.equal(update.detail.displayZoom, 2);
+  assert.equal(update.detail.displayZoom, 4);
   assert.equal(update.detail.worldZoom, 4);
-  assert.equal(update.detail.viewportWidth, 3072);
+  assert.equal(update.detail.viewportWidth, 1536);
   assert.deepEqual({ ...update.detail.avatar }, { ...window.ForestCamera.avatarAnchor() });
 });
 
 test('nickname projection stays sharp in DOM and updates when only the edge-bound avatar or name changes', () => {
-  const { scene, camera, window, events } = setup({ zoom: .5 });
+  const { scene, camera, window, events } = setup({ zoom: 1 });
   const first = window.ForestCamera.avatarAnchor();
   assert.equal(first.name, scene.avatar.name);
   assert.equal(first.scene, 'world');
@@ -174,7 +345,7 @@ test('nickname projection stays sharp in DOM and updates when only the edge-boun
 });
 
 test('nickname uses actual LPC opaque bounds instead of the transparent composite margin', () => {
-  const { scene } = setup();
+  const { scene } = setup({ zoom: 2, clientWidth: 1399.5, clientHeight: 933 });
   const pixels = new Uint8ClampedArray(224 * 288 * 4);
   for (let y = 111; y <= 249; y++) for (let x = 75; x <= 148; x++) pixels[(y * 224 + x) * 4 + 3] = 255;
   pixels[3] = 1; pixels[(20 * 224 + 100) * 4 + 3] = 31;
@@ -183,7 +354,6 @@ test('nickname uses actual LPC opaque bounds instead of the transparent composit
   assert.equal(scene.measureAvatarOpaqueBounds(new Uint8ClampedArray(224 * 288 * 4), 224, 288), null);
   scene.avatarOpaqueBounds = bounds;
   scene.premiumAvatar = { y: 0, height: 288, originY: .87, scaleY: .43 };
-  scene.game = { canvas: { clientHeight: 933 } };
   const headWorldY = scene.player.y + (111 - 288 * .87) * .43;
   const hairTop = scene.worldToScreen(scene.player.x, headWorldY);
   const anchor = scene.avatarAnchor();
@@ -193,12 +363,12 @@ test('nickname uses actual LPC opaque bounds instead of the transparent composit
 });
 
 test('nickname stays eight CSS pixels above visible hair across zoom, resized frames, scale, and jumping', () => {
-  const { scene, camera, events } = setup();
+  const { scene, camera, events, host, window } = setup();
   scene.avatarOpaqueBounds = { left: 75, top: 111, right: 148, bottom: 249 };
   scene.premiumAvatar = { y: 0, height: 288, originY: .87, scaleY: .43 };
-  scene.game = { canvas: { clientHeight: 512 } };
-  for (const cssHeight of [220, 512, 933, 1024]) for (const zoom of [.5, 1, 2]) for (const scale of [.32, .43, .58]) {
-    scene.game.canvas.clientHeight = cssHeight;
+  for (const cssHeight of [220, 512, 933, 1024]) for (const zoom of [1, 2, 4]) for (const scale of [.32, .43, .58]) {
+    host.clientHeight = cssHeight;
+    window.ForestCamera.resizeViewport();
     scene.premiumAvatar.scaleY = scale;
     scene.setCameraZoom(zoom);
     for (const jumpY of [0, -16]) {
@@ -212,7 +382,7 @@ test('nickname stays eight CSS pixels above visible hair across zoom, resized fr
   scene.avatarOpaqueBounds.top = 108; camera.preRender();
   assert.equal(events.length, count + 1, 'a changed hair bound updates the DOM even without camera movement');
   const y = events.at(-1).detail.avatar.y;
-  scene.game.canvas.clientHeight = 768; camera.preRender();
+  host.clientHeight = 768; window.ForestCamera.resizeViewport();
   assert.notEqual(events.at(-1).detail.avatar.y, y, 'responsive resizing recomputes the CSS-pixel gap');
 });
 
@@ -237,12 +407,13 @@ test('the rendered LPC frame supplies fresh opaque bounds and empty intermediate
 test('HUD boot zoom, clamps, resets, and event cleanup use one camera contract', () => {
   const { scene, camera, listeners, window } = setup({ zoom: 1.5 });
   assert.equal(scene.cameraZoom, 1.5);
-  for (const [value, expected] of [[-1, .5], [12, 2], [NaN, 1], [undefined, 1], [1, 1]]) {
+  for (const [value, expected] of [[-1, 1], [.5, 1], [12, 4], [NaN, 1], [undefined, 1], [1, 1]]) {
     listeners.get('forest-camera-zoom')({ detail: { zoom: value } });
     assert.equal(scene.cameraZoom, expected);
   }
   scene.detachWindowEvents();
   assert.equal(listeners.has('forest-camera-zoom'), false);
+  assert.equal(listeners.size, 0, 'all owned window handlers must be removed on scene teardown');
   assert.equal(camera.handlers.has('followupdate'), false);
   assert.equal(window.ForestCamera, undefined);
   assert.doesNotMatch(source, /keyboard\.on\("keydown-C"/);

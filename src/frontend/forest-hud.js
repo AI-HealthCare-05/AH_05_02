@@ -1,12 +1,10 @@
-/* Fixed-size forest viewport, camera zoom, and lightweight in-game HUD controls. */
+/* Responsive forest viewport, camera zoom, and lightweight in-game HUD controls. */
 (() => {
   "use strict";
   const NAME_KEY = "carrot-forest-name-v1";
   const DEFAULT_NAME = "우리의 작은 숲";
-  const NATIVE_WIDTH = 768;
-  const NATIVE_HEIGHT = 512;
-  const MAX_FRAME_SCALE = 2;
-  const MIN_ZOOM = .5, MAX_ZOOM = 2, ZOOM_STEP = .25;
+  // Rebase the old 50–200% range without losing any usable world magnification.
+  const MIN_ZOOM = 1, MAX_ZOOM = 4, ZOOM_STEP = .5;
   const byId = id => document.getElementById(id);
   const cleanName = value => Array.from(String(value ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim()).slice(0, 24).join("");
   let forestName = DEFAULT_NAME;
@@ -30,16 +28,15 @@
 
   function fitGame() {
     if (!area || !frame || area.clientWidth <= 0 || area.clientHeight <= 0) return;
-    // Double the former frame's width, height and diagonal when space allows.
-    // Fit both axes up to 1536x1024; camera +/- never changes the DOM frame.
-    const fittedScale = Math.min(MAX_FRAME_SCALE, area.clientWidth / NATIVE_WIDTH, area.clientHeight / NATIVE_HEIGHT);
-    const width = NATIVE_WIDTH * fittedScale;
-    const height = width * NATIVE_HEIGHT / NATIVE_WIDTH;
+    // Fill both available axes. Phaser changes its camera viewport instead of
+    // stretching the authored 3:2 world into this independently sized frame.
+    const width = area.clientWidth;
+    const height = area.clientHeight;
     const widthStyle = `${width}px`, heightStyle = `${height}px`;
     const changed = frame.style.width !== widthStyle || frame.style.height !== heightStyle;
     frame.style.width = widthStyle;
     frame.style.height = heightStyle;
-    if (changed) window.carrotForestPhaserGame?.scale.refresh();
+    if (changed) window.ForestCamera?.resizeViewport();
   }
 
   function updateZoomControls() {
@@ -104,6 +101,14 @@
   });
   byId("zoom-in")?.addEventListener("click", () => setZoom(zoom + ZOOM_STEP));
   byId("zoom-out")?.addEventListener("click", () => setZoom(zoom - ZOOM_STEP));
+  document.querySelector(".mobile-panel-shortcut")?.addEventListener("click", event => {
+    const shell = byId("forest-main"), target = byId("avatar-editor");
+    if (!shell || !target) return;
+    event.preventDefault();
+    // Native fragment navigation can also scroll the hidden outer body and
+    // displace its topbar. Move only our actual mobile panel scroll container.
+    shell.scrollTo({ top: shell.scrollTop + target.getBoundingClientRect().top - shell.getBoundingClientRect().top });
+  });
   function updateUiToggle() {
     const button = byId("ui-toggle");
     if (!button) return;
@@ -172,6 +177,18 @@
     requestAnimationFrame(() => { resizePending = false; fitGame(); });
   }
   window.addEventListener("resize", scheduleFit);
+  document.addEventListener?.("fullscreenchange", scheduleFit);
+  let boundsRefreshPending = false;
+  window.addEventListener("scroll", () => {
+    if (boundsRefreshPending) return;
+    boundsRefreshPending = true;
+    requestAnimationFrame(() => {
+      boundsRefreshPending = false;
+      // Mobile panels scroll inside main, without resizing the canvas. Keep
+      // Phaser's client-to-canvas origin current for a partly visible world.
+      window.carrotForestPhaserGame?.scale.refresh();
+    });
+  }, true);
   if (area && typeof ResizeObserver !== "undefined") new ResizeObserver(scheduleFit).observe(area);
   updateZoomControls();
   updateUiToggle();

@@ -50,7 +50,7 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260908-2" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260908-4" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260902-28" defer></script>
@@ -59,8 +59,8 @@
   <script src="/static/forest-objects.js?v=20260908-2" defer></script>
   <script src="/static/forest-fire.js?v=20260907-3" defer></script>
   <script src="/static/forest-animals.js?v=20260907-1" defer></script>
-  <script src="/static/forest-phaser.js?v=20260908-3" defer></script>
-  <script src="/static/forest-hud.js?v=20260908-1" defer></script>
+  <script src="/static/forest-phaser.js?v=20260908-6" defer></script>
+  <script src="/static/forest-hud.js?v=20260908-4" defer></script>
   <script src="/static/forest-profile.js?v=20260907-1" defer></script>
   <script src="/static/forest-game.js?v=20260908-3" defer></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.2">
@@ -245,6 +245,7 @@
   </main>
 
   <button id="chat-toggle" class="chat-launcher" type="button" aria-expanded="false" aria-controls="chat-panel">채팅 (Enter / C)</button>
+  <a class="mobile-panel-shortcut" href="#avatar-editor">옷장·창고 ↓</a>
   <aside id="chat-panel" class="chat-panel bottom-chat" aria-labelledby="chat-title" hidden>
     <div class="chat-heading"><h2 id="chat-title">숲 채팅</h2><small id="chat-help">C를 다시 누르면 채팅이 숨겨집니다.</small><button id="chat-close" class="toolbar-button" type="button" aria-label="채팅 숨기기">×</button></div>
     <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"><p><strong>숲지기</strong><span>오늘도 같이 숲을 가꿔봐요!</span></p></div>

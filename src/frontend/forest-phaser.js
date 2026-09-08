@@ -9,11 +9,19 @@
   // Phaser 3.90 has no game-level resolution option. Render into a denser
   // backing canvas, then compensate in the camera only: saved coordinates,
   // sprite sizes, collision geometry and movement speed remain world units.
-  // The CSS frame can now reach 1536×1024. Four backing pixels per original
-  // world unit retain at least two physical pixels per CSS pixel at that size.
-  const BACKING_SCALE = 4;
-  const BASE_CAMERA_ZOOM = 2;
-  const TEXT_RESOLUTION = BACKING_SCALE * BASE_CAMERA_ZOOM;
+  // The viewport, not the authored world, resizes with the window. Keep a 2x
+  // backing where possible and cap its longest edge for large/fullscreen views.
+  const BASE_CAMERA_ZOOM = 1; // Old 50% is the new 100%; old 200% is new 400%.
+  const TEXT_RESOLUTION = 8;
+  function viewportSize() {
+    const host = document.getElementById("phaser-world");
+    // The Phaser host is display:none until preload completes. Its frame is
+    // already laid out, so boot must measure that parent rather than 768×512.
+    const cssWidth = host?.clientWidth || host?.parentElement?.clientWidth || WORLD.width;
+    const cssHeight = host?.clientHeight || host?.parentElement?.clientHeight || WORLD.height;
+    const density = Math.min(2, 4096 / Math.max(cssWidth, cssHeight));
+    return { width: Math.round(cssWidth * density), height: Math.round(cssHeight * density), density };
+  }
   const AVATAR_RENDER_SCALE = 0.43;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
@@ -232,6 +240,7 @@
       this.attachWindowEvents();
       window.LpcAvatarEngine?.ready().then(() => this.rebuildAvatar());
       document.documentElement.classList.add("phaser-world-ready");
+      this.resizeViewport();
       window.carrotForestPhaserActive = true;
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
       this.input.once("pointerdown", () => document.getElementById("phaser-world")?.focus());
@@ -260,17 +269,33 @@
       this.cameraApi = Object.freeze({
         worldToScreen: (x, y) => this.worldToScreen(x, y),
         avatarAnchor: () => this.avatarAnchor(),
+        resizeViewport: () => this.resizeViewport(),
       });
       window.ForestCamera = this.cameraApi;
       this.onCameraView = () => this.emitCameraView();
       camera.on("followupdate", this.onCameraView);
-      this.setCameraZoom(window.ForestHud?.zoom ?? 1);
+      this.cameraZoom = window.ForestHud?.zoom ?? 1;
+      this.resizeViewport();
+    }
+
+    resizeViewport() {
+      const size = viewportSize();
+      const camera = this.cameras.main;
+      this.scale?.setZoom(1 / size.density);
+      if (this.scale && (camera.width !== size.width || camera.height !== size.height)) {
+        // NONE + an explicit display zoom preserves Phaser's pointer inverse:
+        // canvas CSS and backing have the same aspect, with no FIT letterbox.
+        this.scale.resize(size.width, size.height);
+        camera.setSize(size.width, size.height);
+      }
+      this.scale?.refresh();
+      this.setCameraZoom(this.cameraZoom);
     }
 
     worldToScreen(x, y) {
       const camera = this.cameras.main;
       const point = camera.matrix.transformPoint(x - camera.scrollX, y - camera.scrollY);
-      // Fractions of the fixed canvas CSS frame, independent of backing
+      // Fractions of the responsive canvas CSS frame, independent of backing
       // density. DOM labels can track the map without scaling their text.
       return { x: point.x / camera.width, y: point.y / camera.height };
     }
@@ -319,11 +344,14 @@
 
     setCameraZoom(value = 1) {
       const requested = Number(value);
-      this.cameraZoom = Math.min(2, Math.max(.5, Number.isFinite(requested) ? requested : 1));
+      this.cameraZoom = Math.min(4, Math.max(1, Number.isFinite(requested) ? requested : 1));
       this.worldCameraZoom = this.cameraZoom * BASE_CAMERA_ZOOM;
       const camera = this.cameras?.main;
       if (!camera) return;
-      camera.setZoom(this.worldCameraZoom * BACKING_SCALE);
+      // Uniform cover fits the available rectangle without distorting art.
+      // Camera bounds crop only the surplus axis on wide or tall screens.
+      const cover = Math.max(camera.width / WORLD.width, camera.height / WORLD.height);
+      camera.setZoom(this.worldCameraZoom * cover);
       camera.setFollowOffset(0, this.cameraFocusOffsetY());
       camera.centerOn(this.player.x, this.player.y - this.cameraFocusOffsetY());
       // Refresh the inverse transform immediately as well as on the next
@@ -1452,16 +1480,20 @@
     }
   }
 
+  const initialViewport = viewportSize();
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: "phaser-world",
-    width: WORLD.width * BACKING_SCALE,
-    height: WORLD.height * BACKING_SCALE,
+    width: initialViewport.width,
+    height: initialViewport.height,
     backgroundColor: "#78b96a",
     pixelArt: true,
     roundPixels: true,
     render: { antialias: false, pixelArt: true, roundPixels: true },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    // Small layouts scroll to their wardrobe below the canvas. Wheel input is
+    // not a game action, so do not trap page scrolling over the world.
+    input: { mouse: { preventDefaultWheel: false } },
+    scale: { mode: Phaser.Scale.NONE, zoom: 1 / initialViewport.density, autoRound: false },
     scene: ForestScene,
   });
   window.carrotForestPhaserGame = game;

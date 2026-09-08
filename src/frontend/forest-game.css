@@ -431,3 +431,38 @@ body.forest-ui-hidden .game-controls-overlay #ui-toggle{grid-column:3;background
 .game-controls-overlay .touch-controls button.action-attack:active{transform:translateY(1px);background:linear-gradient(155deg,#e9a64b,#e18f38);border-bottom-width:1px;box-shadow:inset 0 2px 4px #71331542}
 @media(prefers-reduced-motion:reduce){.game-controls-overlay .touch-controls button.action-attack{transition:none}.game-controls-overlay .touch-controls button.action-attack:active{transform:none}}
 @media(max-width:520px){.font-size-control{gap:3px}.font-size-control>span{font-size:10px}.font-size-control select{max-width:70px;min-height:32px;padding:4px}.studio-topbar .forest-brand{font-size:calc(15px * var(--forest-ui-scale))}.game-controls-overlay{left:7px;bottom:7px;max-width:calc(100% - 14px);padding:5px}.game-controls-overlay .touch-controls{grid-template-rows:repeat(3,36px)}.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{height:36px}}
+
+/* v157: the measured viewport fills the space left by actual UI, not a 3:2 box. */
+.mobile-panel-shortcut{display:none;position:fixed;z-index:30;left:10px;bottom:calc(16px + env(safe-area-inset-bottom,0px));align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:12px;text-decoration:none;box-shadow:0 3px 14px #16392715}
+body.forest-ui-hidden .mobile-panel-shortcut{display:none}
+html,body{height:100%;min-height:0;overflow:hidden}
+body{display:flex;flex-direction:column;height:100dvh}
+.studio-topbar{flex:0 0 auto;height:auto;min-height:62px}
+.studio-shell{flex:1 1 0;min-width:0;min-height:0;width:100%;height:auto;margin:0;padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.workspace,body.forest-ui-hidden .workspace{height:100%;min-height:0;grid-template-columns:var(--hud-left) minmax(0,1fr) var(--hud-left);grid-template-rows:minmax(0,1fr);grid-template-areas:"rail stage right"}
+.world-stage,.forest-ui-hidden .world-stage{height:100%;min-height:0;max-height:none}
+.forest-weather-strip{max-width:none;flex:0 0 auto}
+.canvas-workarea{flex:1 1 0;min-width:0;min-height:0;align-items:stretch;justify-content:stretch;overflow:hidden;padding:0}
+.canvas-frame,.canvas-frame.is-zoomed{flex:1 1 auto;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;box-sizing:border-box;border:0;padding:0}
+#phaser-world{width:100%;height:100%;min-width:0;min-height:0;aspect-ratio:auto}
+/* Phaser resizes its backing buffer to this exact box; CSS must not fit an old aspect. */
+#phaser-world canvas{display:block;width:100%!important;height:100%!important;max-width:none;max-height:none;aspect-ratio:auto;margin:0!important}
+/* A legacy fallback may letterbox, but must never distort its original bitmap. */
+#forest-canvas{width:100%;height:100%;aspect-ratio:auto;object-fit:contain}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen){height:100dvh;min-height:0;max-height:none}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .canvas-workarea{flex:1 1 0;min-width:0;min-height:0;padding:0;align-items:stretch;justify-content:stretch;overflow:hidden}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .canvas-frame{flex:1 1 auto;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;border:0;padding:0}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .game-controls-overlay .control-cluster{width:100%;height:auto;min-height:0}
+@media(max-width:900px){
+  .mobile-panel-shortcut{display:inline-flex}
+  .studio-topbar{min-height:58px}
+  .studio-shell{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin}
+  /* Definite first-item height uses the flex shell, including wrapped toolbar text. */
+  .workspace,body.forest-ui-hidden .workspace{display:flex;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;height:100%;gap:9px}
+  .world-stage,.forest-ui-hidden .world-stage{order:0;flex:0 0 100%;width:100%;height:100%;min-height:0;max-height:none}
+  .workspace>.tool-rail,.workspace>.right-hud{order:1;flex:0 0 calc((100% - 9px)/2);min-height:0;max-height:none;height:auto;margin-bottom:12px}
+}
+@media(max-width:520px){
+  .workspace>.tool-rail,.workspace>.right-hud{flex-basis:100%}
+  .workspace>.right-hud{order:2}
+}

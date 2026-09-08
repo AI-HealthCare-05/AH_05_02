@@ -38,6 +38,9 @@ function createHud({ width = 1800, height = 1200, storedName = null, storageBloc
   document.activeElement = document.body;
   for (const id of ['zoom-in', 'zoom-out', 'ui-toggle', 'controls-toggle', 'objects-toggle', 'reset-position']) elements[id] = createElement('BUTTON', document.body);
   for (const id of ['zoom-level', 'controls-content', 'placed-list', 'phaser-world']) elements[id] = createElement('DIV', document.body);
+  elements['mobile-panel-shortcut'] = createElement('A', document.body);
+  elements['forest-main'] = { scrollTop: 0, getBoundingClientRect: () => ({ top: 66 }), scrollTo({ top }) { this.scrollTop = top; } };
+  elements['avatar-editor'] = { getBoundingClientRect: () => ({ top: 800 - elements['forest-main'].scrollTop }) };
   if (nameEditor) {
     elements['forest-name-form'] = createElement('FORM', document.body);
     elements['forest-name-form'].hidden = true;
@@ -46,9 +49,10 @@ function createHud({ width = 1800, height = 1200, storedName = null, storageBloc
     elements['cancel-forest-name'] = createElement('BUTTON', elements['forest-name-form']);
   }
   const area = { clientWidth: width, clientHeight: height }, frame = { style: {} };
-  let refreshCount = 0, resizeCallback, modalOpen = false;
+  let refreshCount = 0, boundsRefreshCount = 0, resizeCallback, modalOpen = false;
   const window = {
-    carrotForestPhaserGame: { scale: { refresh() { refreshCount += 1; } } },
+    ForestCamera: { resizeViewport() { refreshCount += 1; } },
+    carrotForestPhaserGame: { scale: { refresh() { boundsRefreshCount += 1; } } },
     dispatchEvent(event) { events.push(event); for (const callback of windowListeners[event.type] ?? []) callback(event); },
     addEventListener(type, callback) { (windowListeners[type] ??= []).push(callback); },
   };
@@ -56,6 +60,7 @@ function createHud({ width = 1800, height = 1200, storedName = null, storageBloc
   document.querySelector = selector => {
     if (selector === '.canvas-workarea') return area;
     if (selector === '.canvas-frame') return frame;
+    if (selector === '.mobile-panel-shortcut') return elements['mobile-panel-shortcut'];
     if (selector === 'dialog[open], [aria-modal="true"]:not([hidden])') return modalOpen ? { open: true } : null;
     return null;
   };
@@ -66,7 +71,9 @@ function createHud({ width = 1800, height = 1200, storedName = null, storageBloc
     requestAnimationFrame: callback => callback(), ResizeObserver: class { constructor(callback) { resizeCallback = callback; } observe() {} },
   });
   return { hud: window.ForestHud, window, document, elements, area, frame, events, classes, storage, createElement,
-    resize: () => resizeCallback(), refreshCount: () => refreshCount, setModalOpen: value => { modalOpen = value; },
+    resize: () => resizeCallback(), refreshCount: () => refreshCount, boundsRefreshCount: () => boundsRefreshCount,
+    scroll: () => { for (const callback of windowListeners.scroll ?? []) callback(); },
+    setModalOpen: value => { modalOpen = value; },
     click: id => { elements[id].focus(); return elements[id].click(); },
     submit: () => elements['forest-name-form'].emit('submit'),
     key(key, values = {}) {
@@ -78,34 +85,54 @@ function createHud({ width = 1800, height = 1200, storedName = null, storageBloc
   };
 }
 
-test('the fixed frame doubles the former diagonal to 1536×1024 with a distinct 100% camera zoom', () => {
+test('the responsive frame fills both available axes with the rebased 100% default', () => {
   const app = createHud();
-  assert.equal(app.frame.style.width, '1536px'); assert.equal(app.frame.style.height, '1024px');
-  assert.equal(Math.hypot(parseFloat(app.frame.style.width), parseFloat(app.frame.style.height)) / Math.hypot(768, 512), 2);
+  assert.equal(app.frame.style.width, '1800px'); assert.equal(app.frame.style.height, '1200px');
   assert.equal(app.hud.zoom, 1); assert.equal(app.elements['zoom-level'].textContent, '100%');
   assert.equal(app.events.at(-1).type, 'forest-camera-zoom'); assert.equal(app.events.at(-1).detail.zoom, 1);
   assert.equal(app.refreshCount(), 1); app.resize();
-  assert.equal(app.refreshCount(), 1, 'unchanged observer callbacks must not loop scale refresh');
+  assert.equal(app.refreshCount(), 1, 'unchanged observer callbacks must not loop viewport resize');
   assert.equal(app.elements['forest-name-form'], undefined, 'the removed name editor is optional');
 });
 
-test('enlarged viewport fits both available dimensions without overflow and does not alter camera zoom', () => {
-  for (const [width, height, expectedWidth, expectedHeight] of [
-    [1400, 900, 1350, 900], [1200, 1000, 1200, 800], [2560, 1600, 1536, 1024],
-    [760, 450, 675, 450], [390, 220, 330, 220],
+test('viewport fills wide, tall, and fullscreen areas with no former maximum or 3:2 letterbox', () => {
+  for (const [width, height] of [
+    [1400, 900], [1200, 1000], [2560, 1600], [3440, 1440],
+    [760, 450], [390, 700],
   ]) {
     const app = createHud({ width, height });
-    assert.equal(app.frame.style.width, `${expectedWidth}px`);
-    assert.equal(app.frame.style.height, `${expectedHeight}px`);
+    assert.equal(app.frame.style.width, `${width}px`);
+    assert.equal(app.frame.style.height, `${height}px`);
     assert.ok(parseFloat(app.frame.style.width) <= width);
     assert.ok(parseFloat(app.frame.style.height) <= height);
-    assert.equal(parseFloat(app.frame.style.width) / parseFloat(app.frame.style.height), 1.5);
+    assert.equal(parseFloat(app.frame.style.width) / parseFloat(app.frame.style.height), width / height);
     app.hud.setZoom(2);
     app.area.clientWidth = width / 2; app.area.clientHeight = height / 2; app.resize();
     assert.equal(app.hud.zoom, 2);
     assert.ok(parseFloat(app.frame.style.width) <= width / 2);
     assert.ok(parseFloat(app.frame.style.height) <= height / 2);
   }
+});
+
+test('scrolling mobile panels refreshes pointer origin without resizing, zooming or changing outfits', () => {
+  const app = createHud();
+  app.scroll();
+  assert.equal(app.boundsRefreshCount(), 1);
+  assert.equal(app.refreshCount(), 1);
+  assert.equal(app.hud.zoom, 1);
+  assert.ok(source.includes('}, true);'), 'capture nested main scroll events');
+  const phaser = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
+  assert.ok(phaser.includes('preventDefaultWheel: false'), 'canvas must not trap the wheel above below-screen panels');
+});
+
+test('touch panel shortcut scrolls only main and does not displace the topbar through fragment navigation', () => {
+  const app = createHud();
+  const event = app.elements['mobile-panel-shortcut'].click();
+  assert.equal(event.defaultPrevented, true);
+  assert.equal(app.elements['forest-main'].scrollTop, 734);
+  assert.equal(app.elements['avatar-editor'].getBoundingClientRect().top, 66);
+  app.elements['mobile-panel-shortcut'].click();
+  assert.equal(app.elements['forest-main'].scrollTop, 734);
 });
 
 test('forest UI copies Suin final landing tokens and installed font stack without importing page styles', () => {
@@ -145,48 +172,48 @@ test('enlarged frame keeps balanced panel tracks and challenge title and refresh
   assert.ok(css.includes('.v2-heading>[data-refresh]{flex:0 0 auto'));
 });
 
-test('small screens fit 3:2 while preserving camera magnification and available zoom controls', () => {
+test('small screens fill independent dimensions while preserving camera magnification', () => {
   const app = createHud({ width: 400, height: 200 });
-  assert.equal(app.frame.style.width, '300px'); assert.equal(app.frame.style.height, '200px');
+  assert.equal(app.frame.style.width, '400px'); assert.equal(app.frame.style.height, '200px');
   assert.equal(app.elements['zoom-level'].textContent, '100%');
   app.area.clientWidth = 600; app.area.clientHeight = 500; app.resize();
-  assert.equal(app.frame.style.width, '600px'); assert.equal(app.frame.style.height, '400px');
+  assert.equal(app.frame.style.width, '600px'); assert.equal(app.frame.style.height, '500px');
   app.area.clientWidth = 0; app.resize();
   assert.equal(app.frame.style.width, '600px', 'temporarily hidden areas must not erase the viewport');
   app.area.clientWidth = 100; app.resize();
   assert.equal(app.frame.style.width, '100px');
-  assert.equal(app.elements['zoom-in'].disabled, false); assert.equal(app.elements['zoom-out'].disabled, false);
+  assert.equal(app.elements['zoom-in'].disabled, false); assert.equal(app.elements['zoom-out'].disabled, true);
 });
 
-test('camera zoom steps by 25 points from 50–200% without resizing or refreshing the frame', () => {
+test('camera zoom rebases the old 50–200% range to 100–400% without resizing the frame', () => {
   const app = createHud(), emittedZooms = [];
   app.window.addEventListener('forest-camera-zoom', event => {
     assert.equal(event.detail.zoom, app.hud.zoom, 'state is current when the scene receives the event');
     emittedZooms.push(event.detail.zoom);
   });
-  for (let i = 0; i < 5; i++) app.click('zoom-in');
-  assert.equal(app.hud.zoom, 2); assert.equal(app.elements['zoom-in'].disabled, true);
-  assert.equal(app.elements['zoom-level'].textContent, '200%');
+  for (let i = 0; i < 7; i++) app.click('zoom-in');
+  assert.equal(app.hud.zoom, 4); assert.equal(app.elements['zoom-in'].disabled, true);
+  assert.equal(app.elements['zoom-level'].textContent, '400%');
   for (let i = 0; i < 7; i++) app.click('zoom-out');
-  assert.equal(app.hud.zoom, .5); assert.equal(app.elements['zoom-out'].disabled, true);
-  assert.equal(app.elements['zoom-level'].textContent, '50%');
-  assert.deepEqual(emittedZooms, [1.25, 1.5, 1.75, 2, 1.75, 1.5, 1.25, 1, .75, .5]);
-  assert.equal(app.frame.style.width, '1536px'); assert.equal(app.frame.style.height, '1024px');
+  assert.equal(app.hud.zoom, 1); assert.equal(app.elements['zoom-out'].disabled, true);
+  assert.equal(app.elements['zoom-level'].textContent, '100%');
+  assert.deepEqual(emittedZooms, [1.5, 2, 2.5, 3, 3.5, 4, 3.5, 3, 2.5, 2, 1.5, 1]);
+  assert.equal(app.frame.style.width, '1800px'); assert.equal(app.frame.style.height, '1200px');
   assert.equal(app.refreshCount(), 1);
 });
 
 test('public zoom APIs clamp to supported steps, ignore invalid values, and reset to new 100%', () => {
   const app = createHud({ width: 100 });
-  assert.equal(app.hud.setZoom(3), 2); assert.equal(app.hud.setZoom(.81), .75);
-  assert.equal(app.hud.setZoom(-1), .5); assert.equal(app.hud.setZoom(NaN), .5);
-  assert.equal(app.hud.setZoom(Infinity), .5); assert.equal(app.hud.resetZoom(), 1);
+  assert.equal(app.hud.setZoom(9), 4); assert.equal(app.hud.setZoom(1.6), 1.5);
+  assert.equal(app.hud.setZoom(-1), 1); assert.equal(app.hud.setZoom(NaN), 1);
+  assert.equal(app.hud.setZoom(Infinity), 1); assert.equal(app.hud.resetZoom(), 1);
   const count = app.events.length; app.hud.resetZoom();
   assert.equal(app.events.length, count, 'redundant resets must not dispatch duplicate camera events');
   assert.equal(app.frame.style.width, '100px'); assert.equal(app.elements['zoom-level'].textContent, '100%');
 });
 
 test('UI and panels restore preferences without resizing the frame or changing camera zoom', () => {
-  const app = createHud({ width: 600 }); app.hud.setZoom(1.75);
+  const app = createHud({ width: 600 }); app.hud.setZoom(2);
   assert.equal(app.elements['controls-toggle'].textContent, '버튼 숨기기(8)');
   assert.equal(app.elements['reset-position'].textContent, '초기화(9)');
   assert.equal(app.elements['ui-toggle'].textContent, 'UI 숨기기(0)');
@@ -207,8 +234,8 @@ test('UI and panels restore preferences without resizing the frame or changing c
   assert.equal(app.elements['controls-content'].hidden, true, 'restoring UI preserves panel preference');
   app.click('controls-toggle'); app.click('objects-toggle');
   assert.equal(app.elements['controls-content'].hidden, false); assert.equal(app.elements['placed-list'].hidden, false);
-  assert.equal(app.frame.style.width, '600px'); assert.equal(app.frame.style.height, '400px');
-  assert.equal(app.hud.zoom, 1.75); assert.equal(app.refreshCount(), 1);
+  assert.equal(app.frame.style.width, '600px'); assert.equal(app.frame.style.height, '1200px');
+  assert.equal(app.hud.zoom, 2); assert.equal(app.refreshCount(), 1);
 });
 
 test('8 and 0 toggle controls and UI; 9 delegates page refresh without mutating zoom before reload', () => {
@@ -222,7 +249,7 @@ test('8 and 0 toggle controls and UI; 9 delegates page refresh without mutating 
   assert.equal(app.key('0').defaultPrevented, true); assert.equal(app.classes.has('forest-ui-hidden'), true);
   app.key('0'); assert.equal(app.classes.has('forest-ui-hidden'), false);
   app.key('8'); assert.equal(app.elements['controls-content'].hidden, false);
-  app.hud.setZoom(.5); app.click('reset-position'); assert.equal(reloads, 2); assert.equal(app.hud.zoom, .5);
+  app.hud.setZoom(1); app.click('reset-position'); assert.equal(reloads, 2); assert.equal(app.hud.zoom, 1);
   assert.equal(createHud().hud.zoom, 1, 'a fresh page still starts at the default camera magnification');
 });
 
