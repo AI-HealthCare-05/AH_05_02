@@ -2280,6 +2280,7 @@
   function renderQuests() {
     if (window.ForestChallengeV2?.enabled) {
       const plan = window.ForestChallengeV2.plan;
+      $("#quests-panel").classList.toggle("has-compact-quests", Boolean(plan?.enrolled));
       const label = `${plan?.completed || 0}/${plan?.items?.length || 0}`;
       $("#personal-progress").textContent = label;
       $("#heading-personal-progress").textContent = label;
@@ -2287,6 +2288,7 @@
     }
     syncActiveQuests();
     const ready = Boolean(state.challengePlan?.onboarded);
+    $("#quests-panel").classList.remove("has-compact-quests");
     $("#start-prediction-flow").textContent = ready ? "당뇨 예방 챌린지 다시 만들기" : "당뇨 예방 챌린지";
     $("#quest-list").innerHTML = ready
       ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")

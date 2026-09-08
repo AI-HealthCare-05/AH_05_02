@@ -3,6 +3,8 @@
   "use strict";
   const root = document.querySelector("[data-challenge-v2]");
   if (!root) return;
+  const forestView=root.getAttribute?.("data-challenge-v2-view")==="forest";
+  const forestSettingsButton=forestView?document.querySelector("#forest-quest-settings"):null;
   const homeParent=root.parentElement;
   const esc = x => String(x ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const proofLabel = {T1:"담당자가 사진 확인",T2:"사진과 기록 제출",T3:"직접 기록"};
@@ -91,9 +93,43 @@
       ${item.status!=="completed"?Array.from({length:g.target_sessions},(_,i)=>item.sessions.some(s=>s.index===i+1)?`<small>회차 ${i+1} 저장됨</small>`:sessionForm(item,i+1)).join("")+uploads+`<button type="button" data-alternatives="${item.id}">다른 챌린지로 바꾸기</button><div data-options="${item.id}"></div>`:`<p>${g.proof_type==="T1"?"사진 조건 확인":g.proof_type==="T2"?"기록 제출 완료":"자가 기록 완료"} · 당근 10개 지급</p>`}
       <details><summary>근거·확인 범위</summary><p>목표 수치는 앱 시작용 설계이며 예방 효과의 순위가 아닙니다. 사진으로 실제 섭취나 걷기 진위를 증명하지 않습니다.</p>${g.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join(" · ")}</details></article>`;
   }
+  function compactQuest(item,openIds) {
+    const g=item.goal, complete=item.status==="completed";
+    const pending=!complete&&item.verification_status==="pending"&&item.completed_sessions>=g.target_sessions;
+    const label=complete?"인증완료":pending?"확인 중":"인증하기";
+    return `<article class="v2-quest-card${complete?" is-complete":""}">
+      <h4>${esc(g.title)}</h4><div class="v2-quest-row"><small>${g.goal_unit==="minute"?`${g.per_session_quantity}분 × ${g.target_sessions}회`:`${g.target_sessions}회 기록`} · ${item.completed_sessions}/${g.target_sessions}</small>
+      <button type="button" data-certify="${esc(item.id)}" aria-label="${esc(g.title)} ${label}" ${complete||pending?"disabled":""}>${label}</button></div>
+      <details class="v2-quest-details" data-quest-details="${esc(item.id)}" ${!complete&&openIds.has(String(item.id))?"open":""}><summary>자세히 보기</summary>${card(item)}</details></article>`;
+  }
+  function compactContent(openIds) {
+    return `<p data-message role="status" aria-live="polite"></p>
+      <div class="v2-compact-cards">${(plan.items||[]).map(item=>compactQuest(item,openIds)).join("")}</div>
+      ${!plan.items?.length?`<p class="v2-notice">설정을 저장했어요.${plan.starts_on?` ${esc(plan.starts_on)}부터 오늘의 퀘스트가 표시돼요.`:" 오늘의 퀘스트를 준비하고 있어요."}</p>`:""}
+      ${settings(plan.preferences)}<section data-compact-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 안내와 보상">
+      <p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
+      ${(plan.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
+      ${(plan.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
+      <p>오늘 ${plan.completed||0}/${plan.items?.length||0}개 완료${!plan.day_id?` · 시작일 ${esc(plan.starts_on)}`:""}</p>
+      ${plan.day_id?`<p class="v2-wallet">계정 당근 ${plan.carrot_balance??100}개 · ${plan.chest_issued?"오늘의 보물상자를 받았어요":"오늘 할 일을 모두 마치면 보물상자를 받아요"}</p><small>숲 체험에서 모은 당근과 아이템은 따로 보관돼요.</small>`:""}
+      <button data-refresh type="button">새로고침</button></section>`;
+  }
+  function setSettingsOpen(open,button=null) {
+    settingsOpen=open;
+    const section=root.querySelector("[data-settings]");if(section)section.hidden=!open;
+    const management=root.querySelector("[data-compact-settings]");if(management)management.hidden=!open;
+    if(button){button.setAttribute("aria-expanded",String(open));button.textContent=open?"설정 닫기":"챌린지 설정";}
+    if(forestSettingsButton){forestSettingsButton.setAttribute("aria-expanded",String(open));forestSettingsButton.textContent=open?"닫기":"설정";}
+    if(open)root.querySelector("[data-settings] select")?.focus();
+  }
+  forestSettingsButton?.addEventListener("click",()=>setSettingsOpen(!settingsOpen));
   function render() {
     if(!plan?.enrolled)settingsOpen=true;
-    root.innerHTML=`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p><p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
+    const compact=forestView&&plan?.enrolled&&!needsSetup&&!connectionFailed;
+    const openIds=new Set(Array.from(root.querySelectorAll?.(".v2-quest-details[open]")||[],item=>item.dataset.questDetails));
+    root.setAttribute?.("data-compact",String(Boolean(compact)));
+    if(forestSettingsButton){forestSettingsButton.hidden=!compact;forestSettingsButton.setAttribute("aria-expanded",String(settingsOpen));forestSettingsButton.textContent=settingsOpen?"닫기":"설정";}
+    root.innerHTML=compact?compactContent(openIds):`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p><p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
       ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"설정 닫기":"챌린지 설정"}</button>
       ${(plan?.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan?.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
@@ -111,13 +147,23 @@
   }
   root.addEventListener("click",async event=>{
     if(event.target.closest("[data-refresh]"))return load();
+    const certify=event.target.closest("[data-certify]");
+    if(certify){
+      if(busy||certify.disabled)return;
+      // Never invent quantities, upload proof, grant rewards, or optimistically
+      // mark completion. The existing record API remains authoritative.
+      const detail=root.querySelector(`[data-quest-details="${certify.dataset.certify}"]`);
+      if(detail){
+        detail.open=true;
+        const field=detail.querySelector("form input:not([disabled]), form textarea:not([disabled]), form select:not([disabled])");
+        if(field){const session=field.closest("details");if(session)session.open=true;field.focus();}
+        else detail.querySelector("summary")?.focus();
+      }
+      return;
+    }
     const settingsButton=event.target.closest("[data-open-settings]");
     if(settingsButton){
-      settingsOpen=!settingsOpen;
-      root.querySelector("[data-settings]").hidden=!settingsOpen;
-      settingsButton.setAttribute("aria-expanded",String(settingsOpen));
-      settingsButton.textContent=settingsOpen?"설정 닫기":"챌린지 설정";
-      if(settingsOpen)root.querySelector("[data-settings] select")?.focus();
+      setSettingsOpen(!settingsOpen,settingsButton);
       return;
     }
     if(event.target.closest("[data-dashboard]"))return window.dispatchEvent(new Event("challenge-v2-open-dashboard"));
