@@ -192,14 +192,32 @@ test('enrolled forest shows three short quests while preserving every original d
   assert.doesNotMatch(visibleText(root), /당뇨 예방 챌린지|나에게 맞게 설정하기|계정 당근|담당자가 사진 확인/);
 });
 
-test('certify opens the existing recording form without inventing a completion request', async () => {
+test('direct-record quests save an honest self-attestation and optional detail with one certify click', async () => {
   const { root, requests } = await widget();
   const before = requests.length;
   const card = root.querySelector('.v2-quest-card');
+  card.querySelector('[name="note"]').value = '저녁 산책 후 몸이 가벼웠어요.';
   await root.listeners.click({ target: card.querySelector('[data-certify]') });
-  assert.equal(card.querySelector('.v2-quest-details').open, true);
-  assert.equal(requests.length, before, 'expanding certification must not write a record');
-  assert.ok(descendants(card).some(node => node.focused), 'the existing required recording input must receive focus');
+  const writes = requests.slice(before).filter(request => request.url.includes('/sessions/'));
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].options.method, 'PUT');
+  const payload = JSON.parse(writes[0].options.body);
+  assert.equal(payload.done, true);
+  assert.equal(payload.quantity, 5);
+  assert.equal(payload.note, '저녁 산책 후 몸이 가벼웠어요.');
+  assert.equal(Number.isNaN(Date.parse(payload.performed_at)), false);
+});
+
+test('photo and measurement-heavy quests still open their real inputs instead of fabricating proof', async () => {
+  const photo = assignment(1); photo.goal.proof_type = 'T2'; photo.goal.required_uploads = 1;
+  const drink = assignment(2); drink.goal.family_id = 'H02'; drink.goal.goal_unit = 'count';
+  const { root, requests } = await widget({ plan: today({ items: [photo, drink, assignment(3)] }) });
+  const before = requests.length;
+  await root.listeners.click({ target: root.querySelector('[data-certify="1"]') });
+  await root.listeners.click({ target: root.querySelector('[data-certify="2"]') });
+  assert.equal(requests.length, before);
+  assert.equal(root.querySelector('[data-quest-details="1"]').open, true);
+  assert.equal(root.querySelector('[data-quest-details="2"]').open, true);
 });
 
 test('only server-completed assignments show certification complete; review stays pending', async () => {
@@ -303,7 +321,7 @@ test('record submission waits for authoritative completion and preserves the exi
     requestHook: url => url.endsWith('/assignments/1/sessions/1')
       ? new Promise(resolve => { finishRecording = resolve; }) : null,
   });
-  await root.listeners.click({ target: root.querySelector('[data-certify="1"]') });
+  root.querySelector('[data-quest-details="1"]').open = true;
   const form = root.querySelector('[data-session="1"]');
   form.values = { performed_at: '2026-09-08T14:30', quantity: '5', done: 'on' };
   const saving = root.listeners.submit({ target: form, preventDefault() {} });
@@ -329,7 +347,7 @@ test('record submission waits for authoritative completion and preserves the exi
 
 test('refresh preserves the chosen open quest while unrelated quests remain collapsed', async () => {
   const { root, requests } = await widget();
-  await root.listeners.click({ target: root.querySelector('[data-certify="2"]') });
+  root.querySelector('[data-quest-details="2"]').open = true;
   await root.listeners.click({ target: root.querySelector('[data-refresh]') });
   assert.equal(root.querySelector('[data-quest-details="1"]').open, false);
   assert.equal(root.querySelector('[data-quest-details="2"]').open, true);

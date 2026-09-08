@@ -422,14 +422,6 @@ body.forest-ui-hidden .game-controls-overlay #controls-content,body.forest-ui-hi
 body.forest-ui-hidden .game-controls-overlay .hud-panel-heading{margin:0}
 body.forest-ui-hidden .game-controls-overlay #ui-toggle{grid-column:3;background:var(--paper);box-shadow:0 2px 8px #16392725}
 /* A warm, tactile attack key; feedback is interaction-only, never a looping bounce. */
-.game-controls-overlay .touch-controls button.action-attack{background:linear-gradient(155deg,#ffe0a1,#efae54);border-color:#a95520;border-bottom:3px solid #8a431b;color:#603013;box-shadow:inset 0 1px #fff4d4,0 2px 0 #743c1929;transition:background .14s ease,box-shadow .14s ease,transform .1s ease}
-.game-controls-overlay .touch-controls button.action-attack span{display:flex;align-items:center;justify-content:center;gap:4px;font-size:calc(11px * var(--forest-ui-scale))}
-.game-controls-overlay .action-attack .attack-spark{font-style:normal;font-size:15px;color:#884512}
-.game-controls-overlay .touch-controls button.action-attack kbd{display:inline-flex;align-items:center;justify-content:center;min-width:16px;width:16px;height:16px;padding:1px 3px;border:1px solid #a65c2b66;border-radius:4px;background:#fff6dc8f;font-family:inherit;font-size:9px;line-height:1.15;box-shadow:none}
-.game-controls-overlay .touch-controls button.action-attack:hover,.game-controls-overlay .touch-controls button.action-attack:focus-visible{background:linear-gradient(155deg,#ffebbf,#f9bf69);color:#4d240c;border-color:#844113;box-shadow:inset 0 1px #fff9e9,0 0 0 2px #ffe3a877,0 3px 7px #71331530}
-.game-controls-overlay .touch-controls button.action-attack:focus-visible{outline:3px solid #704018;outline-offset:3px}
-.game-controls-overlay .touch-controls button.action-attack:active{transform:translateY(1px);background:linear-gradient(155deg,#e9a64b,#e18f38);border-bottom-width:1px;box-shadow:inset 0 2px 4px #71331542}
-@media(prefers-reduced-motion:reduce){.game-controls-overlay .touch-controls button.action-attack{transition:none}.game-controls-overlay .touch-controls button.action-attack:active{transform:none}}
 @media(max-width:520px){.font-size-control{gap:3px}.font-size-control>span{font-size:10px}.font-size-control select{max-width:70px;min-height:32px;padding:4px}.studio-topbar .forest-brand{font-size:calc(15px * var(--forest-ui-scale))}.game-controls-overlay{left:7px;bottom:7px;max-width:calc(100% - 14px);padding:5px}.game-controls-overlay .touch-controls{grid-template-rows:repeat(3,36px)}.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{height:36px}}
 
 /* v157: the measured viewport fills the space left by actual UI, not a 3:2 box. */

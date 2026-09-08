@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v169-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v170-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -794,7 +794,8 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)"):
         assert f"<span>{label}</span>" in html
     assert 'data-action="attack" aria-label="공격, 단축키 Z"' in html
-    assert '<i class="attack-spark" aria-hidden="true">✦</i> 공격 <kbd>Z</kbd>' in html
+    assert '<span>공격 (Z)</span>' in html
+    assert "attack-spark" not in html
     assert "data-footer-tool=" not in html
     assert 'class="asset-dock rail-assets"' in html
     overlay_position = html.index('class="game-controls-overlay arcade-deck"')

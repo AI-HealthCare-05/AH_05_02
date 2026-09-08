@@ -6,19 +6,22 @@ const vm = require('node:vm');
 const pets = require('../src/frontend/forest-pets.js');
 const code = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
 
-test('pet menu contains only three LPC walkers, four kittens and none without duplicate choices', () => {
+test('pet menu contains three LPC walkers, three free-color kittens and all free equipment without duplicate choices', () => {
   const start = code.indexOf('    pet: ['), end = code.indexOf('    speech: [', start);
   const menu = vm.runInNewContext(`({${code.slice(start, end)}}).pet`, { window: { ForestPets: pets } });
-  assert.equal(menu.length, 8);
-  assert.equal(new Set(menu.map(pet => pet.id)).size, 8);
+  const companions = menu.filter(item => item.slot === 'pet');
+  const equipment = menu.filter(item => item.slot === 'petAccessory');
+  assert.equal(menu.length, 23);
+  assert.equal(new Set(menu.map(item => item.id)).size, menu.length);
   assert.deepEqual(pets.classicCatalog.map(pet => pet.id), ['lpc_white_cat', 'lpc_orange_cat', 'lpc_brown_dog']);
-  assert.equal(menu[0].id, 'none');
-  assert.equal(new Set(menu.filter(pet => pet.group).map(pet => pet.group)).size, 2);
-  for (const pet of menu.slice(1)) {
+  assert.equal(companions.length, 7);
+  assert.equal(companions[0].itemId, 'none');
+  assert.equal(equipment.length, 16);
+  for (const pet of companions.slice(1)) {
     assert.ok(!pet.static);
-    assert.ok(!Object.hasOwn(pets.aliases, pet.id), 'compatibility IDs do not duplicate menu cards');
-    assert.notEqual(pets.pose(pet.id, { action: 'walk', elapsed: 0 }).frame,
-      pets.pose(pet.id, { action: 'walk', elapsed: 160 }).frame);
+    assert.ok(!Object.hasOwn(pets.aliases, pet.itemId), 'compatibility IDs do not duplicate menu cards');
+    assert.notEqual(pets.pose(pet.itemId, { action: 'walk', elapsed: 0 }).frame,
+      pets.pose(pet.itemId, { action: 'walk', elapsed: 160 }).frame);
   }
 });
 
@@ -35,13 +38,21 @@ test('static portrait loading and frame registration are absent while source PNG
 
 test('old saved IDs resolve only to animated pets without mutating saved data', () => {
   const expected = { white_pup: 'lpc_brown_dog', brown_pup: 'lpc_brown_dog', cat: 'lpc_white_cat', fox: 'lpc_orange_cat',
-    blue_eyes_white_cat: 'last_tick_white', gold_eyes_orange_cat: 'last_tick_ginger' };
+    blue_eyes_white_cat: 'last_tick_white', gold_eyes_orange_cat: 'last_tick_ginger', last_tick_ribbon: 'last_tick_white' };
   assert.deepEqual(pets.aliases, expected);
   for (const [oldId, id] of Object.entries(expected)) {
     const saved = Object.freeze({ pet: oldId });
     assert.equal(pets.canonicalId(saved.pet), id);
     assert.equal(pets.definition(saved.pet).id, id);
-    assert.deepEqual(pets.pose(saved.pet, { action: 'walk', elapsed: 160 }), pets.pose(id, { action: 'walk', elapsed: 160 }));
+    const oldPose = pets.pose(saved.pet, { action: 'walk', elapsed: 160 });
+    const newPose = pets.pose(id, { action: 'walk', elapsed: 160 });
+    if (oldId === 'last_tick_ribbon') {
+      assert.equal(oldPose.overlay.key, 'forest-kitten-valentine-bow-red');
+      assert.equal(pets.pose(oldId, { action: 'walk', elapsed: 160, equipment: 'none' }).overlay.key,
+        'forest-kitten-valentine-bow-red');
+      delete oldPose.overlay;
+    }
+    assert.deepEqual(oldPose, newPose);
     assert.equal(saved.pet, oldId);
   }
   assert.equal(pets.canonicalId('none'), 'none');
@@ -53,9 +64,10 @@ test('studio selection resolves a saved alias to its current card without changi
   for (const [oldId, id] of Object.entries(pets.aliases)) {
     const avatarDraft = { pet: oldId };
     const context = vm.createContext({ window: { ForestPets: pets }, avatarDraft,
-      avatarItemsForCategory: () => [{ id: 'none' }, ...pets.classicCatalog, ...pets.catalog] });
+      avatarItemsForCategory: () => [{ id: 'pet:none', itemId: 'none', slot: 'pet' },
+        ...[...pets.classicCatalog, ...pets.catalog].map(item => ({ ...item, id: `pet:${item.id}`, itemId: item.id, slot: 'pet' }))] });
     vm.runInContext(code.slice(start, end), context);
-    assert.equal(context.selectedAvatarItem('pet').id, id);
+    assert.equal(context.selectedAvatarItem('pet').itemId, id);
     assert.equal(avatarDraft.pet, oldId);
   }
   assert.match(code, /itemSlot === "pet" \? window.ForestPets\?\.canonicalId\?\.\(avatarDraft.pet\)/);

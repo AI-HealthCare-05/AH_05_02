@@ -364,9 +364,10 @@
     ],
     vehicle: [],
     pet: [
-      { id: "none", name: "함께 걷기 없음", visual: "—" },
-      ...(window.ForestPets?.classicCatalog || []),
-      ...(window.ForestPets?.catalog || []),
+      { id: "pet:none", itemId: "none", slot: "pet", name: "함께 걷기 없음", visual: "—", group: "펫" },
+      ...(window.ForestPets?.classicCatalog || []).map(item => ({ ...item, id: `pet:${item.id}`, itemId: item.id, slot: "pet", group: item.group || "펫" })),
+      ...(window.ForestPets?.catalog || []).map(item => ({ ...item, id: `pet:${item.id}`, itemId: item.id, slot: "pet", group: item.group || "펫" })),
+      ...(window.ForestPets?.equipment || []).map(item => ({ ...item, id: `petAccessory:${item.id}` })),
     ],
     speech: [
       { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
@@ -427,6 +428,7 @@
   avatarCatalog.bottomColor = colorChoices;
   avatarCatalog.shoeColor = colorChoices;
   avatarCatalog.mobilityColor = colorChoices;
+  avatarCatalog.petAccessory = [...(window.ForestPets?.equipment || [])];
   const lpcCatalogMap = {
     lpcHead: "head", lpcHair: "hair", lpcOutfit: "outfit", lpcBottom: "bottom",
     lpcShoes: "shoes", lpcHat: "hat", lpcGlasses: "eyewear",
@@ -525,7 +527,7 @@
   }
   const defaultCosmetics = {
     skin: "peach", accessory: "none",
-    aura: "none", effect: "none", vehicle: "none", pet: "none", speech: "none",
+    aura: "none", effect: "none", vehicle: "none", pet: "none", petAccessory: "none", speech: "none",
     lpcHair: "messy", lpcOutfit: "tshirt", lpcBottom: "long_pants", lpcShoes: "boots", lpcHat: "none", lpcGlasses: "none",
     lpcArms: "none", lpcTool: "none", lpcWeapon: "none",
     bodyType: "male", lpcHead: "human_male", lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button", lpcEyes: "none", lpcWrinkles: "none",
@@ -575,21 +577,21 @@
   };
   const additionalDefaultOutfits = [
     { role: "moon_mage", number: 3, label: "달빛 마법사", gender: "female", cosmetics: {
-      lpcHat: "celestial_moon", hairColor: "silver", lpcWeapon: "wand", pet: "last_tick_white",
+      lpcHat: "celestial_moon", hairColor: "silver", lpcWeapon: "wand", pet: "last_tick_white", petAccessory: "valentine_nimbus",
     } },
     { role: "forest_witch", number: 4, label: "숲의 엘프", gender: "female", cosmetics: {
       lpcHair: "braid", lpcHat: "celestial", hatColor: "green", lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara",
-      outfitColor: "green", bottomColor: "brown", lpcWeapon: "bow", pet: "last_tick_ribbon",
+      outfitColor: "green", bottomColor: "brown", lpcWeapon: "bow", pet: "last_tick_white", petAccessory: "valentine_bow_red",
     } },
     { role: "inventor", number: 5, label: "숲속 발명가", gender: "male", cosmetics: {
       bodyType: "muscular", skin: "peach", lpcHead: "human_male", lpcHair: "messy", lpcHat: "leather_cap", hatColor: "brown",
       lpcGlasses: "round", glassesColor: "brown", lpcOutfit: "apron_full", outfitColor: "cream", lpcBottom: "cuffed",
-      bottomColor: "navy", lpcTool: "hammer", pet: "last_tick_ginger",
+      bottomColor: "navy", lpcTool: "hammer", pet: "last_tick_ginger", petAccessory: "winter_antlers_green",
     } },
     { role: "knight", number: 6, label: "숲의 기사", gender: "male", cosmetics: {
       bodyType: "male", skin: "peach", lpcHead: "human_male", lpcHair: "curtains", hairColor: "black", lpcHat: "cavalier",
       hatColor: "navy", lpcOutfit: "official_torso_armour_torso_armour_plate", outfitColor: "silver", lpcBottom: "long_pants",
-      bottomColor: "navy", lpcWeapon: "arming_sword", pet: "last_tick_gray",
+      bottomColor: "navy", lpcWeapon: "arming_sword", pet: "last_tick_gray", petAccessory: "winter_santa_hat_1",
     } },
   ];
 
@@ -1758,6 +1760,7 @@
       drawPetFrame(context, cosmetics.pet, {
         action: avatar.sitting ? "sit" : performance.now() < walkingUntil ? "walk" : "idle",
         direction: avatar.direction || "down", elapsed: performance.now(),
+        idleMs: Math.max(0, performance.now() - walkingUntil), equipment: cosmetics.petAccessory,
         reducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
       }, x + 37, y + 22, 40);
     }
@@ -2510,7 +2513,8 @@
   function selectedAvatarItem(category, id = category === "pose" ? avatarPreviewPose : avatarDraft[category]) {
     const choices = avatarItemsForCategory(category);
     const selectedId = category === "pet" ? window.ForestPets?.canonicalId?.(id) ?? id : id;
-    return choices.find((item) => item.id === selectedId) || choices[0] || { id: "none", name: "" };
+    return choices.find((item) => (item.itemId || item.id) === selectedId && (!item.slot || item.slot === category))
+      || choices[0] || { id: "none", name: "" };
   }
 
   const avatarThumbnailIndexes = {
@@ -2718,6 +2722,15 @@
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       drawPetFrame(target, thumbnail.dataset.petThumb, { action: "sit", direction: "down", elapsed: 0, reducedMotion: true }, 48, 84, 88);
     });
+    document.querySelectorAll("canvas[data-pet-equipment-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      const selectedPet = window.ForestPets?.definition?.(avatarDraft.pet)?.legacy ? "last_tick_white" : avatarDraft.pet;
+      drawPetFrame(target, selectedPet === "none" ? "last_tick_white" : selectedPet, {
+        action: "sit", direction: "down", elapsed: 0, reducedMotion: true,
+        equipment: thumbnail.dataset.petEquipmentThumb,
+      }, 48, 84, 88);
+    });
   }
 
   function drawLayeredAvatarPreview(target, cosmetics) {
@@ -2786,6 +2799,7 @@
     drawPetFrame(previewContext, avatarDraft.pet, {
       action: avatarPreviewPose === "sit" ? "sit" : ["walk", "run"].includes(avatarPreviewPose) ? "walk" : "idle",
       direction: "down", elapsed: avatarPreviewFrame * 150,
+      equipment: avatarDraft.petAccessory,
       reducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
     }, 228, 275, 100);
   }
@@ -2843,13 +2857,17 @@
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-speech-thumb="${item.id}" aria-hidden="true"></canvas>`;
       } else if (effectiveCategory === "pose") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-pose="${item.id}" aria-hidden="true"></canvas>`;
-      } else if (item.id === "none" && ["aura", "pet"].includes(effectiveCategory)) {
+      } else if (itemSlot === "pet" && itemId === "none") {
         visual = '<canvas class="item-visual catalog-thumb" width="96" height="96" data-empty-preview="true" aria-hidden="true"></canvas>';
+      } else if (itemSlot === "petAccessory") {
+        visual = itemId === "none"
+          ? '<canvas class="item-visual catalog-thumb" width="96" height="96" data-empty-preview="true" aria-hidden="true"></canvas>'
+          : `<canvas class="item-visual catalog-thumb" width="96" height="96" data-pet-equipment-thumb="${itemId}" aria-hidden="true"></canvas>`;
       } else if (effectiveCategory === "vehicle" && item.id === "none") {
         visual = '<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-pose="walk" aria-hidden="true"></canvas>';
       } else if (effectiveCategory === "vehicle") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="lpcMobility" data-lpc-item="${itemId}" aria-hidden="true"></canvas>`;
-      } else if (effectiveCategory === "pet") {
+      } else if (itemSlot === "pet") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-pet-thumb="${itemId}" aria-hidden="true"></canvas>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
@@ -3151,7 +3169,7 @@
     if (!button) return;
     const categoryId = activeAvatarCategory;
     if (categoryId === "pose") return;
-    const groupedCategories = ["head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle"];
+    const groupedCategories = ["head", "hair", "headwear", "arms", "torso", "legs", "feet", "tools", "weapons", "vehicle", "pet"];
     const groupedItem = groupedCategories.includes(categoryId)
       ? avatarCatalog[categoryId].find((item) => item.id === button.dataset.avatarItem)
       : null;
@@ -3160,6 +3178,14 @@
     if (avatarDraft[targetSlot] === targetItem) return;
     avatarDraftHistory.push({ ...avatarDraft });
     avatarDraft[targetSlot] = targetItem;
+    if (targetSlot === "petAccessory" && targetItem !== "none") {
+      const selectedPet = window.ForestPets?.definition?.(avatarDraft.pet);
+      if (!selectedPet || selectedPet.legacy) avatarDraft.pet = "last_tick_white";
+    }
+    if (targetSlot === "pet") {
+      const selectedPet = window.ForestPets?.definition?.(targetItem);
+      if (!selectedPet || selectedPet.legacy) avatarDraft.petAccessory = "none";
+    }
     if (targetSlot === "lpcTool") {
       avatarDraft.lpcWeapon = "none";
       avatarPreviewPose = "harvest";
@@ -3197,7 +3223,7 @@
       "skin", "lpcHead", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles",
       "lpcHair", "hairColor", "lpcHat", "lpcGlasses", "lpcArms", "lpcOutfit", "outfitColor",
       "lpcBottom", "bottomColor", "lpcShoes", "shoeColor", "lpcTool", "lpcWeapon",
-      "aura", "effect", "vehicle", "pet", "speech",
+      "aura", "effect", "vehicle", "pet", "petAccessory", "speech",
     ].forEach((slot) => {
       const choices = avatarItemsForCategory(slot);
       if (choices.length) avatarDraft[slot] = choices[Math.floor(Math.random() * choices.length)].id;

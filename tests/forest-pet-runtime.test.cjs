@@ -300,7 +300,14 @@ test('installed production kitten manifest can drive all four runtime variants w
     const pose = pets.pose(ids[0], { action: scene.petPoseAction, direction: scene.petFacing, elapsed: scene.petPoseElapsedMs });
     clips.add(pose.clip); assert.equal(scene.pet.frame, pose.frame);
   }
-  assert.deepEqual([...clips].sort(), ['meow_sit', 'rest', 'wash_sit', 'yawn_sit'], 'the live resting clock reaches every audited waiting clip');
+  assert.deepEqual([...clips].sort(), ['meow_sit', 'rest', 'sit', 'wash_sit', 'yawn_sit'], 'the live resting clock reaches every audited waiting clip');
+  for (const stage of pets.idleStages) {
+    scene.petIdleMs = stage.thresholdMs;
+    scene.renderPetPose('idle', stage.thresholdMs);
+    const expected = pets.pose(ids[0], { action: 'idle', direction: scene.petFacing,
+      elapsed: stage.thresholdMs, idleMs: stage.thresholdMs });
+    assert.equal(scene.pet.frame, expected.frame, stage.name);
+  }
 });
 
 test('all three LPC walkers remain visible animated choices without modifying saved IDs', () => {

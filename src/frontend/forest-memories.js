@@ -241,7 +241,9 @@
       // never block the portrait; the existing LPC companion remains a fallback.
       session.people.filter(person => person.number >= 3 && root.ForestPets?.definition(person.avatar.cosmetics?.pet)).forEach(person => {
         const x = person.x + 17, y = person.y + 20;
-        session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet, x, y, startX: x + 22, startY: y,
+        session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet,
+          petAccessory: person.avatar.cosmetics.petAccessory || (person.avatar.cosmetics.pet === "last_tick_ribbon" ? "valentine_bow_red" : "none"),
+          x, y, startX: x + 22, startY: y,
           sprite: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y)),
           overlay: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y + .01).setVisible(false)),
         });
@@ -301,7 +303,8 @@
       const animals = root.ForestAnimals;
       const travelDirection = animal.startX < animal.x ? "right" : "left";
       if (animal.kind === "preset-pet") {
-        const pose = root.ForestPets?.pose(animal.petId, { action: moving ? "walk" : "sit", direction: moving ? travelDirection : "down", elapsed, reducedMotion });
+        const pose = root.ForestPets?.pose(animal.petId, { action: moving ? "walk" : "sit", direction: moving ? travelDirection : "down", elapsed,
+          equipment: animal.petAccessory, reducedMotion });
         if (pose && this.scene.textures.exists(pose.key) && (!pose.overlay || this.scene.textures.exists(pose.overlay.key))) {
           sprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.flipX));
           const visible = Boolean(pose.overlay && this.scene.textures.exists(pose.overlay.key));

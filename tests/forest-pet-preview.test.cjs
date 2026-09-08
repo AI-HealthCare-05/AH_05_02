@@ -64,8 +64,13 @@ test('older saved IDs preview the same animated frame as their canonical pet wit
   const pets = require('../src/frontend/forest-pets.js');
   for (const [oldId, id] of Object.entries(pets.aliases)) {
     const pose = pets.pose(oldId, { action: 'walk', elapsed: 400 });
-    assert.deepEqual(pose, pets.pose(id, { action: 'walk', elapsed: 400 }));
+    const canonical = pets.pose(id, { action: 'walk', elapsed: 400 });
+    if (oldId === 'last_tick_ribbon') {
+      assert.equal(pose.overlay.key, 'forest-kitten-valentine-bow-red');
+      assert.deepEqual({ ...pose, overlay: undefined }, { ...canonical, overlay: undefined });
+    } else assert.deepEqual(pose, canonical);
     const previewPose = { ...pose, key: pose.key === 'lpc-pets' ? pose.key : 'kitten' };
+    if (previewPose.overlay) previewPose.overlay = { ...previewPose.overlay, key: 'bow' };
     const s = setup(previewPose);
     assert.equal(s.draw(oldId), true);
     assert.equal(s.calls[0][0].key, previewPose.key);

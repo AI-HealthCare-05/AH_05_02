@@ -85,25 +85,26 @@ or offered as a standalone asset. See `docs/forest-pets-rabbits-v167.md`.
 - Title: **32x32 Pixel kittens Cats – Animated NPC**.
 - Creator: **Last tick**.
 - Source: <https://last-tick.itch.io/animated-pixel-kittens-cats-32x32>.
-- Downloaded through the official public $0 flow: **Free pack.zip** and
-  **14 feb.zip**. No purchase was made or paid-only file requested.
+- Downloaded through the official public $0 flow: **Free pack.zip**,
+  **Winter accessories.zip**, and **14 feb.zip**. No purchase was made or
+  paid-only file requested.
 - The creator allows personal/commercial projects but prohibits redistribution
   or resale of the source materials separately. The download instructions request
   credit to Last tick; the pet selection menu includes the creator link.
 - This is a custom creator license, **not CC0 and not an LPC license**.
 
-The free gray, ginger, white sheets and matching red-bow overlay are unchanged
-PNG bytes, installed with `scripts/import_forest_kittens.ps1` under the ignored
-`licensed-kittens` directory. No original ZIP/PNG is committed to public Git.
+The free gray, ginger, white sheets plus all four winter and eleven Valentine
+equipment overlays are unchanged PNG bytes, installed with
+`scripts/import_forest_kittens.ps1` under the ignored `licensed-kittens`
+directory. No original ZIP/PNG is committed to public Git.
 Developers must obtain the original files themselves and distribute them only
 as part of the game under the creator's terms.
 
 The free version has no pet furniture. Paid **Kittens pack.zip** and the separate
-**Pixel Interiors Room pack.zip** have not been included. The fourth selectable
-kitten is a white kitten with the free red ribbon, not a paid fourth coat color.
-Since v167, the pet menu offers only animated companions: three original LPC
-walkers under separate `lpc_*` IDs and four Last tick kitten choices. Retired
-static portrait pets are not restored. Older saved IDs resolve to animated
-companions without rewriting saved outfits. New kitten IDs and preset pets
-remain unchanged. Missing-art fallbacks still use the credited LPC atlas.
+**Pixel Interiors Room pack.zip** have not been included. Since v170, the pet
+menu offers three original LPC walkers, all three free Last tick coat colors,
+and a separate equipment group for the official free holiday overlays. Retired
+static portrait pets are not restored. The former ribbon-kitten saved ID still
+resolves to the white kitten plus the free red ribbon without rewriting saved
+outfits. Missing-art fallbacks still use the credited LPC atlas.
 See `docs/forest-pet-restoration.md` for the roster and animation limits.

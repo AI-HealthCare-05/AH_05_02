@@ -1702,7 +1702,8 @@
       const id = this.avatar.cosmetics?.pet;
       const definition = window.ForestPets?.definition(id);
       let pose = definition ? window.ForestPets.pose(id, {
-        action, direction: this.petFacing, elapsed: elapsedMs, reducedMotion,
+        action, direction: this.petFacing, elapsed: elapsedMs, idleMs: this.petIdleMs,
+        equipment: this.avatar.cosmetics?.petAccessory, reducedMotion,
       }) : null;
       const authored = Boolean(pose && this.textures?.exists(pose.key)
         && (!pose.overlay || this.textures.exists(pose.overlay.key)));

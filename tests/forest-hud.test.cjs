@@ -339,16 +339,15 @@ test('8, 9 and 0 are one equal-size responsive row and hiding UI retains its res
   assert.equal(app.elements['ui-toggle'].textContent, 'UI 숨기기(0)');
 });
 
-test('native attack is keyboard accessible and has distinct non-looping hover, focus and pressed feedback', () => {
+test('native attack returns to the same pad shape and label treatment as the other actions', () => {
   const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
   assert.ok(html.includes('data-action="attack" aria-label="공격, 단축키 Z"'));
-  assert.ok(html.includes('class="attack-spark" aria-hidden="true"'));
-  for (const state of [':hover', ':focus-visible', ':active']) {
-    assert.ok(css.includes(`.game-controls-overlay .touch-controls button.action-attack${state}`));
-  }
-  assert.ok(css.includes('@media(prefers-reduced-motion:reduce){.game-controls-overlay .touch-controls button.action-attack{transition:none}'));
-  assert.ok(css.includes('.game-controls-overlay .touch-controls button.action-attack:active{transform:none}'));
+  assert.ok(html.includes('<span>공격 (Z)</span>'));
+  assert.ok(html.includes('<span>상호작용 (Q)</span>'));
+  assert.doesNotMatch(html, /attack-spark/);
+  assert.doesNotMatch(css, /\.game-controls-overlay \.touch-controls button\.action-attack/);
+  assert.doesNotMatch(css, /ffe0a1|efae54|attack-spark/);
 });
 
 test('native Enter and Space activation do not double-toggle a focused button', () => {

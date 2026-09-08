@@ -54,7 +54,7 @@
   const input=(name,label,type="text",extra="")=>`<label>${label}<input name="${name}" type="${type}" ${extra} required></label>`;
   function settings(p={}) {
     const check=(name,label,fallback=false)=>`<label class="v2-check"><input type="checkbox" name="${name}" ${(p[name]??fallback)?"checked":""}>${label}</label>`;
-    return `<section id="daily-settings" data-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 설정"><h4>나에게 맞게 설정하기</h4><form data-preferences>
+    return `<section id="daily-settings" data-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 설정"><h4>나에게 맞게 다시 설정하기</h4><form data-preferences>
       <label>챌린지 방식<select name="mode">${Object.entries({balanced:"균형",activity_focus:"운동 중심",diet_focus:"식단 중심"}).map(([k,v])=>`<option value="${k}" ${p.mode===k?"selected":""}>${v}</option>`).join("")}</select></label>
       <label>어느 정도까지 할 수 있나요?<select name="max_difficulty">${Object.entries(levelLabel).map(([k,v])=>`<option value="${k}" ${(p.max_difficulty||"E")===k?"selected":""}>${v}</option>`).join("")}</select></label>
       ${input("planned_meals","오늘 예정된 식사 횟수","number",`min="0" max="3" value="${p.planned_meals??1}"`)}
@@ -73,7 +73,7 @@
       ${input("performed_at","수행 시각 (한국 시간, 활동은 종료 시각)","datetime-local",`value="${current}"`)}
       ${g.goal_unit==="minute"?input("quantity","이번 회차 시간(분)","number",`min="${g.per_session_quantity}" max="1440"`):""}
       ${g.family_id==="H02"?input("intake_ml",`${["오전","오후","저녁"][index-1]} 구간 실제 섭취량(mL)`,"number",'min="0" max="20000"')+'<small>이전 구간과 겹치지 않는 양만 기록하세요. 0mL도 정상이며 더 마실 필요가 없습니다.</small>':""}
-      ${g.domain==="diet"?'<label>내용 기록<textarea name="note" maxlength="500" required></textarea></label>':""}
+      <label>상세 기록<textarea name="note" maxlength="500" ${g.domain==="diet"?"required":""} placeholder="오늘 실천한 내용이나 느낀 점을 남길 수 있어요."></textarea></label>
       ${g.family_id==="D02"?input("serving_amount","표시 기준량","number",'min="0.01" step="any"')+'<label>기준 단위<select name="serving_unit"><option>g</option><option>mL</option></select></label>'+input("sugar_g","당류(g)","number",'min="0" step="any"')+(g.difficulty!=="E"?input("carbohydrate_g","총탄수화물(g)","number",'min="0" step="any"')+input("product_category","제품 종류","text",'maxlength="80"'):""):""}
       ${["D02","D03"].includes(g.family_id)&&g.difficulty==="H"&&index===g.target_sessions?`<label>${g.family_id==="D02"?"동일 100g 또는 100mL 기준 비교":"다음 날 개선점 한 줄"}<textarea name="improvement" maxlength="200" required></textarea></label>`:""}
       <label class="v2-check"><input name="done" type="checkbox" required>이 회차를 직접 수행하고 기록했어요</label><button>회차 저장</button></form></details>`;
@@ -102,6 +102,25 @@
       <button type="button" data-certify="${esc(item.id)}" aria-label="${esc(g.title)} ${label}" ${complete||pending?"disabled":""}>${label}</button></div>
       <details class="v2-quest-details" data-quest-details="${esc(item.id)}" ${!complete&&openIds.has(String(item.id))?"open":""}><summary>자세히 보기</summary>${card(item)}</details></article>`;
   }
+  function openRecordDetails(itemId) {
+    const detail=root.querySelector(`[data-quest-details="${itemId}"]`);
+    if(!detail)return;
+    detail.open=true;
+    const field=detail.querySelector("form input:not([disabled]), form textarea:not([disabled]), form select:not([disabled])");
+    if(field){const session=field.closest("details");if(session)session.open=true;field.focus();}
+    else detail.querySelector("summary")?.focus();
+  }
+  function quickSessionPayload(item,index,form,performedAt=new Date()) {
+    const g=item.goal;
+    // Photo evidence and measurement-heavy drink/label reviews still need the
+    // user-provided file or actual value. A click must never fabricate those.
+    if(g.proof_type!=="T3"||["H02","D02"].includes(g.family_id))return null;
+    const note=form?.querySelector?.('[name="note"]')?.value?.trim()||"직접 인증 완료";
+    const values={performed_at:performedAt.toISOString(),done:true,note};
+    if(g.goal_unit==="minute")values.quantity=Number(g.per_session_quantity);
+    if(g.family_id==="D03"&&g.difficulty==="H"&&index===g.target_sessions)values.improvement=note;
+    return values;
+  }
   function compactContent(openIds) {
     return `<p data-message role="status" aria-live="polite"></p>
       <div class="v2-compact-cards">${(plan.items||[]).map(item=>compactQuest(item,openIds)).join("")}</div>
@@ -118,8 +137,8 @@
     settingsOpen=open;
     const section=root.querySelector("[data-settings]");if(section)section.hidden=!open;
     const management=root.querySelector("[data-compact-settings]");if(management)management.hidden=!open;
-    if(button){button.setAttribute("aria-expanded",String(open));button.textContent=open?"설정 닫기":"챌린지 설정";}
-    if(forestSettingsButton){forestSettingsButton.setAttribute("aria-expanded",String(open));forestSettingsButton.textContent=open?"닫기":"설정";}
+    if(button){button.setAttribute("aria-expanded",String(open));button.textContent=open?"다시 설정 닫기":"나에게 맞게 다시 설정하기";}
+    if(forestSettingsButton){forestSettingsButton.setAttribute("aria-expanded",String(open));forestSettingsButton.textContent=open?"다시 설정 닫기":"나에게 맞게 다시 설정하기";}
     if(open)root.querySelector("[data-settings] select")?.focus();
   }
   forestSettingsButton?.addEventListener("click",()=>setSettingsOpen(!settingsOpen));
@@ -128,9 +147,9 @@
     const compact=forestView&&plan?.enrolled&&!needsSetup&&!connectionFailed;
     const openIds=new Set(Array.from(root.querySelectorAll?.(".v2-quest-details[open]")||[],item=>item.dataset.questDetails));
     root.setAttribute?.("data-compact",String(Boolean(compact)));
-    if(forestSettingsButton){forestSettingsButton.hidden=!compact;forestSettingsButton.setAttribute("aria-expanded",String(settingsOpen));forestSettingsButton.textContent=settingsOpen?"닫기":"설정";}
+    if(forestSettingsButton){forestSettingsButton.hidden=!compact;forestSettingsButton.setAttribute("aria-expanded",String(settingsOpen));forestSettingsButton.textContent=settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기";}
     root.innerHTML=compact?compactContent(openIds):`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p><p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
-      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"설정 닫기":"챌린지 설정"}</button>
+      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기"}</button>
       ${(plan?.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan?.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
       ${settings(plan?.preferences)}<div class="v2-cards">${(plan?.items||[]).map(card).join("")}</div>
@@ -150,15 +169,22 @@
     const certify=event.target.closest("[data-certify]");
     if(certify){
       if(busy||certify.disabled)return;
-      // Never invent quantities, upload proof, grant rewards, or optimistically
-      // mark completion. The existing record API remains authoritative.
-      const detail=root.querySelector(`[data-quest-details="${certify.dataset.certify}"]`);
-      if(detail){
-        detail.open=true;
-        const field=detail.querySelector("form input:not([disabled]), form textarea:not([disabled]), form select:not([disabled])");
-        if(field){const session=field.closest("details");if(session)session.open=true;field.focus();}
-        else detail.querySelector("summary")?.focus();
-      }
+      const item=plan?.items?.find(candidate=>String(candidate.id)===String(certify.dataset.certify));
+      const missing=item?Array.from({length:item.goal.target_sessions},(_,i)=>i+1).filter(index=>!item.sessions.some(session=>session.index===index)):[];
+      const firstForm=missing.length?root.querySelector(`[data-session="${certify.dataset.certify}"][data-index="${missing[0]}"]`):null;
+      if(!item||!missing.length||!quickSessionPayload(item,missing[0],firstForm)){openRecordDetails(certify.dataset.certify);return;}
+      busy=true;certify.disabled=true;certify.textContent="저장 중…";
+      try{
+        const interval=Math.max(60000,item.goal.goal_unit==="minute"?Number(item.goal.per_session_quantity)*60000:60000);
+        for(const [position,index] of missing.entries()){
+          const form=root.querySelector(`[data-session="${certify.dataset.certify}"][data-index="${index}"]`);
+          const performedAt=new Date(Date.now()-(missing.length-position-1)*interval);
+          const values=quickSessionPayload(item,index,form,performedAt);
+          plan={...plan,...await api(`/assignments/${item.id}/sessions/${index}`,{method:"PUT",body:JSON.stringify(values)})};
+        }
+        render();notify("상세 기록과 인증을 저장했어요.");channel?.postMessage("refresh");
+      }catch(error){notify(error.message);certify.disabled=false;certify.textContent="인증하기";}
+      finally{busy=false;}
       return;
     }
     const settingsButton=event.target.closest("[data-open-settings]");

@@ -25,7 +25,9 @@ test('six stable presets include a female mage, elf archer and muscular inventor
   assert.equal(inventor.cosmetics.lpcTool, 'hammer');
   assert.equal(inventor.cosmetics.lpcOutfit, 'apron_full');
   assert.deepEqual([mage, witch, inventor, knight].map(look => look.cosmetics.pet),
-    ['last_tick_white', 'last_tick_ribbon', 'last_tick_ginger', 'last_tick_gray']);
+    ['last_tick_white', 'last_tick_white', 'last_tick_ginger', 'last_tick_gray']);
+  assert.deepEqual([mage, witch, inventor, knight].map(look => look.cosmetics.petAccessory),
+    ['valentine_nimbus', 'valentine_bow_red', 'winter_antlers_green', 'winter_santa_hat_1']);
   assert.deepEqual(target.avatar, { name: 'unchanged' });
   const saved = JSON.stringify(target.outfitHistory);
   c.ensureGenderDefaultOutfits(target);
@@ -43,7 +45,8 @@ test('saved preset4 is upgraded from wand to bow without duplicating its card', 
   assert.equal(elf[0].id, old.id);
   assert.equal(elf[0].label, '숲의 엘프');
   assert.equal(elf[0].cosmetics.lpcWeapon, 'bow');
-  assert.equal(elf[0].cosmetics.pet, 'last_tick_ribbon');
+  assert.equal(elf[0].cosmetics.pet, 'last_tick_white');
+  assert.equal(elf[0].cosmetics.petAccessory, 'valentine_bow_red');
 });
 test('migration preserves eight personal looks, existing gender presets and current avatar', () => {
   const c = setup();
