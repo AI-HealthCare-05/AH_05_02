@@ -67,7 +67,7 @@
     "status": "ready",
     "empty_reason": null,
     "report_id": "rpt-week-2026-08-29",
-    "generated_at": "2026-09-08T13:24:45.134300+09:00",
+    "generated_at": "2026-09-08T06:30:00.775645Z",
     "period": {
       "key": "week",
       "timezone": "Asia/Seoul",
@@ -432,7 +432,7 @@
     "status": "empty",
     "empty_reason": "no_challenges",
     "report_id": "rpt-week-2026-04-04",
-    "generated_at": "2026-09-08T13:24:46.248049+09:00",
+    "generated_at": "2026-09-08T06:30:01.919479Z",
     "period": {
       "key": "week",
       "timezone": "Asia/Seoul",
@@ -495,4 +495,6 @@
 {"status_code": 422, "body": {"detail": {"error_code": "INVALID_PERIOD", "message": "period는 week, four-week, all 중 하나여야 합니다.", "retryable": false}}}
 ```
 
-**미완료 항목**: DB 마이그레이션은 코드로는 완성됐지만 실제 운영 MySQL에는 아직 적용하지 않았다 — Docker 환경에서 직접 실행해야 한다.
+**추가 반영 사항 (2026-09-08 갱신)**: §3 API 공통 조건 중 "시각은 ISO 8601 UTC로 반환" 항목을 재점검하다가, `generated_at`이 `+09:00`(Asia/Seoul) 오프셋으로 나가던 것을 발견해 UTC(`Z` 접미사)로 고쳤다 — 위 응답 예시는 모두 이 수정 이후 실제로 캡처한 최신 값이다. 또한 `Cache-Control: private, no-store`가 성공(200) 응답에만 적용되고 같은 라우트의 에러 응답(422/404/401)에는 빠지는 사각지대가 있어, 앱 레벨 미들웨어로 옮겨 성공·에러 응답 모두에 일괄 적용되도록 했다. 두 가지 모두 테스트로 검증됨.
+
+**미완료 항목**: 없음 — DB 마이그레이션은 2026-09-08 실제 docker compose/MySQL 스택에서 적용·검증까지 완료했다.

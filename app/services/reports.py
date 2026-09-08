@@ -525,12 +525,17 @@ async def _trend_buckets(user_id: int, anchor: ChallengeCycle, as_of: date) -> l
         challenges = await _build_challenge_summaries(user_id, bucket_period, include_goal_windows=False)
         counts = _summary_counts(challenges)
         eligible_days = min((min(end, as_of) - start).days + 1, 7) if start <= as_of else 0
+        # 요청서 §2.3(작업 D)의 "참여일" — 이 버킷 구간 안에서 실제로 활성 회차가 있었던 날수.
+        # `eligible_days`(as_of 기준 경과한 달력일수, 완전히 지난 버킷은 사실상 항상 7)와는 다른
+        # 개념이다 — 첫 회차가 버킷 중간에 시작한 사용자는 이 값이 7보다 작아야 한다.
+        participation_days = await _participation_days(user_id, bucket_period)
         buckets.append(
             {
                 "start_date": start,
                 "end_date": end,
                 "is_partial": end > as_of,
                 "eligible_days": max(0, eligible_days),
+                "participation_days": participation_days,
                 **counts,
             }
         )

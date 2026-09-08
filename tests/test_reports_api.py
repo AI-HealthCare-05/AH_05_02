@@ -398,6 +398,35 @@ async def test_period_challenges_exclude_non_overlapping_old_cycle_selection() -
 
 
 @pytest.mark.asyncio
+async def test_four_week_bucket_participation_days_reflects_actual_enrollment() -> None:
+    """작업 D 요청 표: 각 4주 bucket은 '실천일'뿐 아니라 '참여일'도 반환해야 한다. `eligible_days`
+    는 as_of 기준으로 그 버킷 구간이 달력상 얼마나 지났는지(완전히 지난 버킷은 사실상 항상 7)만
+    나타내므로, 사용자가 아직 회차를 시작하지 않았던 과거 구간에서도 7을 보고해 '참여했다'는 착시를
+    준다. `participation_days`는 그 구간에 실제로 활성 회차가 있었던 날수만 세야 한다 — 첫 회차를
+    지금 막 시작한 사용자라면 지난 4주 각 버킷 모두 0이어야 한다."""
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers = await signup_and_login(client, "bucketparticipation@example.com")
+        user_id = await _user_id_by_email("bucketparticipation@example.com")
+
+        # The user's only cycle starts TODAY — the four trend buckets are entirely before it.
+        today = date(2026, 9, 8)
+        assert today.weekday() == 1  # Tuesday: harmless, just documents the fixture's anchor weekday
+        await _make_cycle(user_id, today, codes=["regular_meals_log"])
+
+        import app.services.reports as reports_module
+
+        reports_module.today_kst = lambda: today
+
+        response = await client.get("/api/v1/reports", params={"period": "four-week"}, headers=headers)
+        data = response.json()["data"]
+        buckets = data["trend"]["buckets"]
+        assert len(buckets) == 4
+        for bucket in buckets:
+            assert bucket["eligible_days"] == 7  # fully in the past relative to as_of
+            assert bucket["participation_days"] == 0  # but the user wasn't enrolled yet
+
+
+@pytest.mark.asyncio
 async def test_barriers_scoped_to_period_selected_challenge_and_deduped() -> None:
     """Work item F: the four-week barriers card must exclude a barrier whose date falls
     outside the period, exclude a barrier tied to a challenge not selected in this period
