@@ -30,6 +30,7 @@
     up_right: [Math.SQRT1_2, -Math.SQRT1_2], up_left: [-Math.SQRT1_2, -Math.SQRT1_2],
   };
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
+  const ambientDecorCodes = new Set(["light_tent", "lantern", "flower_cart", "flower_pot", "mushroom", "scarecrow"]);
   const interactiveObjectTypes = {
     reward_cow: "cow", campfire: "fire", lantern: "light", firefly_lantern: "light", light_tent: "light",
   };
@@ -117,6 +118,10 @@
       this.rabbitActionIndex = 0;
       this.rabbitActionStartedAt = 0;
       this.rabbitActionUntil = 0;
+      this.rabbitDefeating = false;
+      this.rabbitDefeatAction = null;
+      this.rabbitDefeatStartedAt = 0;
+      this.rabbitDefeatUntil = 0;
       this.ratEventId = 0;
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
@@ -631,15 +636,24 @@
           const shadow = this.add.ellipse(0, -2, 42, 12, 0x1b241d, .32);
           const lantern = this.add.sprite(0, 0, "storage-objects", storageObjectIndex.lantern)
             .setOrigin(0.5, 0.9).setDisplaySize(82, 82);
-          actor = this.add.container(item.x, item.y, [shadow, lantern]);
-          actor.setData("visualTarget", lantern).setData("pointerTargets", [lantern]);
+          const accents = this.add.graphics();
+          actor = this.add.container(item.x, item.y, [shadow, lantern, accents]);
+          actor.setData("visualTarget", lantern).setData("fixtureTarget", lantern)
+            .setData("ambientFx", accents).setData("pointerTargets", [lantern]);
         } else if (Object.hasOwn(storageObjectIndex, item.code)) {
           const largeObjects = new Set(["tent", "light_tent", "picnic_table", "bbq_table", "pond", "fence", "flower_cart", "carrot_crate"]);
           const smallObjects = new Set(["chair_green", "chair_red", "lantern", "mailbox", "watering_can"]);
           const size = largeObjects.has(item.code) ? 96 : smallObjects.has(item.code) ? 70 : 82;
-          actor = this.add.sprite(item.x, item.y, "storage-objects", storageObjectIndex[item.code])
-            .setOrigin(0.5, 0.9)
-            .setDisplaySize(size, size);
+          const fixture = this.add.sprite(0, 0, "storage-objects", storageObjectIndex[item.code])
+            .setOrigin(0.5, 0.9).setDisplaySize(size, size);
+          if (ambientDecorCodes.has(item.code)) {
+            const accents = this.add.graphics();
+            actor = this.add.container(item.x, item.y, [fixture, accents]);
+            actor.setData("fixtureTarget", fixture).setData("ambientFx", accents).setData("pointerTargets", [fixture]);
+          } else {
+            fixture.setPosition(item.x, item.y);
+            actor = fixture;
+          }
         }
         if (!actor) return null;
         const interactiveDepthBoost = interactiveObjectTypes[item.code] ? 6 : 0;
@@ -797,6 +811,7 @@
         if (!accents) return;
         accents.clear();
         const phase = reducedMotion ? 0 : time / 1600 + item.x * .01;
+        const paused = document.hidden || reducedMotion || this.sceneName !== "world" || actor.visible === false;
         if (item.code === "garden_pinwheel") {
           const rotor = actor.getData("rotorTarget");
           const lastTime = actor.getData("rotorLastTime");
@@ -814,6 +829,25 @@
             const wave = reducedMotion ? 0 : Math.sin(phase + index * 1.8);
             accents.fillStyle(0xfff3a9, .28 + (wave + 1) * .09)
               .fillCircle(x + wave * .65, y + wave * .4, 1.1);
+          });
+        } else if (["lantern", "light_tent"].includes(item.code) && item.active) {
+          const points = item.code === "lantern" ? [[0, -32], [-2, -35], [3, -34]]
+            : [[-26, -45], [-13, -50], [0, -52], [14, -49], [27, -44]];
+          points.forEach(([x, y], index) => {
+            const glow = paused ? 0 : (Math.sin(phase * 4.2 + index * 1.7) + 1) / 2;
+            accents.fillStyle(0xfff0a0, .28 + glow * .3).fillCircle(x, y, 1.3 + glow * .8);
+          });
+        } else if (["flower_cart", "flower_pot", "mushroom", "scarecrow"].includes(item.code)) {
+          // Only pollen/spores/leaves move. The photographed pot, cart, stems,
+          // scarecrow and their ground contact remain pixel-identical and fixed.
+          const origins = item.code === "flower_cart" ? [[-22, -39], [7, -48], [28, -35]]
+            : item.code === "flower_pot" ? [[-13, -38], [10, -43]]
+              : item.code === "mushroom" ? [[-10, -31], [12, -35]] : [[-24, -42], [25, -36]];
+          origins.forEach(([x, y], index) => {
+            const wave = paused ? 0 : Math.sin(phase * 1.8 + index * 2.2);
+            const color = item.code === "mushroom" ? 0xffe9b0 : item.code === "scarecrow" ? 0xd7a84f : 0xffd6df;
+            accents.fillStyle(color, paused ? .18 : .24 + (wave + 1) * .08)
+              .fillCircle(x + wave * .8, y - Math.abs(wave) * .65, 1.05);
           });
         }
       });
@@ -1504,6 +1538,8 @@
       const [x, y] = Phaser.Utils.Array.GetRandom(candidates.length ? candidates : spawnPoints);
       this.ratEventId += 1;
       this.ratActive = true;
+      this.rabbitDefeating = false;
+      this.rabbitDefeatAction = null;
       this.ratDespawnAt = Infinity;
       this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
       this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
@@ -1533,7 +1569,10 @@
         const requested = available.find(variant => variant.id === variantId);
         const variant = requested || available[this.rabbitVariantCursor % available.length];
         if (variant && typeof animals.rabbitAction === "function" && typeof animals.rabbitPose === "function") {
-          const sequence = variant.actions.map(action => animals.rabbitAction(variant.id, action))
+          const roamingNames = variant.roamingActions || variant.actions.filter(name =>
+            /^(idle|jump_up|pose_(down|up|left|right|down_left|down_right|up_right|up_left))$/.test(name)
+            || name.startsWith("hop_") || name.startsWith("jump_forward") || name.startsWith("jump_front") || name.startsWith("jump_back"));
+          const sequence = roamingNames.map(action => animals.rabbitAction(variant.id, action))
             .filter(action => action && Number.isFinite(action.durationMs) && action.durationMs > 0);
           if (sequence.length) {
             this.rabbitVariant = variant.id;
@@ -1572,8 +1611,9 @@
 
     advanceRabbitBehavior(time) {
       if (!this.rabbitVariant || !this.rabbitBehaviorSequence.length) return null;
-      // Every source action gets a finite turn, including clips whose source
-      // tag loops. Absolute clip boundaries make the sequence frame-rate safe.
+      // Only the source's locomotion/standing actions get ambient turns.
+      // Defeat and sleep clips are reserved for a successful attack.
+      // Absolute clip boundaries make the sequence frame-rate safe.
       while (time >= this.rabbitActionUntil) {
         this.rabbitActionStartedAt = this.rabbitActionUntil;
         this.rabbitActionIndex = (this.rabbitActionIndex + 1) % this.rabbitBehaviorSequence.length;
@@ -1599,6 +1639,30 @@
       this.ratSprite.setFlipX?.(Boolean(pose.flipX));
     }
 
+    renderRabbitDefeat(time) {
+      if (!this.rabbitVariant || !this.rabbitDefeatAction) return false;
+      const pose = window.ForestAnimals.rabbitPose(this.rabbitVariant, {
+        action: this.rabbitDefeatAction.name,
+        direction: this.ratDirection,
+        elapsedMs: Math.max(0, time - this.rabbitDefeatStartedAt),
+        reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      });
+      if (!pose) return false;
+      this.ratSprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale);
+      this.ratSprite.setFlipX?.(Boolean(pose.flipX));
+      return true;
+    }
+
+    finishRabbitDefeat() {
+      if (!this.rabbitDefeating) return;
+      this.rabbitDefeating = false;
+      this.rabbitDefeatAction = null;
+      this.tweens.add({
+        targets: this.ratActor, alpha: 0, duration: 180,
+        onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
+      });
+    }
+
     dismissRat(time, caught = false) {
       if (!this.ratActive) return;
       this.ratActive = false;
@@ -1612,16 +1676,28 @@
       if (this.pointerAttackEventId != null) this.cancelPointerMovement();
       this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
       if (!caught) {
+        this.rabbitDefeating = false;
+        this.rabbitDefeatAction = null;
         this.ratActor.setVisible(false);
         return;
       }
       const x = this.ratActor.x;
       const y = this.ratActor.y;
-      this.tweens.add({
-        targets: this.ratActor, alpha: 0, duration: 180,
-        onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
-      });
       if (this.ratSpecies === "rabbit") {
+        const defeat = window.ForestAnimals.rabbitDefeatAction?.(this.rabbitVariant)
+          || this.rabbitBehaviorSequence.find(action => /sleep|flat|head_lower/i.test(action.name));
+        if (defeat && this.rabbitVariant) {
+          this.rabbitDefeating = true;
+          this.rabbitDefeatAction = defeat;
+          this.rabbitDefeatStartedAt = time;
+          this.rabbitDefeatUntil = time + Math.max(520, Math.min(defeat.durationMs, 1100));
+          this.renderRabbitDefeat(time);
+        } else {
+          this.tweens.add({
+            targets: this.ratActor, alpha: 0, duration: 180,
+            onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
+          });
+        }
         const rewardText = this.add.text(x, y - 30, "+1 🥕", {
           resolution: TEXT_RESOLUTION,
           fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
@@ -1630,6 +1706,11 @@
         this.tweens.add({
           targets: rewardText, y: y - 58, alpha: 0, duration: 850,
           onComplete: () => rewardText.destroy(),
+        });
+      } else {
+        this.tweens.add({
+          targets: this.ratActor, alpha: 0, duration: 180,
+          onComplete: () => this.ratActor.setVisible(false).setAlpha(1).setScale(1),
         });
       }
     }
@@ -1653,6 +1734,12 @@
       if (this.memoryCapturing) return;
       if (this.sceneName !== "world") {
         this.ratActor?.setVisible(false);
+        return;
+      }
+      if (this.rabbitDefeating) {
+        this.ratActor.setVisible(true);
+        this.renderRabbitDefeat(time);
+        if (time >= this.rabbitDefeatUntil) this.finishRabbitDefeat();
         return;
       }
       if (!this.ratActive) {

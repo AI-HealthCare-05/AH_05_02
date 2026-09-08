@@ -50,8 +50,14 @@
   ];
   const rabbitActionSets = Object.freeze({ bunbun: Object.freeze(bunbunActions), "last-tick": Object.freeze(lastTickActions) });
   const rabbitOriginals = [
-    { id: "bunbun", key: rabbitAssets[0].key, label: "Bunbun 얼룩토끼", actions: Object.freeze(bunbunActions.map(item => item.name)) },
-    { id: "last-tick", key: rabbitAssets[1].key, label: "Last tick 회색토끼", actions: Object.freeze(lastTickActions.map(item => item.name)) },
+    { id: "bunbun", key: rabbitAssets[0].key, label: "Bunbun 얼룩토끼",
+      actions: Object.freeze(bunbunActions.map(item => item.name)),
+      roamingActions: Object.freeze(["idle", "jump_up", "jump_forward", "jump_front", "jump_back"]),
+      defeatAction: "sleep" },
+    { id: "last-tick", key: rabbitAssets[1].key, label: "Last tick 회색토끼",
+      actions: Object.freeze(lastTickActions.map(item => item.name)),
+      roamingActions: Object.freeze(lastTickActions.filter(item => item.moves || /^pose_(down|up|left|right|down_left|down_right|up_right|up_left)$/.test(item.name)).map(item => item.name)),
+      defeatAction: "head_lower_left" },
   ];
   // Game-authored runtime palettes, NOT additional downloads from the creators.
   // Only verified fur colors change. Eyes/outlines, pink ears, carrots and alpha
@@ -74,6 +80,7 @@
       const source = rabbitOriginals.find(item => item.id === family);
       return Object.freeze({ id: `${family}-${color}`, key: `forest-rabbit-${family}-${color}`, sourceKey: source.key,
         family, color, label, scale: 1.4, generated: true, actions: source.actions,
+        roamingActions: source.roamingActions, defeatAction: source.defeatAction,
         palette: Object.freeze(Object.fromEntries(rabbitFurColors[family].map((rgb, index) => [rgb, palette[index]]))) });
     }),
   ]);
@@ -126,6 +133,11 @@
   function rabbitAction(id, name) {
     const family = rabbitVariants.find(item => item.id === id)?.family;
     return rabbitActionSets[family]?.find(item => item.name === name) || null;
+  }
+
+  function rabbitDefeatAction(id) {
+    const variant = rabbitVariants.find(item => item.id === id);
+    return variant ? rabbitAction(id, variant.defeatAction) : null;
   }
 
   function rabbitPose(id, { action: name, direction = "right", elapsedMs = 0, reducedMotion = false } = {}) {
@@ -319,7 +331,7 @@
     return true;
   }
 
-  const api = Object.freeze({ assets, rabbitAssets, rabbitVariants, rabbitAction, rabbitPose, cowFrame,
+  const api = Object.freeze({ assets, rabbitAssets, rabbitVariants, rabbitAction, rabbitDefeatAction, rabbitPose, cowFrame,
     recolorRabbitPixels, createRabbitSkinCanvas, registerRabbitSkins,
     createCowState, updateCowState, touchCowState, cowPose, cowBehavior,
     rabbitFrame, frameRect, mooUrl, playMoo, cowReactionDurationMs });

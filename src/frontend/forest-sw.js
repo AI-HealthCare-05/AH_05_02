@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v172-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v173-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -14,15 +14,15 @@ const CORE_SHELL = [
   "/static/lpc-avatar-engine.js?v=20260908-2",
   "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
-  "/static/forest-animals.js?v=20260908-4",
+  "/static/forest-animals.js?v=20260908-5",
   "/static/forest-pets.js?v=20260908-6",
   "/static/forest-riverduck.js?v=20260908-1",
   "/static/forest-riverduck-art.js?v=20260908-1",
   "/static/forest-memories.js?v=20260908-8",
   "/static/forest-garden.js?v=20260908-1",
-  "/static/forest-phaser.js?v=20260908-21",
+  "/static/forest-phaser.js?v=20260908-22",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260908-19",
+  "/static/forest-game.js?v=20260908-20",
   "/static/challenge-v2.js?v=2.1.7",
   "/static/challenge-v2.css?v=2.1.3",
   "/static/icons/forest-icon-192.png",

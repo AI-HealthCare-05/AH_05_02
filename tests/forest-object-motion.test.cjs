@@ -62,7 +62,7 @@ function setup() {
   });
   const scene = new window.carrotForestPhaserGame.config.scene();
   scene.add = {
-    sprite: displayObject, image: displayObject, graphics: () => displayObject(),
+    sprite: displayObject, image: displayObject, ellipse: displayObject, graphics: () => displayObject(),
     container: (x, y, list) => Object.assign(displayObject(x, y), { list }),
   };
   scene.tweens = { killTweensOf() {}, add: config => tweens.push(config) };
@@ -299,6 +299,30 @@ test('reduced-motion water and light accents do not change between updates', () 
   const before = actors.map(actor => structuredClone(actor.getData('ambientFx').operations));
   scene.updatePlacedObjectMotion(54321);
   assert.deepEqual(actors.map(actor => actor.getData('ambientFx').operations), before);
+});
+
+test('matching warehouse decorations animate only small accents while their furniture footprint stays fixed', () => {
+  const { scene, place, setReduced } = setup();
+  const codes = ['lantern', 'light_tent', 'flower_cart', 'flower_pot', 'mushroom', 'scarecrow'];
+  for (const code of codes) {
+    const actor = place(code), fixture = actor.getData('fixtureTarget'), accents = actor.getData('ambientFx');
+    const fixturePose = [fixture.x, fixture.y, fixture.angle, fixture.scaleX, fixture.scaleY, fixture.texture, fixture.frame];
+    scene.updatePlacedObjectMotion(0);
+    const first = structuredClone(accents.operations);
+    scene.updatePlacedObjectMotion(1100);
+    const second = structuredClone(accents.operations);
+    assert.deepEqual([actor.x, actor.y, actor.angle], [300, 400, 11], `${code} anchor stays fixed`);
+    assert.deepEqual([fixture.x, fixture.y, fixture.angle, fixture.scaleX, fixture.scaleY, fixture.texture, fixture.frame], fixturePose,
+      `${code} furniture art never shifts or changes frame`);
+    assert.ok(second.some(operation => operation[0] === 'circle'), `${code} has a restrained animated accent`);
+    assert.notDeepEqual(second, first, `${code} accent changes over time`);
+    setReduced(true);
+    scene.updatePlacedObjectMotion(3000);
+    const reduced = structuredClone(accents.operations);
+    scene.updatePlacedObjectMotion(9000);
+    assert.deepEqual(accents.operations, reduced, `${code} respects reduced motion`);
+    setReduced(false);
+  }
 });
 
 test('cow grazes occasionally and responds to touch with separate original look and hoof frames', () => {

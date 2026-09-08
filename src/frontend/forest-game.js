@@ -270,35 +270,35 @@
     sprout_hat: { name: "새싹 모자", kind: "accessory", icon: "🌱" },
     carrot_bag: { name: "당근 가방", kind: "accessory", icon: "🎒" },
     flower_patch: { name: "꽃밭", kind: "object", icon: "🌼" },
-    lantern: { name: "숲 등불", kind: "object", icon: "🏮" },
-    mushroom: { name: "버섯 장식", kind: "object", icon: "🍄" },
+    lantern: { name: "숲 등불", kind: "object", icon: "🏮", animated: true },
+    mushroom: { name: "버섯 장식", kind: "object", icon: "🍄", animated: true },
     bench: { name: "나무 벤치", kind: "object", icon: "🪵" },
     stone_path: { name: "돌길", kind: "object", icon: "🪨" },
     bird_bath: { name: "새 물그릇", kind: "object", icon: "⛲" },
     carrot_crate: { name: "당근 상자", kind: "object", icon: "🥕" },
     picnic_table: { name: "피크닉 탁자", kind: "object", icon: "🧺" },
-    flower_pot: { name: "꽃 화분", kind: "object", icon: "🪴" },
+    flower_pot: { name: "꽃 화분", kind: "object", icon: "🪴", animated: true },
     signpost: { name: "숲 표지판", kind: "object", icon: "🪧" },
     stump: { name: "나무 그루터기", kind: "object", icon: "🪵" },
     watering_can: { name: "물뿌리개", kind: "object", icon: "🚿" },
     campfire: { name: "모닥불", kind: "object", icon: "🔥" },
     hammock: { name: "해먹", kind: "object", icon: "🏕️" },
     mailbox: { name: "우편함", kind: "object", icon: "📫" },
-    scarecrow: { name: "허수아비", kind: "object", icon: "🌾" },
+    scarecrow: { name: "허수아비", kind: "object", icon: "🌾", animated: true },
     beehive: { name: "벌통", kind: "object", icon: "🍯" },
     fountain: { name: "작은 분수", kind: "object", icon: "⛲" },
     arch: { name: "꽃 아치", kind: "object", icon: "🌸" },
     wheelbarrow: { name: "손수레", kind: "object", icon: "🛒" },
     reward_cow: { name: "행운의 젖소", kind: "object", icon: "🐄", rarity: "rare" },
     tent: { name: "캠핑 텐트", kind: "object", icon: "⛺" },
-    light_tent: { name: "전구 텐트", kind: "object", icon: "⛺" },
+    light_tent: { name: "전구 텐트", kind: "object", icon: "⛺", animated: true },
     bbq_table: { name: "바비큐 탁자", kind: "object", icon: "🍖" },
     chair_green: { name: "초록 캠핑 의자", kind: "object", icon: "🪑" },
     chair_red: { name: "빨간 캠핑 의자", kind: "object", icon: "🪑" },
     picnic_blanket: { name: "피크닉 매트", kind: "object", icon: "🧺" },
     pond: { name: "돌 연못", kind: "object", icon: "💧" },
     fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
-    flower_cart: { name: "꽃수레", kind: "object", icon: "🌼" },
+    flower_cart: { name: "꽃수레", kind: "object", icon: "🌼", animated: true },
     duck_float: { name: "리버덕", kind: "object", icon: "🦆", animated: true },
     animated_fountain: { name: "물결 분수", kind: "object", icon: "⛲", animated: true },
     firefly_lantern: { name: "반딧불 랜턴", kind: "object", icon: "🏮", animated: true },
@@ -2492,7 +2492,7 @@
         if (code === "reward_cow") return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 희귀 꾸미기 오브젝트, ${action}" title="${item.name}"><canvas class="animal-thumbnail-canvas" width="96" height="96" data-animal="cow" aria-hidden="true"></canvas></button>`;
         const animatedRow = animatedObjectRows[code];
         if (animatedRow != null) return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, 반복해서 움직이는 오브젝트, ${action}" title="${item.name}"><canvas class="animated-object-thumbnail-canvas" width="96" height="96" data-animated-object-row="${animatedRow}" aria-hidden="true"></canvas></button>`;
-        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${action}" title="${item.name}"><canvas class="storage-sprite-thumb" width="96" height="96" data-storage-object="${code}" aria-hidden="true"></canvas></button>`;
+        return `<button class="inventory-item storage-icon-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="object" data-placement="${selected}" aria-pressed="${selected}" aria-label="${item.name}, ${item.animated ? "자연스럽게 움직이는 오브젝트, " : ""}${action}" title="${item.name}"><canvas class="storage-sprite-thumb" width="96" height="96" data-storage-object="${code}" aria-hidden="true"></canvas></button>`;
       }
       return `<button class="inventory-item ${highlightCode === code ? "reward-new" : ""}" type="button" data-item="${code}" data-kind="${item.kind}" data-placement="${selected}" aria-pressed="${equipped || selected}"><span aria-hidden="true">${item.icon}</span><strong>${item.name}</strong><small>${item.kind === "accessory" ? equipped ? "장착 중" : "장착하기" : selected ? "맵을 눌러 배치" : "배치 선택"}</small></button>`;
     }).join("");
@@ -3558,7 +3558,7 @@
     currentWildEncounter = { eventId: event.detail?.eventId, species: event.detail?.species === "rabbit" ? "rabbit" : "mouse" };
     if (event.detail?.species === "rabbit") {
       const variantLabel = event.detail?.variantLabel ? ` (${event.detail.variantLabel})` : "";
-      setStatus(`야생 토끼${variantLabel}가 나타났어요. 숲에서 쉬고 뛰노는 모습을 찾아보세요!`);
+      setStatus(`야생 토끼${variantLabel}가 나타났어요. 숲을 돌아다니는 모습을 찾아보세요!`);
       return;
     }
     setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"

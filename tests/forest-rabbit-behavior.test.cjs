@@ -10,9 +10,11 @@ const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.
 // licensed PNGs. The real source manifest is also exercised below.
 const fixtureVariants = [
   { id: 'bunbun', key: 'test-bunbun', label: 'Bunbun', scale: 1.8,
-    actions: ['idle', 'jump_up', 'jump_forward', 'jump_front', 'jump_back', 'kick', 'sleep', 'dig'] },
+    actions: ['idle', 'jump_up', 'jump_forward', 'jump_front', 'jump_back', 'kick', 'sleep', 'dig'],
+    roamingActions: ['idle', 'jump_up', 'jump_forward', 'jump_front', 'jump_back'], defeatAction: 'sleep' },
   { id: 'last-tick', key: 'test-last-tick', label: 'Last tick', scale: 1.8,
-    actions: ['idle', 'walk', 'sleep', 'dig', 'kick', 'jump'] },
+    actions: ['idle', 'walk', 'sleep', 'dig', 'kick', 'jump'],
+    roamingActions: ['idle', 'walk', 'jump'], defeatAction: 'sleep' },
 ];
 const fixtureAnimals = {
   ...ForestAnimals,
@@ -23,6 +25,10 @@ const fixtureAnimals = {
     return { name, durationMs: 2000, loop: name === 'idle' || name === 'sleep',
       moves: ['walk', 'jump', 'jump_forward', 'jump_front', 'jump_back'].includes(name),
       direction: name === 'jump_front' ? 'down' : name === 'jump_back' ? 'up' : undefined };
+  },
+  rabbitDefeatAction(id) {
+    const variant = fixtureVariants.find(item => item.id === id);
+    return variant ? this.rabbitAction(id, variant.defeatAction) : null;
   },
   rabbitPose(id, { action, direction, elapsedMs, reducedMotion }) {
     const variant = fixtureVariants.find(item => item.id === id);
@@ -58,7 +64,7 @@ function actor(x = 0, y = 0) {
 
 function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(variant => variant.key) || [] } = {}) {
   let reduced = false;
-  const events = [], labels = [], listeners = new Map();
+  const events = [], labels = [], listeners = new Map(), tweens = [];
   const Phaser = {
     Scene: class {}, AUTO: 0, Scale: { FIT: 1, CENTER_BOTH: 1 },
     Game: class { constructor(config) { this.config = config; } },
@@ -82,14 +88,14 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   scene.ratSprite = actor();
   scene.textures = { exists: key => loaded.includes(key) };
   scene.add = { text: (x, y, text) => { labels.push(text); return actor(x, y); } };
-  scene.tweens = { add() {} };
+  scene.tweens = { add(config) { tweens.push(config); } };
   scene.time = { now: 1000 };
   scene.isBlocked = () => false;
   scene.ratTurnAt = Infinity;
   scene.ratDespawnAt = Infinity;
   scene.ratActive = true;
   scene.avatar = { x: 400, y: 350, direction: 'right', cosmetics: {} };
-  return { scene, events, labels, listeners, window, setReduced: value => { reduced = value; } };
+  return { scene, events, labels, listeners, tweens, window, setReduced: value => { reduced = value; } };
 }
 
 test('encounter creation keeps the monster body and marker without allocating a ground shadow', () => {
@@ -162,7 +168,7 @@ function assertBehaviorSequence(animals) {
     assert.equal(scene.rabbitVariant, variant.id);
     const observed = [];
     let time = 1000;
-    for (const name of variant.actions) {
+    for (const name of variant.roamingActions) {
       const action = animals.rabbitAction(variant.id, name);
       const before = [scene.ratActor.x, scene.ratActor.y];
       scene.updateRat(time + 1, 40);
@@ -176,29 +182,29 @@ function assertBehaviorSequence(animals) {
       assert.equal(scene.ratSprite.originY, 1);
       time += action.durationMs;
     }
-    assert.deepEqual(observed, Array.from(variant.actions), `${variant.id} exposes every source action`);
+    assert.deepEqual(observed, Array.from(variant.roamingActions), `${variant.id} roams with travel and standing actions only`);
     assert.ok(time - 1000 <= 43800, 'the complete sequence fits the bounded encounter');
     scene.updateRat(time + 1, 40);
-    assert.equal(scene.rabbitBehaviorSequence[scene.rabbitActionIndex].name, variant.actions[0]);
+    assert.equal(scene.rabbitBehaviorSequence[scene.rabbitActionIndex].name, variant.roamingActions[0]);
   }
 }
 
-test('all actions have finite turns; sleeping, digging, kicking and vertical jumping never glide', () => {
+test('ambient rabbit turns contain only roaming actions and keep stationary poses from gliding', () => {
   assertBehaviorSequence(fixtureAnimals);
 });
 
-test('the production source manifests expose every action through the same live scene behavior', () => {
+test('the production source manifests expose every roaming action through the live scene behavior', () => {
   assert.ok(ForestAnimals.rabbitVariants?.length >= 2, 'both requested source packs have behavior metadata');
   assertBehaviorSequence(ForestAnimals);
 });
 
-test('every populated production rabbit cell reaches the live renderer during its finite sequence', () => {
+test('every authored roaming frame reaches the live renderer while defeat-only cells remain excluded', () => {
   for (const variant of ForestAnimals.rabbitVariants) {
     const { scene } = setup({ animals: ForestAnimals });
     scene.setRatSpecies('rabbit', variant.id, 1000);
     let time = 1000;
     const observed = new Set(), expected = new Set();
-    for (const name of variant.actions) {
+    for (const name of variant.roamingActions) {
       const action = ForestAnimals.rabbitAction(variant.id, name);
       action.frames.forEach(frame => expected.add(frame));
       for (let elapsed = 1; elapsed < action.durationMs; elapsed += action.frameMs) {
@@ -208,7 +214,30 @@ test('every populated production rabbit cell reaches the live renderer during it
       time += action.durationMs;
     }
     assert.deepEqual([...observed].sort((a, b) => a - b), [...expected].sort((a, b) => a - b), variant.id);
-    assert.equal(observed.size, variant.family === 'bunbun' ? 18 : 219);
+    for (const name of variant.actions.filter(name => !variant.roamingActions.includes(name))) {
+      const action = ForestAnimals.rabbitAction(variant.id, name);
+      assert.ok(action.frames.some(frame => !observed.has(frame)), `${variant.id}/${name} does not leak into roaming`);
+    }
+  }
+});
+
+test('a caught rabbit plays its authored defeat pose once before fading out', () => {
+  for (const variant of fixtureVariants) {
+    const { scene, tweens } = setup();
+    scene.setRatSpecies('rabbit', variant.id, 1000);
+    scene.ratEventId = 4;
+    scene.dismissRat(5000, true);
+    assert.equal(scene.ratActive, false);
+    assert.equal(scene.rabbitDefeating, true);
+    assert.equal(scene.rabbitDefeatAction.name, variant.defeatAction);
+    assert.equal(scene.ratActor.visible, true, 'defeat is visible before removal');
+    const startFrame = scene.ratSprite.frame;
+    scene.updateRat(5500, 40);
+    assert.equal(scene.ratSprite.texture, variant.key);
+    assert.ok(Number.isInteger(startFrame));
+    scene.updateRat(scene.rabbitDefeatUntil, 40);
+    assert.equal(scene.rabbitDefeating, false);
+    assert.ok(tweens.some(tween => tween.targets === scene.ratActor && tween.alpha === 0));
   }
 });
 
@@ -295,7 +324,9 @@ test('explicit variant and action state updates select supported poses without a
   scene.attachWindowEvents();
   listeners.get('forest-state-updated')({ detail: { rat: { species: 'rabbit', variant: 'last-tick', action: 'sleep' } } });
   assert.equal(scene.rabbitVariant, 'last-tick');
-  assert.equal(scene.rabbitBehaviorSequence[scene.rabbitActionIndex].name, 'sleep');
+  assert.equal(scene.rabbitBehaviorSequence[scene.rabbitActionIndex].name, 'idle', 'defeat-only sleep cannot be forced into roaming');
+  assert.equal(scene.setRabbitAction('jump', 1000), true);
+  assert.equal(scene.rabbitBehaviorSequence[scene.rabbitActionIndex].name, 'jump');
   assert.equal(scene.setRabbitAction('not-a-source-action', 1000), false);
   assert.equal(events.length, 0);
 });
