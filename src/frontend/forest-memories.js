@@ -2,10 +2,13 @@
 ((root) => {
   "use strict";
 
-  const NICKNAMES = Object.freeze(["성실한 당근", "꾸준한 당근", "달빛의 빛샘", "숲속의 수인", "발명의 준혁", "해결의 세준"]);
+  const NICKNAMES = Object.freeze(["성실한 당근", "꾸준한 상균", "달빛의 빛샘", "숲속의 수인", "발명의 준혁", "해결의 세준"]);
   const CAMERA = Object.freeze({ x: 694, y: 338, width: 52, height: 76 });
-  const FRAME = Object.freeze({ x: 280, y: 229, width: 464, height: 261, scale: 4 });
-  const POSITIONS = Object.freeze([[330, 365], [399, 354], [468, 347], [537, 347], [606, 354], [675, 365]].map(Object.freeze));
+  // The real carrot house occupies x149..286, y0..240 in the 768x512 map.
+  // Keep its leafy roof and doorstep visible above the group; never replace
+  // the field with a generated backdrop or stretch the original background.
+  const FRAME = Object.freeze({ x: 0, y: 0, width: 640, height: 360, scale: 4 });
+  const POSITIONS = Object.freeze([[57, 294], [126, 284], [195, 280], [264, 280], [333, 284], [402, 294]].map(Object.freeze));
   const clone = value => JSON.parse(JSON.stringify(value));
 
   function portraitPresets(presets) {
@@ -32,6 +35,19 @@
   function fitWithin(width, height, maxWidth, maxHeight) {
     const scale = Math.min(maxWidth / width, maxHeight / height);
     return { width: width * scale, height: height * scale };
+  }
+
+  function overlapsPortrait(actor) {
+    if (!actor) return false;
+    let bounds;
+    try { bounds = actor.getBounds?.(); } catch { /* A destroyed actor may no longer expose its bounds. */ }
+    const width = Number(bounds?.width ?? actor.displayWidth ?? 0);
+    const height = Number(bounds?.height ?? actor.displayHeight ?? 0);
+    const x = Number(bounds?.x ?? (actor.x - width * (actor.originX ?? .5)));
+    const y = Number(bounds?.y ?? (actor.y - height * (actor.originY ?? 1)));
+    if (![x, y, width, height].every(Number.isFinite) || width < 0 || height < 0) return false;
+    return x + width >= FRAME.x && x <= FRAME.x + FRAME.width
+      && y + height >= FRAME.y && y <= FRAME.y + FRAME.height;
   }
 
   function labelY(feetY, opaqueTop, { height = 288, originY = .87, scale = .43, gap = 4 } = {}) {
@@ -180,9 +196,9 @@
       [scene.player, scene.pet, scene.petOverlay, scene.petEmoji, scene.petHeart, scene.ratActor, scene.ratAttackButton,
         scene.ratAttackPlate, scene.placementGrid, scene.placementPreview, scene.memoryCameraActor,
         scene.nightOverlay, scene.lightFx].forEach(hide);
-      // Furniture is never moved/deleted/persisted. Only pieces overlapping the
-      // portrait lawn are temporarily out of view; the surrounding field stays.
-      scene.placedObjectActors?.filter(actor => actor.x > 280 && actor.y > 300).forEach(hide);
+      // Bounds include tall/rotated furniture whose center is outside the shot.
+      // This changes visibility only; every saved placement is restored intact.
+      scene.placedObjectActors?.filter(overlapsPortrait).forEach(hide);
       const camera = scene.cameras.main;
       camera.stopFollow();
       camera.useBounds = false;
@@ -208,31 +224,31 @@
           resolution: 4, fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "10px", fontStyle: "bold",
           color: "#fffbee", stroke: "#284e35", strokeThickness: 3, padding: { x: 3, y: 2 },
         }).setOrigin(.5, 1).setDepth(1000));
-        return { ...preset, x, y, startX: x + (index < 3 ? -36 : 36), startY: y + 23 + index % 2 * 9, sprite, shadow, label, texture };
+        return { ...preset, x, y, startX: x + (index < 3 ? -36 : 36), startY: y, sprite, shadow, label, texture };
       });
       session.animals = [
-        { kind: "bunbun", x: 320, y: 416, key: "forest-rabbit-bunbun", scale: 1.4 },
-        { kind: "last-tick", x: 370, y: 434, key: "forest-rabbit-last-tick", scale: 1.4 },
-        { kind: "mouse", x: 412, y: 421, key: "lpc-rat", scale: 1.4 },
-        { kind: "pet", column: 0, x: 453, y: 432, key: "lpc-pets", scale: 1.2 },
-        { kind: "pet", column: 3, x: 498, y: 414, key: "lpc-pets", scale: 1.2 },
-        { kind: "pet", column: 6, x: 543, y: 435, key: "lpc-pets", scale: 1.2 },
-        { kind: "cow", x: 638, y: 440, key: "forest-cow-eat", scale: 1.12 },
-      ].map((animal, index) => ({ ...animal, startX: animal.x + (index < 4 ? -22 : 25), startY: animal.y + 18,
+        { kind: "bunbun", x: 87, y: 302, key: "forest-rabbit-bunbun", scale: 1.4 },
+        { kind: "last-tick", x: 152, y: 301, key: "forest-rabbit-last-tick", scale: 1.4 },
+        { kind: "mouse", x: 187, y: 300, key: "lpc-rat", scale: 1.4 },
+        { kind: "pet", column: 0, x: 238, y: 331, key: "lpc-pets", scale: 1.2 },
+        { kind: "pet", column: 3, x: 294, y: 336, key: "lpc-pets", scale: 1.2 },
+        { kind: "pet", column: 6, x: 353, y: 338, key: "lpc-pets", scale: 1.2 },
+        { kind: "cow", x: 500, y: 330, key: "forest-cow-eat", scale: 1.12 },
+      ].map((animal, index) => ({ ...animal, startX: animal.x + (index < 4 ? -22 : 25), startY: animal.y,
         sprite: add(scene.add.sprite(animal.x, animal.y, animal.key, 0).setOrigin(.5, 1).setScale(animal.scale).setDepth(animal.y)),
       }));
       // Each added preset brings its selected kitten. Optional licensed sheets
       // never block the portrait; the existing LPC companion remains a fallback.
       session.people.filter(person => person.number >= 3 && root.ForestPets?.definition(person.avatar.cosmetics?.pet)).forEach(person => {
-        const x = person.x + 17, y = person.y + 24;
-        session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet, x, y, startX: x + 22, startY: y + 18,
+        const x = person.x + 17, y = person.y + 20;
+        session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet, x, y, startX: x + 22, startY: y,
           sprite: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y)),
           overlay: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y + .01).setVisible(false)),
         });
       });
       session.stagedAt = root.performance.now();
       session.reducedMotion = root.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-      this.progress(session, "gathering", "여섯 친구와 동물들이 들판에 모이고 있어요.");
+      this.progress(session, "gathering", "여섯 친구와 동물들이 당근집 앞에 모이고 있어요.");
       this.update(session.stagedAt);
     }
 
@@ -315,7 +331,7 @@
 
     async capture(session) {
       try {
-        this.progress(session, "shutter", "실제 들판 장면을 선명한 PNG로 저장하고 있어요.");
+        this.progress(session, "shutter", "당근집 앞 추억을 선명한 PNG로 저장하고 있어요.");
         if (this.session !== session) return;
         const scene = this.scene;
         // Render the same live display-list objects with a dedicated integer
@@ -330,7 +346,7 @@
         target.draw(scene.children.list.filter(object => object.visible && object !== target));
         // Phaser 3.90 CanvasRenderer.snapshotCanvas clamps an offscreen target
         // to the MAIN canvas size. Read its own backing directly on Canvas to
-        // retain the full 1856×1044 photograph even on a small phone viewport.
+        // retain the full 2560×1440 photograph even on a small phone viewport.
         const image = target.texture?.canvas
           ? { src: target.texture.canvas.toDataURL("image/png") }
           : await this.bounded(session, new Promise((resolve, reject) => {
@@ -393,7 +409,7 @@
     }
   }
 
-  const api = Object.freeze({ NICKNAMES, CAMERA, FRAME, POSITIONS, portraitPresets, alphaBounds, fitWithin, labelY, trimmedTexture, fitImage, pngBlob, saveView, restoreView, Controller });
+  const api = Object.freeze({ NICKNAMES, CAMERA, FRAME, POSITIONS, portraitPresets, alphaBounds, fitWithin, overlapsPortrait, labelY, trimmedTexture, fitImage, pngBlob, saveView, restoreView, Controller });
   root.ForestMemories = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(typeof window === "object" ? window : globalThis);

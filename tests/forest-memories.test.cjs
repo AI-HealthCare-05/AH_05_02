@@ -13,12 +13,12 @@ const presets = () => memories.NICKNAMES.map((nickname, index) => ({ number: ind
   cosmetics: { lpcOutfit: `actual-outfit-${index}`, outfitColor: `actual-color-${index}`, pet: 'white_pup' },
 } }));
 
-function setup({ prepare = async () => true, missing = [], snapshotError = false, canvasCapture = false, opaqueTop, draw = () => true, pets } = {}) {
+function setup({ prepare = async () => true, missing = [], snapshotError = false, canvasCapture = false, opaqueTop, draw = () => true, pets, reducedMotion = false } = {}) {
   let now = 1000;
   const events = [], listeners = new Map(), renders = [], removed = [], calls = [];
   const window = {
     performance: { now: () => now }, document: { fonts: { ready: Promise.resolve() } },
-    setTimeout, clearTimeout, atob, Blob, matchMedia: () => ({ matches: false }), ForestAnimals: animals, ForestPets: pets,
+    setTimeout, clearTimeout, atob, Blob, matchMedia: () => ({ matches: reducedMotion }), ForestAnimals: animals, ForestPets: pets,
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     addEventListener(type, fn) { listeners.set(type, fn); },
     removeEventListener(type) { listeners.delete(type); },
@@ -64,7 +64,7 @@ function setup({ prepare = async () => true, missing = [], snapshotError = false
   for (const key of ['player', 'pet', 'petOverlay', 'petEmoji', 'petHeart', 'ratActor', 'ratAttackButton', 'ratAttackPlate', 'placementGrid', 'memoryCameraActor', 'nightOverlay', 'lightFx']) scene[key] = actor(key, 410, 350);
   scene.petEmoji.visible = false;
   scene.player.anims = { timeScale: .6 };
-  scene.placedObjectActors = [actor('furniture', 510, 370), actor('furniture', 120, 180)];
+  scene.placedObjectActors = [actor('furniture', 120, 280), actor('furniture', 700, 450)];
   const camera = {
     x: 0, y: 0, width: 1536, height: 1024, zoom: 3.2, scrollX: 12.75, scrollY: -88.25,
     _follow: scene.player, followOffset: { x: 4, y: 43 }, lerp: { x: .8, y: .6 }, useBounds: true, roundPixels: false,
@@ -112,6 +112,7 @@ test('six numbered portrait aliases are detached copies of the exact current off
   const before = JSON.stringify(input);
   const output = memories.portraitPresets(input.reverse());
   assert.deepEqual(output.map(item => item.nickname), memories.NICKNAMES);
+  assert.equal(output[1].nickname, '꾸준한 상균');
   output.forEach((item, index) => {
     assert.equal(item.avatar.cosmetics.lpcOutfit, `actual-outfit-${index}`);
     assert.equal(item.avatar.cosmetics.outfitColor, `actual-color-${index}`);
@@ -175,6 +176,144 @@ test('generated square decorations are cropped at visible alpha 16 and fit unifo
   assert.deepEqual(memories.fitWithin(1254, 627, 76, 108), { width: 76, height: 38 });
 });
 
+test('portrait overlap uses actual large and rotated world AABBs even when their centers are outside the photo', () => {
+  const cases = [
+    [{ x: 690, y: 400, angle: 45, displayWidth: 20, displayHeight: 20,
+      getBounds: () => ({ x: 620, y: 320, width: 110, height: 100 }) }, true, 'rotated container reaches the lower-right crop corner'],
+    [{ x: 300, y: 420, displayWidth: 80, displayHeight: 100, originX: .5, originY: 1 }, true, 'tall furniture reaches up from below the crop'],
+    [{ x: 660, y: 180, displayWidth: 60, displayHeight: 80, originX: .5, originY: .5 }, true, 'wide furniture reaches in from the right'],
+    [{ x: 120, y: 280, getBounds: () => ({ x: 700, y: 410, width: 40, height: 30 }) }, false, 'valid world bounds outrank an unrelated local center'],
+    [{ x: 710, y: 440, displayWidth: 80, displayHeight: 70, originX: .5, originY: 1 }, false, 'far furniture remains outside'],
+    [{ getBounds: () => ({ x: -20, y: 120, width: 20, height: 10 }) }, true, 'touching the left border counts conservatively'],
+    [{ getBounds: () => ({ x: 640, y: 360, width: 0, height: 0 }) }, true, 'the lower-right boundary is inclusive'],
+    [{ getBounds: () => ({ x: 640.1, y: 180, width: 10, height: 10 }) }, false, 'a real gap does not overlap'],
+  ];
+  for (const [actor, expected, message] of cases) {
+    const saved = JSON.stringify(actor);
+    assert.equal(memories.overlapsPortrait(Object.freeze(actor)), expected, message);
+    assert.equal(JSON.stringify(actor), saved, 'overlap checks never change placement or dimensions');
+  }
+});
+
+test('invalid portrait bounds are safe and a failed bounds lookup falls back to display size and origin', () => {
+  for (const actor of [null, undefined, {}, { x: Infinity, y: 30 }, { x: 30, y: NaN },
+    { getBounds: () => ({ x: 10, y: 10, width: -1, height: 20 }) },
+    { getBounds: () => ({ x: 10, y: 10, width: 20, height: -1 }) },
+    { getBounds: () => ({ x: NaN, y: 10, width: 20, height: 20 }) },
+    { getBounds: () => ({ x: 10, y: Infinity, width: 20, height: 20 }) },
+    { getBounds: () => ({ x: 10, y: 10, width: 'invalid', height: 20 }) },
+    { getBounds() { throw new Error('destroyed container'); } }]) {
+    assert.doesNotThrow(() => memories.overlapsPortrait(actor));
+    assert.equal(memories.overlapsPortrait(actor), false);
+  }
+  for (const getBounds of [() => null, () => undefined, () => { throw new Error('unavailable bounds'); }]) {
+    assert.equal(memories.overlapsPortrait({ x: 665, y: 380, displayWidth: 80, displayHeight: 80, originX: 1, originY: 1, getBounds }), true);
+    assert.equal(memories.overlapsPortrait({ x: 740, y: 480, displayWidth: 40, displayHeight: 40, originX: .5, originY: 1, getBounds }), false);
+  }
+});
+
+test('overlapping furniture regains its exact previous visibility after cancel, snapshot failure, and success', async () => {
+  for (const finish of ['cancel', 'failure', 'success']) {
+    const { controller, scene, renders } = setup({ snapshotError: finish === 'failure' });
+    const large = scene.add.sprite(680, 410, 'large-rotated-furniture');
+    large.getBounds = () => ({ x: 600, y: 310, width: 130, height: 120 }); large.angle = 42;
+    const hidden = scene.add.sprite(180, 290, 'already-hidden').setVisible(false);
+    hidden.getBounds = () => ({ x: 130, y: 220, width: 100, height: 80 });
+    const outside = scene.add.sprite(720, 460, 'outside').setVisible(true);
+    outside.getBounds = () => ({ x: 690, y: 400, width: 60, height: 70 });
+    const outsideHidden = scene.add.sprite(710, 440, 'outside-hidden').setVisible(false);
+    scene.placedObjectActors = [large, hidden, outside, outsideHidden];
+    const original = scene.placedObjectActors.map(actor => ({ x: actor.x, y: actor.y, angle: actor.angle, visible: actor.visible }));
+    await controller.start({ requestId: `furniture-${finish}`, presets: presets() });
+    assert.deepEqual(scene.placedObjectActors.map(actor => actor.visible), [false, false, true, false]);
+    assert.equal(scene.background.visible, true, 'the actual house background is not hidden with furniture');
+    if (finish === 'cancel') controller.cancel();
+    else {
+      controller.update(controller.session.stagedAt + 3200);
+      if (finish === 'success') {
+        assert.ok(renders[0].objects.includes(outside));
+        for (const object of [large, hidden, outsideHidden]) assert.ok(!renders[0].objects.includes(object));
+        renders[0].callback({ src: 'data:image/png;base64,iVBORw0KGgo=' });
+      }
+      await tick();
+    }
+    assert.equal(controller.active, false);
+    assert.deepEqual(scene.placedObjectActors.map(actor => ({ x: actor.x, y: actor.y, angle: actor.angle, visible: actor.visible })), original);
+    assert.ok(scene.placedObjectActors.every(actor => !actor.destroyed && actor.scene === scene));
+  }
+});
+
+test('house-front framing keeps gathering feet at fixed heights away from pond water, including every preset kitten', async () => {
+  const pets = require('../src/frontend/forest-pets.js'), pond = require('../src/frontend/forest-riverduck.js');
+  for (const reducedMotion of [false, true]) {
+    const input = presets(); pets.catalog.forEach((pet, index) => { input[index + 2].avatar.cosmetics.pet = pet.id; });
+    const { controller, scene, renders } = setup({ pets, reducedMotion });
+    await controller.start({ requestId: `house-front-${reducedMotion}`, presets: input });
+    const session = controller.session;
+    assert.equal(session.people.length, 6); assert.equal(session.animals.length, 11);
+    // The source roof/doorstep rectangle must be inside the export, and every
+    // person stands below the doorstep rather than inside the building art.
+    assert.ok(memories.FRAME.x <= 149 && memories.FRAME.y <= 0);
+    assert.ok(memories.FRAME.x + memories.FRAME.width >= 286 && memories.FRAME.y + memories.FRAME.height >= 240);
+    assert.ok(session.people.every(person => person.y > 240 && person.y <= 302));
+    for (const actor of [...session.people, ...session.animals]) assert.equal(actor.startY, actor.y);
+    for (const elapsed of reducedMotion ? [0, 700, 1400] : [0, 400, 800, 1200, 1600, 2200]) {
+      controller.update(session.stagedAt + elapsed);
+      for (const actor of [...session.people, ...session.animals]) {
+        assert.equal(actor.sprite.y, actor.y, `${actor.kind || actor.nickname} has no downward gathering detour`);
+        assert.ok(actor.sprite.x >= memories.FRAME.x && actor.sprite.x <= memories.FRAME.x + memories.FRAME.width);
+        assert.ok(actor.sprite.y >= memories.FRAME.y && actor.sprite.y <= memories.FRAME.y + memories.FRAME.height);
+        // Sample a small planted-foot contact area against the existing
+        // authored pond polygon, including every intermediate approach point.
+        for (const dx of [-8, 0, 8]) for (const dy of [0, 3]) {
+          assert.equal(pond.isWater(actor.sprite.x + dx, actor.sprite.y + dy, 0), false, `${actor.kind || actor.nickname} feet stay out of pond water`);
+        }
+        if (actor.sprite.x < 190) assert.ok(actor.sprite.y <= 302, 'left-bank guests remain above the stone shoreline');
+        if (actor.overlay?.visible) assert.deepEqual([actor.overlay.x, actor.overlay.y], [actor.sprite.x, actor.sprite.y]);
+      }
+    }
+    const cow = session.animals.find(actor => actor.kind === 'cow');
+    assert.ok(cow.x > 400 && cow.y <= 338, 'the large cow stays on the open right-hand lawn');
+    controller.update(session.stagedAt + (reducedMotion ? 1500 : 3200));
+    assert.deepEqual([renders[0].camera.x, renders[0].camera.y], [320, 180]);
+    assert.deepEqual([renders[0].config.width, renders[0].config.height], [2560, 1440]);
+    assert.ok(renders[0].objects.includes(scene.background));
+    assert.deepEqual(Array.from(session.people, person => person.label.text), ['성실한 당근', '꾸준한 상균', '달빛의 빛샘', '숲속의 수인', '발명의 준혁', '해결의 세준']);
+    controller.cancel();
+  }
+});
+
+test('moving the portrait and renaming its second label never mutates original saved outfits, coordinates, or names', async () => {
+  const input = presets();
+  input.forEach((preset, index) => {
+    Object.assign(preset.avatar, { x: 710 - index * 23, y: 410 - index * 7, direction: 'left', tuning: { worldScale: .43, nested: { offset: index } } });
+    preset.avatar.cosmetics.nested = { colors: ['navy', index] };
+  });
+  const saved = JSON.stringify(input);
+  const freeze = object => { Object.values(object).forEach(value => { if (value && typeof value === 'object') freeze(value); }); return Object.freeze(object); };
+  freeze(input);
+  const { controller, scene, calls } = setup({ draw: (context, avatar) => {
+    // Even a scene-local renderer mutation must not alias a user's wardrobe.
+    avatar.cosmetics.nested.colors[0] = 'temporary-photo-only'; return true;
+  } });
+  const originalAvatar = JSON.stringify(scene.avatar);
+  await controller.start({ requestId: 'source-outfits', presets: input });
+  const session = controller.session;
+  controller.update(session.stagedAt + 1800);
+  assert.equal(session.people[1].label.text, '꾸준한 상균');
+  assert.equal(session.people[1].avatar.name, input[1].avatar.name);
+  assert.ok(calls.length >= 12);
+  session.people.forEach((person, index) => {
+    assert.notEqual(person.avatar, input[index].avatar);
+    assert.notEqual(person.avatar.cosmetics, input[index].avatar.cosmetics);
+    assert.notEqual(person.avatar.tuning, input[index].avatar.tuning);
+    assert.equal(person.avatar.cosmetics.lpcOutfit, input[index].avatar.cosmetics.lpcOutfit);
+  });
+  controller.cancel();
+  assert.equal(JSON.stringify(input), saved);
+  assert.equal(JSON.stringify(scene.avatar), originalAvatar);
+});
+
 test('each nickname sits at least four world pixels above its actual clothed alpha top, including tall hats', async () => {
   for (const opaqueTop of [58, 78, 96, 112]) {
     const { controller } = setup({ opaqueTop });
@@ -201,9 +340,9 @@ test('portrait live view is centered without stretching or changing export, then
   assert.ok(Math.abs(camera.y + camera.height / 2 - (11 + 1100 / 2)) <= .5);
   assert.ok(Math.abs(camera.width / camera.height - memories.FRAME.width / memories.FRAME.height) < .005);
   controller.update(controller.session.stagedAt + 3200);
-  assert.equal(renders[0].config.width, 1856); assert.equal(renders[0].config.height, 1044);
+  assert.equal(renders[0].config.width, 2560); assert.equal(renders[0].config.height, 1440);
   assert.equal(memories.FRAME.width / memories.FRAME.height, 16 / 9);
-  assert.equal(memories.FRAME.y + memories.FRAME.height, 490, 'only the crop top changes; people and animal positions stay intact');
+  assert.deepEqual(memories.FRAME, { x: 0, y: 0, width: 640, height: 360, scale: 4 }, 'the shot includes the real carrot roof, doorstep and front lawn');
   controller.cancel();
   assert.deepEqual({ x: camera.x, y: camera.y, width: camera.width, height: camera.height }, { x: 7, y: 11, width: 738, height: 1100 });
 });
@@ -269,7 +408,7 @@ test('one actual field render yields one PNG, no HUD, original actors, or respon
   controller.update(session.stagedAt + 3400);
   assert.equal(renders.length, 1);
   const target = renders[0];
-  assert.equal(target.config.width, 1856); assert.equal(target.config.height, 1044);
+  assert.equal(target.config.width, 2560); assert.equal(target.config.height, 1440);
   assert.equal(target.config.add, false); assert.equal(target.camera.zoom, 4);
   assert.equal(target.format, 'image/png');
   assert.ok(target.objects.includes(scene.background));
@@ -313,8 +452,8 @@ test('Canvas fallback reads the full offscreen backing instead of Phaser main-vi
   await controller.start({ requestId: 'canvas-small', presets: presets() });
   controller.update(controller.session.stagedAt + 3200);
   await tick();
-  assert.equal(renders[0].texture.canvas.width, 1856);
-  assert.equal(renders[0].texture.canvas.height, 1044);
+  assert.equal(renders[0].texture.canvas.width, 2560);
+  assert.equal(renders[0].texture.canvas.height, 1440);
   assert.equal(renders[0].canvasFormat, 'image/png');
   assert.equal(renders[0].callback, undefined, 'never use the clamping snapshot path');
   assert.equal(events.filter(event => event.type === 'forest-memory-ready').length, 1);

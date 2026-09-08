@@ -31,7 +31,7 @@
   // Keepsake guests are temporary copies of the six saved official looks.
   // Never copy account/profile fields, rename wardrobe cards, or persist photos.
   const MEMORY_PRESET_GUESTS = Object.freeze([
-    ["female", "성실한 당근"], ["male", "꾸준한 당근"],
+    ["female", "성실한 당근"], ["male", "꾸준한 상균"],
     ["moon_mage", "달빛의 빛샘"], ["forest_witch", "숲속의 수인"],
     ["inventor", "발명의 준혁"], ["knight", "해결의 세준"],
   ]);

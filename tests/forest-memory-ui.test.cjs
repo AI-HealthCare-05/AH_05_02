@@ -9,7 +9,7 @@ const html = readFileSync(path.join(__dirname, '../src/frontend/forest.html'), '
 const css = readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
 const memoryCode = source.slice(source.indexOf('  const MEMORY_PRESET_GUESTS'), source.indexOf('  function generateNickname()'));
 const roles = ['female', 'male', 'moon_mage', 'forest_witch', 'inventor', 'knight'];
-const names = ['성실한 당근', '꾸준한 당근', '달빛의 빛샘', '숲속의 수인', '발명의 준혁', '해결의 세준'];
+const names = ['성실한 당근', '꾸준한 상균', '달빛의 빛샘', '숲속의 수인', '발명의 준혁', '해결의 세준'];
 const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
 
 function sampleState() {
