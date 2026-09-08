@@ -99,6 +99,12 @@
       this.petTrail = [];
       this.petLastSampleAt = 0;
       this.petFacing = "right";
+      this.petVisualId = null;
+      this.petPoseAction = "idle";
+      this.petPoseElapsedMs = 0;
+      this.petFeedRemainingMs = 0;
+      this.petAttackRemainingMs = 0;
+      this.petIdleMs = 0;
       this.ratActive = false;
       this.ratNextSpawnAt = 0;
       this.ratDespawnAt = 0;
@@ -135,6 +141,10 @@
       this.load.image("forest-memory-camera", "/static/assets/forest-memory-camera-v159.png?v=20260908-1");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
+      // Optional source packs must never remove the bundled dog/photo fallback.
+      (window.ForestPets?.assets || []).forEach(asset => this.load.spritesheet(asset.key, asset.url, {
+        frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
+      }));
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       window.ForestRiverDuckArt.assets.forEach(riverDuck => this.load.spritesheet(riverDuck.key, riverDuck.url, {
         frameWidth: riverDuck.frameWidth, frameHeight: riverDuck.frameHeight,
@@ -195,7 +205,8 @@
       this.petEmoji = this.add.text(this.avatar.x + 31, this.avatar.y + 8, "", { fontSize: "25px", resolution: TEXT_RESOLUTION }).setOrigin(0.5, 1).setDepth(this.avatar.y - 1).setVisible(false);
       this.lastPetPointerAt = 0;
       const feedPetFromPointer = (pointer, localX, localY, event) => {
-        if (this.placementActive) return;
+        if (this.placementActive || document.hidden || this.isWorldInputBlocked()) return;
+        if (!pointer.wasTouch && pointer.button !== 0) return;
         event?.stopPropagation?.();
         this.cancelPointerMovement();
         this.lastPetPointerAt = performance.now();
@@ -910,12 +921,25 @@
       if (this.cameraApi) this.emitCameraView();
       const pet = c.pet;
       const petColumns = { blue_eyes_white_cat: 0, gold_eyes_orange_cat: 3, white_pup: 6 };
-      this.pet?.setVisible(Object.hasOwn(petColumns, pet));
+      const selected = Object.hasOwn(petColumns, pet) || Boolean(window.ForestPets?.definition(pet));
+      this.pet?.setVisible(selected);
       this.petBaseColumn = petColumns[pet] || 0;
-      this.pet?.setFrame(this.petBaseColumn);
       this.petEmoji?.setVisible(false);
-      this.petTrail = [];
-      this.petLastSampleAt = 0;
+      if (pet !== this.petVisualId) {
+        this.petVisualId = pet;
+        this.petTrail = [];
+        this.petLastSampleAt = 0;
+        this.petPoseAction = this.avatar.sitting ? "sit" : "idle";
+        this.petPoseElapsedMs = 0;
+        this.petFeedRemainingMs = 0;
+        this.petAttackRemainingMs = 0;
+        this.petIdleMs = 0;
+        this.petFacing = this.avatar.direction;
+        this.petFollowX = this.avatar.x + 31;
+        this.petFollowY = this.avatar.y + 10;
+      }
+      if (selected) this.renderPetPose(this.petPoseAction, this.petPoseElapsedMs, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      else this.petOverlay?.setVisible(false);
     }
 
     attachWindowEvents() {
@@ -949,7 +973,17 @@
         this.playAction(detail.pose || detail, Number(detail.duration) || 1100);
       };
       window.addEventListener("forest-avatar-action", this.onAction);
-      this.onPetFed = () => this.showPetHeart();
+      this.onPetFed = event => {
+        if (event.detail?.pet && event.detail.pet !== this.avatar.cosmetics?.pet) return;
+        if (this.memoryCapturing || this.placementActive || document.hidden || this.isWorldInputBlocked()) return;
+        this.showPetHeart();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !this.pet?.visible) return;
+        this.petFeedRemainingMs = window.ForestPets?.actionDurations?.feed || 1600;
+        this.petAttackRemainingMs = 0;
+        this.petPoseAction = "feed";
+        this.petPoseElapsedMs = 0;
+        this.renderPetPose("feed", 0);
+      };
       window.addEventListener("forest-pet-fed", this.onPetFed);
       this.onPlacement = (event) => {
         this.memoryController?.cancel("가구 배치를 시작해 촬영이 취소되었어요.");
@@ -1645,9 +1679,44 @@
       this.ratShadow.setY(0);
     }
 
+    renderPetPose(action, elapsedMs, reducedMotion = false) {
+      if (!this.pet?.visible) { this.petOverlay?.setVisible(false); return; }
+      const id = this.avatar.cosmetics?.pet;
+      const definition = window.ForestPets?.definition(id);
+      let pose = definition && !definition.legacy ? window.ForestPets.pose(id, {
+        action, direction: this.petFacing, elapsed: elapsedMs, reducedMotion,
+      }) : null;
+      const authored = Boolean(pose && this.textures?.exists(pose.key)
+        && (!pose.overlay || this.textures.exists(pose.overlay.key)));
+      if (!authored) {
+        const row = { down: 0, left: 1, right: 2, up: 3 }[this.petFacing] || 0;
+        const column = definition?.fallbackColumn ?? (id === "white_pup" ? 6 : ["gold_eyes_orange_cat", "last_tick_ginger"].includes(id) ? 3 : this.petBaseColumn || 0);
+        pose = { key: "lpc-pets", frame: row * 9 + column + (action === "walk" && !reducedMotion ? Math.floor(elapsedMs / 105) % 3 : 1),
+          originX: .5, originY: 1, scale: 1.2, flipX: false };
+      }
+      this.petSourceAction = authored ? pose.action || action : action === "walk" ? "walk" : "idle";
+      const apply = (actor, frame) => {
+        actor.setTexture(frame.key, frame.frame).setOrigin(frame.originX ?? pose.originX ?? .5, frame.originY ?? pose.originY ?? 1)
+          .setScale(frame.scale ?? pose.scale ?? 1.2).setFlipX(Boolean(frame.flipX ?? pose.flipX)).setAngle(0)
+          .setPosition(this.petFollowX, this.petFollowY).setDepth(this.petFollowY - 1);
+      };
+      apply(this.pet, pose);
+      if (pose.overlay) {
+        this.petOverlay ||= this.add.sprite(this.petFollowX, this.petFollowY, pose.overlay.key, pose.overlay.frame);
+        apply(this.petOverlay, pose.overlay);
+        this.petOverlay.setDepth(this.petFollowY - .9).setVisible(true);
+      } else this.petOverlay?.setVisible(false);
+    }
+
     updatePet(time, delta, playerMoving) {
-      if (this.memoryCapturing) return;
+      if (this.memoryCapturing || document.hidden || this.placementActive || this.isWorldInputBlocked()) return;
       if ((!this.pet || !this.pet.visible) && (!this.petEmoji || !this.petEmoji.visible)) return;
+      const stepMs = Number.isFinite(delta) ? Math.max(0, Math.min(delta, 50)) : 0;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reducedMotion) { this.petFeedRemainingMs = 0; this.petAttackRemainingMs = 0; }
+      const feeding = this.petFeedRemainingMs > 0;
+      const attacking = this.petAttackRemainingMs > 0;
+      const togetherSitting = Boolean(this.avatar.sitting);
       if (!this.petTrail.length) {
         this.petTrail.push({ x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction, time });
       }
@@ -1664,40 +1733,29 @@
         : null;
       const petActor = this.pet?.visible ? this.pet : this.petEmoji;
       const ratDistanceFromPlayer = this.ratActive ? Phaser.Math.Distance.Between(this.ratActor.x, this.ratActor.y, this.avatar.x, this.avatar.y) : Infinity;
-      const autoHunting = this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
+      const autoHunting = stepMs > 0 && !feeding && !attacking && !togetherSitting && this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 185;
       const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
       const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
-      const follow = autoHunting ? Math.min(0.12, Math.max(0.035, delta / 260)) : playerMoving ? Math.min(0.34, Math.max(0.08, delta / 120)) : Math.min(0.22, Math.max(0.045, delta / 210));
+      const follow = feeding || attacking || togetherSitting ? 0 : 1 - Math.exp(-stepMs / (autoHunting ? 260 : playerMoving ? 120 : 210));
       const actor = petActor;
-      const previousX = this.petFollowX;
-      this.petFollowX += (targetX - this.petFollowX) * follow;
-      this.petFollowY += (targetY - this.petFollowY) * follow;
-      const togetherSitting = this.avatar.sitting;
-      const dancing = this.petAction === "dance" && time < this.petActionUntil;
-      if (Math.abs(this.petFollowX - previousX) > 0.08) this.petFacing = this.petFollowX < previousX ? "left" : "right";
-      const gait = playerMoving || autoHunting ? Math.sin(time / (autoHunting ? 190 : 82)) : 0;
-      const danceX = dancing ? Math.sin(time / 120) * 7 : 0;
-      const hop = dancing ? -Math.abs(Math.sin(time / 118)) * 7 : playerMoving || autoHunting ? -Math.abs(gait) * 2.6 : togetherSitting ? 4 : Math.sin(time / 430) * 0.7;
-      actor.setPosition(this.petFollowX + danceX, this.petFollowY + hop).setDepth(this.petFollowY - 1);
-      let petDirection = this.avatar.direction;
-      if (autoHunting) {
-        const dx = this.ratActor.x - this.petFollowX;
-        const dy = this.ratActor.y - this.petFollowY;
-        petDirection = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+      const previousX = this.petFollowX, previousY = this.petFollowY;
+      if (Math.hypot(targetX - previousX, targetY - previousY) > .3) {
+        this.petFollowX += (targetX - previousX) * follow;
+        this.petFollowY += (targetY - previousY) * follow;
       }
-      const petDirectionRow = { down: 0, left: 1, right: 2, up: 3 }[petDirection] || 0;
-      const petFrame = playerMoving || autoHunting ? Math.floor(time / (autoHunting ? 210 : 105)) % 3 : 1;
-      this.pet?.setFrame(petDirectionRow * 9 + (this.petBaseColumn || 0) + petFrame);
-      actor.setFlipX?.(false);
-      actor.setAngle(dancing ? Math.sin(time / 95) * 11 : playerMoving || autoHunting ? gait * 2.2 : 0);
-      if (this.pet?.visible) {
-        const baseScale = togetherSitting ? 1.08 : 1.2;
-        const squash = dancing ? Math.sin(time / 118) * 0.08 : playerMoving ? Math.abs(gait) * 0.035 : 0;
-        actor.setScale(baseScale + squash, baseScale - squash * 0.65);
-      } else {
-        const emojiScale = togetherSitting ? 0.88 : dancing ? 1 + Math.sin(time / 118) * 0.08 : 1;
-        actor.setScale(emojiScale, emojiScale);
-      }
+      const dx = this.petFollowX - previousX, dy = this.petFollowY - previousY;
+      const moving = Math.hypot(dx, dy) > .025;
+      if (moving) this.petFacing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
+      this.petIdleMs = moving || feeding || attacking ? 0 : this.petIdleMs + (reducedMotion ? 0 : stepMs);
+      const action = feeding ? "feed" : togetherSitting ? "sit" : attacking ? "attack" : moving ? "walk" : "idle";
+      // A continuous rest clock lets every original meow/yawn/groom clip finish.
+      const resting = ["idle", "sit"].includes(action) && ["idle", "sit"].includes(this.petPoseAction);
+      this.petPoseElapsedMs = action === this.petPoseAction || resting ? this.petPoseElapsedMs + (reducedMotion ? 0 : stepMs) : 0;
+      this.petPoseAction = action;
+      this.petFeedRemainingMs = Math.max(0, this.petFeedRemainingMs - stepMs);
+      this.petAttackRemainingMs = Math.max(0, this.petAttackRemainingMs - stepMs);
+      if (this.pet?.visible) this.renderPetPose(action, this.petPoseElapsedMs, reducedMotion);
+      else actor.setPosition(this.petFollowX, this.petFollowY).setDepth(this.petFollowY - 1).setAngle(0).setScale(1);
       if (time >= this.petActionUntil) this.petAction = null;
       if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 2600) {
         this.lastPetAttackAt = time;
@@ -1706,6 +1764,12 @@
         const eventId = this.ratEventId;
         this.dismissRat(time, true);
         window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, source: "pet", species: this.ratSpecies } }));
+        if (!reducedMotion) {
+          this.petAttackRemainingMs = window.ForestPets?.actionDurations?.attack || 760;
+          this.petPoseAction = "attack";
+          this.petPoseElapsedMs = 0;
+          this.renderPetPose("attack", 0);
+        }
       }
     }
 

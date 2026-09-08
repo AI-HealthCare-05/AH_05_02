@@ -177,7 +177,7 @@
         session.visibility.push([object, object.visible]);
         object.setVisible(false);
       };
-      [scene.player, scene.pet, scene.petEmoji, scene.petHeart, scene.ratActor, scene.ratAttackButton,
+      [scene.player, scene.pet, scene.petOverlay, scene.petEmoji, scene.petHeart, scene.ratActor, scene.ratAttackButton,
         scene.ratAttackPlate, scene.placementGrid, scene.placementPreview, scene.memoryCameraActor,
         scene.nightOverlay, scene.lightFx].forEach(hide);
       // Furniture is never moved/deleted/persisted. Only pieces overlapping the
@@ -221,6 +221,15 @@
       ].map((animal, index) => ({ ...animal, startX: animal.x + (index < 4 ? -22 : 25), startY: animal.y + 18,
         sprite: add(scene.add.sprite(animal.x, animal.y, animal.key, 0).setOrigin(.5, 1).setScale(animal.scale).setDepth(animal.y)),
       }));
+      // Each added preset brings its selected kitten. Optional licensed sheets
+      // never block the portrait; the existing LPC companion remains a fallback.
+      session.people.filter(person => person.number >= 3 && root.ForestPets?.definition(person.avatar.cosmetics?.pet)).forEach(person => {
+        const x = person.x + 17, y = person.y + 24;
+        session.animals.push({ kind: "preset-pet", petId: person.avatar.cosmetics.pet, x, y, startX: x + 22, startY: y + 18,
+          sprite: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y)),
+          overlay: add(scene.add.sprite(x, y, "lpc-pets", 1).setOrigin(.5, 1).setScale(1.2).setDepth(y + .01).setVisible(false)),
+        });
+      });
       session.stagedAt = root.performance.now();
       session.reducedMotion = root.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
       this.progress(session, "gathering", "여섯 친구와 동물들이 들판에 모이고 있어요.");
@@ -275,7 +284,19 @@
       sprite.setPosition(x, y).setDepth(y);
       const animals = root.ForestAnimals;
       const travelDirection = animal.startX < animal.x ? "right" : "left";
-      if (animal.kind === "bunbun" || animal.kind === "last-tick") {
+      if (animal.kind === "preset-pet") {
+        const pose = root.ForestPets?.pose(animal.petId, { action: moving ? "walk" : "sit", direction: moving ? travelDirection : "down", elapsed, reducedMotion });
+        if (pose && this.scene.textures.exists(pose.key) && (!pose.overlay || this.scene.textures.exists(pose.overlay.key))) {
+          sprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.flipX));
+          const visible = Boolean(pose.overlay && this.scene.textures.exists(pose.overlay.key));
+          animal.overlay.setVisible(visible);
+          if (visible) animal.overlay.setTexture(pose.overlay.key, pose.overlay.frame).setPosition(x, y).setDepth(y + .01)
+            .setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.overlay.flipX ?? pose.flipX));
+        } else {
+          sprite.setTexture("lpc-pets", animal.petId === "last_tick_ginger" ? 4 : 1).setOrigin(.5, 1).setScale(1.2).setFlipX(false);
+          animal.overlay.setVisible(false);
+        }
+      } else if (animal.kind === "bunbun" || animal.kind === "last-tick") {
         const action = animal.kind === "bunbun" ? (moving ? "jump_forward" : "idle") : (moving ? `hop_${travelDirection}` : "ear_flick_1");
         const clip = animals.rabbitAction(animal.kind, action);
         const pose = animals.rabbitPose(animal.kind, { action, direction: moving ? travelDirection : animal.kind === "bunbun" ? "right" : "down", elapsedMs: elapsed % clip.durationMs, reducedMotion });

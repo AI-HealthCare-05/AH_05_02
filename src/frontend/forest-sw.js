@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v163-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v164-2";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -15,12 +15,13 @@ const CORE_SHELL = [
   "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
   "/static/forest-animals.js?v=20260908-3",
+  "/static/forest-pets.js?v=20260908-2",
   "/static/forest-riverduck.js?v=20260908-1",
   "/static/forest-riverduck-art.js?v=20260908-1",
-  "/static/forest-memories.js?v=20260908-3",
-  "/static/forest-phaser.js?v=20260908-13",
+  "/static/forest-memories.js?v=20260908-5",
+  "/static/forest-phaser.js?v=20260908-15",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260908-10",
+  "/static/forest-game.js?v=20260908-12",
   "/static/challenge-v2.js?v=2.1.4",
   "/static/challenge-v2.css?v=2.1.2",
   "/static/icons/forest-icon-192.png",
@@ -37,6 +38,7 @@ const MEDIA_ASSETS = [
   ...["idle-2", "swim-1", "swim-2", "flee-1", "flee-2"].map(name => `/static/assets/animals/riverduck-v160/${name}.png?v=20260908-1`),
   "/static/assets/animals/licensed-rabbits/bunbun.png?v=20260908-1",
   "/static/assets/animals/licensed-rabbits/last-tick.png?v=20260908-1",
+  ...["white", "gray", "ginger", "red-bow"].map(color => `/static/assets/animals/licensed-kittens/${color}.png?v=20260908-1`),
   "/static/assets/animals/cow-moo-joseph-sardin-cc0.mp3",
   "/static/assets/home-record-player-v159.png?v=20260908-1",
   "/static/assets/forest-memory-camera-v159.png?v=20260908-1",

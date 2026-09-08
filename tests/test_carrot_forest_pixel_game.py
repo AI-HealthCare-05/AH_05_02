@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v163-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v164-2";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -537,7 +537,7 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert '["head", cosmetics.lpcHead' in engine
     assert "KeyCodes.SPACE" in phaser_script
     assert "time - this.lastPetAttackAt > 2600" in phaser_script
-    assert "delta / 260" in phaser_script
+    assert "Math.exp(-stepMs / (autoHunting ? 260" in phaser_script
     assert "this.motionFx?.clear()" in phaser_script
     assert 'forest: new Audio("/static/assets/carrot-forest-main-theme.mp3")' in game_script
     assert 'night: new Audio("/static/assets/peaceful-forest-samza-cc0.wav")' in game_script

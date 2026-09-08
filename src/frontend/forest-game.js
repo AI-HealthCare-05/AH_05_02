@@ -367,6 +367,7 @@
       { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
       { id: "blue_eyes_white_cat", name: "설빛 고양이", visual: "🐈", isNew: true },
       { id: "gold_eyes_orange_cat", name: "호박눈 고양이", visual: "🐈", isNew: true },
+      ...(window.ForestPets?.catalog || []),
     ],
     speech: [
       { id: "none", name: "말풍선 없음", visual: "—" }, { id: "cat", name: "고양이 인사", visual: "🐱" },
@@ -575,21 +576,21 @@
   };
   const additionalDefaultOutfits = [
     { role: "moon_mage", number: 3, label: "달빛 마법사", gender: "female", cosmetics: {
-      lpcHat: "celestial_moon", hairColor: "silver", lpcWeapon: "wand",
+      lpcHat: "celestial_moon", hairColor: "silver", lpcWeapon: "wand", pet: "last_tick_white",
     } },
     { role: "forest_witch", number: 4, label: "숲의 엘프", gender: "female", cosmetics: {
       lpcHair: "braid", lpcHat: "celestial", hatColor: "green", lpcOutfit: "official_torso_shirts_torso_clothes_tunic_sara",
-      outfitColor: "green", bottomColor: "brown", lpcWeapon: "bow",
+      outfitColor: "green", bottomColor: "brown", lpcWeapon: "bow", pet: "last_tick_ribbon",
     } },
     { role: "inventor", number: 5, label: "숲속 발명가", gender: "male", cosmetics: {
       bodyType: "muscular", skin: "peach", lpcHead: "human_male", lpcHair: "messy", lpcHat: "leather_cap", hatColor: "brown",
       lpcGlasses: "round", glassesColor: "brown", lpcOutfit: "apron_full", outfitColor: "cream", lpcBottom: "cuffed",
-      bottomColor: "navy", lpcTool: "hammer",
+      bottomColor: "navy", lpcTool: "hammer", pet: "last_tick_ginger",
     } },
     { role: "knight", number: 6, label: "숲의 기사", gender: "male", cosmetics: {
       bodyType: "male", skin: "peach", lpcHead: "human_male", lpcHair: "curtains", hairColor: "black", lpcHat: "cavalier",
       hatColor: "navy", lpcOutfit: "official_torso_armour_torso_armour_plate", outfitColor: "silver", lpcBottom: "long_pants",
-      bottomColor: "navy", lpcWeapon: "arming_sword",
+      bottomColor: "navy", lpcWeapon: "arming_sword", pet: "last_tick_gray",
     } },
   ];
 
@@ -984,6 +985,16 @@
     teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-avatar-teal_bob-normalized-v2.png" },
   };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
+  const petSpriteImages = new Map((window.ForestPets?.assets || []).map((asset) => {
+    const image = new Image();
+    image.addEventListener("load", () => {
+      renderCanvas();
+      renderCatalogThumbnailCanvases();
+      if ($("#avatar-studio").open) renderAvatarPreview();
+    });
+    image.src = asset.url;
+    return [asset.key, image];
+  }));
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
@@ -1589,6 +1600,37 @@
     return { blue_eyes_white_cat: 1, gold_eyes_orange_cat: 4, white_pup: 7 }[itemId] ?? null;
   }
 
+  function drawPetFrame(target, petId, poseOptions, x, y, size) {
+    if (!petId || petId === "none") return false;
+    const pose = window.ForestPets?.pose(petId, poseOptions);
+    const image = pose?.key === "lpc-pets" ? catPetAtlas : petSpriteImages.get(pose?.key);
+    const drawLayer = (sheet, frame, flipX, originX = .5, originY = 1) => {
+      if (!sheet?.complete || !sheet.naturalWidth || !Number.isInteger(frame) || frame < 0) return false;
+      const columns = Math.floor(sheet.naturalWidth / 32);
+      if (!columns || frame >= columns * Math.floor(sheet.naturalHeight / 32)) return false;
+      target.save();
+      target.imageSmoothingEnabled = false;
+      target.translate(x, y);
+      target.scale(flipX ? -1 : 1, 1);
+      target.drawImage(sheet, (frame % columns) * 32, Math.floor(frame / columns) * 32, 32, 32,
+        -size * originX, -size * originY, size, size);
+      target.restore();
+      return true;
+    };
+    const overlayImage = petSpriteImages.get(pose?.overlay?.key);
+    const overlayReady = !pose?.overlay || Boolean(overlayImage?.complete && overlayImage.naturalWidth);
+    if (pose && overlayReady && drawLayer(image, pose.frame, pose.flipX, pose.originX, pose.originY)) {
+      if (pose.overlay) drawLayer(petSpriteImages.get(pose.overlay.key), pose.overlay.frame,
+        pose.overlay.flipX ?? pose.flipX, pose.originX, pose.originY);
+      return true;
+    }
+    // Licensed art is installed separately. Missing optional PNGs must not
+    // erase the selected companion or leave a blank selection card.
+    const fallback = catPetSpriteIndex(petId) ?? ({ last_tick_white: 1, last_tick_gray: 1,
+      last_tick_ginger: 4, last_tick_ribbon: 1 }[petId]);
+    return drawLayer(catPetAtlas, fallback, false);
+  }
+
   function drawAtlasCell(target, image, index, columns, rows, x, y, width, height) {
     if (!image.complete || !image.naturalWidth || index == null) return false;
     const cellWidth = image.naturalWidth / columns;
@@ -1709,6 +1751,11 @@
         running,
         frame: walkAnimationFrame,
       }, { x: x - 48, y: y - 68, width: 96, height: 96 });
+      drawPetFrame(context, cosmetics.pet, {
+        action: avatar.sitting ? "sit" : performance.now() < walkingUntil ? "walk" : "idle",
+        direction: avatar.direction || "down", elapsed: performance.now(),
+        reducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
+      }, x + 37, y + 22, 40);
     }
     // Never expose the retired hand-drawn or preset-atlas avatar while the
     // official LPC manifest or individual layers are still loading.
@@ -2659,6 +2706,11 @@
       target.imageSmoothingEnabled = true;
       drawAtlasCell(target, catPetAtlas, Number(thumbnail.dataset.catThumb), 9, 4, 7, 7, 82, 82);
     });
+    document.querySelectorAll("canvas[data-pet-thumb]").forEach((thumbnail) => {
+      const target = thumbnail.getContext("2d");
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      drawPetFrame(target, thumbnail.dataset.petThumb, { action: "sit", direction: "down", elapsed: 0, reducedMotion: true }, 48, 84, 88);
+    });
   }
 
   function drawLayeredAvatarPreview(target, cosmetics) {
@@ -2724,9 +2776,11 @@
     // Pet preview remains separate; all retired avatar and speech overlays
     // are intentionally excluded from the official LPC studio.
     previewContext.setTransform(2, 0, 0, 2, 0, 0);
-    const petIndex = cosmeticSpriteIndex("pet", avatarDraft.pet);
-    const catIndex = catPetSpriteIndex(avatarDraft.pet);
-    drawAtlasCell(previewContext, catPetAtlas, catIndex, 9, 4, 178, 188, 100, 100);
+    drawPetFrame(previewContext, avatarDraft.pet, {
+      action: avatarPreviewPose === "sit" ? "sit" : ["walk", "run"].includes(avatarPreviewPose) ? "walk" : "idle",
+      direction: "down", elapsed: avatarPreviewFrame * 150,
+      reducedMotion: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
+    }, 228, 275, 100);
   }
 
   function drawPreviewAccessoryOverlay(target, accessory) {
@@ -2754,6 +2808,7 @@
     const items = avatarItemsForCategory(effectiveCategory);
     $("#avatar-category-title").textContent = category.label;
     $("#avatar-item-count").textContent = `${items.length}개`;
+    if ($("#pet-art-credit")) $("#pet-art-credit").hidden = effectiveCategory !== "pet";
     let previousGroup = null;
     $("#avatar-item-grid").innerHTML = items.map((item) => {
       const itemSlot = item.slot || effectiveCategory;
@@ -2787,6 +2842,8 @@
         visual = '<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-pose="walk" aria-hidden="true"></canvas>';
       } else if (effectiveCategory === "vehicle") {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-lpc-category="lpcMobility" data-lpc-item="${itemId}" aria-hidden="true"></canvas>`;
+      } else if (effectiveCategory === "pet") {
+        visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-pet-thumb="${itemId}" aria-hidden="true"></canvas>`;
       } else if (catIndex != null) {
         visual = `<canvas class="item-visual catalog-thumb" width="96" height="96" data-cat-thumb="${catIndex}" aria-hidden="true"></canvas>`;
       } else if (cosmeticIndex != null) {

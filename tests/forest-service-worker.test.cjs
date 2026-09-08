@@ -33,6 +33,9 @@ test('offline shell versions match every HTML script and stylesheet and the mixe
   const animals = require('../src/frontend/forest-animals.js');
   assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-rabbits/')).sort(),
     animals.rabbitAssets.map(asset => asset.url).sort(), 'both optional packs use the same URLs in preload and offline cache');
+  const pets = require('../src/frontend/forest-pets.js');
+  assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-kittens/')).sort(),
+    pets.assets.map(asset => asset.url).sort(), 'all four optional kitten sheets share exact cache URLs');
 });
 
 function worker({ network = async () => response('fresh forest'), failPut = false } = {}) {

@@ -71,3 +71,27 @@ the game's 46 groups include 14 static directional/rest poses and 32 animated
 groups. Names and timing are application-authored visual interpretations, not
 official animation tags. Each pack has one original colorway. Palette swatches
 and the numbered index guide are not additional skins or gameplay sheets.
+
+## Optional Last tick kittens — free pack (2026-09-08)
+
+- Title: **32x32 Pixel kittens Cats – Animated NPC**.
+- Creator: **Last tick**.
+- Source: <https://last-tick.itch.io/animated-pixel-kittens-cats-32x32>.
+- Downloaded through the official public $0 flow: **Free pack.zip** and
+  **14 feb.zip**. No purchase was made or paid-only file requested.
+- The creator allows personal/commercial projects but prohibits redistribution
+  or resale of the source materials separately. The download instructions request
+  credit to Last tick; the pet selection menu includes the creator link.
+- This is a custom creator license, **not CC0 and not an LPC license**.
+
+The free gray, ginger, white sheets and matching red-bow overlay are unchanged
+PNG bytes, installed with `scripts/import_forest_kittens.ps1` under the ignored
+`licensed-kittens` directory. No original ZIP/PNG is committed to public Git.
+Developers must obtain the original files themselves and distribute them only
+as part of the game under the creator's terms.
+
+The free version has no pet furniture. Paid **Kittens pack.zip** and the separate
+**Pixel Interiors Room pack.zip** have not been included. The fourth selectable
+kitten is a white kitten with the free red ribbon, not a paid fourth coat color.
+Existing LPC cat IDs resolve to equivalent new white/ginger cats when installed;
+the original dog and missing-art fallbacks still use the credited LPC atlas.

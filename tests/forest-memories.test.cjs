@@ -13,12 +13,12 @@ const presets = () => memories.NICKNAMES.map((nickname, index) => ({ number: ind
   cosmetics: { lpcOutfit: `actual-outfit-${index}`, outfitColor: `actual-color-${index}`, pet: 'white_pup' },
 } }));
 
-function setup({ prepare = async () => true, missing = [], snapshotError = false, canvasCapture = false, opaqueTop, draw = () => true } = {}) {
+function setup({ prepare = async () => true, missing = [], snapshotError = false, canvasCapture = false, opaqueTop, draw = () => true, pets } = {}) {
   let now = 1000;
   const events = [], listeners = new Map(), renders = [], removed = [], calls = [];
   const window = {
     performance: { now: () => now }, document: { fonts: { ready: Promise.resolve() } },
-    setTimeout, clearTimeout, atob, Blob, matchMedia: () => ({ matches: false }), ForestAnimals: animals,
+    setTimeout, clearTimeout, atob, Blob, matchMedia: () => ({ matches: false }), ForestAnimals: animals, ForestPets: pets,
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
     addEventListener(type, fn) { listeners.set(type, fn); },
     removeEventListener(type) { listeners.delete(type); },
@@ -61,7 +61,7 @@ function setup({ prepare = async () => true, missing = [], snapshotError = false
     },
   };
   scene.background = actor('background', 384, 256, 'world-bg');
-  for (const key of ['player', 'pet', 'petEmoji', 'petHeart', 'ratActor', 'ratAttackButton', 'ratAttackPlate', 'placementGrid', 'memoryCameraActor', 'nightOverlay', 'lightFx']) scene[key] = actor(key, 410, 350);
+  for (const key of ['player', 'pet', 'petOverlay', 'petEmoji', 'petHeart', 'ratActor', 'ratAttackButton', 'ratAttackPlate', 'placementGrid', 'memoryCameraActor', 'nightOverlay', 'lightFx']) scene[key] = actor(key, 410, 350);
   scene.petEmoji.visible = false;
   scene.player.anims = { timeScale: .6 };
   scene.placedObjectActors = [actor('furniture', 510, 370), actor('furniture', 120, 180)];
@@ -124,6 +124,45 @@ test('six numbered portrait aliases are detached copies of the exact current off
   assert.equal(JSON.stringify(input), before);
   assert.throws(() => memories.portraitPresets(input.slice(0, 5)));
   assert.throws(() => memories.portraitPresets([...input.slice(0, 5), input[0]]));
+});
+
+test('preset3 through preset6 bring their four actual kittens into the photo, including a matching ribbon', async () => {
+  const pets = require('../src/frontend/forest-pets.js');
+  const input = presets(), ids = ['last_tick_white', 'last_tick_ribbon', 'last_tick_ginger', 'last_tick_gray'];
+  ids.forEach((id, index) => { input[index + 2].avatar.cosmetics.pet = id; });
+  const saved = JSON.stringify(input);
+  const { controller, scene } = setup({ pets });
+  await controller.start({ requestId: 'kitten-portrait', presets: input });
+  const kittens = controller.session.animals.filter(animal => animal.kind === 'preset-pet');
+  assert.deepEqual(Array.from(kittens, item => item.petId), ids);
+  assert.equal(scene.petOverlay.visible, false);
+  controller.update(controller.session.stagedAt + 1800);
+  for (const animal of kittens) {
+    const pose = pets.pose(animal.petId, { action: 'sit', direction: 'down', elapsed: 1800 });
+    assert.equal(animal.sprite.key, pose.key); assert.equal(animal.sprite.frame, pose.frame);
+    assert.equal(animal.sprite.originY, pose.originY);
+    assert.equal(animal.overlay.visible, Boolean(pose.overlay));
+    if (pose.overlay) {
+      assert.equal(animal.overlay.frame, animal.sprite.frame);
+      assert.equal(animal.overlay.key, pose.overlay.key);
+      assert.deepEqual([animal.overlay.x, animal.overlay.y], [animal.sprite.x, animal.sprite.y]);
+    }
+  }
+  controller.cancel();
+  assert.equal(scene.petOverlay.visible, true);
+  assert.equal(JSON.stringify(input), saved);
+});
+
+test('optional kitten PNG failures keep photography available using the existing pet fallback', async () => {
+  const pets = require('../src/frontend/forest-pets.js'), input = presets();
+  input[2].avatar.cosmetics.pet = 'last_tick_ginger';
+  const { controller } = setup({ pets, missing: pets.assets.map(asset => asset.key) });
+  assert.equal(await controller.start({ requestId: 'optional-kitten-fallback', presets: input }), true);
+  const ginger = controller.session.animals.find(animal => animal.petId === 'last_tick_ginger');
+  assert.equal(ginger.sprite.key, 'lpc-pets');
+  assert.equal(ginger.sprite.frame, 4);
+  assert.equal(ginger.overlay.visible, false);
+  controller.cancel();
 });
 
 test('generated square decorations are cropped at visible alpha 16 and fit uniformly, independent of source dimensions', () => {
