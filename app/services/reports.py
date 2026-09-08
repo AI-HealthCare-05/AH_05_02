@@ -34,7 +34,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
 from fastapi import HTTPException, status
@@ -665,7 +665,8 @@ class ReportService:
             "status": report_status,
             "empty_reason": empty_reason,
             "report_id": report_id_for(period, as_of),
-            "generated_at": datetime.now(config.TIMEZONE),
+            # §3 API 공통 조건: 날짜는 Asia/Seoul YYYY-MM-DD, 시각(timestamp)은 ISO 8601 UTC.
+            "generated_at": datetime.now(UTC),
             "period": bounds.to_dict(),
             "summary": {
                 **counts,

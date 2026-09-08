@@ -539,3 +539,15 @@ async def test_invalid_period_is_rejected() -> None:
         response = await client.get("/api/v1/reports", params={"period": "month"}, headers=headers)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert response.json()["detail"]["error_code"] == "INVALID_PERIOD"
+
+
+@pytest.mark.asyncio
+async def test_generated_at_is_utc_and_response_is_marked_private_no_store() -> None:
+    """§3 API 공통 조건: 시각(timestamp)은 ISO 8601 UTC로, 민감 응답은
+    Cache-Control: private, no-store로 반환한다."""
+    async with db_session(), AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        headers = await signup_and_login(client, "cachecontrol@example.com")
+        response = await client.get("/api/v1/reports", params={"period": "week"}, headers=headers)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["data"]["generated_at"].endswith("Z")
+        assert response.headers["cache-control"] == "private, no-store"

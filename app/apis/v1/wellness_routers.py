@@ -145,5 +145,9 @@ async def weekly_report_pdf(user: Annotated[User, Depends(get_request_user)]) ->
     return Response(
         content=build_korean_pdf(lines),
         media_type="application/pdf",
-        headers={"Content-Disposition": 'attachment; filename="gandang-weekly-report.pdf"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="gandang-weekly-report.pdf"',
+            # §3 API 공통 조건: 민감 응답은 Cache-Control: private, no-store를 권장한다.
+            "Cache-Control": "private, no-store",
+        },
     )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -11,12 +11,17 @@ from app.services.reports import VALID_PERIODS, PeriodKey, ReportService, resolv
 
 reports_router = APIRouter(tags=["Lifestyle reports"])
 
+# §3 API 공통 조건: 민감 응답은 Cache-Control: private, no-store를 권장한다.
+_SENSITIVE_CACHE_CONTROL = "private, no-store"
+
 
 @reports_router.get("/reports")
 async def get_report(
+    response: Response,
     user: Annotated[User, Depends(get_request_user)],
     period: str = Query(...),
 ) -> dict[str, object]:
+    response.headers["Cache-Control"] = _SENSITIVE_CACHE_CONTROL
     if period not in VALID_PERIODS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -32,10 +37,12 @@ async def get_report(
 @reports_router.get("/reports/{report_id}/cycles")
 async def get_report_cycles(
     report_id: str,
+    response: Response,
     user: Annotated[User, Depends(get_request_user)],
     cursor: str | None = Query(default=None),
     limit: int = Query(default=10, ge=1, le=50),
 ) -> dict[str, object]:
+    response.headers["Cache-Control"] = _SENSITIVE_CACHE_CONTROL
     period: PeriodKey
     period, _as_of = resolve_report_id(report_id)
     if period != "all":

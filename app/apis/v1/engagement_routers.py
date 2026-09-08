@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -31,7 +31,11 @@ async def create_barrier(
 
 
 @engagement_router.get("/weekly-reports/current")
-async def current_weekly_report(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+async def current_weekly_report(
+    response: Response, user: Annotated[User, Depends(get_request_user)]
+) -> dict[str, object]:
+    # §3 API 공통 조건: 민감 응답은 Cache-Control: private, no-store를 권장한다.
+    response.headers["Cache-Control"] = "private, no-store"
     return envelope(await EngagementService().weekly_report(user))
 
 
