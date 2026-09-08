@@ -44,9 +44,9 @@ class Config(BaseSettings):
 
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
-    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
     CURRENT_SCREENING_MANIFEST_URI: str = (
-        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
+        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
     )
     # Explicitly opt-in local S2 research runtime. This never promotes a model
     # or enables public probability display.
