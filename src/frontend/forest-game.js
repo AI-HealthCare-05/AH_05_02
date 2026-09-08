@@ -2951,7 +2951,6 @@
     if (reward) state.inventory.push(reward);
     renderGroup();
     $("#carrot-balance").textContent = String(state.carrots);
-    $("#profile-carrots").textContent = String(state.carrots);
     await adapter.save(state);
     await playRewardCelebration(reward);
     if (!reward) renderInventory();
@@ -3114,7 +3113,6 @@
     playSfx("rat-caught", { volume: 0.42, rate: event.detail?.source === "pet" ? 1.08 : 1 });
     $("#carrot-balance").textContent = String(state.carrots);
     $("#preview-carrot-balance").textContent = String(state.carrots);
-    $("#profile-carrots").textContent = String(state.carrots);
     await persist(rabbit ? `야생 토끼와 만나 당근 ${amount}개를 얻었습니다!` : event.detail?.source === "pet"
       ? `펫이 가까운 야생 쥐를 자동으로 잡아 당근 ${amount}개를 가져왔습니다!`
       : `야생 쥐를 잡고 당근 ${amount}개를 얻었습니다!`);

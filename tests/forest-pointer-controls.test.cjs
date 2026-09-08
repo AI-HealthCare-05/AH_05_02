@@ -101,7 +101,7 @@ test('the exact fractional destination is emitted once after the final throttled
   assert.equal(scene.movePath.length, 0);
 });
 
-test('hover reveals a local attack button and a touch pins it until a ground click or dismissal', () => {
+test('hover reveals attack and tapping the animal starts the same action as its button', () => {
   const { scene } = setup();
   scene.add = { text: () => actor() };
   scene.ratSprite = actor();
@@ -119,11 +119,75 @@ test('hover reveals a local attack button and a touch pins it until a ground cli
   scene.ratSprite.handlers.pointerdown({ wasTouch: true }, 0, 0, { stopPropagation: () => stopped++ });
   assert.equal(stopped, 1);
   assert.equal(scene.ratAttackPinned, true);
+  assert.equal(scene.pointerAttackEventId, scene.ratEventId);
   scene.ratAttackButton.handlers.pointerdown({ wasTouch: true }, 0, 0, { stopPropagation() {} });
   assert.equal(scene.pointerAttackEventId, scene.ratEventId);
   scene.placementActive = true;
   scene.updateRatAttackButton();
   assert.equal(scene.ratAttackButton.visible, false);
+});
+
+test('animal and button clicks approach and catch once through real update/action despite same-scene saves', () => {
+  for (const target of ['ratSprite', 'ratAttackButton']) for (const wasTouch of [false, true]) {
+    const { scene, context, events } = setup();
+    let now = 2000;
+    context.performance.now = () => now;
+    scene.avatar.x = 384;
+    scene.avatar.y = 350;
+    scene.avatar.cosmetics.lpcWeapon = 'wand';
+    scene.ratActor = Object.assign(actor(), { x: 620, y: 350 });
+    scene.ratSprite = actor();
+    scene.add = { text: () => actor() };
+    scene.ratActive = true;
+    scene.ratSpecies = 'rabbit';
+    scene.ratEventId = 9;
+    scene.player = actor();
+    scene.background = { setTexture() { return this; }, setDisplaySize() { return this; } };
+    scene.keys = Object.fromEntries(['A', 'S', 'D', 'W'].map(key => [key, { isDown: false }]));
+    scene.cursors = Object.fromEntries(['left', 'right', 'up', 'down'].map(key => [key, { isDown: false }]));
+    for (const method of ['updateWorldAtmosphere', 'updatePlacedObjectMotion', 'updateRat', 'updatePet', 'setPremiumFrame']) scene[method] = () => {};
+    const catches = [];
+    scene.dismissRat = (time, caught) => { catches.push(caught); scene.ratActive = false; };
+    scene.createRatAttackButton();
+    let stopped = false;
+    scene[target].handlers.pointerdown({ wasTouch, button: 0 }, 0, 0, { stopPropagation() { stopped = true; } });
+    assert.equal(stopped, true);
+    assert.equal(scene.pointerAttackEventId, 9);
+    for (let i = 0; i < 160; i++) {
+      now += 20;
+      // A save announces scene: world again while the avatar is approaching.
+      if (i % 5 === 0) scene.setScene('world');
+      scene.update(now, 20);
+    }
+    assert.deepEqual(catches, [true], `${target}, touch=${wasTouch}`);
+    const rewards = events.filter(event => event.type === 'forest-rat-caught');
+    assert.equal(rewards.length, 1);
+    assert.equal(rewards[0].detail.species, 'rabbit');
+    assert.equal(rewards[0].detail.amount, 5);
+    assert.equal(scene.actionPose, 'attack');
+    assert.equal(scene.avatar.direction, 'right');
+    assert.equal(scene.pointerAttackEventId, null);
+  }
+});
+
+test('same-scene sync preserves a path, but entering a different room cancels path and attack', () => {
+  const { scene } = setup();
+  scene.background = { setTexture() { return this; }, setDisplaySize() { return this; } };
+  scene.updateWorldAtmosphere = () => {};
+  scene.avatar.x = 384;
+  scene.avatar.y = 350;
+  scene.requestMoveTo(620, 350);
+  const path = scene.movePath;
+  scene.pointerAttackEventId = 4;
+  scene.ratAttackPinned = true;
+  scene.setScene('world');
+  assert.equal(scene.movePath, path);
+  assert.equal(scene.pointerAttackEventId, 4);
+  assert.equal(scene.ratAttackPinned, true);
+  scene.setScene('home');
+  assert.equal(scene.movePath.length, 0);
+  assert.equal(scene.pointerAttackEventId, null);
+  assert.equal(scene.ratAttackPinned, false);
 });
 
 test('pointer attack approaches its target then faces it and uses the existing equipped action once', () => {

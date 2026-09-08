@@ -941,10 +941,12 @@
         this.ratHovered = false;
         this.ratAttackHovered = false;
         this.ratHoverUntil = 0;
+        // Ordinary state saves also announce the current scene. Only a real
+        // room change should cancel a click-to-move or click-to-attack intent.
+        this.cancelPointerMovement();
+        this.ratAttackPinned = false;
+        this.ratAttackButton?.setVisible(false);
       }
-      this.cancelPointerMovement();
-      this.ratAttackPinned = false;
-      this.ratAttackButton?.setVisible(false);
       this.sceneName = nextSceneName;
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
       this.recordPlayerActor?.setVisible(this.sceneName === "home");
@@ -1058,9 +1060,10 @@
         .on("pointerdown", (pointer, _x, _y, event) => {
           if (this.placementActive || (!pointer.wasTouch && pointer.button !== 0)) return;
           event?.stopPropagation?.();
-          this.cancelPointerMovement();
-          this.ratAttackPinned = true;
           keepVisible();
+          // Clicking the animal and its visible button share one action.
+          // A distant target is approached before the equipped attack plays.
+          this.requestRatAttack();
           this.updateRatAttackButton();
         });
       this.ratAttackButton.on("pointerover", () => {
