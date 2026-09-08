@@ -24,6 +24,11 @@
   }
   const AVATAR_RENDER_SCALE = 0.43;
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
+  const encounterVectors = {
+    left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1],
+    down_left: [-Math.SQRT1_2, Math.SQRT1_2], down_right: [Math.SQRT1_2, Math.SQRT1_2],
+    up_right: [Math.SQRT1_2, -Math.SQRT1_2], up_left: [-Math.SQRT1_2, -Math.SQRT1_2],
+  };
   const animatedObjectRows = { duck_float: 0, animated_fountain: 1, firefly_lantern: 2, garden_pinwheel: 3 };
   const interactiveObjectTypes = {
     reward_cow: "cow", campfire: "fire", lantern: "light", firefly_lantern: "light", light_tent: "light",
@@ -100,6 +105,12 @@
       this.ratTurnAt = 0;
       this.ratDirection = "left";
       this.ratSpecies = "mouse";
+      this.rabbitVariant = null;
+      this.rabbitVariantCursor = 0;
+      this.rabbitBehaviorSequence = [];
+      this.rabbitActionIndex = 0;
+      this.rabbitActionStartedAt = 0;
+      this.rabbitActionUntil = 0;
       this.ratEventId = 0;
       this.lastRatAttackAt = 0;
       this.lastPetAttackAt = 0;
@@ -125,6 +136,11 @@
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       window.ForestAnimals.assets.forEach(asset => this.load.spritesheet(asset.key, asset.url, {
+        frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
+      }));
+      // Optional licensed packs may be absent in a source-only checkout. The
+      // loaded-texture check below retains the bundled LPC rabbit in that case.
+      (window.ForestAnimals.rabbitAssets || []).forEach(asset => this.load.spritesheet(asset.key, asset.url, {
         frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
       }));
       this.load.image("animated-objects-source", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1");
@@ -815,7 +831,8 @@
         }
         if (detail.scene) this.setScene(detail.scene);
         if (Array.isArray(detail.placed)) this.syncPlacedObjects(detail.placed);
-        if (detail.rat?.species) this.setRatSpecies(detail.rat.species);
+        if (detail.rat?.species) this.setRatSpecies(detail.rat.species, detail.rat.variant);
+        if (detail.rat?.action) this.setRabbitAction(detail.rat.action, this.time?.now ?? performance.now());
         if (typeof detail.homeRecordPlaying === "boolean") this.syncHomeRecordPlayer(detail.homeRecordPlaying);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
@@ -1285,18 +1302,97 @@
       this.ratDespawnAt = time + 12000;
       this.ratTurnAt = time + Phaser.Math.Between(900, 1800);
       this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
-      this.setRatSpecies(Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]));
+      this.setRatSpecies(Phaser.Utils.Array.GetRandom(["mouse", "rabbit"]), null, time);
+      if (this.rabbitVariant) {
+        const behaviorDuration = this.rabbitBehaviorSequence.reduce((total, action) => total + action.durationMs, 0);
+        this.ratDespawnAt = time + Math.min(45000, Math.max(12000, behaviorDuration + 1200));
+      }
       this.ratActor.setPosition(x, y).setDepth(y - 2).setAlpha(1).setScale(1).setVisible(true);
-      window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: { eventId: this.ratEventId, species: this.ratSpecies } }));
+      const variant = window.ForestAnimals.rabbitVariants?.find(item => item.id === this.rabbitVariant);
+      window.dispatchEvent(new CustomEvent("forest-rat-appeared", { detail: {
+        eventId: this.ratEventId, species: this.ratSpecies, variant: variant?.id, variantLabel: variant?.label,
+      } }));
     }
 
-    setRatSpecies(species) {
+    setRatSpecies(species, variantId = null, time = this.time?.now ?? performance.now()) {
       this.ratSpecies = species === "rabbit" ? "rabbit" : "mouse";
+      this.rabbitVariant = null;
+      this.rabbitBehaviorSequence = [];
+      this.rabbitActionIndex = 0;
+      this.rabbitActionStartedAt = time;
+      this.rabbitActionUntil = time;
       if (!this.ratSprite) return;
+      this.ratSprite.setFlipX?.(false);
       if (this.ratSpecies === "rabbit") {
-        const frame = window.ForestAnimals.rabbitFrame(this.ratDirection, false, 0);
-        this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY).setScale(1.35);
+        const animals = window.ForestAnimals;
+        const available = (animals.rabbitVariants || []).filter(variant => this.textures?.exists(variant.key));
+        const requested = available.find(variant => variant.id === variantId);
+        const variant = requested || available[this.rabbitVariantCursor % available.length];
+        if (variant && typeof animals.rabbitAction === "function" && typeof animals.rabbitPose === "function") {
+          const sequence = variant.actions.map(action => animals.rabbitAction(variant.id, action))
+            .filter(action => action && Number.isFinite(action.durationMs) && action.durationMs > 0);
+          if (sequence.length) {
+            this.rabbitVariant = variant.id;
+            this.rabbitBehaviorSequence = sequence;
+            if (!requested) this.rabbitVariantCursor += 1;
+            this.setRabbitAction(sequence[0].name, time);
+          }
+        }
+        if (!this.rabbitVariant) {
+          const frame = animals.rabbitFrame(this.ratDirection, false, 0);
+          this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY).setScale(1.35);
+        }
       } else this.ratSprite.setTexture("lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
+      if (!this.rabbitVariant && !Object.hasOwn(directionRows, this.ratDirection)) this.ratDirection = "down";
+      // The same sprite keeps its hover/click listeners across 32px and 72px
+      // sheets; resize only the default rectangular hit area with the texture.
+      const hitArea = this.ratSprite.input?.hitArea;
+      if (hitArea && "width" in hitArea && Number.isFinite(this.ratSprite.width)) {
+        hitArea.width = this.ratSprite.width;
+        hitArea.height = this.ratSprite.height;
+      }
+    }
+
+    setRabbitAction(name, time = this.time?.now ?? performance.now()) {
+      if (!this.rabbitVariant) return false;
+      const index = this.rabbitBehaviorSequence.findIndex(action => action.name === name);
+      if (index < 0) return false;
+      this.rabbitActionIndex = index;
+      this.rabbitActionStartedAt = time;
+      this.rabbitActionUntil = time + this.rabbitBehaviorSequence[index].durationMs;
+      const direction = this.rabbitBehaviorSequence[index].direction;
+      if (Object.hasOwn(encounterVectors, direction)) this.ratDirection = direction;
+      this.renderRabbitPose(time, true);
+      return true;
+    }
+
+    advanceRabbitBehavior(time) {
+      if (!this.rabbitVariant || !this.rabbitBehaviorSequence.length) return null;
+      // Every source action gets a finite turn, including clips whose source
+      // tag loops. Absolute clip boundaries make the sequence frame-rate safe.
+      while (time >= this.rabbitActionUntil) {
+        this.rabbitActionStartedAt = this.rabbitActionUntil;
+        this.rabbitActionIndex = (this.rabbitActionIndex + 1) % this.rabbitBehaviorSequence.length;
+        this.rabbitActionUntil += this.rabbitBehaviorSequence[this.rabbitActionIndex].durationMs;
+      }
+      return this.rabbitBehaviorSequence[this.rabbitActionIndex];
+    }
+
+    renderRabbitPose(time, moving) {
+      const active = this.rabbitBehaviorSequence[this.rabbitActionIndex];
+      if (!this.rabbitVariant || !active) return;
+      // A blocked walking/jumping animal holds a still pose, never skating
+      // against a wall. Non-travelling source actions always play in place.
+      const still = active.moves && !moving ? this.rabbitBehaviorSequence.filter(action => !action.moves) : [];
+      const resting = still.find(action => action.direction === this.ratDirection && /idle|stand|^pose_/i.test(action.name))
+        || still.find(action => /idle|stand|^pose_/i.test(action.name)) || still[0];
+      const pose = window.ForestAnimals.rabbitPose(this.rabbitVariant, {
+        action: resting?.name || active.name, direction: this.ratDirection,
+        elapsedMs: resting ? 0 : Math.max(0, time - this.rabbitActionStartedAt),
+        reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      });
+      this.ratSprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale);
+      this.ratSprite.setFlipX?.(Boolean(pose.flipX));
     }
 
     dismissRat(time, caught = false) {
@@ -1361,24 +1457,31 @@
         this.dismissRat(time);
         return;
       }
-      if (time >= this.ratTurnAt) {
+      const rabbitAction = this.advanceRabbitBehavior(time);
+      const wantsMove = !rabbitAction || rabbitAction.moves;
+      const fixedDirection = Object.hasOwn(encounterVectors, rabbitAction?.direction) ? rabbitAction.direction : null;
+      if (fixedDirection) this.ratDirection = fixedDirection;
+      if (wantsMove && !fixedDirection && time >= this.ratTurnAt) {
         this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
         this.ratTurnAt = time + Phaser.Math.Between(700, 1600);
       }
       const speed = 23 * Math.min(delta, 40) / 1000;
-      const vector = { left: [-speed, 0], right: [speed, 0], up: [0, -speed], down: [0, speed] }[this.ratDirection];
-      const nextX = this.ratActor.x + vector[0];
-      const nextY = this.ratActor.y + vector[1];
-      const moving = !this.isBlocked(nextX, nextY);
-      if (!moving) {
-        this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
+      const vector = encounterVectors[this.ratDirection] || encounterVectors.down;
+      const nextX = this.ratActor.x + vector[0] * speed;
+      const nextY = this.ratActor.y + vector[1] * speed;
+      const moving = wantsMove && !this.isBlocked(nextX, nextY);
+      if (wantsMove && !moving) {
+        if (!fixedDirection) this.ratDirection = Phaser.Utils.Array.GetRandom(["left", "right", "up", "down"]);
         this.ratTurnAt = time + 500;
-      } else {
+      } else if (moving) {
         this.ratActor.setPosition(nextX, nextY).setDepth(nextY - 2);
       }
       if (this.ratSpecies === "rabbit") {
-        const frame = window.ForestAnimals.rabbitFrame(this.ratDirection, moving, time, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-        this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
+        if (this.rabbitVariant) this.renderRabbitPose(time, moving);
+        else {
+          const frame = window.ForestAnimals.rabbitFrame(this.ratDirection, moving, time, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+          this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
+        }
       } else {
         const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
         this.ratSprite.setFrame(directionRow * 3 + (moving ? Math.floor(time / 145) % 3 : 1));

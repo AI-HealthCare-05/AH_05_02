@@ -63,3 +63,6 @@ models/cache/
 node_modules/
 dist/
 build/
+
+# Creator-licensed game assets: install locally, do not redistribute source art.
+src/frontend/assets/animals/licensed-rabbits/

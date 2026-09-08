@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v157-5";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v158-2";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -14,10 +14,10 @@ const CORE_SHELL = [
   "/static/lpc-avatar-engine.js?v=20260902-28",
   "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
-  "/static/forest-animals.js?v=20260907-1",
-  "/static/forest-phaser.js?v=20260908-6",
+  "/static/forest-animals.js?v=20260908-2",
+  "/static/forest-phaser.js?v=20260908-7",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260908-3",
+  "/static/forest-game.js?v=20260908-4",
   "/static/challenge-v2.js?v=2.1.4",
   "/static/challenge-v2.css?v=2.1.2",
   "/static/icons/forest-icon-192.png",
@@ -30,6 +30,8 @@ const MEDIA_ASSETS = [
   "/static/assets/animals/lpc-cow-eat.png",
   "/static/assets/animals/lpc-cow-walk.png",
   "/static/assets/animals/lpc-rabbit.png",
+  "/static/assets/animals/licensed-rabbits/bunbun.png?v=20260908-1",
+  "/static/assets/animals/licensed-rabbits/last-tick.png?v=20260908-1",
   "/static/assets/animals/cow-moo-joseph-sardin-cc0.mp3",
   "/static/assets/home-record-player-cottage-v2.png?v=20260907-1",
   "/static/assets/town-pro-sensory-cc0.mp3",

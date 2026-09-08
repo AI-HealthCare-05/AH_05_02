@@ -3097,7 +3097,8 @@
   window.addEventListener("forest-rat-appeared", (event) => {
     currentWildEncounter = { eventId: event.detail?.eventId, species: event.detail?.species === "rabbit" ? "rabbit" : "mouse" };
     if (event.detail?.species === "rabbit") {
-      setStatus("하얀 야생 토끼가 나타났어요. 숲 사이를 깡충깡충 다니는 모습을 찾아보세요!");
+      const variantLabel = event.detail?.variantLabel ? ` (${event.detail.variantLabel})` : "";
+      setStatus(`야생 토끼${variantLabel}가 나타났어요. 숲에서 쉬고 뛰노는 모습을 찾아보세요!`);
       return;
     }
     setStatus(state.avatar.cosmetics?.pet && state.avatar.cosmetics.pet !== "none"

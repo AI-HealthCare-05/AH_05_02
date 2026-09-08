@@ -30,6 +30,9 @@ test('offline shell versions match every HTML script and stylesheet and the mixe
     '/static/assets/furniture-v153/animated_fountain.png?v=20260907-1',
     '/static/assets/furniture-v153/campfire.png?v=20260907-1',
   ]);
+  const animals = require('../src/frontend/forest-animals.js');
+  assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-rabbits/')).sort(),
+    animals.rabbitAssets.map(asset => asset.url).sort(), 'both optional packs use the same URLs in preload and offline cache');
 });
 
 function worker({ network = async () => response('fresh forest'), failPut = false } = {}) {
