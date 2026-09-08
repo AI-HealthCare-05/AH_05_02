@@ -1,0 +1,21 @@
+Create ONE polished Korean briefing poster infographic, landscape 16:9, high-resolution crisp Korean lettering, for the health web service "간당간당" and optional game expansion "당근의 숲". Editorial healthcare design, warm ivory background, deep forest green headings, soft orange accents, tasteful small pixel-art family avatars and trees, substantial whitespace. Not a screenshot, no browser borders. This is a strategy diagram, NOT a clinical chart; do not fabricate graphs, clinical success claims or imply age is diagnosis.
+Top headline exactly: "세대는 달라도, 건강 습관은 함께"
+Subtitle exactly: "간당간당 · 목적별 위험 정보 × 세대 연결형 챌린지"
+Three equally spaced top cards representing audience markers, NOT one model per generation:
+Card1 "10~30대" / "게임·디지털 참여 접점" / "게임 이용률: 10대 81.4% · 20대 85.1%" / small orange label "전략: 재미로 참여하고 가족을 초대"
+Card2 "40~64세" / "예방 개입의 핵심 시기" / "노년기 이전부터 위험 확인·생활습관 실천" / small orange label "전략: 건강 관심을 행동으로 연결"
+Card3 "65세 이상" / "높은 당뇨병 유병 부담" / "당뇨병 유병률 약 29.3%*" / small orange label "전략: 쉬운 화면과 가족의 응원"
+Below, separate full-width green-tinted horizontal band title "모델은 나이가 아니라, 질문으로 나눕니다"
+Three compact purpose cards WITHIN this band:
+"오늘이" / "현재 위험 신호 선별 모델" / "국민건강영양조사"
+"내일이" / "미래 신규 발병 위험 예측 모델" / "KLoSA · 약 2년 후"
+"장기 전망" / "시간에 따라 어떻게 달라질까?" / "별도 모델·검증이 필요한 확장 영역"
+Do NOT label these three as normal/prediabetes/diabetes. They are independent purposes.
+Bottom full-width illustrated green forest banner: "당근의 숲 | 함께 실천할 이유를 만듭니다"
+Flow within banner: "가족·친구 초대 → 건강 챌린지 → 아바타·홈피 보상 → 다시 참여"
+Small adjacent label "참여·지속 효과는 사용자 테스트로 검증"
+Footer legible but smaller:
+"* 유병률: 국민건강영양조사 2021~2022년 통합. 발병률과 다릅니다."
+"연령은 기획 마커이며 모델 적용은 검증 범위를 따릅니다. 현재 MVP는 만 19세 이상, 미성년 참여는 별도 검토."
+"근거: 대한당뇨병학회(2024) · 게임동아(2025, 콘진원 조사 인용) · 양희민 외(2025)"
+Keep lettering clean and exact, no excessive detail, clear hierarchy, professional but friendly presentation visual. All generation-specific motives are strategy not proven universal traits.

@@ -475,3 +475,17 @@
 | 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |
 
 주간 리포트의 `record_summary`는 생성형 모델이 사실을 보충하는 방식이 아니라 저장된 수행률과 장벽 기록만 사용하는 `deterministic_template_v1`이다.
+
+## 9. 2026-08-31 당근의 숲 선택 기능 API
+
+| Method | Endpoint | 기능·권한 |
+|---|---|---|
+| GET | `/api/v1/forest/catalog` | 아바타·장식 카탈로그 조회 |
+| POST | `/api/v1/forest/spaces` | 활성 공동 챌린지 구성원이 숲 시작 |
+| GET | `/api/v1/forest/spaces/{group_id}` | 구성원 진행률·아바타·장식 조회 |
+| PATCH | `/api/v1/forest/avatar` | 내 아바타 코디 저장 |
+| POST | `/api/v1/forest/spaces/{group_id}/rewards/group-daily` | 공동 목표 완료 후 사용자별 일일 보상 수령 |
+| POST | `/api/v1/forest/spaces/{group_id}/objects` | 당근을 사용하여 장식 배치 |
+| DELETE | `/api/v1/forest/spaces/{group_id}/objects/{object_id}` | 내가 배치한 장식만 회수하고 사용한 당근 환급 |
+
+숲 응답에는 챌린지 완료 수, 아바타와 장식만 포함하며 건강정보와 예측 결과를 포함하지 않는다. 비구성원은 숲을 조회할 수 없고 다른 구성원이 배치한 장식은 회수할 수 없다.

@@ -1,4 +1,4 @@
-# 저장소 구조 및 파일 저장 위치 가이드
+# GitHub 저장소 구조 변경 및 사용 가이드
 
 ## 1. 한 줄 원칙
 
@@ -213,3 +213,125 @@ PR에는 코드·설정·메타데이터·테스트·README만 포함하고, 데
 | 실제 웹 MVP | `app/` + `src/frontend/` | `src/backend/`에 신규 기능 추가 금지 |
 
 Draft PR이나 `tmp/worktrees/` 안에서 진행 중인 실험 파일은 임의 복사하지 않습니다. 해당 PR을 정리할 때 코드·설정·README만 위 표준 위치로 옮기고, 생성 결과와 모델 바이너리는 `outputs/`에 남깁니다.
+
+## 10. 확정 Git Flow
+
+```text
+feature/* 또는 docs/*
+        ↓ Pull Request + 팀원 리뷰 + CI
+     develop
+        ↓ Release Pull Request + 팀원 리뷰 + CI
+       main
+```
+
+| 브랜치 | 역할 | 직접 Push |
+| --- | --- | --- |
+| `main` | 심사·배포·릴리즈 기준 | 금지 |
+| `develop` | 팀 기능을 합치는 통합 개발 기준 | 금지 |
+| `feature/*` | 기능·모델·화면·인프라 작업 | 담당자 작업 |
+| `docs/*` | 문서만 수정하는 작업 | 담당자 작업 |
+
+- 기본 브랜치는 `main`입니다.
+- 신규 작업 브랜치는 항상 최신 `develop`에서 만듭니다.
+- 기능 PR의 대상 브랜치는 `develop`입니다.
+- `develop`의 통합 검증이 끝나면 `develop → main` Release PR을 생성합니다.
+- `bootstrap/base`와 `codex/setup-template-migration`은 초기 구축·통합을 위한 임시 기준 브랜치였으며 신규 작업의 base로 사용하지 않습니다.
+
+## 11. 작업 시작부터 병합까지
+
+### 11-1. 새 작업 시작
+
+```bash
+git switch develop
+git pull origin develop
+git switch -c feature/<이슈번호>-<영역>-<작업명>
+```
+
+예시:
+
+```bash
+git switch -c feature/21-ml-rf-experiment
+git switch -c feature/22-be-artifact-provider
+git switch -c feature/23-fe-prediction-status
+git switch -c docs/24-sprint3-guide
+```
+
+권장 영역 표기는 `pm`, `ml`, `be`, `fe`, `db`, `infra`, `rag`입니다.
+
+### 11-2. 작업 저장·Push
+
+```bash
+git status
+git add <내가 수정한 파일 경로>
+git commit -m "feat: 작업 내용"
+git push -u origin <작업 브랜치명>
+```
+
+다른 사람의 파일이나 원본 의료 데이터를 함께 `git add .`로 올리지 않습니다. 변경 파일을 확인한 뒤 필요한 경로만 선택합니다.
+
+### 11-3. Pull Request
+
+기능 PR은 다음과 같이 설정합니다.
+
+- base: `develop`
+- compare: 본인의 `feature/*` 또는 `docs/*`
+- 설명: 변경 목적, 주요 파일, 실행 방법, 테스트 결과, 리뷰 요청사항
+- 확인: 원본 데이터·개인정보·비밀정보·모델 바이너리 없음
+
+## 12. 리뷰·승인·병합 방법
+
+리뷰어는 다음 순서로 확인합니다.
+
+1. PR의 `Conversation`에서 목적과 테스트 결과 확인
+2. `Files changed`에서 코드·문서·데이터 안전 여부 확인
+3. 수정이 필요하면 `Request changes`, 문제없으면 `Approve`
+4. `Submit review`로 리뷰 제출
+
+댓글이나 이모지만 남긴 것은 승인이 아닙니다. `Approve → Submit review`까지 완료해야 보호 규칙의 승인으로 인정됩니다.
+
+병합 조건:
+
+- 쓰기 권한이 있는 팀원 승인 1건 이상
+- 필수 CI 전체 통과
+- 해결되지 않은 리뷰 대화 없음
+- base 브랜치와 충돌 없음
+
+조건을 충족하면 기능 PR은 `develop`에 병합합니다. `main`에는 기능 PR을 직접 병합하지 않고 Release PR만 반영합니다.
+
+## 13. Revert·재분류 작업 기준
+
+이미 `develop`에 들어간 작업을 폴더 이동이나 책임 재분류 때문에 수정할 때는 다음 원칙을 지킵니다.
+
+- 같은 커밋을 여러 브랜치에서 반복 Revert하지 않습니다.
+- Revert가 필요한 경우 `Revert + 올바른 위치로 재적용`을 하나의 PR에 함께 넣습니다.
+- 해당 PR의 base는 임시 통합 브랜치가 아니라 최신 `develop`로 설정합니다.
+- 기능이 삭제되지 않고 새 위치에서 동일하게 동작하는지 테스트합니다.
+- 파일 이동 후 import, 문서 경로, 실행 명령, `pyproject.toml`, `uv.lock`을 함께 확인합니다.
+
+PR #14는 PR #11을 별도로 다시 Revert하는 작업이 아닙니다. #14 자체에 `#11 Revert + 모델 재현 파일 책임별 재분류`가 포함되어 있으므로 base를 `develop`로 변경해 하나의 정리 PR로 검토합니다.
+
+## 14. 현재 브랜치 전환 상태
+
+- PR #2 `[행정 간소화 및 업무 자동화] GitHub 대개혁안`은 팀원 승인과 CI를 거쳐 `develop`에 병합되었습니다.
+- PR #2에는 초기 Python 3.13 서비스 스택, 비동기 AI 파이프라인, MVP, 공통 전처리, 모델 실험, 크로스 플랫폼 실행 작업이 통합되어 있습니다.
+- PR #15는 `develop → main` Release PR이며 CI 통과 후 팀원 승인을 받아 병합합니다.
+- PR #14를 이번 릴리즈에 포함하려면 먼저 base를 `develop`로 바꾸고 #14를 병합한 뒤 PR #15를 최종 승인합니다.
+- `main` 반영 후 병합 완료·고유 커밋·진행 중 PR 여부를 확인하고 임시 통합 브랜치를 정리합니다.
+
+## 15. 팀원별 한 줄 사용법
+
+### 박빛샘
+
+> 백엔드는 `app/`, AI 비동기 작업은 `ai_worker/`, 배포는 `infra/`에 작성하고 API 변경 시 테스트와 API 문서를 함께 수정합니다.
+
+### 양준혁
+
+> 공통 ML 코드는 `src/ml/`, 개별 실험은 `experiments/diabetes_incidence/`에 작성하고 데이터·모델 파일 대신 설정·코드·성능·재현 방법을 공유합니다.
+
+### 이수인
+
+> 화면은 `src/frontend/`에 작성하고 성공 화면뿐 아니라 로딩·대기·실패·부적합·의료기관 안내 상태와 접근성을 함께 확인합니다.
+
+### 정세준
+
+> 요구사항·정책·회의·QA는 `docs/`, 통합·의료 안전 검증은 `tests/`에 기록하고 구현·모델·API·DB·화면의 일치 여부를 확인합니다.

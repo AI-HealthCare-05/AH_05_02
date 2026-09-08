@@ -196,4 +196,4 @@ API는 판정 결과와 함께 하나 이상의 `reason_codes`와 하나의 `nex
   https://law.go.kr/LSW/lsLinkCommonInfo.do?lsJoLnkSeq=1031809295
 - 식품의약품안전처, 「디지털의료기기소프트웨어 허가·심사 가이드라인」(2025-05-07). 확인일 2026-08-19.  
   https://www.mfds.go.kr/brd/m_1060/view.do?seq=15653
-- 프로젝트 내부 KLoSA 메타데이터: `전처리_및_기준_참고자료/1_2_3조_통합_참고자료_Notion용.md`, `data/metadata/cohort_definitions.csv`.
+- 프로젝트 내부 KLoSA 메타데이터: `docs/data/references/preprocessing/1_2_3조_통합_참고자료_Notion용.md`, `data/metadata/cohort_definitions.csv`.
