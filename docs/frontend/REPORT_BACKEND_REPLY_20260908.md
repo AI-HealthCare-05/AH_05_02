@@ -37,7 +37,7 @@
 ## 4. 지난 4주·전체 회차 조회와 barrier 범위 보정의 예상 작업 범위
 
 **작업 범위(완료 기준):**
-- **지난 4주**: 현재 주를 제외한 정확히 4개의 사용자 주 bucket(§5.1) + 4주 전체 요약(챌린지별 비율의 평균이 아니라 분자·분모 합산 후 계산, R11). `app/services/reports.py::_trend_buckets` / `_compute_period`.
+- **지난 4주**: 현재 주를 제외한 정확히 4개의 사용자 주 bucket(§5.1) + 4주 전체 요약(챌린지별 비율의 평균이 아니라 분자·분모 합산 후 계산, R11). 각 bucket에는 요청서 §2.3 표가 요구한 실천일·완료·미기록에 더해 `participation_days`(그 구간에 실제로 활성 회차가 있었던 날수 — `eligible_days`는 as_of 기준 달력상 경과일수라 의미가 다르다)도 반환한다. `app/services/reports.py::_trend_buckets` / `_compute_period`.
 - **전체**: 첫 회차 시작일부터 오늘까지의 요약 + 회차 이력 커서 페이지네이션(페이지당 10개, cursor=마지막 회차 id). `_cycles_page` / `ReportService.cycles_page`. 리포트 자체를 저장하지 않고 매 요청마다 재계산하므로(`report_id`는 결정적 키일 뿐, 저장된 스냅샷이 아님) 데이터 최신성 문제가 없고, 다른 사용자의 `report_id`로 호출해도 항상 호출자 자신의 데이터만 재계산되어 반환된다(크로스유저 접근 불가 — 테스트로 검증).
 - **barrier 범위 보정(작업 F)**: 기간 종료일 + 그 기간과 겹치는 회차 + 그 기간에 실제 선택된 챌린지로 한정하고, 같은 (user_challenge_id, 날짜) 재제출은 최신 것만 반영(`EngagementRepository.list_barriers`). 요청서에는 4주 화면만 언급됐지만, 기존 `/weekly-reports/current`의 정확도도 같이 맞추는 게 낫다고 판단해 거기에도 동일 로직을 적용했다(응답 스키마는 불변).
 - **실제 변경 규모**: 모델/마이그레이션 1개, 신규 서비스 파일 1개(~700줄), 신규 라우터 파일 1개, 기존 리포지토리/서비스 수정 3개(`engagement_repository.py`, `engagement.py`, `challenges.py`), 테스트 15개. 기존 전체 테스트 스위트 대비 회귀 없음(베이스라인 비교로 확인).
@@ -271,6 +271,7 @@
         "end_date": "2026-09-08",
         "is_partial": false,
         "eligible_days": 7,
+        "participation_days": 7,
         "practiced_days": 5,
         "completed_count": 5,
         "evaluated_completed_count": 5,
@@ -284,6 +285,7 @@
         "end_date": "2026-09-15",
         "is_partial": false,
         "eligible_days": 7,
+        "participation_days": 7,
         "practiced_days": 5,
         "completed_count": 5,
         "evaluated_completed_count": 5,
@@ -297,6 +299,7 @@
         "end_date": "2026-09-22",
         "is_partial": false,
         "eligible_days": 7,
+        "participation_days": 7,
         "practiced_days": 5,
         "completed_count": 5,
         "evaluated_completed_count": 5,
@@ -310,6 +313,7 @@
         "end_date": "2026-09-29",
         "is_partial": false,
         "eligible_days": 7,
+        "participation_days": 7,
         "practiced_days": 6,
         "completed_count": 6,
         "evaluated_completed_count": 6,
