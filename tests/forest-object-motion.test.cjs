@@ -6,6 +6,8 @@ const { test } = require('node:test');
 
 const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
 const ForestAnimals = require('../src/frontend/forest-animals.js');
+const ForestRiverDuck = require('../src/frontend/forest-riverduck.js');
+const ForestRiverDuckArt = require('../src/frontend/forest-riverduck-art.js');
 
 function displayObject(x = 0, y = 0, texture, frame) {
   const data = new Map();
@@ -17,6 +19,8 @@ function displayObject(x = 0, y = 0, texture, frame) {
     setOrigin(x, y = x) { this.originX = x; this.originY = y; return this; },
     setDisplaySize(w, h) { this.scaleX = w / 256; this.scaleY = h / 256; return this; },
     setScale(x, y = x) { this.scaleX = x; this.scaleY = y; return this; },
+    setFlipX(value) { this.flipX = value; return this; },
+    setCrop(x, y, width, height) { this.crop = [x, y, width, height]; return this; },
     setAngle(value) { this.angle = value; return this; },
     setAlpha(value) { this.alpha = value; return this; },
     setDepth(value) { this.depth = value; return this; },
@@ -29,6 +33,7 @@ function displayObject(x = 0, y = 0, texture, frame) {
     setTexture(value, frame) { this.texture = value; this.frame = frame; return this; },
     setY(value) { this.y = value; return this; },
     add(value) { this.list.push(value); return this; },
+    destroy() { this.destroyed = true; return this; },
     clear() { this.operations = []; return this; },
     lineStyle(...args) { this.operations.push(['lineStyle', ...args]); return this; },
     fillStyle(...args) { this.operations.push(['fillStyle', ...args]); return this; },
@@ -46,11 +51,12 @@ function setup() {
     Math: { Between: minimum => minimum }, Utils: { Array: { GetRandom: values => values[0] } },
   };
   const window = {
-    Phaser, ForestAnimals, matchMedia: () => ({ matches: reduced }),
+    Phaser, ForestAnimals, ForestRiverDuck, ForestRiverDuckArt, matchMedia: () => ({ matches: reduced }),
     dispatchEvent: event => events.push(event),
   };
+  const document = { getElementById: () => ({}), hidden: false };
   vm.runInNewContext(source, {
-    window, Phaser, document: { getElementById: () => ({}) },
+    window, Phaser, document,
     localStorage: { getItem: () => null }, performance: { now: () => 0 },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   });
@@ -65,14 +71,15 @@ function setup() {
   scene.createPinwheelTextures = () => {};
   scene.createFountainTextures = () => {};
   scene.placedObjectActors = [];
+  scene.sceneName = 'world';
   scene.time = { now: 0 };
-  const place = (code, active = true) => {
-    const item = { code, x: 300, y: 400, rotation: 11, active };
+  const place = (code, active = true, overrides = {}) => {
+    const item = { code, x: 300, y: 400, rotation: 11, active, ...overrides };
     const actor = scene.createPlacedObjectActor(item, false, scene.placedObjectActors.length);
     scene.placedObjectActors.push(actor);
     return actor;
   };
-  return { scene, place, tweens, events, setReduced: value => { reduced = value; } };
+  return { scene, place, tweens, events, setReduced: value => { reduced = value; }, setHidden: value => { document.hidden = value; } };
 }
 
 test('fountain, firefly and pinwheel fixtures keep identical frames and fixed bases', () => {
@@ -90,23 +97,23 @@ test('fountain, firefly and pinwheel fixtures keep identical frames and fixed ba
   }
 });
 
-test('pinwheel cycles blade colors while every blade and the complete support stay fixed', () => {
+test('pinwheel rotates only its blades while the full support and footprint stay fixed', () => {
   const { scene, place, setReduced } = setup();
   const actor = place('garden_pinwheel'), rotor = actor.getData('rotorTarget');
   const base = actor.getData('fixtureTarget');
   const pose = [rotor.x, rotor.y, rotor.scaleX, rotor.scaleY];
   assert.equal(base.texture, 'pinwheel-base');
   assert.equal(rotor.texture, 'pinwheel-blades');
-  for (const [time, expected] of [[0, 0], [650, 1], [1300, 2], [1950, 3], [2600, 4], [3250, 0]]) {
+  for (const [time, expected] of [[0, 0], [650, 26], [1300, 52], [1950, 78], [2600, 104], [3250, 130]]) {
     scene.updatePlacedObjectMotion(time);
-    assert.equal(rotor.angle, 0);
-    assert.equal(rotor.texture, expected ? `pinwheel-blades-${expected}` : 'pinwheel-blades');
+    assert.equal(rotor.angle, expected);
+    assert.equal(rotor.texture, 'pinwheel-blades', 'rotation never changes the authored palette');
     assert.deepEqual([rotor.x, rotor.y, rotor.scaleX, rotor.scaleY], pose);
     assert.deepEqual([actor.x, actor.y, base.x, base.y, base.angle], [300, 400, 0, 0, 0]);
   }
   setReduced(true);
   scene.updatePlacedObjectMotion(9000);
-  assert.equal(rotor.angle, 0);
+  assert.equal(rotor.angle, 130, 'reduced motion pauses at the current angle');
   assert.equal(rotor.texture, 'pinwheel-blades');
   assert.equal(rotor.interactive, true);
 });
@@ -131,21 +138,135 @@ test('pinwheel layer split preserves the complete lower base and fixed stem with
   assert.deepEqual(pixels, original);
 });
 
-test('duck only bobs less than half a world pixel without horizontal travel or resize', () => {
-  const { scene, place, setReduced } = setup();
-  const actor = place('duck_float'), duck = actor.getData('motionTarget');
+test('riverduck alternates still rests and slow swims inside water without moving its saved anchor', () => {
+  const { scene, place } = setup();
+  const actor = place('duck_float', true, { x: 112, y: 398, seed: 7 }), duck = actor.getData('motionTarget');
+  const anchor = Object.freeze(actor.getData('item'));
   const scale = [duck.scaleX, duck.scaleY];
-  assert.equal(duck.texture, 'duck-cutout');
-  for (let time = 0; time < 30000; time += 113) {
+  const modes = new Set(), moving = new Set(), positions = new Set(), swimFrames = new Set(), idleFrames = new Set();
+  let leftMovingFrames = 0;
+  assert.equal(duck.texture, ForestRiverDuckArt.asset.key);
+  assert.deepEqual(scale, [ForestRiverDuckArt.SCALE, ForestRiverDuckArt.SCALE]);
+  assert.deepEqual(duck.crop, [0, 0, 96, 87]);
+  assert.equal(actor.list.length, 1, 'transparent riverduck has no moving water or ground fixture');
+  assert.equal(actor.getData('ambientFx'), undefined);
+  for (let time = 0; time < 30000; time += 50) {
+    const before = [actor.x, actor.y];
     scene.updatePlacedObjectMotion(time);
-    assert.deepEqual([actor.x, actor.y, duck.x, duck.angle], [300, 400, 0, 0]);
-    assert.ok(Math.abs(duck.y) <= .45);
+    const state = actor.getData('riverDuckState');
+    modes.add(state.mode); moving.add(state.moving); positions.add(`${actor.x}:${actor.y}`);
+    assert.ok(ForestRiverDuck.isWater(actor.x, actor.y), 'the entire contact footprint stays off banks and dock');
+    assert.deepEqual([actor.x, actor.y, actor.depth], [state.x, state.y, state.y - 2]);
+    assert.ok(Math.hypot(actor.x - before[0], actor.y - before[1]) <= ForestRiverDuck.CALM_SPEED * .05 + 1e-8);
+    assert.deepEqual([duck.x, duck.y, duck.angle, actor.angle], [0, 0, 0, 0], 'no whole-image bob, rocking, or saved rotation');
     assert.deepEqual([duck.scaleX, duck.scaleY], scale);
-    assert.equal(duck.playing, false);
+    assert.deepEqual(duck.crop, [0, 0, 96, 87], 'every real body frame retains the same submerged-foot crop');
+    assert.deepEqual({ ...actor.getData('item') }, { code: 'duck_float', x: 112, y: 398, rotation: 11, active: true, seed: 7 });
+    assert.equal(actor.getData('item'), anchor);
+    assert.deepEqual([state.anchorX, state.anchorY], [112, 398]);
+    const pose = ForestRiverDuckArt.pose(state, actor.getData('riverDuckClock'));
+    assert.deepEqual([duck.texture, duck.frame, duck.originX, duck.originY, duck.flipX], [pose.key, pose.frame, pose.originX, pose.originY, pose.flipX]);
+    (state.moving ? swimFrames : idleFrames).add(duck.texture);
+    if (state.moving && state.direction === 'left') {
+      leftMovingFrames++;
+      assert.equal(duck.flipX, true, 'leftward travel mirrors the original right-facing body instead of rotating it');
+    }
   }
+  assert.deepEqual([...modes].sort(), ['idle', 'swim']);
+  assert.deepEqual([...moving].sort(), [false, true]);
+  assert.ok(positions.size > 50, 'the duck genuinely travels rather than only cycling a stationary image');
+  assert.deepEqual([...swimFrames].sort(), ForestRiverDuckArt.assets.slice(2, 4).map(asset => asset.key).sort(), 'slow swims alternate both original body frames');
+  assert.deepEqual([...idleFrames].sort(), ForestRiverDuckArt.assets.slice(0, 2).map(asset => asset.key).sort());
+  assert.ok(leftMovingFrames > 0, 'the integration exercises a moving left-facing pose');
+  const oldPlacement = place('duck_float');
+  assert.ok(ForestRiverDuck.isWater(oldPlacement.x, oldPlacement.y));
+  assert.deepEqual([oldPlacement.getData('item').x, oldPlacement.getData('item').y], [300, 400], 'invalid old placement is corrected only at runtime');
+});
+
+test('duck pointer interaction flees away without firing furniture selection or hunting events', () => {
+  const { scene, place, events } = setup();
+  const actor = place('duck_float', true, { x: 112, y: 398 }), duck = actor.getData('motionTarget');
+  scene.updatePlacedObjectMotion(0);
+  let stopped = 0;
+  const pointer = { x: actor.x - 20, y: actor.y, button: 0 };
+  duck.handlers.pointerdown(pointer, 0, 0, { stopPropagation: () => stopped++ });
+  assert.equal(stopped, 1); assert.equal(scene.cancelled, true);
+  assert.equal(actor.getData('riverDuckState').mode, 'flee');
+  const before = [actor.x, actor.y];
+  scene.updatePlacedObjectMotion(50);
+  assert.ok(actor.x > before[0], 'a click left of the body sends it right');
+  assert.ok(Math.hypot(actor.x - pointer.x, actor.y - pointer.y) > 20);
+  assert.equal(actor.getData('riverDuckState').speed, ForestRiverDuck.FLEE_SPEED);
+  assert.equal(duck.flipX, false, 'a rightward escape uses the unmirrored source pose');
+  const fleeFrames = new Set([duck.texture]);
+  assert.equal(events.length, 0, 'duck clicks do not emit generic furniture or hunting actions');
+  for (let time = 100; time < 1800; time += 50) {
+    scene.updatePlacedObjectMotion(time);
+    if (actor.getData('riverDuckState').moving) fleeFrames.add(duck.texture);
+    assert.deepEqual(duck.crop, [0, 0, 96, 87], 'flee frames cannot expose land-walking feet');
+  }
+  assert.deepEqual([...fleeFrames].sort(), ForestRiverDuckArt.assets.slice(4, 6).map(asset => asset.key).sort(), 'short escape alternates both faster original body frames');
+  assert.equal(actor.getData('riverDuckState').mode, 'idle', 'the short escape ends in a still rest');
+  for (const guard of ['placement', 'memory', 'home', 'rightButton']) {
+    const guarded = setup(), actor = guarded.place('duck_float', true, { x: 112, y: 398 });
+    guarded.scene.placementActive = guard === 'placement';
+    guarded.scene.memoryCapturing = guard === 'memory';
+    guarded.scene.sceneName = guard === 'home' ? 'home' : 'world';
+    actor.getData('motionTarget').handlers.pointerdown({ x: 92, y: 398, button: guard === 'rightButton' ? 2 : 0 }, 0, 0, { stopPropagation() {} });
+    assert.equal(actor.getData('riverDuckState').mode, 'idle', guard);
+    assert.equal(guarded.events.length, 0, guard);
+  }
+});
+
+test('riverduck pauses movement and its animation clock for hidden, interior, placement, and reduced-motion states', () => {
+  const { scene, place, setReduced, setHidden } = setup();
+  const actor = place('duck_float', true, { x: 112, y: 398 }), duck = actor.getData('motionTarget');
+  scene.updatePlacedObjectMotion(0);
+  duck.handlers.pointerdown({ x: 92, y: 398, button: 0 }, 0, 0, { stopPropagation() {} });
+  scene.updatePlacedObjectMotion(50);
+  const pose = [actor.x, actor.y], clock = actor.getData('riverDuckClock');
+  const remaining = actor.getData('riverDuckState').remainingMs;
+  setHidden(true); scene.updatePlacedObjectMotion(100000); setHidden(false);
+  scene.sceneName = 'home'; scene.updatePlacedObjectMotion(200000); scene.sceneName = 'world';
+  scene.placementActive = true; scene.updatePlacedObjectMotion(300000); scene.placementActive = false;
+  actor.setVisible(false); scene.updatePlacedObjectMotion(400000); actor.setVisible(true);
+  assert.deepEqual([actor.x, actor.y], pose);
+  assert.equal(actor.getData('riverDuckState').remainingMs, remaining, 'hidden wall time does not consume the behavior phase');
+  assert.equal(actor.getData('riverDuckClock'), clock);
   setReduced(true);
-  scene.updatePlacedObjectMotion(99999);
-  assert.equal(duck.y, 0);
+  for (const time of [400050, 500000, 600000]) scene.updatePlacedObjectMotion(time);
+  assert.deepEqual([actor.x, actor.y], pose);
+  assert.equal(actor.getData('riverDuckClock'), clock);
+  assert.equal(actor.getData('riverDuckState').mode, 'idle', 'reduced motion cancels a pending flee');
+  duck.handlers.pointerdown({ x: 92, y: 398, button: 0 }, 0, 0, { stopPropagation() {} });
+  assert.equal(actor.getData('riverDuckState').mode, 'idle');
+  setReduced(false); scene.updatePlacedObjectMotion(900000);
+  assert.deepEqual([actor.x, actor.y], pose, 'resume does not teleport or replay a deferred burst');
+  assert.equal(actor.getData('riverDuckClock'), clock + 50, 'resumed elapsed time is capped to one safe update');
+});
+
+test('saving unrelated furniture preserves transient duck swimming and flee state while its anchor stays unchanged', () => {
+  const { scene, place } = setup();
+  const actor = place('duck_float', true, { x: 112, y: 398, seed: 10 }), lantern = place('firefly_lantern');
+  const anchor = { ...actor.getData('item') };
+  scene.updatePlacedObjectMotion(0);
+  for (let time = 50; time <= 5000; time += 50) scene.updatePlacedObjectMotion(time);
+  actor.getData('motionTarget').handlers.pointerdown({ x: actor.x - 20, y: actor.y, button: 0 }, 0, 0, { stopPropagation() {} });
+  scene.updatePlacedObjectMotion(5050);
+  const state = actor.getData('riverDuckState'), clock = actor.getData('riverDuckClock');
+  scene.syncPlacedObjects([{ ...lantern.getData('item'), active: false }, { ...anchor }]);
+  const replacement = scene.placedObjectActors[1];
+  assert.equal(actor.destroyed, true); assert.equal(lantern.destroyed, true);
+  assert.notEqual(replacement, actor);
+  assert.equal(replacement.getData('riverDuckState'), state, 'same saved anchor restores the exact transient state even after list reorder');
+  assert.equal(replacement.getData('riverDuckClock'), clock);
+  assert.deepEqual([replacement.x, replacement.y], [state.x, state.y]);
+  assert.deepEqual({ ...replacement.getData('item') }, anchor);
+  scene.updatePlacedObjectMotion(8000);
+  assert.deepEqual([replacement.x, replacement.y], [state.x, state.y], 'recreated actor begins with a fresh elapsed-time baseline');
+  scene.updatePlacedObjectMotion(8050);
+  assert.equal(replacement.getData('riverDuckClock'), clock + 50);
+  assert.ok(ForestRiverDuck.isWater(replacement.x, replacement.y));
 });
 
 test('fountain uses only masked water frames and firefly accents remain subpixel until switched off', () => {

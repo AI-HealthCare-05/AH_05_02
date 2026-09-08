@@ -293,7 +293,7 @@
     pond: { name: "돌 연못", kind: "object", icon: "💧" },
     fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
     flower_cart: { name: "꽃수레", kind: "object", icon: "🌼" },
-    duck_float: { name: "둥실 오리 튜브", kind: "object", icon: "🛟", animated: true },
+    duck_float: { name: "리버덕", kind: "object", icon: "🦆", animated: true },
     animated_fountain: { name: "물결 분수", kind: "object", icon: "⛲", animated: true },
     firefly_lantern: { name: "반딧불 랜턴", kind: "object", icon: "🏮", animated: true },
     garden_pinwheel: { name: "정원 바람개비", kind: "object", icon: "🎡", animated: true },
@@ -966,7 +966,8 @@
   const catPetAtlas = new Image();
   const storageSpriteAtlas = new Image();
   const animatedObjectAtlas = new Image();
-  const duckCutoutImage = new Image();
+  const riverDuckImage = new Image();
+  const riverDuckStates = new WeakMap();
   const campfireBaseImage = new Image();
   const rewardCowImage = new Image();
   const cowReactions = new WeakMap();
@@ -986,7 +987,7 @@
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
   animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
-  duckCutoutImage.src = "/static/assets/furniture-v156/duck_float.png?v=20260908-2";
+  riverDuckImage.src = window.ForestRiverDuckArt.asset.url;
   campfireBaseImage.src = "/static/assets/furniture-v153/campfire.png?v=20260907-1";
   rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";
@@ -1007,7 +1008,7 @@
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
   animatedObjectAtlas.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
-  duckCutoutImage.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
+  riverDuckImage.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
   campfireBaseImage.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
   rewardCowImage.addEventListener("load", () => { renderInventory(); drawAnimalThumbnails(); renderCanvas(); });
   Object.values(sceneImages).forEach((image) => image.addEventListener("load", renderCanvas));
@@ -1381,6 +1382,72 @@
     }
   }
 
+  function fallbackRiverDuckEntry(item) {
+    let entry = riverDuckStates.get(item);
+    if (!entry || entry.state.anchorX !== item.x || entry.state.anchorY !== item.y) {
+      const index = state.placed.indexOf(item);
+      const seed = (Math.imul(Math.round(item.x * 100), 73856093)
+        ^ Math.imul(Math.round(item.y * 100), 19349663) ^ Math.imul(index + 1, 83492791)) >>> 0;
+      entry = { state: window.ForestRiverDuck.createState({ x: item.x, y: item.y, seed }), lastAt: null, animationMs: 0 };
+      riverDuckStates.set(item, entry);
+    }
+    return entry;
+  }
+
+  let lastRiverDuckPaintAt = -Infinity;
+  function updateFallbackRiverDucks(timestamp) {
+    if (window.carrotForestPhaserActive) return false;
+    const hidden = document.hidden || currentScene !== "world" || Boolean(placementCode);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let hasDuck = false, motionStopped = false;
+    state.placed.forEach(item => {
+      if (item.code !== "duck_float") return;
+      hasDuck = true;
+      const entry = fallbackRiverDuckEntry(item);
+      const delta = entry.lastAt == null ? 0 : Math.max(0, Math.min(window.ForestRiverDuck.MAX_DELTA_MS, timestamp - entry.lastAt));
+      entry.lastAt = timestamp;
+      const wasMoving = entry.state.moving || entry.state.fleeing;
+      entry.state = window.ForestRiverDuck.update(entry.state, delta, { hidden, reducedMotion });
+      if (!hidden && !reducedMotion) entry.animationMs += delta;
+      motionStopped ||= wasMoving && !entry.state.moving && !entry.state.fleeing;
+    });
+    // Position state is updated each RAF, painting at 30 fps instead of the
+    // old 420 ms decoration cadence. Hidden/indoor time never catches up.
+    if (!hasDuck || hidden || (reducedMotion && !motionStopped)) return false;
+    if (!motionStopped && timestamp - lastRiverDuckPaintAt < 1000 / 30) return false;
+    lastRiverDuckPaintAt = timestamp;
+    return true;
+  }
+
+  function fallbackRiverDuckAt(x, y) {
+    if (window.carrotForestPhaserActive || currentScene !== "world" || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+    // The last drawn duck owns an overlapping hit, matching canvas draw order.
+    for (let index = state.placed.length - 1; index >= 0; index -= 1) {
+      const item = state.placed[index];
+      if (item.code !== "duck_float") continue;
+      const pose = fallbackRiverDuckEntry(item).state;
+      const hit = typeof window.ForestRiverDuckArt.hitTest === "function"
+        ? window.ForestRiverDuckArt.hitTest(pose, x, y)
+        : Math.abs(x - pose.x) <= 20 && y >= pose.y - 32 && y <= pose.y + 8;
+      if (hit) return { item, index };
+    }
+    return null;
+  }
+
+  function fleeFallbackRiverDuck(item, x, y) {
+    if (window.carrotForestPhaserActive || currentScene !== "world" || placementCode || document.hidden) return false;
+    // An already-open dialog owns input; consume a duck hit without allowing a
+    // second pond popup or changing its saved on/off state behind that dialog.
+    if (document.querySelector('dialog[open], [aria-modal="true"]:not([hidden])')) return true;
+    const entry = fallbackRiverDuckEntry(item);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    entry.state = window.ForestRiverDuck.flee(entry.state, { x, y }, { reducedMotion });
+    entry.lastAt = performance.now();
+    setStatus(reducedMotion ? "리버덕이 물 위에서 조용히 쉬고 있어요." : "리버덕이 살짝 놀라 반대쪽으로 헤엄친 뒤 다시 쉬어요.");
+    renderCanvas();
+    return true;
+  }
+
   function drawPlacedObject(item, preview = false) {
       const x = 0;
       const y = 0;
@@ -1391,8 +1458,15 @@
       const interactionType = interactiveObjectTypes[item.code];
       const interactionActive = interactionType && Boolean(item.active);
       // Fixtures stay anchored even in the non-Phaser fallback renderer.
-      if (item.code === "duck_float" && duckCutoutImage.complete && duckCutoutImage.naturalWidth) {
-        context.drawImage(duckCutoutImage, x - 46, y - 92 * .84, 92, 92);
+      if (item.code === "duck_float") {
+        // Same downloaded source poses as Phaser; never show the retired tube.
+        const entry = preview ? null : fallbackRiverDuckEntry(item);
+        const pose = entry ? entry.state : window.ForestRiverDuck.createState(item);
+        context.rotate(-(Number(item.rotation) || 0) * Math.PI / 180);
+        // Placement previews stay on the selected cell, even when it is not
+        // legal water. Only a real placed duck uses its safe transient offset.
+        window.ForestRiverDuckArt.draw(context, riverDuckImage, pose,
+          preview ? 0 : pose.x - item.x, preview ? 0 : pose.y - item.y, entry?.animationMs || 0);
         context.restore(); return;
       }
       const animatedRow = animatedObjectRows[item.code];
@@ -1801,24 +1875,25 @@
   let lastAnimationAt = 0;
   let lastWalkAnimationAt = 0;
   function animateWorld(timestamp) {
-    let needsRender = false;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let needsRender = updateFallbackRiverDucks(timestamp);
     if (!document.hidden && !window.carrotForestPhaserActive && cowReactionUntil > 0) {
       needsRender = true;
       if (timestamp >= cowReactionUntil) cowReactionUntil = 0;
     }
-    if (!document.hidden && timestamp - lastAnimationAt > 420) {
+    if (!document.hidden && !reducedMotion && timestamp - lastAnimationAt > 420) {
       animationFrame = (animationFrame + 1) % 4;
       lastAnimationAt = timestamp;
       needsRender = true;
     }
     const moving = timestamp < walkingUntil;
-    if ($("#avatar-studio").open && timestamp - lastAvatarPreviewAt > 120) {
+    if (!reducedMotion && $("#avatar-studio").open && timestamp - lastAvatarPreviewAt > 120) {
       avatarPreviewFrame += 1;
       lastAvatarPreviewAt = timestamp;
       renderCatalogThumbnailCanvases();
       renderAvatarPreview();
     }
-    if (!document.hidden && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : running ? 90 : 140)) {
+    if (!document.hidden && !reducedMotion && moving && timestamp - lastWalkAnimationAt > (state.avatar.mounted ? 115 : running ? 90 : 140)) {
       walkAnimationFrame = (walkAnimationFrame + 1) % 4;
       lastWalkAnimationAt = timestamp;
       needsRender = true;
@@ -2009,7 +2084,7 @@
       && y + cellRadius > camera.y - 15 && y - cellRadius < camera.y + 8;
     if (overlapsCameraFoot) return false;
     if (waterObjectCodes.has(placementCode)) {
-      if (!inPond) return false;
+      if (!window.ForestRiverDuck?.isWater(x, y)) return false;
     } else if (inHouse || inGarden || inPond) return false;
     // Traversal collision and decorative pixels do not reserve usable grass cells.
     return !state.placed.some((item) => item.code !== placementCode && Math.hypot(item.x - x, item.y - y) < 28);
@@ -2302,7 +2377,8 @@
       target.clearRect(0, 0, thumbnail.width, thumbnail.height);
       target.imageSmoothingEnabled = true;
       if (row === animatedObjectRows.duck_float) {
-        if (duckCutoutImage.complete && duckCutoutImage.naturalWidth) target.drawImage(duckCutoutImage, 0, 0, thumbnail.width, thumbnail.height);
+        target.imageSmoothingEnabled = false;
+        window.ForestRiverDuckArt.thumbnail(target, riverDuckImage, thumbnail.width, thumbnail.height);
       } else window.ForestObjects.drawAnimatedItem(target, animatedObjectAtlas, window.ForestObjects.ANIMATED_CODES[row], 0, 0, thumbnail.width, thumbnail.height);
     });
     if (animatedObjectAtlas.complete && animatedObjectAtlas.naturalWidth) draw();
@@ -3125,6 +3201,8 @@
         else if (x >= 330 && x <= 445 && y >= 370) interact("exit_garden");
         else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
       } else {
+        const duck = fallbackRiverDuckAt(pointerX, pointerY);
+        if (duck) { fleeFallbackRiverDuck(duck.item, pointerX, pointerY); return; }
         const placedTarget = nearbyPlacedObject(x, y, 58);
         if (placedTarget?.item.code === "reward_cow") {
           const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
@@ -3162,6 +3240,16 @@
     const item = state.placed[index];
     if (!Number.isInteger(index) || !item || currentScene !== "world" || placementCode) return;
     canvas.focus();
+    if (item.code === "duck_float") {
+      // Phaser's direct duck handler owns its own transient state. Never fall
+      // through to generic object on/off or persistence for either renderer.
+      if (!window.carrotForestPhaserActive) {
+        const pose = fallbackRiverDuckEntry(item).state;
+        fleeFallbackRiverDuck(item, Number.isFinite(detail.x) ? detail.x : pose.x,
+          Number.isFinite(detail.y) ? detail.y : pose.y);
+      }
+      return;
+    }
     if (item.code === "reward_cow") {
       const reaction = Number(detail.y) < item.y - 28 ? "head" : "body";
       reactToCow(index, reaction);
@@ -3697,6 +3785,7 @@
     await window.LpcAvatarEngine?.ready();
     // One complete PNG per object: never reveal legacy cropped furniture while loading.
     await window.ForestObjects.loadIndividualAssets();
+    await window.ForestRiverDuckArt.loadImages();
     const params = new URLSearchParams(window.location.search);
     const localReset = localDemoOrigin && params.get("resetToday") === "1";
     state = localReset ? resetTodayProgress(loaded) : loaded;
@@ -3710,7 +3799,9 @@
     window.ForestProfile.watch(applyAccountNickname);
     setStatus(localReset ? "오늘의 과업과 공동 진행, 보물상자 수령 상태를 초기화했습니다." : "당근의 숲이 준비되었습니다. 오늘의 퀘스트부터 시작해 보세요.");
     window.requestAnimationFrame(() => document.documentElement.classList.add("forest-script-ready"));
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) window.requestAnimationFrame(animateWorld);
+    // Keep one scheduler alive so a changed motion preference takes effect;
+    // individual animation paths pause instead of queuing a delayed burst.
+    window.requestAnimationFrame(animateWorld);
   }).catch((error) => {
     console.error(error);
     document.documentElement.classList.add("forest-script-ready");

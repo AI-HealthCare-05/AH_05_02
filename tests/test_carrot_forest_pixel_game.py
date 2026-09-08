@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v159-4";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v160-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -700,7 +700,8 @@ def test_interactive_placed_objects_use_their_visible_sprite_as_click_target() -
     assert 'window.addEventListener("forest-placed-object-pointer"' in game_script
     assert 'await interact(`object:${index}`)' in game_script
     assert 'actor.getData("pointerTargets") || [actor]' in phaser_script
-    assert 'target.setInteractive({ useHandCursor: true })' in phaser_script
+    assert 'target.setInteractive({ useHandCursor: true,' in phaser_script
+    assert 'pixelPerfect: true, alphaTolerance: 16' in phaser_script
     assert 'new CustomEvent("forest-placed-object-pointer"' in phaser_script
 
 
@@ -1026,7 +1027,7 @@ def test_storage_placement_uses_grid_rotation_and_explicit_confirmation() -> Non
     assert "forest-placement-updated" in game_script
     assert "syncPlacement" in phaser_script
     assert "createPlacedObjectActor" in phaser_script
-    assert ".setAngle(Number(item.rotation) || 0)" in phaser_script
+    assert '.setAngle(item.code === "duck_float" ? 0 : Number(item.rotation) || 0)' in phaser_script
     assert 'this.input.keyboard.on("keydown-V"' in phaser_script
     assert ".placement-controls" in css
 
@@ -1233,8 +1234,10 @@ process.stdout.write(JSON.stringify({
         assert url in inventory["cachedAssets"], f"Furniture missing from offline cache: {url}"
     assert "await window.ForestObjects.loadIndividualAssets()" in game
     assert "window.ForestObjects.INDIVIDUAL_ASSETS.forEach" in phaser
-    assert 'furniture-v156/duck_float.png?v=20260908-2' in game
-    assert 'createIndividualTile(individualImages.duck_float, 128)' in phaser
+    assert 'riverDuckImage.src = window.ForestRiverDuckArt.asset.url' in game
+    assert 'window.ForestRiverDuckArt.assets.forEach' in phaser
+    assert '"duck-cutout"' not in phaser
+    assert html.index('forest-riverduck-art.js') < html.index('forest-phaser.js')
     assert 'furniture-v153/campfire.png' in game and 'furniture-v153/campfire.png' in phaser
     # Only flame extraction retains the old atlas; new furniture uses whole PNGs.
     assert all("carrot-forest-storage-atlas-v4.png" in source for source in (game, phaser, worker))

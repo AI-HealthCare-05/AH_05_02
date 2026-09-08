@@ -10,7 +10,7 @@ function setup(code = 'animated_fountain', placed = []) {
   const context = vm.createContext({
     currentScene: 'world', placementCode: code, waterObjectCodes: new Set(['duck_float']),
     WORLD_WIDTH: 768, WORLD_HEIGHT: 512, state: { placed },
-    window: { ForestMemories: { CAMERA: { x: 694, y: 338, width: 52, height: 76 } } },
+    window: { ForestRiverDuck: require('../src/frontend/forest-riverduck.js'), ForestMemories: { CAMERA: { x: 694, y: 338, width: 52, height: 76 } } },
     blocked() { throw new Error('Decorative traversal collision must not reserve grass'); },
   });
   vm.runInContext(functions, context);
@@ -25,6 +25,8 @@ test('fountain belongs on free land; only a floating duck is restricted to the p
   const duck = setup('duck_float');
   assert.equal(duck.placementCellValid(384, 320), false);
   assert.equal(duck.placementCellValid(128, 400), true);
+  assert.equal(duck.placementCellValid(180, 410), false, 'the wooden dock is not water');
+  assert.equal(duck.placementCellValid(45, 380), false, 'the complete contact footprint must clear the bank');
 });
 
 test('world boundaries, house, garden, pond, and occupied cells prevent placement', () => {

@@ -67,6 +67,7 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   };
   const window = {
     Phaser, ForestAnimals: animals, ForestObjects: { INDIVIDUAL_ASSETS: [] },
+    ForestRiverDuckArt: require('../src/frontend/forest-riverduck-art.js'),
     matchMedia: () => ({ matches: reduced }), dispatchEvent: event => events.push(event),
     addEventListener: (type, handler) => listeners.set(type, handler), removeEventListener() {},
   };

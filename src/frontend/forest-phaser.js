@@ -136,6 +136,9 @@
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
+      window.ForestRiverDuckArt.assets.forEach(riverDuck => this.load.spritesheet(riverDuck.key, riverDuck.url, {
+        frameWidth: riverDuck.frameWidth, frameHeight: riverDuck.frameHeight,
+      }));
       window.ForestAnimals.assets.forEach(asset => this.load.spritesheet(asset.key, asset.url, {
         frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
       }));
@@ -162,7 +165,6 @@
       this.textures.addSpriteSheet("campfire-flame-atlas", window.ForestObjects.createLegacyStorageAtlas(storageSource), { frameWidth: 256, frameHeight: 256 });
       const animatedSource = this.textures.get("animated-objects-source").getSourceImage();
       this.textures.addSpriteSheet("animated-objects", window.ForestObjects.createAnimatedAtlas(animatedSource), { frameWidth: 128, frameHeight: 128 });
-      this.textures.addImage("duck-cutout", window.ForestObjects.createIndividualTile(individualImages.duck_float, 128));
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
       this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
       window.ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" });
@@ -267,6 +269,7 @@
         if (this.memoryCapturing || performance.now() - (this.lastMemoryPointerAt || -Infinity) < 180) return;
         if (!pointer.wasTouch && pointer.button !== 0) return;
         if (performance.now() - this.lastPetPointerAt < 120) return;
+        if (performance.now() - (this.lastDuckPointerAt ?? -Infinity) < 120) return;
         this.cancelPointerMovement();
         this.ratAttackPinned = false;
         const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -453,36 +456,45 @@
       const context = tile.getContext("2d", { willReadFrequently: true });
       context.drawImage(frame.source.image, frame.cutX, frame.cutY, 128, 128, 0, 0, 128, 128);
       const pixels = context.getImageData(0, 0, 128, 128).data;
-      const layers = window.ForestObjects.individualReady ? this.splitStaticPinwheelPixels(pixels) : this.splitPinwheelPixels(pixels);
+      const individual = window.ForestObjects.individualReady;
+      const layers = individual ? this.splitStaticPinwheelPixels(pixels) : this.splitPinwheelPixels(pixels);
+      if (individual) layers.base = this.composePinwheelSupportPixels(layers.base, pixels);
       Object.entries(layers).forEach(([name, pixels]) => {
         const canvas = document.createElement("canvas");
         canvas.width = canvas.height = 128;
         canvas.getContext("2d").putImageData(new ImageData(pixels, 128, 128), 0, 0);
         this.textures.addImage(`pinwheel-${name}`, canvas);
       });
-      for (let phase = 1; phase < 5; phase++) {
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = 128;
-        canvas.getContext("2d").putImageData(new ImageData(this.colorCyclePinwheelPixels(layers.blades, phase), 128, 128), 0, 0);
-        this.textures.addImage(`pinwheel-blades-${phase}`, canvas);
-      }
     }
 
     splitStaticPinwheelPixels(pixels) {
       const base = new Uint8ClampedArray(pixels), blades = new Uint8ClampedArray(pixels.length);
-      // Audited against v153 and the v156 replacement after 6px-padded normalization:
-      // hub ~64,44; lowest blade ~78; exposed stem x61..67 from y68 down.
-      // Partition actual colored blade pixels only. Never reconstruct a support
-      // or rotate geometry; recombining these two layers exactly recovers source.
+      // The v156 6px-padded tile has its gold hub at (63,44). Detach the
+      // complete blades, including cream markings, dark edges and antialiasing:
+      // color-only masks leave a stationary ghost of the rotor behind a turn.
+      // The pole emerges diagonally from behind the lower-right blade at y68.
+      // This split is lossless; hidden support is composed separately at runtime.
       for (let y = 0; y < 79; y++) for (let x = 0; x < 128; x++) {
         const i = (y * 128 + x) * 4;
-        if (!pixels[i + 3] || Math.hypot(x - 64, y - 44) < 5 || (y >= 68 && x >= 61 && x <= 67)) continue;
-        const [r, g, b] = pixels.subarray(i, i + 3);
-        if (Math.max(r, g, b) - Math.min(r, g, b) < 28 || Math.max(r, g, b) < 65) continue;
+        const hub = Math.hypot(x - 63, y - 44) <= 5;
+        const exposedStem = y >= 68 && x >= 61 && x <= Math.min(66, y - 5);
+        if (!pixels[i + 3] || hub || exposedStem) continue;
         blades.set(pixels.subarray(i, i + 4), i);
         base.fill(0, i, i + 4);
       }
       return { base, blades };
+    }
+
+    composePinwheelSupportPixels(base, source) {
+      const output = new Uint8ClampedArray(base);
+      // The source photo cannot show wood hidden by the blades. Extend the
+      // original exposed pole behind the detached rotor, never edit its PNG or
+      // overwrite the visible hub, pole, pot, or any source alpha outside it.
+      for (let y = 44; y < 73; y++) for (let x = 61; x <= 66; x++) {
+        const to = (y * 128 + x) * 4, from = (79 * 128 + x) * 4;
+        if (!output[to + 3]) output.set(source.subarray(from, from + 4), to);
+      }
+      return output;
     }
 
     fountainFlowPixels(pixels, frame) {
@@ -539,31 +551,37 @@
 
     createPlacedObjectActor(item, preview = false, placedIndex = -1) {
         let actor;
-        if (Object.hasOwn(animatedObjectRows, item.code)) {
+        if (item.code === "duck_float") {
+          const state = window.ForestRiverDuck.createState(item);
+          const pose = window.ForestRiverDuckArt.pose(state, 0);
+          const body = this.add.sprite(0, 0, pose.key, pose.frame)
+            .setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(pose.flipX)
+            .setCrop(0, 0, 96, window.ForestRiverDuckArt.WATERLINE);
+          actor = this.add.container(preview ? item.x : state.x, preview ? item.y : state.y, [body]);
+          actor.setData("riverDuckState", state).setData("riverDuckLastAt", null).setData("riverDuckClock", 0)
+            .setData("motionTarget", body).setData("fixtureTarget", body).setData("pointerTargets", [body]);
+        } else if (Object.hasOwn(animatedObjectRows, item.code)) {
           const size = item.code === "firefly_lantern" || item.code === "garden_pinwheel" ? 76 : 96;
           // The generated frames redraw rocks, plants and supports between
           // frames. Keep one fixture image; animate only a detached duck or
           // small water/light accents so the placed footprint never drifts.
-          const fixture = this.add.sprite(0, 0, item.code === "duck_float" ? "duck-cutout" : "animated-objects", item.code === "duck_float" ? undefined : animatedObjectRows[item.code] * 4)
+          const fixture = this.add.sprite(0, 0, "animated-objects", animatedObjectRows[item.code] * 4)
             .setOrigin(0.5, 0.84)
             .setDisplaySize(size, size);
           const accents = this.add.graphics();
           actor = this.add.container(item.x, item.y, [fixture, accents]);
           actor.setData("fixtureTarget", fixture).setData("ambientFx", accents).setData("pointerTargets", [fixture]);
-          if (item.code === "duck_float") {
-            actor.setData("motionTarget", fixture).setData("motionOrigin", {
-              x: 0, y: 0, scaleX: fixture.scaleX, scaleY: fixture.scaleY,
-            });
-          } else if (item.code === "animated_fountain") {
+          if (item.code === "animated_fountain") {
             this.createFountainTextures();
             fixture.setTexture("fountain-flow", 0).setDisplaySize(size, size);
           } else if (item.code === "garden_pinwheel") {
             this.createPinwheelTextures();
             fixture.setTexture("pinwheel-base").setDisplaySize(size, size);
-            const blades = this.add.image((62 - 64) * size / 128, (48 - 128 * .84) * size / 128, "pinwheel-blades")
-              .setOrigin(62 / 128, 48 / 128).setDisplaySize(size, size);
+            const hub = window.ForestObjects?.individualReady ? { x: 63, y: 44 } : { x: 62, y: 48 };
+            const blades = this.add.image((hub.x - 64) * size / 128, (hub.y - 128 * .84) * size / 128, "pinwheel-blades")
+              .setOrigin(hub.x / 128, hub.y / 128).setDisplaySize(size, size);
             actor.add(blades);
-            actor.setData("rotorTarget", blades).setData("pointerTargets", [fixture, blades]);
+            actor.setData("rotorTarget", blades).setData("rotorLastTime", null).setData("pointerTargets", [fixture, blades]);
           }
         } else if (item.code === "reward_cow") {
           const frame = window.ForestAnimals.cowFrame();
@@ -595,7 +613,7 @@
         }
         if (!actor) return null;
         const interactiveDepthBoost = interactiveObjectTypes[item.code] ? 6 : 0;
-        actor.setAngle(Number(item.rotation) || 0)
+        actor.setAngle(item.code === "duck_float" ? 0 : Number(item.rotation) || 0)
           .setAlpha(preview ? .72 : 1)
           .setDepth(preview ? 998 : item.y - 2 + interactiveDepthBoost)
           .setVisible(this.sceneName === "world");
@@ -605,13 +623,23 @@
           // after responsive scaling, so clicks on a visible flame/lamp were
           // incorrectly reported as clicks on empty ground.
           const pointerTargets = actor.getData("pointerTargets") || [actor];
-          pointerTargets.forEach((target) => target.setInteractive({ useHandCursor: true }).on(
+          pointerTargets.forEach((target) => target.setInteractive({ useHandCursor: true,
+            ...(item.code === "duck_float" ? { pixelPerfect: true, alphaTolerance: 16 } : {}),
+          }).on(
             "pointerdown",
             (pointer, _localX, _localY, inputEvent) => {
-              if (this.placementActive) return;
+              if (this.placementActive || this.memoryCapturing || this.sceneName !== "world") return;
+              if (!pointer.wasTouch && pointer.button != null && pointer.button !== 0) return;
               inputEvent?.stopPropagation?.();
               this.cancelPointerMovement();
               const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+              if (item.code === "duck_float") {
+                this.lastDuckPointerAt = performance.now();
+                actor.setData("riverDuckState", window.ForestRiverDuck.flee(actor.getData("riverDuckState"), point, {
+                  hidden: document.hidden, reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+                }));
+                return; // A decorative friend, never a hunt target or an on/off fixture.
+              }
               window.dispatchEvent(new CustomEvent("forest-placed-object-pointer", {
                 detail: { index: placedIndex, x: point.x, y: point.y },
               }));
@@ -631,6 +659,7 @@
         else if (!["duck_float", "garden_pinwheel"].includes(item.code)) fixture?.setFrame(animatedObjectRows[item.code] * 4);
         actor.getData("ambientFx")?.clear();
       }
+      if (item.code === "garden_pinwheel") actor.setData("item", { ...item }).setData("rotorLastTime", null);
       if (!type) return;
       actor.setData("interactive", true).setData("active", Boolean(item.active)).setData("item", { ...item });
       if (type === "fire") {
@@ -671,12 +700,23 @@
     }
 
     syncPlacedObjects(placed = []) {
+      const duckStates = new Map();
+      const anchorKey = item => `${item.code}:${item.x}:${item.y}`;
       this.placedObjectActors?.forEach((actor) => {
+        const item = actor.getData?.("item");
+        if (item?.code === "duck_float") duckStates.set(anchorKey(item), {
+          state: actor.getData("riverDuckState"), clock: actor.getData("riverDuckClock"),
+        });
         this.tweens.killTweensOf(actor);
         this.tweens.killTweensOf(actor.getData?.("motionTarget"));
         actor.destroy();
       });
       this.placedObjectActors = placed.map((item, index) => this.createPlacedObjectActor(item, false, index)).filter(Boolean);
+      this.placedObjectActors.forEach(actor => {
+        const saved = duckStates.get(anchorKey(actor.getData("item")));
+        if (saved?.state) actor.setData("riverDuckState", saved.state).setData("riverDuckClock", saved.clock)
+          .setPosition(saved.state.x, saved.state.y);
+      });
     }
 
     updatePlacedObjectMotion(time) {
@@ -684,6 +724,19 @@
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.placedObjectActors?.forEach((actor) => {
         const item = actor.getData("item");
+        if (item.code === "duck_float") {
+          const last = actor.getData("riverDuckLastAt");
+          actor.setData("riverDuckLastAt", time);
+          const hidden = document.hidden || this.sceneName !== "world" || this.placementActive || actor.visible === false;
+          const delta = last == null ? 0 : Math.max(0, Math.min(50, time - last));
+          const state = window.ForestRiverDuck.update(actor.getData("riverDuckState"), delta, { hidden, reducedMotion });
+          const clock = (actor.getData("riverDuckClock") || 0) + (hidden || reducedMotion ? 0 : delta);
+          const pose = window.ForestRiverDuckArt.pose(state, reducedMotion ? 0 : clock);
+          actor.setData("riverDuckState", state).setData("riverDuckClock", clock).setPosition(state.x, state.y).setDepth(state.y - 2);
+          actor.getData("motionTarget").setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY)
+            .setFlipX(pose.flipX).setCrop(0, 0, 96, window.ForestRiverDuckArt.WATERLINE);
+          return;
+        }
         if (item.code === "reward_cow") {
           const started = actor.getData("cowReactionStartedAt");
           const frame = window.ForestAnimals.cowFrame(started == null ? -1 : Math.max(0, time - started), { reducedMotion });
@@ -694,15 +747,14 @@
         if (!accents) return;
         accents.clear();
         const phase = reducedMotion ? 0 : time / 1600 + item.x * .01;
-        if (item.code === "duck_float") {
-          // Subpixel bob, no horizontal travel, rotation or scale pumping.
-          actor.getData("motionTarget")?.setPosition(0, reducedMotion ? 0 : Math.sin(phase) * .45);
-        } else if (item.code === "garden_pinwheel") {
-          // Color steps suggest a turning toy while every blade pixel, hub,
-          // support, and footprint remains in its original position.
-          const colorFrame = reducedMotion ? 0 : Math.floor(time / 650) % 5;
+        if (item.code === "garden_pinwheel") {
           const rotor = actor.getData("rotorTarget");
-          rotor?.setAngle(0).setTexture(colorFrame ? `pinwheel-blades-${colorFrame}` : "pinwheel-blades");
+          const lastTime = actor.getData("rotorLastTime");
+          actor.setData("rotorLastTime", time);
+          // Rotate only the detached geometry around the photographed hub.
+          // Updating the clock while paused avoids a jump when motion resumes.
+          const running = !document.hidden && !reducedMotion && item.active !== false && this.sceneName === "world" && actor.visible !== false;
+          if (rotor && running && lastTime != null) rotor.setAngle((rotor.angle + Math.max(0, time - lastTime) * .04) % 360);
         }
         if (this.sceneName !== "world") return;
         if (item.code === "animated_fountain") {
