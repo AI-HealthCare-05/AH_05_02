@@ -1216,10 +1216,10 @@
 
     createRatAttackButton() {
       this.ratAttackPlate = this.add.graphics().setDepth(1000).setVisible(false);
-      this.ratAttackButton = this.add.text(0, 0, "✦ 공격  ›", {
+      this.ratAttackButton = this.add.text(0, 0, "공격  ›", {
         resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
-        color: "#603013", align: "center", fixedWidth: 112, fixedHeight: 38, padding: { x: 7, y: 10 },
+        color: "#fff9e9", align: "center", fixedWidth: 112, fixedHeight: 38, padding: { left: 29, right: 7, top: 10, bottom: 10 },
       }).setOrigin(.5).setDepth(1001).setVisible(false).setInteractive({ useHandCursor: true });
       const keepVisible = () => { this.ratHoverUntil = performance.now() + 650; };
       const press = () => { this.ratAttackPressedUntil = performance.now() + 140; };
@@ -1268,22 +1268,50 @@
       const approaching = this.pointerAttackEventId === this.ratEventId;
       const pressed = performance.now() < this.ratAttackPressedUntil;
       const highlighted = this.ratAttackHovered || approaching;
-      const visualState = `${approaching}:${pressed}:${highlighted}`;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const visualState = `${approaching}:${pressed}:${highlighted}:${reducedMotion}`;
       if (visualState !== this.ratAttackVisualState) {
         this.ratAttackVisualState = visualState;
-        this.ratAttackButton.setText(approaching ? "↗ 접근 중…" : "✦ 공격  ›");
-        // Fixed text dimensions preserve the same hit area while the label changes.
+        this.ratAttackButton.setText(approaching ? "접근 중…" : "공격  ›");
+        // Only the painted face lifts/depresses; the text and its hit area stay still.
+        const faceY = reducedMotion ? 0 : pressed ? 2 : highlighted ? -1 : 0;
+        const faceColor = approaching ? (pressed ? 0x386849 : 0x4b8259)
+          : pressed ? 0xc64e2d : highlighted ? 0xf47b36 : 0xde622e;
         const plate = this.ratAttackPlate.clear();
-        plate.fillStyle(0x54280f, .28).fillRoundedRect(-56, -16, 112, 38, 10);
-        plate.fillStyle(pressed ? 0xe9a64b : highlighted ? 0xffdfa0 : 0xf7c777, 1).fillRoundedRect(-56, -19, 112, 38, 10);
-        plate.lineStyle(highlighted ? 2 : 1.5, highlighted ? 0xfff3cd : 0x975020, 1).strokeRoundedRect(-56, -19, 112, 38, 10);
-        plate.lineStyle(1, 0xffffff, pressed ? .15 : .4).strokeRoundedRect(-53, -16, 106, 32, 8);
+        if (highlighted) plate.fillStyle(0xffdc84, .22).fillRoundedRect(-61, -24, 122, 51, 16);
+        plate.fillStyle(0x253b2c, .24).fillRoundedRect(-57, -14, 114, 40, 13);
+        plate.fillStyle(approaching ? 0x274331 : 0x803821, 1).fillRoundedRect(-56, -15, 112, 38, 12);
+        plate.fillStyle(0xffe4a7, 1).fillTriangle(-6, 19, 6, 19, 0, 28);
+        plate.fillStyle(faceColor, 1).fillRoundedRect(-56, -19 + faceY, 112, 38, 12);
+        plate.fillStyle(0xffffff, pressed ? .07 : .16).fillRoundedRect(-51, -15 + faceY, 102, 13, 7);
+        plate.lineStyle(highlighted ? 2.5 : 1.5, highlighted ? 0xfff4ce : 0xffd58b, 1).strokeRoundedRect(-56, -19 + faceY, 112, 38, 12);
+        // A code-drawn sword stays crisp and consistent across emoji/font platforms.
+        const swordPart = (points, color) => plate.fillStyle(color, 1).fillPoints(points.map(([x, y]) => ({ x, y: y + faceY })), true);
+        swordPart([[-43, 10], [-46, 7], [-40, 1], [-37, 4]], 0xffd58b);
+        swordPart([[-40, 2], [-29, -9], [-24, -11], [-26, -6], [-37, 5]], 0xfffbeb);
+        swordPart([[-44, -1], [-35, 8], [-33, 6], [-42, -3]], 0xffd58b);
       }
-      const pressOffset = pressed && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
-      const x = Math.max(60, Math.min(WORLD.width - 60, this.ratActor.x));
-      const y = Math.max(24, this.ratActor.y - 72) + pressOffset;
-      this.ratAttackButton.setPosition(x, y);
-      this.ratAttackPlate.setPosition(x, y);
+      let x = Math.max(60, Math.min(WORLD.width - 60, this.ratActor.x));
+      let y = Math.max(24, this.ratActor.y - 72);
+      let buttonScale = 1;
+      const camera = this.cameras?.main;
+      if (camera && typeof camera.getWorldPoint === "function" && Number.isFinite(camera.width) && camera.width > 0
+        && Number.isFinite(camera.height) && camera.height > 0) {
+        const viewportX = camera.x || 0, viewportY = camera.y || 0;
+        const topLeft = camera.getWorldPoint(viewportX, viewportY);
+        const bottomRight = camera.getWorldPoint(viewportX + camera.width, viewportY + camera.height);
+        const viewWidth = bottomRight?.x - topLeft?.x, viewHeight = bottomRight?.y - topLeft?.y;
+        if ([topLeft?.x, topLeft?.y, bottomRight?.x, bottomRight?.y, viewWidth, viewHeight].every(Number.isFinite)
+          && viewWidth > 0 && viewHeight > 0) {
+          // Include the halo/pointer plus one follow frame (at most 7.4 world units).
+          const margin = Math.min(12, viewWidth / 4, viewHeight / 4);
+          buttonScale = Math.min(1, (viewWidth - margin * 2) / 122, (viewHeight - margin * 2) / 52);
+          x = Math.max(topLeft.x + margin + 61 * buttonScale, Math.min(bottomRight.x - margin - 61 * buttonScale, this.ratActor.x));
+          y = Math.max(topLeft.y + margin + 24 * buttonScale, Math.min(bottomRight.y - margin - 28 * buttonScale, this.ratActor.y - 72));
+        }
+      }
+      this.ratAttackButton.setScale(buttonScale).setPosition(x, y);
+      this.ratAttackPlate.setScale(buttonScale).setPosition(x, y);
     }
 
     requestRatAttack() {

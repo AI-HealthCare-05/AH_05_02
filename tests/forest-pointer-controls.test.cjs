@@ -37,9 +37,11 @@ function actor() {
   return {
     handlers: {}, visible: false,
     on(type, handler) { this.handlers[type] = handler; return this; },
-    setOrigin() { return this; }, setDepth() { return this; }, setInteractive() { return this; },
+    setOrigin(x, y = x) { this.originX = x; this.originY = y; return this; },
+    setDepth(value) { this.depth = value; return this; }, setInteractive() { return this; },
     setVisible(value) { this.visible = value; return this; },
     setPosition(x, y) { this.x = x; this.y = y; return this; },
+    setScale(x, y = x) { this.scaleX = x; this.scaleY = y; return this; },
   };
 }
 
@@ -61,6 +63,8 @@ function attackFactory() {
         clear() { this.commands = []; return this; },
         fillStyle(...args) { this.commands.push(['fillStyle', ...args]); return this; },
         fillRoundedRect(...args) { this.commands.push(['fillRoundedRect', ...args]); return this; },
+        fillPoints(...args) { this.commands.push(['fillPoints', ...args]); return this; },
+        fillTriangle(...args) { this.commands.push(['fillTriangle', ...args]); return this; },
         lineStyle(...args) { this.commands.push(['lineStyle', ...args]); return this; },
         strokeRoundedRect(...args) { this.commands.push(['strokeRoundedRect', ...args]); return this; },
       });
@@ -195,7 +199,7 @@ test('animal and button clicks catch rabbit +1 and mouse +0 exactly once despite
   }
 });
 
-test('rounded attack plate shows hover, pressed and approaching feedback without changing its hit area', () => {
+test('coral sword attack plate has raised depth, bright hover, and green approach feedback with a fixed hit target', () => {
   const { scene, context, window } = setup();
   let now = 2000;
   context.performance.now = () => now;
@@ -208,37 +212,66 @@ test('rounded attack plate shows hover, pressed and approaching feedback without
   scene.ratSprite.handlers.pointerover();
   scene.updateRatAttackButton();
   const button = scene.ratAttackButton, plate = scene.ratAttackPlate;
-  assert.equal(button.text, '✦ 공격  ›');
+  assert.equal(button.text, '공격  ›');
+  assert.equal(button.style.color, '#fff9e9');
+  assert.deepEqual({ ...button.style.padding }, { left: 29, right: 7, top: 10, bottom: 10 }, 'asymmetric padding reserves the sword without squeezing the approach label');
+  assert.equal(button.originX, .5); assert.equal(button.originY, .5);
+  assert.ok(button.depth > plate.depth);
   assert.equal(plate.visible, true);
   assert.equal(button.input.cursor, 'pointer');
   const hitArea = { ...button.input.hitArea };
+  const originalHitArea = button.input.hitArea;
+  const position = [button.x, button.y];
   assert.deepEqual(hitArea, { x: 0, y: 0, width: 112, height: 38 });
+  assert.deepEqual(position, [620, 278]);
+  const rgb = color => [color >> 16 & 255, color >> 8 & 255, color & 255];
+  const fills = plate.commands.filter(command => command[0] === 'fillStyle');
+  assert.ok(fills.some(([, color, alpha]) => {
+    const [red, green, blue] = rgb(color);
+    return alpha === 1 && red > 150 && red > green * 1.15 && green > blue;
+  }), 'idle attack face has a warm orange/coral fill');
+  assert.ok(fills.some(([, , alpha]) => alpha > 0 && alpha < 1), 'a translucent shadow separates the button from the scene');
+  assert.ok(plate.commands.filter(command => command[0] === 'fillRoundedRect').length >= 3, 'layered base, face, and highlights give the plate raised depth');
+  assert.ok(plate.commands.some(command => command[0] === 'fillPoints'), 'the sword uses vector geometry, not a font glyph');
+  assert.ok(plate.commands.some(command => command[0] === 'fillTriangle'), 'the icon or button accents retain their pointed geometry');
+  const idleLines = plate.commands.filter(command => command[0] === 'lineStyle');
   const idleCommands = JSON.stringify(plate.commands);
   button.handlers.pointerover();
   assert.notEqual(JSON.stringify(plate.commands), idleCommands);
+  const hoverLines = plate.commands.filter(command => command[0] === 'lineStyle');
+  const brightness = color => rgb(color).reduce((sum, channel) => sum + channel, 0);
+  assert.ok(hoverLines.some((line, index) => idleLines[index] && brightness(line[2]) > brightness(idleLines[index][2])), 'hover brightens a border while preserving the interaction rectangle');
+  assert.deepEqual([button.x, button.y], position);
   button.handlers.pointerdown({ wasTouch: false, button: 2 }, 0, 0, { stopPropagation() { throw Error('right click must be ignored'); } });
   assert.equal(scene.pointerAttackEventId, null);
   button.handlers.pointerdown({ wasTouch: false, button: 0 }, 0, 0, { stopPropagation() {} });
   assert.equal(scene.pointerAttackEventId, 4);
-  assert.equal(button.text, '↗ 접근 중…');
-  assert.equal(button.y, 279);
-  assert.equal(plate.y, button.y);
+  assert.equal(button.text, '접근 중…');
+  assert.deepEqual([button.x, button.y], position, 'pressed feedback must not move the clickable text');
+  assert.deepEqual([plate.x, plate.y], position, 'only local plate drawing changes when pressed');
+  assert.equal(button.input.hitArea, originalHitArea);
   assert.deepEqual(button.input.hitArea, hitArea);
+  assert.ok(plate.commands.filter(command => command[0] === 'fillStyle').some(([, color]) => {
+    const [red, green, blue] = rgb(color);
+    return green > red && green > blue;
+  }), 'approaching changes the face to green');
   const pressedCommands = JSON.stringify(plate.commands);
   window.matchMedia = () => ({ matches: true });
   scene.updateRatAttackButton();
-  assert.equal(button.y, 278, 'reduced motion retains color feedback but removes press displacement');
-  assert.equal(JSON.stringify(plate.commands), pressedCommands);
+  assert.notEqual(JSON.stringify(plate.commands), pressedCommands, 'reduced motion removes only the painted face displacement, retaining the pressed color');
+  assert.deepEqual([button.x, button.y], position, 'reduced motion uses the same fixed world-space hit target');
+  assert.equal(button.input.hitArea, originalHitArea);
   button.handlers.pointerup();
   assert.notEqual(JSON.stringify(plate.commands), pressedCommands);
+  assert.deepEqual([button.x, button.y, plate.x, plate.y], [...position, ...position]);
   button.handlers.pointerout();
   now += 1000;
   scene.updateRatAttackButton();
   assert.equal(button.visible, true, 'a selected target remains visible while approaching');
-  assert.equal(button.text, '↗ 접근 중…');
+  assert.equal(button.text, '접근 중…');
   scene.cancelPointerMovement();
   scene.updateRatAttackButton();
-  assert.equal(button.text, '✦ 공격  ›');
+  assert.equal(button.text, '공격  ›');
   scene.ratActor.x = 0;
   scene.updateRatAttackButton();
   assert.equal(button.x, 60, 'the full fixed-size button remains inside the left map edge');
@@ -249,6 +282,26 @@ test('rounded attack plate shows hover, pressed and approaching feedback without
   scene.updateRatAttackButton();
   assert.equal(button.visible, false);
   assert.equal(plate.visible, false);
+});
+
+test('the monster hover button and plate hide during placement, indoor scenes, modals, memory capture, and inactive encounters', () => {
+  for (const mode of ['placement', 'home', 'garden', 'modal', 'memory', 'inactive']) {
+    const { scene, document } = setup();
+    scene.add = attackFactory(); scene.ratSprite = actor(); scene.ratActor = { x: 440, y: 350 };
+    scene.ratActive = true; scene.ratEventId = 5;
+    scene.createRatAttackButton(); scene.ratSprite.handlers.pointerover(); scene.updateRatAttackButton();
+    assert.equal(scene.ratAttackButton.visible, true);
+    if (mode === 'placement') scene.placementActive = true;
+    if (mode === 'home' || mode === 'garden') scene.sceneName = mode;
+    if (mode === 'modal') document.querySelector = () => ({ open: true });
+    if (mode === 'memory') scene.memoryCapturing = true;
+    if (mode === 'inactive') scene.ratActive = false;
+    scene.updateRatAttackButton();
+    assert.equal(scene.ratAttackButton.visible, false, mode);
+    assert.equal(scene.ratAttackPlate.visible, false, mode);
+    scene.requestRatAttack();
+    assert.equal(scene.pointerAttackEventId, null, `${mode} cannot queue a hidden attack`);
+  }
 });
 
 test('same-scene sync preserves a path, but entering a different room cancels path and attack', () => {

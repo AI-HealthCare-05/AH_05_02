@@ -10,10 +10,10 @@ const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.
 // math. The canvas is physical pixels; every actor remains in 768x512 units.
 class Camera {
   constructor(width, height) {
-    Object.assign(this, { width, height, zoom: 1, scrollX: 0, scrollY: 0, handlers: new Map() });
+    Object.assign(this, { x: 0, y: 0, width, height, zoom: 1, scrollX: 0, scrollY: 0, handlers: new Map() });
     this.matrix = { transformPoint: (x, y) => ({
-      x: (x - this.width / 2) * this.zoom + this.width / 2,
-      y: (y - this.height / 2) * this.zoom + this.height / 2,
+      x: (x - this.width / 2) * this.zoom + this.width / 2 + this.x,
+      y: (y - this.height / 2) * this.zoom + this.height / 2 + this.y,
     }) };
   }
   setBounds(x, y, width, height) { this.bounds = { x, y, width, height }; return this; }
@@ -40,8 +40,8 @@ class Camera {
   }
   getWorldPoint(x, y) {
     return {
-      x: (x - this.width / 2) / this.zoom + this.width / 2 + this.scrollX,
-      y: (y - this.height / 2) / this.zoom + this.height / 2 + this.scrollY,
+      x: (x - this.x - this.width / 2) / this.zoom + this.width / 2 + this.scrollX,
+      y: (y - this.y - this.height / 2) / this.zoom + this.height / 2 + this.scrollY,
     };
   }
 }
@@ -56,7 +56,7 @@ function setup({ devicePixelRatio = 1, zoom = 1, clientWidth = 768, clientHeight
     Game: class { constructor(config) { this.config = config; } },
   };
   const window = {
-    Phaser, devicePixelRatio, ForestHud: { zoom },
+    Phaser, devicePixelRatio, ForestHud: { zoom }, matchMedia: () => ({ matches: false }),
     dispatchEvent: event => events.push(event),
     addEventListener: (type, callback) => listeners.set(type, callback),
     removeEventListener: type => listeners.delete(type),
@@ -116,6 +116,115 @@ function setup({ devicePixelRatio = 1, zoom = 1, clientWidth = 768, clientHeight
 }
 
 function near(actual, expected) { assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} should equal ${expected}`); }
+
+function attackButton(scene) {
+  const display = () => ({
+    setVisible(value) { this.visible = value; return this; },
+    setPosition(x, y) { Object.assign(this, { x, y }); return this; },
+    setScale(x, y = x) { Object.assign(this, { scaleX: x, scaleY: y }); return this; },
+  });
+  scene.ratAttackButton = Object.assign(display(), {
+    input: { hitArea: { x: 0, y: 0, width: 112, height: 38 } },
+    setText(text) { this.text = text; return this; },
+  });
+  scene.ratAttackPlate = display();
+  for (const method of ['clear', 'fillStyle', 'fillRoundedRect', 'fillPoints', 'fillTriangle', 'lineStyle', 'strokeRoundedRect']) {
+    scene.ratAttackPlate[method] = function () { return this; };
+  }
+  Object.assign(scene, { ratActor: { x: 374, y: 286 }, ratActive: true, ratHovered: true, ratEventId: 7 });
+  return scene.ratAttackButton;
+}
+
+function assertAttackFits(scene, camera, margin = 12) {
+  const button = scene.ratAttackButton, plate = scene.ratAttackPlate;
+  const topLeft = camera.getWorldPoint(camera.x || 0, camera.y || 0);
+  const bottomRight = camera.getWorldPoint((camera.x || 0) + camera.width, (camera.y || 0) + camera.height);
+  assert.equal(button.visible, true); assert.equal(plate.visible, true);
+  assert.ok(button.x - 61 * button.scaleX >= topLeft.x + margin - 1e-9, 'left halo stays in the current view');
+  assert.ok(button.x + 61 * button.scaleX <= bottomRight.x - margin + 1e-9, 'right halo stays in the current view');
+  assert.ok(button.y - 24 * button.scaleY >= topLeft.y + margin - 1e-9, 'top halo stays in the current view');
+  assert.ok(button.y + 28 * button.scaleY <= bottomRight.y - margin + 1e-9, 'downward pointer stays in the current view');
+  assert.deepEqual([button.x, button.y, button.scaleX, button.scaleY], [plate.x, plate.y, plate.scaleX, plate.scaleY]);
+  assert.deepEqual(button.input.hitArea, { x: 0, y: 0, width: 112, height: 38 }, 'the local clickable rectangle is never rewritten');
+}
+
+test('400 percent hover attack controls include the halo and pointer inside every current camera edge', () => {
+  const { scene, camera, window } = setup({ clientWidth: 390, clientHeight: 260, zoom: 4 });
+  Object.assign(scene.player, { x: 400, y: 350 }); camera.preRender();
+  const button = attackButton(scene), hitArea = button.input.hitArea;
+  const corners = [camera.getWorldPoint(0, 0), camera.getWorldPoint(camera.width, camera.height)];
+  near(corners[1].x - corners[0].x, 192);
+  for (const [x, y] of [[374, 286], [490, 350], [305, 350], [400, 512], [0, 0], [768, 512]]) {
+    Object.assign(scene.ratActor, { x, y });
+    scene.pointerAttackEventId = scene.ratEventId;
+    scene.ratAttackHovered = true;
+    for (const reduced of [false, true]) {
+      window.matchMedia = () => ({ matches: reduced });
+      scene.updateRatAttackButton(); assertAttackFits(scene, camera);
+      assert.equal(button.scaleX, 1); assert.equal(button.input.hitArea, hitArea);
+      assert.equal(button.text, '접근 중…', 'an offscreen tracked animal does not hide the active control');
+    }
+  }
+});
+
+test('portrait 400 percent scales both attack layers to an 83-world-unit view and restores scale after zooming out', () => {
+  const { scene, camera } = setup({ clientWidth: 390, clientHeight: 600, zoom: 4 });
+  Object.assign(scene.player, { x: 400, y: 350 }); camera.preRender();
+  const button = attackButton(scene), hitArea = button.input.hitArea;
+  scene.updateRatAttackButton(); assertAttackFits(scene, camera);
+  near(camera.width / camera.zoom, 83.2);
+  near(button.scaleX, (83.2 - 24) / 122);
+  scene.setCameraZoom(1);
+  scene.updateRatAttackButton(); assertAttackFits(scene, camera);
+  assert.equal(button.scaleX, 1); assert.equal(button.scaleY, 1);
+  assert.equal(button.input.hitArea, hitArea);
+});
+
+test('hover attack viewport conversion includes a nonzero camera origin rather than assuming canvas origin', () => {
+  const { scene, camera } = setup({ clientWidth: 390, clientHeight: 600, zoom: 4 });
+  Object.assign(scene.player, { x: 400, y: 350 }); camera.preRender();
+  Object.assign(camera, { x: 75, y: 31 });
+  const calls = [], getWorldPoint = camera.getWorldPoint.bind(camera);
+  camera.getWorldPoint = (x, y) => { calls.push([x, y]); return getWorldPoint(x, y); };
+  attackButton(scene); scene.updateRatAttackButton();
+  assert.deepEqual(calls, [[75, 31], [75 + camera.width, 31 + camera.height]]);
+  assertAttackFits(scene, camera);
+  near(scene.ratAttackButton.scaleX, (83.2 - 24) / 122);
+});
+
+test('invalid hover attack cameras retain world fallback and clear any previous portrait scale', () => {
+  const { scene, camera } = setup({ clientWidth: 390, clientHeight: 600, zoom: 4 });
+  const button = attackButton(scene);
+  scene.updateRatAttackButton(); assert.ok(button.scaleX < 1);
+  for (const invalid of [undefined, {}, { width: NaN, height: 10, getWorldPoint() {} },
+    { width: 10, height: 0, getWorldPoint() {} },
+    { width: 10, height: 10, getWorldPoint: () => ({ x: NaN, y: 0 }) },
+    { width: 10, height: 10, getWorldPoint: () => ({ x: 1, y: 1 }) }]) {
+    scene.cameras.main = invalid;
+    Object.assign(scene.ratActor, { x: 0, y: 0 }); scene.updateRatAttackButton();
+    assert.deepEqual([button.x, button.y, button.scaleX, button.scaleY], [60, 24, 1, 1]);
+    Object.assign(scene.ratActor, { x: 768, y: 350 }); scene.updateRatAttackButton();
+    assert.deepEqual([button.x, button.y], [708, 278]);
+  }
+  scene.cameras.main = camera;
+  Object.assign(camera, { width: 2, height: 2, zoom: 1 });
+  scene.updateRatAttackButton(); assertAttackFits(scene, camera, .5);
+  assert.ok(Number.isFinite(button.scaleX) && button.scaleX > 0, 'tiny valid views shrink the gutter without a non-fitting minimum scale');
+});
+
+test('the hover attack gutter absorbs one mounted movement frame before camera follow renders', () => {
+  for (const [clientWidth, clientHeight] of [[390, 260], [390, 600]]) {
+    const { scene, camera } = setup({ clientWidth, clientHeight, zoom: 4 });
+    attackButton(scene);
+    for (const [dx, dy] of [[-7.4, 0], [7.4, 0], [0, -7.4], [0, 7.4]]) {
+      Object.assign(scene.player, { x: 400, y: 350 }); camera.preRender();
+      Object.assign(scene.ratActor, { x: dx < 0 ? 768 : 0, y: dy < 0 ? 512 : 0 });
+      scene.updateRatAttackButton(); assertAttackFits(scene, camera);
+      scene.player.x += dx; scene.player.y += dy; camera.preRender();
+      assertAttackFits(scene, camera, 3);
+    }
+  }
+});
 
 test('new 100 percent shows the old 50 percent world at 3:2 without changing saved coordinates or sprite scale', () => {
   for (const [devicePixelRatio, backing] of [[1, 2], [1.25, 2], [2, 2], [3, 2], [4, 2]]) {
