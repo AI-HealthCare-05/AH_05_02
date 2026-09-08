@@ -48,16 +48,22 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile
+      args:
+        ML_RESEARCH_RUNTIME: "true"
     image: ${DOCKER_USER:-local}/${DOCKER_REPOSITORY:-ah-05-02}:app-${APP_VERSION:-v0.1.0}
     restart: unless-stopped
     env_file:
       - .env
     environment:
       DB_GENERATE_SCHEMAS: "true"
+      ML_RESEARCH_ENDPOINTS_ENABLED: "true"
+      ML_SHARED7_MODEL_URI: /app/models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib
+      ML_FIRST_INTERVAL_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib
     command: ["sh", "app/start-fastapi.sh", "--reload"]
     volumes:
       - ./app:/app/app
       - ./src/frontend:/app/src/frontend:ro
+      - ./models:/app/models:ro
     ports:
       - "127.0.0.1:8001:8000"
     healthcheck:
@@ -97,6 +103,40 @@ services:
       - ./models:/app/storage/models:ro
       - ./models:/app/models:ro
       - model_cache:/app/storage/cache
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/ai-worker-ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - healthcare
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      fastapi:
+        condition: service_healthy
+
+  ai-worker-current:
+    build:
+      context: .
+      dockerfile: ai_worker/Dockerfile.current-screening
+    image: ${DOCKER_USER:-local}/${DOCKER_REPOSITORY:-ah-05-02}:ai-current-${AI_CURRENT_WORKER_VERSION:-v0.6.1}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_STREAM: ${CURRENT_SCREENING_REDIS_STREAM:-ai:jobs:current-screening}
+      REDIS_CONSUMER_GROUP: current-screening-workers
+      S2_MODEL_RUNTIME_ENABLED: "false"
+      CURRENT_SCREENING_MODEL_URI: /app/models/artifacts/candidates/diabetes_current_screening/v061/model.joblib
+      CURRENT_SCREENING_MANIFEST_URI: /app/models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json
+    command: ["uv", "run", "--no-sync", "python", "-m", "ai_worker.main"]
+    mem_limit: 4g
+    volumes:
+      - ./models:/app/models:ro
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/ai-worker-ready"]
       interval: 10s

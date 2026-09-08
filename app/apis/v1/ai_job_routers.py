@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 
+from app.apis.responses import error_detail
 from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest, AIJobResponse
 from app.services.ai_jobs import create_ai_job, get_ai_job, job_channel
@@ -20,7 +21,10 @@ async def enqueue_ai_job(request: AIJobCreateRequest) -> AIJobResponse:
     try:
         job = await create_ai_job(request)
     except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=error_detail("QUEUE_UNAVAILABLE", str(exc), retryable=True),
+        ) from exc
     return to_response(job)
 
 
@@ -28,7 +32,10 @@ async def enqueue_ai_job(request: AIJobCreateRequest) -> AIJobResponse:
 async def read_ai_job(job_id: str) -> AIJobResponse:
     job = await get_ai_job(job_id)
     if job is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI 작업을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error_detail("AI_JOB_NOT_FOUND", "AI 작업을 찾을 수 없습니다."),
+        )
     return to_response(job)
 
 
@@ -62,7 +69,10 @@ async def stream_job_events(job_id: str) -> AsyncIterator[str]:
 @ai_job_router.get("/{job_id}/events")
 async def read_ai_job_events(job_id: str) -> StreamingResponse:
     if await get_ai_job(job_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="AI 작업을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error_detail("AI_JOB_NOT_FOUND", "AI 작업을 찾을 수 없습니다."),
+        )
     return StreamingResponse(
         stream_job_events(job_id),
         media_type="text/event-stream",

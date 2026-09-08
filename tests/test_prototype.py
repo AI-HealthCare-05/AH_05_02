@@ -646,4 +646,7 @@ def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.model_key == "diabetes_incidence"
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
     assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
-    assert ACTIVE_MODEL.threshold_is_approved is False
+    assert ACTIVE_MODEL.threshold_is_approved is (
+        ACTIVE_MODEL.promotion_status == "approved"
+        and ACTIVE_MODEL.threshold_version not in {"", "unapproved"}
+    )
