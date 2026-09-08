@@ -131,7 +131,8 @@
     preload() {
       this.load.image("world-bg", "/static/assets/carrot-forest-world-v6.png?v=20260907-1");
       this.load.image("home-bg", "/static/assets/carrot-forest-home-v3.png?v=20260907-1");
-      this.load.image("home-record-player", "/static/assets/home-record-player-cottage-v2.png?v=20260907-1");
+      this.load.image("home-record-player", "/static/assets/home-record-player-v159.png?v=20260908-1");
+      this.load.image("forest-memory-camera", "/static/assets/forest-memory-camera-v159.png?v=20260908-1");
       this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       this.load.spritesheet("lpc-rat", "/static/assets/carrot-forest-lpc-rat-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
@@ -176,6 +177,7 @@
       this.lastLightingRefresh = 0;
       this.nightStrength = 0;
       this.createHomeRecordPlayer();
+      this.createMemoryCamera();
       this.player = this.add.container(this.avatar.x, this.avatar.y);
       this.motionFx = this.add.graphics().setDepth(2);
       this.player.add(this.motionFx);
@@ -219,7 +221,7 @@
       this.cursors = this.input.keyboard.createCursorKeys();
       // Phaser가 Space를 가로채면 슬로건 textarea에서 띄어쓰기가 되지 않는다.
       this.input.keyboard.removeCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);
-      const formFocused = () => ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(document.activeElement?.tagName);
+      const formFocused = () => this.memoryCapturing || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(document.activeElement?.tagName);
       this.input.keyboard.on("keydown-Q", () => { if (!formFocused()) window.dispatchEvent(new CustomEvent("forest-phaser-interact")); });
       this.input.keyboard.on("keydown-R", (event) => {
         if (event.repeat || formFocused()) return;
@@ -254,6 +256,7 @@
       });
       this.events.on("shutdown", () => this.detachWindowEvents());
       this.attachWindowEvents();
+      this.memoryController = window.ForestMemories ? new window.ForestMemories.Controller(this) : null;
       window.LpcAvatarEngine?.ready().then(() => this.rebuildAvatar());
       document.documentElement.classList.add("phaser-world-ready");
       this.resizeViewport();
@@ -261,6 +264,7 @@
       window.carrotForestPhaserMove = (direction) => this.nudge(direction);
       this.input.once("pointerdown", () => document.getElementById("phaser-world")?.focus());
       this.input.on("pointerdown", (pointer) => {
+        if (this.memoryCapturing || performance.now() - (this.lastMemoryPointerAt || -Infinity) < 180) return;
         if (!pointer.wasTouch && pointer.button !== 0) return;
         if (performance.now() - this.lastPetPointerAt < 120) return;
         this.cancelPointerMovement();
@@ -295,6 +299,7 @@
     }
 
     resizeViewport() {
+      this.memoryController?.cancel("화면 크기가 바뀌어 촬영이 취소되었어요. 다시 찍어 주세요.");
       const size = viewportSize();
       const camera = this.cameras.main;
       this.scale?.setZoom(1 / size.density);
@@ -378,7 +383,13 @@
     createHomeRecordPlayer() {
       const x = 452;
       const y = 320;
-      const furniture = this.add.image(0, 0, "home-record-player").setOrigin(.5, 1).setDisplaySize(76, 108);
+      // v159 replaces home-record-player-cottage-v2.png; alpha-trim and uniform
+      // fit keep the generated square canvas from squashing the furniture.
+      const furniture = this.add.image(0, 0, "home-record-player").setOrigin(.5, 1);
+      if (window.ForestMemories) {
+        furniture.setTexture(window.ForestMemories.trimmedTexture(this, "home-record-player"));
+        window.ForestMemories.fitImage(furniture, 76, 108);
+      } else furniture.setDisplaySize(76, 108);
       const note = this.add.text(33, -112, "♪", {
         resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f6d795", stroke: "#775332", strokeThickness: 2,
@@ -387,6 +398,22 @@
         .setDepth(y - 2).setVisible(false);
       this.recordPlayerNote = note;
       this.syncHomeRecordPlayer(this.homeRecordPlaying);
+    }
+
+    createMemoryCamera() {
+      const memories = window.ForestMemories;
+      if (!memories || !this.textures.exists("forest-memory-camera")) return;
+      const { x, y, width, height } = memories.CAMERA;
+      const key = memories.trimmedTexture(this, "forest-memory-camera");
+      const body = memories.fitImage(this.add.image(0, 0, key).setOrigin(.5, 1), width, height);
+      this.memoryCameraActor = this.add.container(x, y, [body]).setDepth(y - 2);
+      body.setInteractive({ useHandCursor: true }).on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.lastMemoryPointerAt = performance.now();
+        if (this.sceneName !== "world" || this.memoryCapturing || this.placementActive) return;
+        this.cancelPointerMovement();
+        window.dispatchEvent(new CustomEvent("forest-memory-request"));
+      });
     }
 
     syncHomeRecordPlayer(playing) {
@@ -819,10 +846,17 @@
     }
 
     attachWindowEvents() {
-      this.onCameraZoom = (event) => this.setCameraZoom(event.detail?.zoom);
+      this.onCameraZoom = (event) => {
+        this.memoryController?.cancel("카메라 배율을 바꾸어 촬영이 취소되었어요.");
+        this.setCameraZoom(event.detail?.zoom);
+      };
       window.addEventListener("forest-camera-zoom", this.onCameraZoom);
-      this.onAvatar = (event) => this.applyAvatarUpdate(normalizedAvatar({ ...this.avatar, ...(event.detail || {}) }));
+      this.onAvatar = (event) => {
+        this.memoryController?.cancel("캐릭터가 바뀌어 촬영이 취소되었어요.");
+        this.applyAvatarUpdate(normalizedAvatar({ ...this.avatar, ...(event.detail || {}) }));
+      };
       this.onState = (event) => {
+        this.memoryController?.cancel("숲 상태가 바뀌어 촬영이 취소되었어요. 다시 찍어 주세요.");
         const detail = event.detail || {};
         if (detail.avatar) {
           const nextAvatar = normalizedAvatar(detail.avatar);
@@ -844,15 +878,19 @@
       window.addEventListener("forest-avatar-action", this.onAction);
       this.onPetFed = () => this.showPetHeart();
       window.addEventListener("forest-pet-fed", this.onPetFed);
-      this.onPlacement = (event) => this.syncPlacement(event.detail || {});
+      this.onPlacement = (event) => {
+        this.memoryController?.cancel("가구 배치를 시작해 촬영이 취소되었어요.");
+        this.syncPlacement(event.detail || {});
+      };
       window.addEventListener("forest-placement-updated", this.onPlacement);
       this.onAtmosphere = (event) => {
+        this.memoryController?.cancel("숲 조명이 바뀌어 촬영이 취소되었어요.");
         this.atmosphereEnabled = event.detail?.enabled !== false;
         this.lastLightingRefresh = 0;
         this.updateWorldAtmosphere(performance.now());
       };
       window.addEventListener("forest-atmosphere-updated", this.onAtmosphere);
-      this.onCowReaction = (event) => this.reactCow(Number(event.detail?.index), event.detail?.reaction);
+      this.onCowReaction = (event) => { if (!this.memoryCapturing) this.reactCow(Number(event.detail?.index), event.detail?.reaction); };
       window.addEventListener("forest-cow-react", this.onCowReaction);
       this.onMoveTo = (event) => {
         const point = event.detail || {};
@@ -860,6 +898,7 @@
       };
       window.addEventListener("forest-move-to", this.onMoveTo);
       this.onControlsHidden = () => {
+        if (this.memoryCapturing) return;
         this.forcedDirection = null;
         this.forcedUntil = 0;
       };
@@ -867,6 +906,7 @@
     }
 
     detachWindowEvents() {
+      this.memoryController?.destroy();
       this.cameras?.main?.off("followupdate", this.onCameraView);
       if (window.ForestCamera === this.cameraApi) delete window.ForestCamera;
       window.removeEventListener("forest-camera-zoom", this.onCameraZoom);
@@ -882,6 +922,7 @@
     }
 
     showPetHeart() {
+      if (this.memoryCapturing) return;
       const actor = this.pet?.visible ? this.pet : this.petEmoji;
       if (!actor || !actor.visible) return;
       this.petHeart.setPosition(actor.x, actor.y - 35).setAlpha(1).setScale(0.7).setVisible(true);
@@ -893,6 +934,7 @@
     }
 
     playAction(pose, duration = 1100) {
+      if (this.memoryCapturing) return;
       duration = window.LpcAvatarEngine?.actionDuration(this.avatar, pose) || duration;
       this.actionPose = pose;
       this.actionStartedAt = performance.now();
@@ -986,6 +1028,7 @@
     setScene(sceneName) {
       const nextSceneName = ["world", "home", "garden"].includes(sceneName) ? sceneName : "world";
       if (nextSceneName !== this.sceneName) {
+        this.memoryController?.cancel("장소가 바뀌어 촬영이 취소되었어요.");
         this.ratHovered = false;
         this.ratAttackHovered = false;
         this.ratHoverUntil = 0;
@@ -1000,6 +1043,7 @@
       this.sceneName = nextSceneName;
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
       this.recordPlayerActor?.setVisible(this.sceneName === "home");
+      this.memoryCameraActor?.setVisible(this.sceneName === "world");
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
       this.ratActor?.setVisible(this.sceneName === "world" && this.ratActive);
       this.placedObjectActors?.forEach((actor) => actor.setVisible(this.sceneName === "world"));
@@ -1007,6 +1051,7 @@
     }
 
     nudge(direction) {
+      if (this.memoryCapturing) return;
       this.cancelPointerMovement();
       this.forcedDirection = directionRows[direction] == null ? null : direction;
       this.forcedUntil = performance.now() + 170;
@@ -1019,7 +1064,7 @@
     }
 
     isWorldInputBlocked() {
-      return Boolean(document.querySelector?.('dialog[open], [aria-modal="true"]:not([hidden])'));
+      return this.memoryCapturing || Boolean(document.querySelector?.('dialog[open], [aria-modal="true"]:not([hidden])'));
     }
 
     canWalkSegment(from, to) {
@@ -1226,10 +1271,13 @@
       if (x < 28 || x > WORLD.width - 28 || y < 42 || y > WORLD.height - 32) return true;
       if (this.sceneName === "home") return x < 64 || x > 710 || y < 100 || y > 458;
       if (this.sceneName === "garden") return x < 105 || x > 675 || y < 105 || y > 458;
+      const camera = window.ForestMemories?.CAMERA;
+      if (camera && Math.abs(x - camera.x) < 20 && y > camera.y - 15 && y < camera.y + 8) return true;
       return (x > 45 && x < 335 && y > 55 && y < 275) || (x > 465 && x < 735 && y > 45 && y < 255) || (x > 35 && x < 270 && y > 300 && y < 475);
     }
 
     emitPosition(force = false) {
+      if (this.memoryCapturing) return;
       const now = performance.now();
       if (!force && now - this.lastPersist < 180) return;
       this.lastPersist = now;
@@ -1237,6 +1285,9 @@
     }
 
     update(time, delta) {
+      // The portrait owns animation while shooting. Encounters, auto-hunting,
+      // movement, rewards and persistence must never run behind its dialog.
+      if (this.memoryCapturing) { this.memoryController?.update(); return; }
       if (this.mountTransitioning) return;
       if (this.sceneName === "home" && this.homeRecordPlaying) {
         this.recordPlayerNote?.setY(-112 + Math.sin(time / 420) * 2).setAlpha(.8 + Math.sin(time / 420) * .15);
@@ -1429,6 +1480,7 @@
     }
 
     tryAttackRat(time) {
+      if (this.memoryCapturing) return;
       if (this.sceneName !== "world" || !this.ratActive || time - this.lastRatAttackAt < 320) return;
       this.lastRatAttackAt = time;
       const dx = this.ratActor.x - this.avatar.x;
@@ -1443,6 +1495,7 @@
     }
 
     updateRat(time, delta) {
+      if (this.memoryCapturing) return;
       if (this.sceneName !== "world") {
         this.ratActor?.setVisible(false);
         return;
@@ -1490,6 +1543,7 @@
     }
 
     updatePet(time, delta, playerMoving) {
+      if (this.memoryCapturing) return;
       if ((!this.pet || !this.pet.visible) && (!this.petEmoji || !this.petEmoji.visible)) return;
       if (!this.petTrail.length) {
         this.petTrail.push({ x: this.avatar.x, y: this.avatar.y, direction: this.avatar.direction, time });

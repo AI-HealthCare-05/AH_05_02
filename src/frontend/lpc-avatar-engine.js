@@ -333,8 +333,30 @@
     return manifest?.items.filter((record) => record.category === category) || [];
   }
 
+  async function prepare(avatars) {
+    if (!await readyPromise) throw new Error("공식 LPC 의상 목록을 불러오지 못했어요.");
+    const groups = avatars.map(avatar => {
+      const layers = selectedLayers(avatar);
+      const required = ["body", "head", "outfit", "bottom"];
+      if (avatar.cosmetics?.lpcShoes !== "none") required.push("shoes");
+      if (required.some(category => !layers.some(layer => layer.category === category && layer.file))) {
+        throw new Error("공식 의상의 몸·얼굴·상의·하의 레이어가 완전하지 않아요.");
+      }
+      return layers;
+    });
+    const files = [...new Set(groups.flatMap(layers => layers.map(layer => layer.file)).filter(Boolean))];
+    if (!files.length) throw new Error("촬영할 공식 의상 레이어가 없어요.");
+    files.forEach(ensureImage);
+    await Promise.all(files.map(file => pendingImages.get(file)).filter(Boolean));
+    // draw() deliberately permits progressive loading during normal gameplay;
+    // a keepsake must fail closed instead of recording partial/bare outfits.
+    if (files.some(file => !images.has(file))) throw new Error("일부 공식 의상 이미지를 불러오지 못했어요. 다시 촬영해 주세요.");
+    return true;
+  }
+
   window.LpcAvatarEngine = {
     ready: () => readyPromise,
+    prepare,
     isReady: () => Boolean(manifest),
     draw,
     catalog,

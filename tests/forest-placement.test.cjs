@@ -10,6 +10,7 @@ function setup(code = 'animated_fountain', placed = []) {
   const context = vm.createContext({
     currentScene: 'world', placementCode: code, waterObjectCodes: new Set(['duck_float']),
     WORLD_WIDTH: 768, WORLD_HEIGHT: 512, state: { placed },
+    window: { ForestMemories: { CAMERA: { x: 694, y: 338, width: 52, height: 76 } } },
     blocked() { throw new Error('Decorative traversal collision must not reserve grass'); },
   });
   vm.runInContext(functions, context);
@@ -26,7 +27,7 @@ test('fountain belongs on free land; only a floating duck is restricted to the p
   assert.equal(duck.placementCellValid(128, 400), true);
 });
 
-test('only world boundaries, house, garden, pond, and an occupied cell prevent placement', () => {
+test('world boundaries, house, garden, pond, and occupied cells prevent placement', () => {
   const context = setup('bench');
   for (const [x, y] of [[32, 320], [32, 32], [384, 320], [576, 352], [736, 480]]) {
     assert.equal(context.placementCellValid(x, y), true, `${x},${y} grass`);
@@ -46,4 +47,18 @@ test('adjacent 32px grass cells are usable but actual overlapping centers remain
   context.state.placed = [{ code: 'bench', x: 416, y: 320 }];
   assert.equal(context.placementCellValid(416, 320), true, 'moving the selected item must not collide with itself');
   assert.ok(context.placementGridCells().some(cell => cell.x === 32 && cell.y === 32 && cell.valid));
+});
+
+test('the permanent camera reserves only overlapping tripod-foot cells and preserves adjacent lawn', () => {
+  const context = setup('bench');
+  for (const [x, y] of [[694, 338], [672, 320], [704, 320], [672, 352], [704, 352]]) {
+    assert.equal(context.placementCellValid(x, y), false, `${x},${y} overlaps camera feet`);
+  }
+  for (const [x, y] of [[640, 320], [736, 320], [640, 352], [736, 352], [672, 288], [704, 288], [672, 384], [704, 384]]) {
+    assert.equal(context.placementCellValid(x, y), true, `${x},${y} adjacent grass stays usable`);
+  }
+  assert.equal(context.placementGridCells().filter(cell => !cell.valid && cell.x >= 640 && cell.y >= 288 && cell.y <= 384).length, 4);
+  context.window.ForestMemories.CAMERA = { x: 416, y: 320 };
+  assert.equal(context.placementCellValid(416, 320), false, 'the shared camera center is authoritative');
+  assert.equal(context.placementCellValid(694, 338), true, 'the old center is not permanently hardcoded');
 });

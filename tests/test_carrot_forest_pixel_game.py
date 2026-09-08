@@ -10,19 +10,20 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_home_record_player_uses_same_transparent_cottage_sprite_in_both_renderers() -> None:
     import struct
 
-    asset_name = "home-record-player-cottage-v2.png"
+    asset_name = "home-record-player-v159.png"
     raw = (ROOT / "src/frontend/assets" / asset_name).read_bytes()
     assert raw[:8] == b"\x89PNG\r\n\x1a\n"
-    assert struct.unpack(">II", raw[16:24]) == (1008, 1237)
+    assert struct.unpack(">II", raw[16:24]) == (1254, 1254)
     assert raw[25] == 6  # RGBA, so no opaque rectangular background.
 
     game = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     phaser = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
     worker = (ROOT / "src/frontend/forest-sw.js").read_text(encoding="utf-8")
     assert all(asset_name in script for script in (game, phaser, worker))
-    assert "context.drawImage(homeRecordPlayerImage, 414, 212, 76, 108)" in game
-    assert 'this.add.image(0, 0, "home-record-player")' in phaser
-    assert "setDisplaySize(76, 108)" in phaser
+    assert "getImageData" in game and "homeRecordPlayerBounds" in game
+    assert 'trimmedTexture(this, "home-record-player")' in phaser
+    assert "fitImage" in phaser
+    assert "context.drawImage(homeRecordPlayerImage, 414, 212, 76, 108)" not in game
     assert 'distanceTo(452, 300) < 76' in game
     assert 'x >= 410 && x <= 494 && y >= 208 && y <= 325' in game
     assert "recordPlayerDisc" not in phaser
@@ -453,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v158-2";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v159-4";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -487,7 +488,8 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
         "carrot-forest-garden-v2.png": (1536, 1024),
         "carrot-forest-storage-atlas-v4.png": (1280, 1024),
         "carrot-forest-animated-objects-v2.png": (512, 512),
-        "home-record-player-cottage-v2.png": (1008, 1237),
+        "home-record-player-v159.png": (1254, 1254),
+        "forest-memory-camera-v159.png": (1254, 1254),
     }
     from PIL import Image
 
@@ -504,7 +506,7 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
         assert "carrot-forest-garden-v2.png" in source
     assert "carrot-forest-storage-atlas-v4.png" in game_script
     assert "carrot-forest-animated-objects-v2.png" in phaser_script
-    assert "home-record-player-cottage-v2.png" in phaser_script
+    assert "home-record-player-v159.png" in phaser_script
     assert "Full-screen game shell" in css
     assert '<h1 id="forest-title">당근의 숲</h1>' in html
     assert "CARROT FOREST · WORLD STUDIO" not in html

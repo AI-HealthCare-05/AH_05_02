@@ -28,6 +28,213 @@
     forestFairy: { name: "숲 속의 요정", audioKey: "homeRecordForestFairy" },
   };
 
+  // Keepsake guests are temporary copies of the six saved official looks.
+  // Never copy account/profile fields, rename wardrobe cards, or persist photos.
+  const MEMORY_PRESET_GUESTS = Object.freeze([
+    ["female", "성실한 당근"], ["male", "꾸준한 당근"],
+    ["moon_mage", "달빛의 빛샘"], ["forest_witch", "숲속의 수인"],
+    ["inventor", "발명의 준혁"], ["knight", "해결의 세준"],
+  ]);
+
+  function buildMemoryPresets(sourceState) {
+    const history = Array.isArray(sourceState?.outfitHistory) ? sourceState.outfitHistory : [];
+    return MEMORY_PRESET_GUESTS.map(([role, nickname], index) => {
+      const look = history.find((candidate) => candidate?.presetRole === role);
+      if (!look?.cosmetics || !look?.tuning || !look?.gender) {
+        throw new Error(`프리셋${index + 1}을 준비하지 못했어요. 숲을 다시 열고 시도해 주세요.`);
+      }
+      return {
+        number: index + 1, nickname,
+        avatar: {
+          engine: "lpc", name: nickname, gender: look.gender, direction: "down",
+          cosmetics: JSON.parse(JSON.stringify(look.cosmetics)),
+          tuning: JSON.parse(JSON.stringify(look.tuning)),
+        },
+      };
+    });
+  }
+
+  function memoryPhotoFilename(date = new Date()) {
+    const pad = (number) => String(number).padStart(2, "0");
+    return `당근의숲_추억사진_${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}.png`;
+  }
+
+  function createForestMemoryUi({ getState, eventTarget = window, doc = document, urlApi = URL,
+    setTimer = window.setTimeout.bind(window), clearTimer = window.clearTimeout.bind(window), now = Date.now } = {}) {
+    const dialog = doc.querySelector("#forest-memory-dialog");
+    if (!dialog) return null;
+    const status = doc.querySelector("#forest-memory-status");
+    const progress = doc.querySelector("#forest-memory-progress");
+    const preview = doc.querySelector("#forest-memory-preview");
+    const figure = doc.querySelector("#forest-memory-figure");
+    const save = doc.querySelector("#forest-memory-save");
+    const retake = doc.querySelector("#forest-memory-retake");
+    const closeButton = doc.querySelector("#forest-memory-close");
+    const ownedUrls = new Map();
+    const backgroundInert = new Map();
+    let sequence = 0, session = null, returnFocus = null, timeout = 0;
+
+    const emit = (type, detail) => eventTarget.dispatchEvent(new CustomEvent(type, { detail }));
+    const active = (detail) => session?.stage === "busy" && detail?.requestId === session.requestId;
+    function setSaveEnabled(enabled) {
+      save.setAttribute("aria-disabled", String(!enabled));
+      save.tabIndex = enabled ? 0 : -1;
+      if (!enabled) { save.removeAttribute("href"); save.removeAttribute("download"); }
+    }
+    function freezeBackground() {
+      // Inert prevents wardrobe/scene controls from changing the live game,
+      // but unlike an opaque/modal backdrop does not cover its animation.
+      let branch = dialog;
+      while (branch.parentElement) {
+        for (const sibling of branch.parentElement.children) {
+          if (sibling !== branch && !backgroundInert.has(sibling)) {
+            backgroundInert.set(sibling, Boolean(sibling.inert));
+            sibling.inert = true;
+          }
+        }
+        branch = branch.parentElement;
+        if (branch === doc.body) break;
+      }
+    }
+    function stopWaiting() {
+      clearTimer(timeout); timeout = 0;
+      for (const [element, inert] of backgroundInert) element.inert = inert;
+      backgroundInert.clear();
+      doc.body.classList.remove("forest-memory-shooting");
+      dialog.setAttribute("aria-busy", "false");
+      progress.hidden = true;
+    }
+    function releasePhoto() {
+      preview.removeAttribute("src"); figure.hidden = true; setSaveEnabled(false);
+      const photo = session?.photo;
+      if (session) session.photo = null;
+      if (!photo?.owned) return;
+      // A download may still be consuming the URL when the preview is closed.
+      // Retire only after its short grace period, or immediately on page exit.
+      const retire = () => { urlApi.revokeObjectURL(photo.url); ownedUrls.delete(photo.url); };
+      const delay = Math.max(0, photo.lastDownloadAt + 10000 - now());
+      ownedUrls.set(photo.url, setTimer(retire, delay));
+    }
+    function cancelCurrent() {
+      if (!session) return;
+      const previous = session;
+      previous.stage = "closed";
+      emit("forest-memory-cancel", { requestId: previous.requestId });
+      releasePhoto(); session = null;
+      stopWaiting();
+    }
+    function close() {
+      cancelCurrent();
+      if (dialog.open) dialog.close();
+      const target = returnFocus?.isConnected ? returnFocus : doc.querySelector("#phaser-world");
+      returnFocus = null;
+      target?.focus({ preventScroll: true });
+    }
+    function fail(message) {
+      if (!session) return;
+      session.stage = "error";
+      stopWaiting(); retake.disabled = false; setSaveEnabled(false);
+      status.textContent = String(message || "사진을 만들지 못했어요. 다시 찍기를 눌러 주세요.").slice(0, 240);
+      emit("forest-memory-cancel", { requestId: session.requestId });
+    }
+    function start() {
+      if (session?.stage === "busy") return;
+      if (!dialog.open) {
+        returnFocus = doc.activeElement;
+        dialog.show();
+      }
+      cancelCurrent();
+      session = { requestId: `forest-memory-${++sequence}`, stage: "busy", photo: null, autoDownloaded: false };
+      status.textContent = "여섯 친구와 숲속 동물들이 모이고 있어요. 잠시 기다려 주세요.";
+      progress.hidden = false; retake.disabled = true; setSaveEnabled(false);
+      dialog.setAttribute("aria-busy", "true");
+      doc.body.classList.add("forest-memory-shooting");
+      freezeBackground();
+      closeButton.focus({ preventScroll: true });
+      emit("forest-controls-hidden");
+      try {
+        const presets = buildMemoryPresets(getState());
+        const requestId = session.requestId;
+        timeout = setTimer(() => {
+          if (active({ requestId })) fail("사진 준비가 오래 걸리고 있어요. 다시 찍기를 눌러 주세요.");
+        }, 45000);
+        emit("forest-memory-start", { requestId, presets });
+      } catch (error) { fail(error.message); }
+    }
+    function download(automatic = false) {
+      if (session?.stage !== "ready" || !session.photo || (automatic && session.autoDownloaded)) return;
+      if (automatic) session.autoDownloaded = true;
+      try {
+        // The same persistent native link serves both the one automatic attempt
+        // and a direct user click; never remove an anchor while it is navigating.
+        save.click();
+      } catch {
+        status.textContent = "자동 저장을 시작하지 못했어요. ‘사진 저장’을 눌러 주세요.";
+      }
+    }
+    function ready(event) {
+      const detail = event.detail || {};
+      if (!active(detail)) return;
+      // Mark the session first: duplicate/reentrant ready events must not save twice.
+      session.stage = "preparing";
+      try {
+        let photo;
+        const inlinePng = typeof detail.dataUrl === "string" && /^data:image\/png;base64,iVBORw0KGgo[A-Za-z0-9+/]*={0,2}$/.test(detail.dataUrl) ? detail.dataUrl : null;
+        if (detail.blob instanceof Blob && detail.blob.type === "image/png" && detail.blob.size > 0) {
+          photo = { url: urlApi.createObjectURL(detail.blob), owned: true, lastDownloadAt: 0 };
+          ownedUrls.set(photo.url, null);
+        } else if (inlinePng) {
+          photo = { url: inlinePng, owned: false, lastDownloadAt: 0 };
+        } else throw new Error("안전한 PNG 사진을 받지 못했어요. 다시 찍기를 눌러 주세요.");
+        session.photo = photo;
+        session.filename = memoryPhotoFilename();
+        session.stage = "ready";
+        stopWaiting();
+        preview.src = photo.url; figure.hidden = false;
+        // Inline PNG avoids a blob navigation dependency in embedded browsers.
+        // Blob-only captures remain supported, with the existing revoke grace.
+        save.href = inlinePng || photo.url;
+        save.download = session.filename;
+        setSaveEnabled(true); retake.disabled = false;
+        download(true);
+      } catch (error) { releasePhoto(); fail(error.message); }
+    }
+    eventTarget.addEventListener("forest-memory-request", start);
+    eventTarget.addEventListener("forest-memory-progress", (event) => {
+      if (active(event.detail) && typeof event.detail.message === "string") status.textContent = event.detail.message.slice(0, 240);
+    });
+    eventTarget.addEventListener("forest-memory-ready", ready);
+    eventTarget.addEventListener("forest-memory-error", (event) => {
+      if (active(event.detail)) fail(event.detail.message);
+    });
+    save.addEventListener("click", (event) => {
+      if (session?.stage !== "ready" || !session.photo) { event.preventDefault(); return; }
+      session.photo.lastDownloadAt = now();
+      status.textContent = "PNG 사진 저장을 요청했어요. 파일이 보이지 않으면 ‘사진 저장’을 눌러 주세요.";
+      // Do not preventDefault or synthesize another click: native download wins.
+    });
+    save.addEventListener("keydown", (event) => {
+      if (event.key === " ") { event.preventDefault(); download(); }
+      // Enter is the anchor's native keyboard activation.
+    });
+    setSaveEnabled(false);
+    retake.addEventListener("click", start);
+    closeButton.addEventListener("click", close);
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
+    dialog.addEventListener("close", () => { if (!dialog.open && session) close(); });
+    doc.addEventListener("keydown", (event) => {
+      if (dialog.open && event.key === "Escape") {
+        event.preventDefault(); event.stopPropagation(); close();
+      }
+    }, true);
+    eventTarget.addEventListener("pagehide", () => {
+      cancelCurrent();
+      for (const [url, timer] of ownedUrls) { clearTimer(timer); urlApi.revokeObjectURL(url); }
+      ownedUrls.clear();
+    });
+    return Object.freeze({ start, close });
+  }
+
   function generateNickname() {
     const random = new Uint32Array(3);
     if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
@@ -765,6 +972,7 @@
   const cowReactions = new WeakMap();
   let cowReactionUntil = 0;
   const homeRecordPlayerImage = new Image();
+  let homeRecordPlayerBounds = null;
   const basicWalkAtlas = new Image();
   const modularAvatarAtlas = new Image();
   const presetSpriteAtlases = {
@@ -783,8 +991,18 @@
   rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
   sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";
   sceneImages.home.src = "/static/assets/carrot-forest-home-v3.png?v=20260907-1";
-  homeRecordPlayerImage.src = "/static/assets/home-record-player-cottage-v2.png?v=20260907-1";
-  homeRecordPlayerImage.addEventListener("load", renderCanvas);
+  homeRecordPlayerImage.src = "/static/assets/home-record-player-v159.png?v=20260908-1";
+  homeRecordPlayerImage.addEventListener("load", () => {
+    const measure = document.createElement("canvas");
+    measure.width = homeRecordPlayerImage.naturalWidth;
+    measure.height = homeRecordPlayerImage.naturalHeight;
+    const measurement = measure.getContext("2d", { willReadFrequently: true });
+    try {
+      measurement.drawImage(homeRecordPlayerImage, 0, 0);
+      homeRecordPlayerBounds = window.ForestObjects.alphaBounds(measurement.getImageData(0, 0, measure.width, measure.height).data, measure.width, measure.height, 16);
+    } catch { homeRecordPlayerBounds = null; }
+    renderCanvas();
+  });
   sceneImages.garden.src = "/static/assets/carrot-forest-garden-v2.png?v=20260907-1";
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
@@ -1150,7 +1368,10 @@
 
   function drawHomeRecordPlayer() {
     if (!homeRecordPlayerImage.complete || !homeRecordPlayerImage.naturalWidth) return;
-    context.drawImage(homeRecordPlayerImage, 414, 212, 76, 108);
+    const bounds = homeRecordPlayerBounds || { x: 0, y: 0, width: homeRecordPlayerImage.naturalWidth, height: homeRecordPlayerImage.naturalHeight };
+    const scale = Math.min(76 / bounds.width, 108 / bounds.height);
+    const width = bounds.width * scale, height = bounds.height * scale;
+    context.drawImage(homeRecordPlayerImage, bounds.x, bounds.y, bounds.width, bounds.height, 452 - width / 2, 320 - height, width, height);
     if (state.homeRecordPlaying) {
       context.save();
       context.fillStyle = "#f6d795";
@@ -1780,6 +2001,13 @@
     const inHouse = x > 45 && x < 335 && y > 55 && y < 275;
     const inGarden = x > 465 && x < 735 && y > 45 && y < 255;
     const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
+    const camera = (typeof window !== "undefined" && window.ForestMemories?.CAMERA) || { x: 694, y: 338 };
+    // Reserve only the tripod's 40×23px feet plus this 32px placement cell,
+    // not the tall decorative silhouette or the surrounding usable lawn.
+    const cellRadius = 16;
+    const overlapsCameraFoot = x + cellRadius > camera.x - 20 && x - cellRadius < camera.x + 20
+      && y + cellRadius > camera.y - 15 && y - cellRadius < camera.y + 8;
+    if (overlapsCameraFoot) return false;
     if (waterObjectCodes.has(placementCode)) {
       if (!inPond) return false;
     } else if (inHouse || inGarden || inPond) return false;
@@ -3070,6 +3298,8 @@
       detail: { pose: "attack", duration: equippedWeaponDuration() },
     }));
   }
+
+  createForestMemoryUi({ getState: () => state });
 
   let phaserPersistTimer = null;
   window.addEventListener("forest-phaser-position", (event) => {

@@ -1,0 +1,23 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-09-08",
+  "assets": [
+    {
+      "file": "src/frontend/assets/home-record-player-v159.png",
+      "prompt": "Use case: style-transfer. Asset type: one transparent game furniture sprite, 1024x1024. Input image 1 is ONLY the required style/perspective/color reference: the current warm cottage interior. Image 2 is the old record-player subject reference to redesign, NOT a background to preserve. Create ONE replacement freestanding vintage LP record player on a compact wooden console, naturally belonging beside the furniture in image1. Match image1's crisp hand-painted pixel clusters, honey-oak grain, olive-green cabinet panels, warm brass, restrained storybook shading and slightly elevated three-quarter front view. A clear black vinyl record on the open top, brass tonearm, small woven speaker front, two modest knobs; sturdy short legs. Redesign the bulky old box into a believable charming cottage furnishing with proportions close to the cabinets in image1. Preserve recognizable LP functionality but no oversized horn, no extra accessories. Complete silhouette with 10% transparent padding on every edge; genuinely transparent alpha background, no checkerboard, no floor/base/scene, no cast shadow, no text, no logos, no watermark. NOT photorealistic, not smooth 3D, not thick cartoon outlines. Readable at 80 world-pixel height; matched pixel-art edge treatment to reference.",
+      "references": [
+        "src/frontend/assets/carrot-forest-home-v3.png",
+        "src/frontend/assets/home-record-player-cottage-v2.png"
+      ],
+      "source": "Original generated PNG retained; copied unchanged to the project asset path above."
+    },
+    {
+      "file": "src/frontend/assets/forest-memory-camera-v159.png",
+      "prompt": "Use case: stylized-concept. Asset type: ONE transparent furniture sprite for the existing game field, 1024x1024. Input image1 is ONLY style/perspective/color reference, not an edit target: match the current carrot forest game background exactly in storybook pixel-art treatment. Create a charming old-fashioned photographic camera: small honey-brown wooden bellows box camera, dark accordion bellows, obvious round warm-brass lens facing the viewer at a slightly three-quarter downward game viewpoint, perched on a sturdy elegant THREE-legged wooden tripod with brass joints. Include a modest old round brass flash reflector attached beside the box, unlit, not oversized. Warm oak, olive leather accents and brass, crisp small hand-painted pixel clusters and controlled highlights like the house and fences in reference. Keep the entire tripod and all three feet intact, compact silhouette readable at about85 game pixels tall. ONE object only, 10% empty padding all edges. Genuinely transparent alpha background, no ground patch, grass, stones, pedestal, cast shadow, environment, characters, lettering, brand or watermark. Not realistic photographic rendering, not smooth 3D, no thick black cartoon outline. It should look as though the same artist painted the field and this camera.",
+      "references": [
+        "src/frontend/assets/carrot-forest-world-v6.png"
+      ],
+      "source": "Original generated PNG retained; copied unchanged to the project asset path above."
+    }
+  ]
+}
