@@ -1,0 +1,45 @@
+{
+  "experiment_id": "knhanes-team1-six-feature-method-on-team2-cohort-20260831",
+  "comparison_scope": "Team 1 public six-feature method on Team 2 undiagnosed cohort and temporal split",
+  "not_exact_team1_score_reproduction": true,
+  "reason": "Target/cohort and year roles are fixed to Team 2 for fair service comparison; nested 5x4 is replaced by survey-year OOF candidate evaluation.",
+  "features": [
+    "age",
+    "sex",
+    "height_cm",
+    "weight_kg",
+    "leisure_aerobic_moderate_equivalent_min_week",
+    "strength_days_week"
+  ],
+  "activity_formula": "leisure moderate min/week + 2 * leisure vigorous min/week",
+  "strength_mapping": {
+    "1": 0.0,
+    "2": 1.0,
+    "3": 2.0,
+    "4": 3.0,
+    "5": 4.0,
+    "6": 5.0
+  },
+  "complete_case": true,
+  "imputation": false,
+  "clipping": false,
+  "selection": "minimum calibrated OOF Brier within family",
+  "threshold": "maximum validation Recall subject to Specificity >= 0.42",
+  "selected": {
+    "logistic": {
+      "candidate": "lr_c0.01_cw_balanced",
+      "calibration": "platt",
+      "threshold": 0.02521312098775703
+    },
+    "random_forest": {
+      "candidate": "rf_d8_leaf50_mfsqrt_cw_none",
+      "calibration": "identity",
+      "threshold": 0.027253293810355888
+    }
+  },
+  "input_hashes": {
+    "cleaned_sha256": "70c2e4a0d71e883a4181589bfb3042413f6f6e13104756b88d24e103e195ddfa"
+  },
+  "raw_medical_data_committed": false,
+  "disclaimer": "Current risk-signal screening only; not diagnosis or future incidence."
+}

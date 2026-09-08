@@ -42,6 +42,12 @@ tmp/
 *.zip
 *.7z
 *.rar
+*.tar.gz
+
+# Codex/local inspection workspaces and generated review artifacts
+.codex-worktrees/
+*.inspect.ndjson
+*.pptx.inspect/
 
 # Model binaries
 models/**/*.joblib
