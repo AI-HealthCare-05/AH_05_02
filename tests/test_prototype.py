@@ -289,6 +289,7 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
     assert "birth_date: birthDate" in script
     assert 'api("/users/me/profile", { method: "PATCH"' in script
+    assert 'api("/users/me", { method: "PATCH"' not in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
