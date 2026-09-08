@@ -1735,6 +1735,18 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .health-management>.dashboard-management-heading{padding:20px 24px;gap:16px}
 .health-management>.dashboard-management-heading h3{margin:0}
 .feature-report{background:linear-gradient(120deg,#e1f1ec,#f5faf6)}
+.challenge-v3-controls{padding:24px;background:#f1f7f4;border:1px solid #c4dbd2;border-radius:20px;margin:20px 0;color:#153d32}
+.challenge-v3-controls h3{font-size:26px;margin:8px 0 14px}.challenge-v3-controls>small{display:block;margin:10px 0;line-height:1.6}
+.challenge-v3-controls select{min-height:48px;font-size:18px}.challenge-v3-controls .medical-notice{font-size:16px;line-height:1.7}
+.challenge-v3-card{border:1px solid #bbd4cb;border-radius:20px;padding:22px;background:#fff;min-width:0;overflow-wrap:anywhere}
+.challenge-v3-card>img{width:88px;height:88px;object-fit:contain}.challenge-v3-card h4{font-size:22px;line-height:1.4;margin:12px 0}
+.challenge-v3-card>strong{display:block;font-size:18px;color:#12654d}.challenge-v3-card p{line-height:1.7;font-size:16px}
+.challenge-v3-card .record-type-badge{display:inline-block;white-space:normal;font-size:15px;margin:8px 0}
+.challenge-v3-safety{padding:12px;background:#fff7df;border-radius:10px;color:#624817}
+.challenge-v3-card details{border-top:1px solid #dde7e2;padding-top:12px}.challenge-v3-card summary{cursor:pointer;min-height:44px;padding:8px 0}
+.challenge-v3-card a{color:#07583f;text-decoration:underline}.challenge-v3-controls :focus-visible,.challenge-v3-card :focus-visible{outline:3px solid #14664c;outline-offset:3px}
+#v3-photo-fields{display:grid;gap:10px;text-align:left}#v3-photo-fields input{max-width:100%;min-height:44px;font-size:18px}#v3-photo-fields[hidden]{display:none}
+@media(max-width:760px){#challenge-list:has(.challenge-v3-card){grid-template-columns:1fr}.challenge-v3-controls{padding:18px}.challenge-v3-card{padding:18px}}
 .feature-together{background:linear-gradient(120deg,#f9edd9,#fff9ee);border-color:#e4d4b8}
 .feature-tools{background:linear-gradient(120deg,#e1edf7,#f3f8fc);border-color:#c0d3e4}
 .feature-health{background:linear-gradient(120deg,#eee8f6,#faf7fd);border-color:#d5c7e2}
