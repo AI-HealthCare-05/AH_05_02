@@ -99,7 +99,9 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'prediction.result_status === "approved"' in script
     assert 'prediction.promotion_status === "approved"' in script
     assert 'const challengeButton = $("#to-challenges")' in script
-    assert 'challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next' in script
+    assert (
+        'challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next' in script
+    )
     assert "const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk)" in script
     assert 'renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true })' in script
     assert 'factors?.status === "approved"' in script
@@ -308,6 +310,7 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
     assert "birth_date: birthDate" in script
     assert 'api("/users/me/profile", { method: "PATCH"' in script
+    assert 'api("/users/me", { method: "PATCH"' not in script
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script
@@ -638,7 +641,7 @@ def test_forest_return_accepts_resume_and_workspace_links() -> None:
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
     assert 'id="workspace-top-nav" aria-label="로그인 후 주요 메뉴"' in html
-    assert html.count('data-workspace-panel=') >= 5
+    assert html.count("data-workspace-panel=") >= 5
     assert html.count('role="region"') >= 5
     assert 'button.setAttribute("aria-selected", String(selected))' in script
     assert "selectedPanel.focus({ preventScroll: true })" in script
