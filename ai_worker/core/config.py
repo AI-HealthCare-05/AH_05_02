@@ -48,6 +48,15 @@ class Config(BaseSettings):
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
     )
+    # Explicitly opt-in local S2 research runtime. This never promotes a model
+    # or enables public probability display.
+    S2_MODEL_RUNTIME_ENABLED: bool = False
+    ML_SHARED7_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib"
+    )
+    ML_FIRST_INTERVAL_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib"
+    )
     MODEL_CACHE_DIR: str = "/app/storage/models"
     AWS_REGION: str = "ap-northeast-2"
     AWS_S3_ENDPOINT_URL: str | None = None

@@ -15,12 +15,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY pyproject.toml uv.lock ./
 
 # 3. pyproject.toml에 명시된 의존성 패키지 중에서 'app' 그룹만 설치합니다.
-RUN uv sync --group app --no-dev --frozen
+ARG ML_RESEARCH_RUNTIME=false
+RUN if [ "$ML_RESEARCH_RUNTIME" = "true" ]; then \
+      uv sync --group app --group modeling --no-dev --frozen; \
+    else uv sync --group app --no-dev --frozen; fi
 
 # 4. 로컬 소스 코드를 컨테이너 내부로 복사합니다.
 COPY ./app ./app
 COPY ./src/frontend ./src/frontend
 COPY ./src/rag ./src/rag
+COPY ./src/ml ./src/ml
+COPY ./models/registry ./models/registry
 
 # 5. 해당 이미지를 활용하여 도커컨테이너 실행시 실행되는 명령어입니다.
 # FastAPI를 uvicorn을 활용하여 비동기 환경으로 서버를 실행합니다.

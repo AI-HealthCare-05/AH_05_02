@@ -145,7 +145,15 @@ class StreamWorker:
                 "MODEL_DIGEST_MISMATCH",
                 "MODEL_CONTRACT_MISMATCH",
             }
-            error_code = str(exc) if str(exc) in permanent_model_errors else None
+            research_model_error_codes = {
+                "ResearchArtifactUnavailableError": "ML_MODEL_UNAVAILABLE",
+                "EnsembleArtifactUnavailableError": "ML_MODEL_UNAVAILABLE",
+                "ResearchModelContractError": "ML_MODEL_CONTRACT_ERROR",
+                "EnsembleContractError": "ML_MODEL_CONTRACT_ERROR",
+            }
+            error_code = research_model_error_codes.get(type(exc).__name__)
+            if error_code is None:
+                error_code = str(exc) if str(exc) in permanent_model_errors else None
             if error_code is not None:
                 await self.handle_failure(message_id, fields, config.AI_JOB_MAX_ATTEMPTS, exc, error_code=error_code)
             else:

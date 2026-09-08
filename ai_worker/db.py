@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS prediction_jobs (
     calibration_version VARCHAR(100) NULL,
     model_artifact_digest VARCHAR(128) NULL,
     threshold_version VARCHAR(100) NULL,
+    threshold_scope VARCHAR(100) NULL,
     user_id BIGINT NULL,
     health_checkup_id BIGINT NULL,
     input_as_of_date DATE NULL,
@@ -70,6 +71,12 @@ CREATE TABLE IF NOT EXISTS predictions (
     risk_curve_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable',
     output_definition_version VARCHAR(100) NULL,
     age_risk_forecast JSON NULL,
+    task_type VARCHAR(80) NULL,
+    threshold_scope VARCHAR(100) NULL,
+    display_allowed BOOL NOT NULL DEFAULT 0,
+    operational_model_activated BOOL NOT NULL DEFAULT 0,
+    preview_only BOOL NOT NULL DEFAULT 0,
+    preview_signal_level VARCHAR(20) NULL,
     predicted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     INDEX idx_predictions_user_id (user_id),
     INDEX idx_predictions_health_checkup_id (health_checkup_id)
@@ -109,6 +116,12 @@ PREDICTION_COLUMNS = {
     "risk_curve_status": "VARCHAR(20) NOT NULL DEFAULT 'not_applicable'",
     "output_definition_version": "VARCHAR(100) NULL",
     "age_risk_forecast": "JSON NULL",
+    "task_type": "VARCHAR(80) NULL",
+    "threshold_scope": "VARCHAR(100) NULL",
+    "display_allowed": "BOOL NOT NULL DEFAULT 0",
+    "operational_model_activated": "BOOL NOT NULL DEFAULT 0",
+    "preview_only": "BOOL NOT NULL DEFAULT 0",
+    "preview_signal_level": "VARCHAR(20) NULL",
 }
 
 PREDICTION_JOB_COLUMNS = {
@@ -120,6 +133,7 @@ PREDICTION_JOB_COLUMNS = {
     "calibration_version": "VARCHAR(100) NULL",
     "model_artifact_digest": "VARCHAR(128) NULL",
     "threshold_version": "VARCHAR(100) NULL",
+    "threshold_scope": "VARCHAR(100) NULL",
     "user_id": "BIGINT NULL",
     "health_checkup_id": "BIGINT NULL",
     "input_as_of_date": "DATE NULL",
@@ -194,7 +208,16 @@ async def update_job(
                 SET status=%s, worker_name=%s, attempts=%s, result=%s, error=%s,
                     started_at=COALESCE(%s, started_at), completed_at=%s,
                     prediction_id=COALESCE(%s, prediction_id), error_code=%s,
-                    retryable=%s, retry_after_seconds=%s
+                    retryable=%s, retry_after_seconds=%s,
+                    model_key=COALESCE(%s, model_key), model_version=COALESCE(%s, model_version),
+                    feature_schema_version=COALESCE(%s, feature_schema_version),
+                    input_schema_version=COALESCE(%s, input_schema_version),
+                    preprocessing_version=COALESCE(%s, preprocessing_version),
+                    target_definition_version=COALESCE(%s, target_definition_version),
+                    calibration_version=COALESCE(%s, calibration_version),
+                    model_artifact_digest=COALESCE(%s, model_artifact_digest),
+                    threshold_version=COALESCE(%s, threshold_version),
+                    threshold_scope=COALESCE(%s, threshold_scope)
                 WHERE job_id=%s
                 """,
                 (
@@ -209,6 +232,16 @@ async def update_job(
                     error_code,
                     retryable,
                     retry_after_seconds,
+                    result.get("model_key") if result else None,
+                    result.get("model_version") if result else None,
+                    result.get("feature_schema_version") if result else None,
+                    result.get("input_schema_version") if result else None,
+                    result.get("preprocessing_version") if result else None,
+                    result.get("target_definition_version") if result else None,
+                    result.get("calibration_version") if result else None,
+                    result.get("model_artifact_digest") if result else None,
+                    result.get("threshold_version") if result else None,
+                    result.get("threshold_scope") if result else None,
                     job_id,
                 ),
             )
@@ -246,7 +279,9 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     target_definition_version, calibration_version, model_artifact_digest,
                     threshold_version, decision_threshold, class_probabilities, output_status,
                     model_population, explanation_status, disclaimer, age_risk_forecast
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    , task_type, threshold_scope, display_allowed, operational_model_activated,
+                    preview_only, preview_signal_level
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     job_id,
@@ -273,6 +308,12 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result.get("explanation_status", "not_available"),
                     disclaimer,
                     json.dumps(age_risk_forecast, ensure_ascii=False) if age_risk_forecast is not None else None,
+                    result.get("task_type"),
+                    result.get("threshold_scope"),
+                    result.get("display_allowed") is True,
+                    result.get("operational_model_activated") is True,
+                    result.get("preview_only") is True,
+                    result.get("preview_signal_level"),
                 ),
             )
             prediction_id = int(cursor.lastrowid)

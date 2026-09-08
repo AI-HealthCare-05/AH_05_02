@@ -22,6 +22,7 @@ class PredictionJob(Model):
     calibration_version = fields.CharField(max_length=100, null=True)
     model_artifact_digest = fields.CharField(max_length=128, null=True)
     threshold_version = fields.CharField(max_length=100, null=True)
+    threshold_scope = fields.CharField(max_length=100, null=True)
     user_id = fields.BigIntField(null=True, db_index=True)
     health_checkup_id = fields.BigIntField(null=True, db_index=True)
     input_as_of_date = fields.DateField(null=True)

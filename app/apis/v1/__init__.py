@@ -10,6 +10,7 @@ from app.apis.v1.forest_routers import forest_router
 from app.apis.v1.game_routers import game_router
 from app.apis.v1.health_routers import health_router
 from app.apis.v1.prediction_routers import prediction_router
+from app.apis.v1.research_model_routers import research_model_router
 from app.apis.v1.user_routers import user_router
 from app.apis.v1.wellness_routers import wellness_router
 
@@ -18,6 +19,7 @@ v1_routers.include_router(auth_router)
 v1_routers.include_router(user_router)
 v1_routers.include_router(health_router)
 v1_routers.include_router(prediction_router)
+v1_routers.include_router(research_model_router)
 v1_routers.include_router(challenge_router)
 v1_routers.include_router(dashboard_router)
 v1_routers.include_router(feedback_router)

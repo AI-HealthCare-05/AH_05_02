@@ -101,7 +101,7 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     assert eligibility is not None
 
     if request.model_key == CURRENT_SCREENING_MODEL_KEY:
-        return await _create_current_screening_job(user, checkup)
+        return await _create_current_screening_job(user, checkup, eligibility)
 
     if request.model_key == LIFETIME_RISK_MODEL_KEY:
         return await _create_lifetime_risk_job()
@@ -180,9 +180,20 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     return job
 
 
-async def _create_current_screening_job(user: User, checkup: HealthCheckup) -> PredictionJob:
+async def _create_current_screening_job(
+    user: User,
+    checkup: HealthCheckup,
+    eligibility: EligibilityCheck,
+) -> PredictionJob:
     """Queue the KNHANES current-signal model independently from KLoSA incidence."""
-    inference_payload = HealthService.current_screening_payload(checkup)
+    # PR #36 shared7 intentionally reuses the validated common API input and
+    # selects its seven model variables inside the model boundary. Do not map
+    # missing values to zero or send model-internal derived features.
+    inference_payload = HealthService.inference_payload(
+        user,
+        checkup,
+        previously_diagnosed_diabetes=eligibility.has_diabetes_diagnosis,
+    )
     job_id = str(uuid4())
     now = datetime.now(UTC)
     job = await PredictionJob.create(
@@ -215,7 +226,10 @@ async def _create_current_screening_job(user: User, checkup: HealthCheckup) -> P
     message = {
         "job_id": job_id,
         "task_type": CURRENT_SCREENING_MODEL_KEY,
-        "payload": json.dumps({"input": inference_payload}, ensure_ascii=False),
+        "payload": json.dumps(
+            {"input": inference_payload, "as_of_date": checkup.checkup_date.isoformat()},
+            ensure_ascii=False,
+        ),
         "model_version": CURRENT_SCREENING_MODEL.version,
         "feature_schema_version": CURRENT_SCREENING_MODEL.feature_schema_version,
         "input_schema_version": CURRENT_SCREENING_MODEL.input_schema_version,

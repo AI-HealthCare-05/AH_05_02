@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_current_screening",
+  "model_version": "knhanes-shared7-sk180-research-v1",
+  "feature_schema_version": "knhanes-shared7-v1",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "threshold_version": "shared7-sk180-validation-spec042-v1",
+  "threshold": 0.02615995276723876,
+  "features": ["age", "height_cm", "weight_kg", "bmi", "sex", "current_smoker", "education"],
+  "artifact_local_path": "models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib",
+  "artifact_sha256": "6946553dd321189caa6fda207edd3f7a190b8fe1ed007b9a152958ea1cf2e86f",
+  "software": {"scikit_learn": "1.8.0", "python": "3.13.9", "numpy": "2.4.1", "pandas": "2.3.3", "scipy": "1.17.0", "joblib": "1.5.3"},
+  "selection": "Train-year OOF Platt; Validation Specificity>=0.42 maximize Recall",
+  "validation": {"recall": 0.9373493975903614, "specificity": 0.42537570264999425},
+  "test": {"recall": 0.9333333333333333, "specificity": 0.4194172669605419, "precision": 0.06315058986814712, "auroc": 0.7602262232624558, "auprc": 0.10613503872205458, "brier": 0.03752871044828137, "tp": 364, "fn": 26, "tn": 3901, "fp": 5400},
+  "supported_population": {"service_age_minimum": 45, "service_age_maximum": 105, "training_population": "KNHANES age>=19, without reported diabetes diagnosis", "note": "45-105 is a conservative shared API contract, not proof of validation at every age"},
+  "promotion_status": "research_candidate_only",
+  "operational_model_activated": false,
+  "intended_use": "internal current diabetes risk screening research; not diagnosis or prescription",
+  "limitations": ["historical Test repeatedly inspected", "not a future-incidence probability", "education missing is imputed to training mode 4", "self-reported inputs require further validation"]
+}
