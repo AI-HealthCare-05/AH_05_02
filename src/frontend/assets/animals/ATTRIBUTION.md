@@ -1,6 +1,6 @@
 # Forest animal assets
 
-Downloaded 2026-09-07 from the original publicly licensed sources. PNG and MP3 bytes are unchanged; local filenames are renamed. Frame selection and display scaling happen only at runtime. No generated animal art, background removal, or grass platform is used.
+Downloaded from the original publicly licensed sources on the dates below. PNG and MP3 bytes are unchanged; local filenames are renamed. Frame selection, display scaling, and the explicitly documented v167 rabbit fur palettes happen only at runtime. No generated replacement animal illustrations, background removal, or grass platform is used.
 
 ## Cow sprites
 
@@ -72,6 +72,14 @@ groups. Names and timing are application-authored visual interpretations, not
 official animation tags. Each pack has one original colorway. Palette swatches
 and the numbered index guide are not additional skins or gameplay sheets.
 
+Since v167, six **game-authored runtime fur palettes** supplement the two
+original colorways: Bunbun cream/brown/black and Last tick white/cream/brown.
+These are modifications inside this game, not additional creator downloads.
+Canvas replaces only the audited fur RGB values; eyes, outlines, pink ears,
+carrots, transparency and every authored animation cell stay unchanged.
+The original PNG files remain byte-identical, and no recolored sheet is exported
+or offered as a standalone asset. See `docs/forest-pets-rabbits-v167.md`.
+
 ## Optional Last tick kittens — free pack (2026-09-08)
 
 - Title: **32x32 Pixel kittens Cats – Animated NPC**.
@@ -93,5 +101,9 @@ as part of the game under the creator's terms.
 The free version has no pet furniture. Paid **Kittens pack.zip** and the separate
 **Pixel Interiors Room pack.zip** have not been included. The fourth selectable
 kitten is a white kitten with the free red ribbon, not a paid fourth coat color.
-Existing LPC cat IDs resolve to equivalent new white/ginger cats when installed;
-the original dog and missing-art fallbacks still use the credited LPC atlas.
+Since v167, the pet menu offers only animated companions: three original LPC
+walkers under separate `lpc_*` IDs and four Last tick kitten choices. Retired
+static portrait pets are not restored. Older saved IDs resolve to animated
+companions without rewriting saved outfits. New kitten IDs and preset pets
+remain unchanged. Missing-art fallbacks still use the credited LPC atlas.
+See `docs/forest-pet-restoration.md` for the roster and animation limits.

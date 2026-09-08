@@ -5,6 +5,11 @@ const path = require('node:path');
 const vm = require('node:vm');
 const animals = require('../src/frontend/forest-animals.js');
 
+const expectedVariantIds = [
+  'bunbun', 'last-tick', 'bunbun-cream', 'bunbun-brown', 'bunbun-black',
+  'last-tick-white', 'last-tick-cream', 'last-tick-brown',
+];
+
 // Hand-verified source-cell metadata, not licensed image fixtures. Keeping this
 // test independent of PNGs makes it runnable from a clean public clone.
 const lastTickRowCounts = [
@@ -45,17 +50,26 @@ test('rabbit metadata loads with no image, audio, network or licensed-file acces
   const source = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-animals.js'), 'utf8');
   vm.runInContext(source, context);
   const api = context.module.exports;
-  assert.equal(api.rabbitVariants.length, 2);
+  assert.equal(api.rabbitVariants.length, 8);
   assert.equal(api.rabbitPose('bunbun', { action: 'dig' }).frame, 24);
   assert.equal(api.rabbitPose('last-tick', { action: 'head_tilt_2' }).frame, 363);
 });
 
-test('both optional rabbit packs expose the source sheet dimensions and exact action lists', () => {
-  assert.deepEqual(animals.rabbitVariants.map(variant => variant.id), ['bunbun', 'last-tick']);
-  assert.deepEqual(animals.rabbitVariants[0].actions, Object.keys(bunbunFrames));
-  assert.deepEqual(animals.rabbitVariants[1].actions, expectedLastTickNames);
-  assert.equal(animals.rabbitVariants[0].actions.length, 8);
-  assert.equal(animals.rabbitVariants[1].actions.length, 46);
+test('eight rabbit variants reuse only two optional source sheets and their exact action lists', () => {
+  assert.deepEqual(animals.rabbitVariants.map(variant => variant.id).sort(), [...expectedVariantIds].sort());
+  assert.equal(animals.rabbitAssets.length, 2, 'generated colors do not request additional licensed files');
+  assert.equal(new Set(animals.rabbitVariants.map(variant => variant.key)).size, 8);
+  for (const variant of animals.rabbitVariants) {
+    const family = variant.id.startsWith('bunbun') ? 'bunbun' : 'last-tick';
+    const original = animals.rabbitVariants.find(item => item.id === family);
+    assert.equal(variant.family, family);
+    assert.equal(variant.sourceKey, original.key);
+    assert.equal(variant.generated, variant.id !== family);
+    assert.deepEqual(variant.actions, family === 'bunbun' ? Object.keys(bunbunFrames) : expectedLastTickNames);
+    assert.equal(variant.actions.length, family === 'bunbun' ? 8 : 46);
+    assert.equal(variant.scale, original.scale);
+    assert.ok(Object.isFrozen(variant) && Object.isFrozen(variant.actions));
+  }
   for (const [id, columns, frameCount] of [['bunbun', 4, 32], ['last-tick', 11, 374]]) {
     const variant = animals.rabbitVariants.find(item => item.id === id);
     const asset = animals.rabbitAssets.find(item => item.key === variant.key);
@@ -106,12 +120,13 @@ test('Last tick covers exactly 219 occupied cells across all 34 source rows', ()
   }
 });
 
-test('frameRect honors 11-column Last tick sheets and validates complete sheet bounds', () => {
-  for (const asset of animals.rabbitAssets) {
+test('frameRect honors original and generated sheet columns and validates complete sheet bounds', () => {
+  for (const variant of animals.rabbitVariants) {
+    const asset = animals.rabbitAssets.find(item => item.key === variant.sourceKey);
     const width = asset.columns * 32;
     const height = asset.frameCount / asset.columns * 32;
     for (let frame = 0; frame < asset.frameCount; frame++) {
-      const rect = animals.frameRect(asset.key, frame);
+      const rect = animals.frameRect(variant.key, frame);
       assert.deepEqual(rect, {
         x: frame % asset.columns * 32,
         y: Math.floor(frame / asset.columns) * 32,
@@ -121,7 +136,7 @@ test('frameRect honors 11-column Last tick sheets and validates complete sheet b
       assert.ok(rect.y >= 0 && rect.y + rect.height <= height);
     }
     for (const invalid of [-1, asset.frameCount, asset.frameCount + 1, 0.5, NaN, Infinity, -Infinity, '0', null, undefined]) {
-      assert.equal(animals.frameRect(asset.key, invalid), null, `${asset.key}: ${String(invalid)}`);
+      assert.equal(animals.frameRect(variant.key, invalid), null, `${variant.key}: ${String(invalid)}`);
     }
   }
   assert.deepEqual(animals.frameRect('forest-rabbit-last-tick', 10), { x: 320, y: 0, width: 32, height: 32 });

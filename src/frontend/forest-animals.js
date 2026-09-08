@@ -49,24 +49,94 @@
     action("head_tilt_2", "고개 기울이고 몸단장 2", rowFrames(33, 11), 110, { direction: "down" }),
   ];
   const rabbitActionSets = Object.freeze({ bunbun: Object.freeze(bunbunActions), "last-tick": Object.freeze(lastTickActions) });
+  const rabbitOriginals = [
+    { id: "bunbun", key: rabbitAssets[0].key, label: "Bunbun 얼룩토끼", actions: Object.freeze(bunbunActions.map(item => item.name)) },
+    { id: "last-tick", key: rabbitAssets[1].key, label: "Last tick 회색토끼", actions: Object.freeze(lastTickActions.map(item => item.name)) },
+  ];
+  // Game-authored runtime palettes, NOT additional downloads from the creators.
+  // Only verified fur colors change. Eyes/outlines, pink ears, carrots and alpha
+  // keep their exact original bytes in every source animation cell.
+  const rabbitFurColors = {
+    bunbun: [0x6f6f6f, 0x8e8e8e, 0xa3a3a3, 0xb3b3b3, 0xdddddd],
+    "last-tick": [0x414752, 0x626773, 0x868d9b, 0xb6b8c7],
+  };
+  const rabbitColors = [
+    ["bunbun", "cream", "Bunbun 크림토끼", [0x887257, 0xb99d71, 0xd8bd8c, 0xe5cfa7, 0xf6e7ca]],
+    ["bunbun", "brown", "Bunbun 갈색토끼", [0x5a3a2d, 0x73503b, 0xa7744e, 0xb98a61, 0xe4c4a0]],
+    ["bunbun", "black", "Bunbun 검정토끼", [0x29313a, 0x364047, 0x485261, 0x657179, 0x9aa3aa]],
+    ["last-tick", "white", "Last tick 흰토끼", [0x87909a, 0xced3d5, 0xe4e8e4, 0xfffff7]],
+    ["last-tick", "cream", "Last tick 크림토끼", [0x8e7864, 0xd8b588, 0xedcfa5, 0xfff0cf]],
+    ["last-tick", "brown", "Last tick 갈색토끼", [0x5f4034, 0xa67148, 0xc19465, 0xe5c394]],
+  ];
   const rabbitVariants = Object.freeze([
-    Object.freeze({ id: "bunbun", key: rabbitAssets[0].key, label: "Bunbun", scale: 1.4, actions: Object.freeze(bunbunActions.map(item => item.name)) }),
-    Object.freeze({ id: "last-tick", key: rabbitAssets[1].key, label: "Last tick", scale: 1.4, actions: Object.freeze(lastTickActions.map(item => item.name)) }),
+    ...rabbitOriginals.map(item => Object.freeze({ ...item, family: item.id, sourceKey: item.key, scale: 1.4, generated: false })),
+    ...rabbitColors.map(([family, color, label, palette]) => {
+      const source = rabbitOriginals.find(item => item.id === family);
+      return Object.freeze({ id: `${family}-${color}`, key: `forest-rabbit-${family}-${color}`, sourceKey: source.key,
+        family, color, label, scale: 1.4, generated: true, actions: source.actions,
+        palette: Object.freeze(Object.fromEntries(rabbitFurColors[family].map((rgb, index) => [rgb, palette[index]]))) });
+    }),
   ]);
 
+  function recolorRabbitPixels(pixels, variantId) {
+    if (!pixels || pixels.length % 4) throw new Error("Rabbit pixels must be RGBA.");
+    const copy = new Uint8ClampedArray(pixels);
+    const palette = rabbitVariants.find(item => item.id === variantId)?.palette;
+    if (!palette) return copy;
+    for (let index = 0; index < copy.length; index += 4) {
+      if (!copy[index + 3]) continue;
+      const replacement = palette[(copy[index] << 16) | (copy[index + 1] << 8) | copy[index + 2]];
+      if (replacement === undefined) continue;
+      copy[index] = replacement >>> 16; copy[index + 1] = (replacement >>> 8) & 255; copy[index + 2] = replacement & 255;
+    }
+    return copy;
+  }
+
+  function createRabbitSkinCanvas(source, variantId) {
+    const variant = rabbitVariants.find(item => item.id === variantId);
+    const asset = rabbitAssets.find(item => item.key === variant?.sourceKey);
+    const width = source?.naturalWidth || source?.width, height = source?.naturalHeight || source?.height;
+    if (!asset || width !== asset.columns * asset.frameWidth || height !== asset.frameCount / asset.columns * asset.frameHeight) return null;
+    const canvas = root.document.createElement("canvas"); canvas.width = width; canvas.height = height;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(source, 0, 0);
+    if (variant.generated) {
+      const pixels = context.getImageData(0, 0, width, height);
+      pixels.data.set(recolorRabbitPixels(pixels.data, variantId));
+      context.putImageData(pixels, 0, 0);
+    }
+    return canvas;
+  }
+
+  function registerRabbitSkins(scene) {
+    const installed = [];
+    for (const variant of rabbitVariants.filter(item => item.generated)) {
+      if (scene.textures.exists(variant.key)) { installed.push(variant.key); continue; }
+      if (!scene.textures.exists(variant.sourceKey)) continue;
+      try {
+        const canvas = createRabbitSkinCanvas(scene.textures.get(variant.sourceKey).getSourceImage(), variant.id);
+        if (!canvas) continue;
+        scene.textures.addSpriteSheet(variant.key, canvas, { frameWidth: 32, frameHeight: 32 });
+        installed.push(variant.key);
+      } catch { /* Optional palette preparation must not block the original rabbits or game boot. */ }
+    }
+    return installed;
+  }
+
   function rabbitAction(id, name) {
-    return rabbitActionSets[id]?.find(item => item.name === name) || null;
+    const family = rabbitVariants.find(item => item.id === id)?.family;
+    return rabbitActionSets[family]?.find(item => item.name === name) || null;
   }
 
   function rabbitPose(id, { action: name, direction = "right", elapsedMs = 0, reducedMotion = false } = {}) {
     const variant = rabbitVariants.find(item => item.id === id);
     if (!variant) return null;
-    const selected = rabbitAction(id, name) || rabbitActionSets[id][0];
+    const selected = rabbitAction(id, name) || rabbitActionSets[variant.family][0];
     const time = Number.isFinite(elapsedMs) ? Math.max(0, elapsedMs) : 0;
     const done = time >= selected.durationMs;
     const index = reducedMotion ? 0 : done ? selected.frames.length - 1 : Math.floor(time / selected.frameMs) % selected.frames.length;
     // Bunbun side poses face right. Front/back and digging have their own art.
-    const sidePose = id === "bunbun" && !["jump_front", "jump_back", "dig"].includes(selected.name);
+    const sidePose = variant.family === "bunbun" && !["jump_front", "jump_back", "dig"].includes(selected.name);
     return {
       key: variant.key, frame: selected.frames[index], originX: 0.5, originY: 1,
       scale: variant.scale, flipX: sidePose && direction.includes("left"), done,
@@ -216,7 +286,8 @@
   }
 
   function frameRect(key, frame) {
-    const asset = assets.find(item => item.key === key) || rabbitAssets.find(item => item.key === key);
+    const sourceKey = rabbitVariants.find(item => item.key === key)?.sourceKey || key;
+    const asset = assets.find(item => item.key === sourceKey) || rabbitAssets.find(item => item.key === sourceKey);
     const frameCount = asset?.frameCount || (key === "forest-rabbit" ? 32 : 16);
     if (!asset || !Number.isInteger(frame) || frame < 0 || frame >= frameCount) return null;
     const columns = asset.columns || 4;
@@ -249,6 +320,7 @@
   }
 
   const api = Object.freeze({ assets, rabbitAssets, rabbitVariants, rabbitAction, rabbitPose, cowFrame,
+    recolorRabbitPixels, createRabbitSkinCanvas, registerRabbitSkins,
     createCowState, updateCowState, touchCowState, cowPose, cowBehavior,
     rabbitFrame, frameRect, mooUrl, playMoo, cowReactionDurationMs });
   root.ForestAnimals = api;

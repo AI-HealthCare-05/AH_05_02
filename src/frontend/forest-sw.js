@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v166-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v169-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -14,14 +14,15 @@ const CORE_SHELL = [
   "/static/lpc-avatar-engine.js?v=20260908-2",
   "/static/forest-objects.js?v=20260908-2",
   "/static/forest-fire.js?v=20260907-3",
-  "/static/forest-animals.js?v=20260908-3",
-  "/static/forest-pets.js?v=20260908-2",
+  "/static/forest-animals.js?v=20260908-4",
+  "/static/forest-pets.js?v=20260908-4",
   "/static/forest-riverduck.js?v=20260908-1",
   "/static/forest-riverduck-art.js?v=20260908-1",
   "/static/forest-memories.js?v=20260908-6",
-  "/static/forest-phaser.js?v=20260908-15",
+  "/static/forest-garden.js?v=20260908-1",
+  "/static/forest-phaser.js?v=20260908-19",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260908-14",
+  "/static/forest-game.js?v=20260908-17",
   "/static/challenge-v2.js?v=2.1.5",
   "/static/challenge-v2.css?v=2.1.2",
   "/static/icons/forest-icon-192.png",
@@ -83,7 +84,8 @@ const MEDIA_ASSETS = [
   "/static/assets/carrot-forest-loading-v2.png?v=20260907-1",
   "/static/assets/carrot-forest-world-v6.png?v=20260907-1",
   "/static/assets/carrot-forest-home-v3.png?v=20260907-1",
-  "/static/assets/carrot-forest-garden-v2.png?v=20260907-1",
+  "/static/assets/carrot-forest-garden-v3.png?v=20260908-1",
+  "/static/assets/garden-carrot-v168.png?v=20260908-1",
   "/static/assets/lpc-pack/manifest.json?v=20260901-10",
 ];
 

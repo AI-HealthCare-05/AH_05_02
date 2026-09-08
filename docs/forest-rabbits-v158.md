@@ -1,5 +1,9 @@
 # Forest rabbit packs — v158
 
+Historical v158 implementation record. v167 adds six runtime fur palettes and
+retains the later **+1 carrot per rabbit / zero per mouse** reward policy.
+See `forest-pets-rabbits-v167.md` for current behavior and verification.
+
 ## Included behavior
 
 Both requested packs are real source sprite sheets, not generated replacements.

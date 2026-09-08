@@ -374,6 +374,35 @@ test('photoshoot source actors are six clothed avatars plus both rabbits, three 
   controller.cancel();
 });
 
+test('portrait monsters have no ground-shadow ellipses while all six avatar shadows remain in the photo', async () => {
+  const { controller, renders } = setup({ pets: require('../src/frontend/forest-pets.js') });
+  await controller.start({ requestId: 'shadow-scope', presets: presets() });
+  const session = controller.session;
+  const avatarShadows = Array.from(session.people, person => person.shadow);
+  const animalKinds = Array.from(session.animals, animal => animal.kind);
+  assert.ok(['bunbun', 'last-tick', 'mouse', 'pet', 'preset-pet', 'cow'].every(kind => animalKinds.includes(kind)));
+  assert.equal(session.animals.length, 11, 'all pets and the cow remain alongside the monsters');
+  for (const elapsed of [0, 400, 1200, 1800, 3200]) {
+    controller.update(session.stagedAt + elapsed);
+    assert.deepEqual(Array.from(session.objects.filter(object => object.type === 'shadow')), avatarShadows,
+      'gathering and export retain only the pre-existing six avatar ground shadows');
+    for (const animal of session.animals) {
+      assert.equal(Object.hasOwn(animal, 'shadow'), false, animal.kind);
+      assert.ok(session.objects.includes(animal.sprite), `${animal.kind} body is still staged`);
+      assert.equal(animal.sprite.visible, true);
+    }
+    for (const person of session.people) {
+      assert.deepEqual([person.shadow.x, person.shadow.y, person.shadow.depth],
+        [person.sprite.x, person.sprite.y + 1, person.sprite.y - 1]);
+    }
+  }
+  const exportedShadows = renders[0].objects.filter(object => object.type === 'shadow');
+  assert.equal(exportedShadows.length, 6);
+  assert.ok(avatarShadows.every(shadow => exportedShadows.includes(shadow)), 'depth sorting preserves every avatar shadow');
+  assert.ok(session.animals.every(animal => renders[0].objects.includes(animal.sprite)));
+  controller.cancel();
+});
+
 test('exact live state, visibility, follow, zoom, pan, existing paused speeds and saved data survive cancellation', async () => {
   const { controller, scene, setNow, events, removed } = setup();
   const before = JSON.stringify({ avatar: scene.avatar, path: scene.movePath, trail: scene.petTrail });

@@ -363,12 +363,12 @@ test('cow clocks pause and survive unrelated saves without changing the placed a
   assert.equal(scene.placedObjectActors[0].getData('cowState').action, 'idle');
 });
 
-test('rabbit uses directional hop frames while its body scale and foot origin remain stable', () => {
+test('rabbit and mouse animate without a ground-shadow actor while body scale and foot origin remain stable', () => {
   const { scene } = setup();
   Object.assign(scene, { ratActive: true, ratDespawnAt: Infinity, ratTurnAt: Infinity, ratDirection: 'left', ratSpecies: 'rabbit' });
   scene.ratActor = displayObject(420, 350);
   scene.ratSprite = displayObject(0, 0).setScale(1.35);
-  scene.ratShadow = displayObject(0, 0);
+  assert.equal(Object.hasOwn(scene, 'ratShadow'), false);
   scene.isBlocked = () => false;
   const frames = [];
   for (let time = 0; time < 560; time += 140) {

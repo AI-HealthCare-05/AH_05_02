@@ -67,6 +67,7 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   };
   const window = {
     Phaser, ForestAnimals: animals, ForestObjects: { INDIVIDUAL_ASSETS: [] },
+    ForestGarden: require('../src/frontend/forest-garden.js'),
     ForestRiverDuckArt: require('../src/frontend/forest-riverduck-art.js'),
     matchMedia: () => ({ matches: reduced }), dispatchEvent: event => events.push(event),
     addEventListener: (type, handler) => listeners.set(type, handler), removeEventListener() {},
@@ -79,7 +80,6 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   const scene = new window.carrotForestPhaserGame.config.scene();
   scene.ratActor = actor(420, 350);
   scene.ratSprite = actor();
-  scene.ratShadow = actor();
   scene.textures = { exists: key => loaded.includes(key) };
   scene.add = { text: (x, y, text) => { labels.push(text); return actor(x, y); } };
   scene.tweens = { add() {} };
@@ -91,6 +91,29 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   scene.avatar = { x: 400, y: 350, direction: 'right', cosmetics: {} };
   return { scene, events, labels, listeners, window, setReduced: value => { reduced = value; } };
 }
+
+test('encounter creation keeps the monster body and marker without allocating a ground shadow', () => {
+  const start = source.indexOf('      this.ratActor = this.add.container(0, 0)');
+  const end = source.indexOf('      this.createRatAttackButton();', start);
+  assert.ok(start >= 0 && end > start, 'the live encounter initialization block exists');
+  const created = [];
+  const make = (type, x, y) => {
+    const object = Object.assign(actor(x, y), { type, list: [], add(children) { this.list.push(...children); return this; } });
+    created.push(object);
+    return object;
+  };
+  const scene = { add: {
+    container: (x, y) => make('container', x, y),
+    sprite: (x, y) => make('sprite', x, y),
+    text: (x, y) => make('text', x, y),
+    ellipse: () => assert.fail('rabbit/mouse encounters must not allocate ground-shadow ellipses'),
+  } };
+  vm.runInNewContext(`(function () { ${source.slice(start, end)} }).call(scene)`, { scene, TEXT_RESOLUTION: 2 });
+  assert.deepEqual(scene.ratActor.list, [scene.ratSprite, scene.ratMarker]);
+  assert.deepEqual(created.map(object => object.type), ['container', 'sprite', 'text']);
+  assert.equal(scene.ratActor.visible, false);
+  assert.equal(Object.hasOwn(scene, 'ratShadow'), false);
+});
 
 test('optional rabbit packs preload separately and loaded variants alternate without starvation', () => {
   const { scene } = setup();
@@ -185,7 +208,7 @@ test('every populated production rabbit cell reaches the live renderer during it
       time += action.durationMs;
     }
     assert.deepEqual([...observed].sort((a, b) => a - b), [...expected].sort((a, b) => a - b), variant.id);
-    assert.equal(observed.size, variant.id === 'bunbun' ? 18 : 219);
+    assert.equal(observed.size, variant.family === 'bunbun' ? 18 : 219);
   }
 });
 

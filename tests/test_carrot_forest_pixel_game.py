@@ -309,7 +309,7 @@ def test_world_scene_transitions_visual_storage_cats_and_fishing_are_connected()
     asset_names = (
         "carrot-forest-world-v6.png",
         "carrot-forest-home-v3.png",
-        "carrot-forest-garden-v2.png",
+        "carrot-forest-garden-v3.png",
         "carrot-forest-cat-pets-v1.png",
         "carrot-forest-storage-atlas-v4.png",
     )
@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v166-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v169-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -485,7 +485,8 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
         "carrot-forest-loading-v2.png": (1672, 941),
         "carrot-forest-world-v6.png": (1536, 1024),
         "carrot-forest-home-v3.png": (1536, 1024),
-        "carrot-forest-garden-v2.png": (1536, 1024),
+        "carrot-forest-garden-v3.png": (1536, 1024),
+        "garden-carrot-v168.png": (1254, 1254),
         "carrot-forest-storage-atlas-v4.png": (1280, 1024),
         "carrot-forest-animated-objects-v2.png": (512, 512),
         "home-record-player-v159.png": (1254, 1254),
@@ -503,7 +504,10 @@ def test_storybook_world_assets_and_fullscreen_game_shell_are_connected() -> Non
     for source in (game_script, phaser_script):
         assert "carrot-forest-world-v6.png" in source
         assert "carrot-forest-home-v3.png" in source
-        assert "carrot-forest-garden-v2.png" in source
+        assert "window.ForestGarden.assets.background" in source
+    garden_script = (ROOT / "src/frontend/forest-garden.js").read_text(encoding="utf-8")
+    assert "carrot-forest-garden-v3.png" in garden_script
+    assert "garden-carrot-v168.png" in garden_script
     assert "carrot-forest-storage-atlas-v4.png" in game_script
     assert "carrot-forest-animated-objects-v2.png" in phaser_script
     assert "home-record-player-v159.png" in phaser_script

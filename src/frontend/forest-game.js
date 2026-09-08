@@ -364,9 +364,8 @@
     ],
     vehicle: [],
     pet: [
-      { id: "none", name: "함께 걷기 없음", visual: "—" }, { id: "white_pup", name: "몽실이", visual: "🐶", isNew: true },
-      { id: "blue_eyes_white_cat", name: "설빛 고양이", visual: "🐈", isNew: true },
-      { id: "gold_eyes_orange_cat", name: "호박눈 고양이", visual: "🐈", isNew: true },
+      { id: "none", name: "함께 걷기 없음", visual: "—" },
+      ...(window.ForestPets?.classicCatalog || []),
       ...(window.ForestPets?.catalog || []),
     ],
     speech: [
@@ -985,6 +984,7 @@
     teal_bob: { image: new Image(), rows: 6, file: "carrot-forest-avatar-teal_bob-normalized-v2.png" },
   };
   const sceneImages = { world: new Image(), home: new Image(), garden: new Image() };
+  const gardenCarrotImage = new Image();
   const petSpriteImages = new Map((window.ForestPets?.assets || []).map((asset) => {
     const image = new Image();
     image.addEventListener("load", () => {
@@ -1016,7 +1016,9 @@
     } catch { homeRecordPlayerBounds = null; }
     renderCanvas();
   });
-  sceneImages.garden.src = "/static/assets/carrot-forest-garden-v2.png?v=20260907-1";
+  sceneImages.garden.src = window.ForestGarden.assets.background.url;
+  gardenCarrotImage.addEventListener("load", renderCanvas);
+  gardenCarrotImage.src = window.ForestGarden.assets.carrot.url;
   catPetAtlas.addEventListener("load", () => { renderCanvas(); if ($("#avatar-studio").open) renderAvatarStudio(); });
   storageSpriteAtlas.addEventListener("load", () => { renderInventory(); drawStorageObjectThumbnails(); renderCanvas(); });
   animatedObjectAtlas.addEventListener("load", () => { renderInventory(); drawAnimatedObjectThumbnails(); renderCanvas(); });
@@ -1351,6 +1353,7 @@
         drawPlacedObjects();
       }
       if (currentScene === "home") drawHomeRecordPlayer();
+      if (currentScene === "garden") window.ForestGarden.draw(context, gardenCarrotImage);
       return;
     }
     fillPixelRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, "#65aa59");
@@ -1597,7 +1600,8 @@
   }
 
   function catPetSpriteIndex(itemId) {
-    return { blue_eyes_white_cat: 1, gold_eyes_orange_cat: 4, white_pup: 7 }[itemId] ?? null;
+    return { blue_eyes_white_cat: 1, gold_eyes_orange_cat: 4, white_pup: 7,
+      lpc_white_cat: 1, lpc_orange_cat: 4, lpc_brown_dog: 7 }[itemId] ?? null;
   }
 
   function drawPetFrame(target, petId, poseOptions, x, y, size) {
@@ -1626,7 +1630,7 @@
     }
     // Licensed art is installed separately. Missing optional PNGs must not
     // erase the selected companion or leave a blank selection card.
-    const fallback = catPetSpriteIndex(petId) ?? ({ last_tick_white: 1, last_tick_gray: 1,
+    const fallback = catPetSpriteIndex(petId) ?? ({ brown_pup: 7, cat: 1, fox: 4, last_tick_white: 1, last_tick_gray: 1,
       last_tick_ginger: 4, last_tick_ribbon: 1 }[petId]);
     return drawLayer(catPetAtlas, fallback, false);
   }
@@ -1865,7 +1869,7 @@
     const sceneCopy = {
       world: { title: window.ForestHud?.forestName || "우리의 작은 숲", aria: "집, 당근밭, 연못이 있는 고해상도 픽셀 숲 월드" },
       home: { title: "우리 집", aria: "소파와 옷장이 있는 집 내부 장면" },
-      garden: { title: "당근 밭", aria: "당근밭과 물뿌리개가 있는 농장 장면" },
+      garden: { title: "당근 밭", aria: "1주차부터 6주차까지, 주차별 당근 5개와 나무 팻말이 있는 당근밭 장면" },
     }[currentScene];
     $("#map-title").textContent = sceneCopy.title;
     canvas.setAttribute("aria-label", `${sceneCopy.aria}. 방향키나 WASD로 이동하고 Q키로 상호작용할 수 있습니다.`);
@@ -2069,7 +2073,7 @@
       record_player: { icon: "💿", title: "숲속 LP 재생기", copy: "집 안에서 듣고 싶은 레코드를 골라 보세요.", actions: `<div class="record-music-list">${recordActions}</div><button class="record-stop" type="button" data-world-action="record_off" ${state.homeRecordPlaying ? "" : "disabled"}>LP 끄기 · 집 음악으로</button>` },
       exit_home: { icon: "🚪", title: "현관문", copy: "작은 숲으로 다시 나갈까요?", actions: '<button type="button" data-world-action="exit_scene">집 밖으로 나가기</button>' },
       crops: { icon: "🥕", title: "챌린지 당근 수확", copy: pendingChallengeCarrots() ? `완료한 챌린지 보상 당근 ${pendingChallengeCarrots()}개를 수확할 수 있어요.` : "오늘 완료한 챌린지 보상은 모두 수확했어요.", actions: `<button type="button" data-world-action="harvest_challenge" ${pendingChallengeCarrots() ? "" : "disabled"}>${pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확하기` : "수확 완료"}</button><button type="button" data-world-action="water" ${state.gardenWatered ? "disabled" : ""}>${state.gardenWatered ? "오늘 물주기 완료" : "당근에 물주기"}</button>` },
-      exit_garden: { icon: "🌲", title: "숲으로 가는 문", copy: "당근 밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
+      exit_garden: { icon: "🌲", title: "숲으로 가는 길", copy: "당근 밭을 나가 작은 숲으로 돌아가요.", actions: '<button type="button" data-world-action="exit_scene">숲으로 돌아가기</button>' },
     }[target];
     if (!content) { setStatus("상호작용할 대상 가까이 이동해 주세요."); return; }
     $("#world-dialog-icon").textContent = content.icon;
@@ -2505,7 +2509,8 @@
 
   function selectedAvatarItem(category, id = category === "pose" ? avatarPreviewPose : avatarDraft[category]) {
     const choices = avatarItemsForCategory(category);
-    return choices.find((item) => item.id === id) || choices[0] || { id: "none", name: "" };
+    const selectedId = category === "pet" ? window.ForestPets?.canonicalId?.(id) ?? id : id;
+    return choices.find((item) => item.id === selectedId) || choices[0] || { id: "none", name: "" };
   }
 
   const avatarThumbnailIndexes = {
@@ -2853,7 +2858,8 @@
       } else {
         visual = `<span class="item-visual" aria-hidden="true">${item.visual || "—"}</span>`;
       }
-      const selected = (effectiveCategory === "pose" ? avatarPreviewPose : avatarDraft[itemSlot]) === itemId;
+      const selectedId = itemSlot === "pet" ? window.ForestPets?.canonicalId?.(avatarDraft.pet) ?? avatarDraft.pet : avatarDraft[itemSlot];
+      const selected = (effectiveCategory === "pose" ? avatarPreviewPose : selectedId) === itemId;
       const shortcuts = { idle: "대기", walk: "WASD", run: "R", sit: "X", attack: "Z", dance: "0", harvest: "Q", fishing: "Q", door: "Q" };
       const actionViewOnly = effectiveCategory === "pose";
       const groupHeading = item.group && item.group !== previousGroup

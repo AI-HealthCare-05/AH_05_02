@@ -7,7 +7,8 @@ const code = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.j
 
 function setup(pose, missing = []) {
   const calls = [], transforms = [];
-  const sheet = key => ({ key, complete: !missing.includes(key), naturalWidth: key === 'lpc-pets' ? 288 : 352, naturalHeight: key === 'lpc-pets' ? 128 : 1696 });
+  const dimensions = { 'lpc-pets': [288, 128] };
+  const sheet = key => ({ key, complete: !missing.includes(key), naturalWidth: (dimensions[key] || [352, 1696])[0], naturalHeight: (dimensions[key] || [352, 1696])[1] });
   const target = {
     save() { transforms.push('save'); }, restore() { transforms.push('restore'); },
     translate(x, y) { transforms.push([x, y]); }, scale(x, y) { transforms.push([x, y]); },
@@ -57,4 +58,27 @@ test('live LPC canvas, studio, and menu all use shared pet rendering', () => {
   assert.match(code, /data-pet-thumb="\$\{itemId\}"/);
   assert.match(code, /thumbnail.dataset.petThumb/);
   assert.match(code, /\.\.\.\(window.ForestPets\?\.catalog \|\| \[\]\)/);
+});
+
+test('older saved IDs preview the same animated frame as their canonical pet without loading a static portrait', () => {
+  const pets = require('../src/frontend/forest-pets.js');
+  for (const [oldId, id] of Object.entries(pets.aliases)) {
+    const pose = pets.pose(oldId, { action: 'walk', elapsed: 400 });
+    assert.deepEqual(pose, pets.pose(id, { action: 'walk', elapsed: 400 }));
+    const previewPose = { ...pose, key: pose.key === 'lpc-pets' ? pose.key : 'kitten' };
+    const s = setup(previewPose);
+    assert.equal(s.draw(oldId), true);
+    assert.equal(s.calls[0][0].key, previewPose.key);
+    assert.deepEqual(s.calls[0].slice(3, 5), [32, 32]);
+  }
+});
+
+test('all three existing LPC walkers retain their 32px preview frames', () => {
+  const pets = require('../src/frontend/forest-pets.js');
+  for (const pet of pets.classicCatalog) {
+    const pose = pets.pose(pet.id, { action: 'walk', direction: 'right', elapsed: 160 });
+    const s = setup(pose);
+    assert.equal(s.draw(pet.id), true);
+    assert.deepEqual([s.calls[0][0].key, ...s.calls[0].slice(1, 5)], ['lpc-pets', (pose.frame % 9) * 32, 64, 32, 32]);
+  }
 });

@@ -139,7 +139,8 @@
       this.load.image("home-bg", "/static/assets/carrot-forest-home-v3.png?v=20260907-1");
       this.load.image("home-record-player", "/static/assets/home-record-player-v159.png?v=20260908-1");
       this.load.image("forest-memory-camera", "/static/assets/forest-memory-camera-v159.png?v=20260908-1");
-      this.load.image("garden-bg", "/static/assets/carrot-forest-garden-v2.png?v=20260907-1");
+      this.load.image(window.ForestGarden.assets.background.key, window.ForestGarden.assets.background.url);
+      this.load.image(window.ForestGarden.assets.carrot.key, window.ForestGarden.assets.carrot.url);
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
       // Optional source packs must never remove the bundled dog/photo fallback.
       (window.ForestPets?.assets || []).forEach(asset => this.load.spritesheet(asset.key, asset.url, {
@@ -165,6 +166,7 @@
     }
 
     create() {
+      window.ForestAnimals.registerRabbitSkins?.(this);
       // Phaser's preload is the boot gate: register only the complete 24-file
       // art pack, so no scene can flash the retired multi-object atlas.
       const individualImages = window.ForestObjects.registerIndividualImages(Object.fromEntries(window.ForestObjects.INDIVIDUAL_ASSETS.map(asset => [
@@ -176,6 +178,7 @@
       const animatedSource = this.textures.get("animated-objects-source").getSourceImage();
       this.textures.addSpriteSheet("animated-objects", window.ForestObjects.createAnimatedAtlas(animatedSource), { frameWidth: 128, frameHeight: 128 });
       this.background = this.add.image(WORLD.width / 2, WORLD.height / 2, "world-bg").setDisplaySize(WORLD.width, WORLD.height);
+      this.createGardenLayer();
       this.waterRippleFx = this.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
       window.ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" });
       this.placementGrid = this.add.graphics().setDepth(1).setVisible(false);
@@ -218,14 +221,14 @@
       this.petFollowX = this.avatar.x + 31;
       this.petFollowY = this.avatar.y + 10;
       this.ratActor = this.add.container(0, 0).setVisible(false);
-      this.ratShadow = this.add.ellipse(0, 0, 22, 6, 0x17352a, 0.24).setOrigin(0.5, 0.5);
       this.ratSprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
       this.ratMarker = this.add.text(0, -38, "!", {
         resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold",
         color: "#ffffff", backgroundColor: "#d85836", padding: { x: 5, y: 1 },
       }).setOrigin(0.5);
-      this.ratActor.add([this.ratShadow, this.ratSprite, this.ratMarker]);
+      // All encounter species share this actor; keep their ground shadow absent.
+      this.ratActor.add([this.ratSprite, this.ratMarker]);
       this.createRatAttackButton();
       // Nicknames use the same crisp DOM label layer as house/garden labels.
       this.rebuildAvatar();
@@ -392,6 +395,21 @@
       // Refresh the inverse transform immediately as well as on the next
       // frame, so a click directly after +/- still resolves in world space.
       camera.preRender();
+    }
+
+    createGardenLayer() {
+      const garden = window.ForestGarden;
+      const source = this.textures.exists(garden.assets.carrot.key)
+        ? this.textures.get(garden.assets.carrot.key).getSourceImage() : null;
+      const canvas = garden.createLayerCanvas(source, { resolution: 4 });
+      if (!canvas) return;
+      const key = "garden-week-layer";
+      if (this.textures.exists(key)) this.textures.remove(key);
+      this.textures.addCanvas(key, canvas);
+      // Shared world-space decoration sits above the empty base, below actors.
+      // A dense backing keeps Korean week labels sharp at camera zoom levels.
+      this.gardenLayer = this.add.image(WORLD.width / 2, WORLD.height / 2, key)
+        .setDisplaySize(WORLD.width, WORLD.height).setDepth(1).setVisible(this.sceneName === "garden");
     }
 
     createHomeRecordPlayer() {
@@ -1149,6 +1167,7 @@
       }
       this.sceneName = nextSceneName;
       this.background.setTexture(`${this.sceneName}-bg`).setDisplaySize(WORLD.width, WORLD.height);
+      this.gardenLayer?.setVisible(this.sceneName === "garden");
       this.recordPlayerActor?.setVisible(this.sceneName === "home");
       this.memoryCameraActor?.setVisible(this.sceneName === "world");
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
@@ -1676,14 +1695,13 @@
         const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
         this.ratSprite.setFrame(directionRow * 3 + (moving ? Math.floor(time / 145) % 3 : 1));
       }
-      this.ratShadow.setY(0);
     }
 
     renderPetPose(action, elapsedMs, reducedMotion = false) {
       if (!this.pet?.visible) { this.petOverlay?.setVisible(false); return; }
       const id = this.avatar.cosmetics?.pet;
       const definition = window.ForestPets?.definition(id);
-      let pose = definition && !definition.legacy ? window.ForestPets.pose(id, {
+      let pose = definition ? window.ForestPets.pose(id, {
         action, direction: this.petFacing, elapsed: elapsedMs, reducedMotion,
       }) : null;
       const authored = Boolean(pose && this.textures?.exists(pose.key)

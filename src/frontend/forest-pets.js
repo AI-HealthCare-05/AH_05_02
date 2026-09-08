@@ -23,9 +23,22 @@
     { id: "last_tick_gray", name: "구름 고양이", color: "gray", fallbackColumn: 0 },
     { id: "last_tick_ginger", name: "살구 고양이", color: "ginger", fallbackColumn: 3 },
     { id: "last_tick_ribbon", name: "리본 고양이", color: "white", fallbackColumn: 0, overlayKey: "forest-kitten-red-bow" },
-  ].map(item => Object.freeze({ ...item, key: `forest-kitten-${item.color}`, scale: SCALE, legacy: false })));
-  const aliases = Object.freeze({ blue_eyes_white_cat: "last_tick_white", gold_eyes_orange_cat: "last_tick_ginger", cat: "last_tick_gray" });
-  const dog = Object.freeze({ id: "white_pup", name: "흰 강아지", key: "lpc-pets", scale: 1.2, legacy: true, fallbackColumn: 6, supportsSit: false });
+  ].map(item => Object.freeze({ ...item, key: `forest-kitten-${item.color}`, scale: SCALE, legacy: false, group: "새 고양이 · 원본 애니메이션" })));
+  // Only authored animated pets are selectable. Old saved IDs remain readable
+  // through a rendering alias; opening the menu never rewrites saved outfits.
+  const aliases = Object.freeze({ white_pup: "lpc_brown_dog", brown_pup: "lpc_brown_dog",
+    cat: "lpc_white_cat", fox: "lpc_orange_cat",
+    blue_eyes_white_cat: "last_tick_white", gold_eyes_orange_cat: "last_tick_ginger" });
+  const classicCatalog = Object.freeze([
+    { id: "lpc_white_cat", name: "흰 고양이 · 보행", fallbackColumn: 0 },
+    { id: "lpc_orange_cat", name: "주황 고양이 · 보행", fallbackColumn: 3 },
+    { id: "lpc_brown_dog", name: "갈색 강아지 · 보행", fallbackColumn: 6 },
+  ].map(item => Object.freeze({ ...item, key: "lpc-pets", scale: 1.2, legacy: true,
+    supportsSit: false, group: "기존 펫 · 네 방향 보행", description: "기존 LPC · 네 방향 걷기" })));
+
+  function canonicalId(id) {
+    return Object.hasOwn(aliases, id) ? aliases[id] : id;
+  }
 
   // Exact nonempty cell counts from the official original body PNGs. Preserve
   // this audited topology: trailing transparent cells are NOT animation frames.
@@ -55,8 +68,7 @@
   });
 
   function definition(id) {
-    if (id === "white_pup") return dog;
-    return catalog.find(item => item.id === (aliases[id] || id)) || null;
+    return [...classicCatalog, ...catalog].find(item => item.id === canonicalId(id)) || null;
   }
 
   function pose(id, options = {}) {
@@ -104,7 +116,7 @@
     return result;
   }
 
-  const api = Object.freeze({ assets, catalog, aliases, definition, pose, rowFrameCounts,
+  const api = Object.freeze({ assets, catalog, classicCatalog, aliases, canonicalId, definition, pose, rowFrameCounts,
     walkRows, eatRows, pawRows, sitColumns, actions, actionDurations, idleClips, IDLE_CYCLE_MS, COLUMNS, ROWS, FRAME_SIZE, SCALE, ORIGIN });
   root.ForestPets = api;
   if (typeof module === "object" && module.exports) module.exports = api;

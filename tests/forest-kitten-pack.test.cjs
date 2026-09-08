@@ -11,7 +11,7 @@ test('free kittens use three original colors and one original bow, never paid so
   assert.deepEqual(pets.catalog.map(item => item.id), ['last_tick_white', 'last_tick_gray', 'last_tick_ginger', 'last_tick_ribbon']);
   assert.equal(pets.definition('blue_eyes_white_cat').key, pets.definition('last_tick_white').key);
   assert.equal(pets.definition('gold_eyes_orange_cat').key, pets.definition('last_tick_ginger').key);
-  assert.equal(pets.definition('white_pup').supportsSit, false);
+  assert.equal(pets.definition('lpc_brown_dog').supportsSit, false);
   assert.equal(pets.pose('none'), null);
   for (const asset of pets.assets) {
     assert.deepEqual([asset.frameWidth, asset.frameHeight, asset.columns, asset.rows], [32, 32, 11, 53]);

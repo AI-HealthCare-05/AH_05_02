@@ -20,12 +20,12 @@
     output { display: block; font-size: 13px; color: #657665; margin-top: 14px; min-height: 20px; }
     .note { margin-top: 26px; font-size: 13px; } @media(max-width:650px) { .cards { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } }
   </style>
-  <script src="/static/forest-animals.js?v=20260908-2" defer></script>
+  <script src="/static/forest-animals.js?v=20260908-4" defer></script>
 </head>
 <body><main>
-  <header><div><h1>새로운 토끼 친구들</h1><p>숲에서 쉬고, 뛰고, 귀를 쫑긋해요.</p></div><a href="/forest?bunnies=v158">숲으로 들어가기</a></header>
+  <header><div><h1>여덟 가지 토끼 친구들</h1><p>숲에서 쉬고, 뛰고, 귀를 쫑긋해요.</p></div><a href="/forest?pets=v167">숲으로 들어가기</a></header>
   <section class="cards" aria-label="토끼 동작 미리보기"></section>
-  <p class="note">원본 토끼 그림을 그대로 사용했습니다. 아래 선택창에서 각 동작을 골라 보세요. 시스템의 동작 줄이기 설정도 적용됩니다.</p>
+  <p class="note">원본 2종과 게임 내 털색 변형 6종입니다. 원본 모션과 눈·귀의 색은 유지합니다. 아래에서 동작을 고를 수 있고, 시스템의 동작 줄이기 설정도 적용됩니다.</p>
 </main>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -45,10 +45,10 @@
         canvas.width = Math.round(canvas.clientWidth * 2);
         canvas.height = Math.round(canvas.clientHeight * 2);
       }).observe(canvas);
-      const picture = new Image(); picture.src = animals.rabbitAssets.find(asset => asset.key === variant.key).url;
+      const picture = new Image(); picture.src = animals.rabbitAssets.find(asset => asset.key === variant.sourceKey).url;
       picture.onerror = () => { output.textContent = "토끼 자산을 설치한 뒤 다시 열어주세요."; };
-      let started = performance.now(), paused = false, pausedAt = 0, loaded = false, manual = false;
-      picture.onload = () => { loaded = true; started = performance.now(); };
+      let started = performance.now(), paused = false, pausedAt = 0, loaded = false, manual = false, skin = null;
+      picture.onload = () => { skin = animals.createRabbitSkinCanvas(picture, variant.id); loaded = Boolean(skin); started = performance.now(); };
       const next = () => { select.selectedIndex = (select.selectedIndex + 1) % select.options.length; started = performance.now(); pausedAt = 0; };
       select.addEventListener("change", () => { started = performance.now(); pausedAt = 0; manual = true; });
       const [pause, advance] = article.querySelectorAll("button");
@@ -63,7 +63,7 @@
           const rect = animals.frameRect(pose.key, pose.frame);
           ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.imageSmoothingEnabled = false;
           ctx.save(); ctx.translate(canvas.width / 2, canvas.height * .69); if (pose.flipX) ctx.scale(-1, 1);
-          ctx.drawImage(picture, rect.x, rect.y, rect.width, rect.height, -96, -192, 192, 192); ctx.restore();
+          ctx.drawImage(skin, rect.x, rect.y, rect.width, rect.height, -96, -192, 192, 192); ctx.restore();
           output.textContent = `${select.selectedIndex + 1} / ${variant.actions.length} · ${selected.label}${paused ? " · 멈춤" : ""}`;
           if (!manual && !paused && elapsed >= selected.durationMs) next();
         }

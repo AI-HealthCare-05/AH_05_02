@@ -6,7 +6,7 @@ const { test } = require('node:test');
 
 const source = readFileSync(path.join(__dirname, '../src/frontend/forest-phaser.js'), 'utf8');
 const ids = ['last_tick_white', 'last_tick_gray', 'last_tick_ginger', 'last_tick_ribbon'];
-const aliases = { blue_eyes_white_cat: 'last_tick_white', gold_eyes_orange_cat: 'last_tick_ginger' };
+const aliases = {};
 const fixturePets = {
   assets: [...ids.slice(0, 3), 'bow'].map(key => ({ key, url: `/fixture/${key}.png`, frameWidth: 32, frameHeight: 32 })),
   catalog: ids.map(id => ({ id })),
@@ -43,7 +43,7 @@ function actor(x = 0, y = 0, key = 'lpc-pets', frame = 1) {
   };
 }
 
-function setup({ id = 'last_tick_white', pets = fixturePets, loaded = pets?.assets.map(asset => asset.key) || [] } = {}) {
+function setup({ id = 'last_tick_white', pets = fixturePets, loaded = (pets?.assets || []).map(asset => asset.key) } = {}) {
   let reducedMotion = false, modal = false;
   const events = [], listeners = new Map(), loads = [], overlays = [];
   const document = { hidden: false, activeElement: { tagName: 'DIV' },
@@ -54,6 +54,7 @@ function setup({ id = 'last_tick_white', pets = fixturePets, loaded = pets?.asse
   };
   const window = {
     Phaser, ForestPets: pets, ForestObjects: { INDIVIDUAL_ASSETS: [] },
+    ForestGarden: require('../src/frontend/forest-garden.js'),
     ForestAnimals: { assets: [] }, ForestRiverDuckArt: { assets: [] },
     matchMedia: () => ({ matches: reducedMotion }),
     dispatchEvent: event => events.push(event),
@@ -65,12 +66,13 @@ function setup({ id = 'last_tick_white', pets = fixturePets, loaded = pets?.asse
   });
   const scene = new window.carrotForestPhaserGame.config.scene();
   scene.avatar = { x: 400, y: 350, direction: 'right', cosmetics: { pet: id }, tuning: { worldScale: .43 } };
-  scene.pet = actor(); scene.petEmoji = actor().setVisible(false); scene.petHeart = actor().setVisible(false);
+  scene.pet = actor(); scene.pet.input = { hitArea: { width: 32, height: 32 }, customHitArea: false };
+  scene.petEmoji = actor().setVisible(false); scene.petHeart = actor().setVisible(false);
   scene.petFollowX = 368; scene.petFollowY = 358;
   scene.player = actor(400, 350); scene.ratActor = actor(420, 350);
   scene.textures = { exists: key => key === 'lpc-pets' || loaded.includes(key) };
   scene.add = { sprite(x, y, key, frame) { const result = actor(x, y, key, frame); overlays.push(result); return result; } };
-  scene.load = { image() {}, spritesheet: (...args) => loads.push(args) };
+  scene.load = { image: (...args) => loads.push(args), spritesheet: (...args) => loads.push(args) };
   scene.tweens = { killTweensOf() {}, add() {} };
   scene.rebuildAvatar(); scene.attachWindowEvents();
   scene.dismissRat = (time, caught) => { assert.equal(caught, true); scene.ratActive = false; };
@@ -121,7 +123,7 @@ test('left-click and touch feeding keep the existing event path, while right-cli
   assert.equal(stopped, 2); assert.equal(events.filter(event => event.type === 'forest-pet-clicked').length, 2);
 });
 
-test('all four kittens and both legacy cat aliases use real poses, stable feet, and an exactly synchronized ribbon', () => {
+test('all four kittens use real poses, stable feet, and an exactly synchronized ribbon', () => {
   for (const id of [...ids, ...Object.keys(aliases)]) {
     const { scene, overlays } = setup({ id });
     const saved = JSON.stringify(scene.avatar);
@@ -145,7 +147,7 @@ test('all four kittens and both legacy cat aliases use real poses, stable feet, 
   }
 });
 
-test('missing optional kittens or ribbon fall back to loaded LPC frames, and the dog never fabricates a sit pose', () => {
+test('missing pet art or ribbon falls back to loaded LPC frames without fabricating a sit pose', () => {
   for (const id of [...ids, ...Object.keys(aliases), 'white_pup']) {
     const { scene } = setup({ id, loaded: [] });
     for (const action of ['idle', 'sit', 'feed']) {
@@ -299,4 +301,49 @@ test('installed production kitten manifest can drive all four runtime variants w
     clips.add(pose.clip); assert.equal(scene.pet.frame, pose.frame);
   }
   assert.deepEqual([...clips].sort(), ['meow_sit', 'rest', 'wash_sit', 'yawn_sit'], 'the live resting clock reaches every audited waiting clip');
+});
+
+test('all three LPC walkers remain visible animated choices without modifying saved IDs', () => {
+  const pets = require('../src/frontend/forest-pets.js');
+  for (const pet of pets.classicCatalog) {
+    const { scene, events } = setup({ id: pet.id, pets });
+    scene.preload();
+    const saved = JSON.stringify(scene.avatar);
+    assert.equal(scene.pet.visible, true, pet.id);
+    for (const action of ['walk', 'idle', 'sit', 'feed', 'attack']) {
+      const expected = pets.pose(pet.id, { action, direction: scene.petFacing, elapsed: 300 });
+      scene.renderPetPose(action, 300);
+      assert.equal(scene.pet.texture, expected.key, pet.id);
+      assert.equal(scene.pet.frame, expected.frame, pet.id);
+      assert.equal(scene.petSourceAction, action === 'walk' ? 'walk' : 'idle');
+      assert.equal(scene.pet.scaleX, expected.scale);
+      assert.equal(scene.pet.scaleX, scene.pet.scaleY);
+      assert.equal(scene.pet.angle, 0);
+      assert.deepEqual(scene.pet.input.hitArea, { width: 32, height: 32 });
+      assert.equal(scene.petOverlay?.visible || false, false);
+    }
+    assert.equal(JSON.stringify(scene.avatar), saved);
+    Object.assign(scene, { ratActive: true, ratEventId: 27, ratSpecies: 'rabbit', petFollowX: 420, petFollowY: 350 });
+    step(scene, 2);
+    assert.equal(events.filter(event => event.type === 'forest-rat-caught').length, 1);
+    scene.avatar.cosmetics.pet = 'none'; scene.rebuildAvatar();
+    assert.equal(scene.pet.visible, false);
+  }
+});
+
+test('older saved IDs stay visible and animate identically to canonical choices without rewriting the saved ID', () => {
+  const pets = require('../src/frontend/forest-pets.js');
+  for (const [oldId, id] of Object.entries(pets.aliases)) {
+    const { scene } = setup({ id: oldId, pets });
+    const saved = JSON.stringify(scene.avatar);
+    assert.equal(scene.pet.visible, true);
+    scene.renderPetPose('walk', 0); const first = scene.pet.frame;
+    scene.renderPetPose('walk', 160);
+    const expected = pets.pose(id, { action: 'walk', direction: scene.petFacing, elapsed: 160 });
+    assert.equal(scene.pet.texture, expected.key);
+    assert.equal(scene.pet.frame, expected.frame);
+    assert.notEqual(scene.pet.frame, first);
+    assert.equal(JSON.stringify(scene.avatar), saved);
+    assert.deepEqual(scene.pet.input.hitArea, { width: 32, height: 32 });
+  }
 });
