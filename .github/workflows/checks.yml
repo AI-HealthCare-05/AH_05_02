@@ -51,6 +51,11 @@ jobs:
           MYSQL_DATABASE: ai_health
         ports:
           - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppw1234"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -68,6 +73,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups --frozen
 
+      - name: Create test database
+        run: mysql -h 127.0.0.1 -P 3306 -uroot -ppw1234 -e "CREATE DATABASE IF NOT EXISTS test;"
+
       - name: Check if tests exist
         id: check_tests
         # tests 폴더나 test_*.py 파일이 있는지 확인
@@ -80,6 +88,13 @@ jobs:
 
       - name: Run Tests with Coverage
         if: steps.check_tests.outputs.has_tests == 'true'
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: pw1234
+          DB_NAME: ai_health
+          SECRET_KEY: test-only-secret-key-please-change-123456
         run: |
-          uv run coverage run -m pytest app
+          uv run coverage run -m pytest -q
           uv run coverage report -m

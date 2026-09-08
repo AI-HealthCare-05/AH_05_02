@@ -28,6 +28,7 @@ class UserUpdateRequest(BaseModel):
         Gender | None,
         Field(None, description="'MALE' or 'FEMALE'"),
     ]
+    height_cm: Annotated[float | None, Field(None, ge=120, le=220)]
 
 
 class UserInfoResponse(BaseSerializerModel):
@@ -35,6 +36,7 @@ class UserInfoResponse(BaseSerializerModel):
     name: str | None
     email: str
     phone_number: str | None
-    birthday: date
-    gender: Gender
+    birthday: date | None
+    gender: Gender | None
+    height_cm: float | None
     created_at: datetime

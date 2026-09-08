@@ -95,6 +95,7 @@ services:
       replicas: 3
     volumes:
       - ./models:/app/storage/models:ro
+      - ./models:/app/models:ro
       - model_cache:/app/storage/cache
     healthcheck:
       test: ["CMD", "test", "-f", "/tmp/ai-worker-ready"]
@@ -108,6 +109,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      fastapi:
         condition: service_healthy
 
   nginx:

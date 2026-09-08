@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_incidence",
+  "model_version": "rf25-tuned-spec40-v1.1-sav",
+  "promotion_status": "candidate_only",
+  "operational_model_activated": false,
+  "experiment_id": "rf_25features_tuned_spec40_v001",
+  "run_id": "20260901T084527Z",
+  "based_on_pull_request": 26,
+  "source_data_format": "SPSS SAV",
+  "artifact_local_path": "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib",
+  "artifact_source_path": "outputs/ml/rf_25features_tuned_spec40_v001/20260901T084527Z/model.joblib",
+  "artifact_filename": "model.joblib",
+  "artifact_size_bytes": 2293404,
+  "artifact_sha256": "b96eaf408982399782073fce97977bef874012cf7d90551120da60266df68ddd",
+  "artifact_git_policy": "local_only_do_not_commit_model_binary",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "feature_schema_version": "klosa_stage3_25features_v1",
+  "preprocessing_version": "train-median-indicator-mode-onehot-v1",
+  "threshold_version": "validation-spec043-caution-recall090-sav-repro-v1",
+  "thresholds": {
+    "low": 0.0,
+    "caution": 0.01725507070479405,
+    "high": 0.02120045257343795,
+    "selection_data": "validation_only",
+    "caution_target_recall": 0.9,
+    "high_minimum_validation_specificity": 0.43,
+    "minimum_reported_test_specificity": 0.4
+  },
+  "risk_categories": [
+    "low",
+    "caution",
+    "high"
+  ],
+  "features": [
+    "age",
+    "sex",
+    "bmi",
+    "smoking_status",
+    "current_drinker",
+    "regular_exercise",
+    "exercise_days_per_week",
+    "exercise_minutes",
+    "hypertension_diagnosis",
+    "cancer_diagnosis",
+    "chronic_lung_disease_diagnosis",
+    "liver_disease_diagnosis",
+    "heart_disease_diagnosis",
+    "cerebrovascular_disease_diagnosis",
+    "psychiatric_disease_diagnosis",
+    "arthritis_rheumatism_diagnosis",
+    "log_household_income",
+    "education_level",
+    "marital_status",
+    "household_structure",
+    "health_satisfaction_score",
+    "economic_satisfaction_score",
+    "overall_quality_of_life_score",
+    "depressed_feeling_last_week",
+    "sleep_difficulty_last_week"
+  ],
+  "missing_value_policy": {
+    "required_api_fields": "reject_missing",
+    "optional_numeric": "NaN_then_train_median_and_missing_indicator",
+    "optional_categorical": "NaN_then_train_mode",
+    "unknown_diagnosis": "missing_never_assume_no",
+    "preprocessing_fit_scope": "train_only"
+  },
+  "software": {
+    "python": "3.13.9",
+    "scikit_learn": "1.8.0",
+    "pandas": "2.3.3",
+    "joblib": "1.5.3"
+  },
+  "reproduce": {
+    "source_requirement": "KLoSA str01-str10 SPSS SAV files under data/interim/source_extract/klosa/20260413",
+    "validate": "./scripts/ml-experiment.sh validate",
+    "run": "./scripts/ml-experiment.sh run rf_25features_tuned_spec40_v001",
+    "provision": "python scripts/provision-models.py --tomorrow outputs/ml/rf_25features_tuned_spec40_v001/20260901T084527Z/model.joblib",
+    "test": "uv run pytest -q tests/ml/test_diabetes_standard_inference.py tests/test_dual_model_integration.py"
+  },
+  "metrics": {
+    "recall": 0.8358974358974359,
+    "specificity": 0.40542293720809547,
+    "auroc": 0.6633753808896518,
+    "auprc": 0.048437075282080605,
+    "f1": 0.06597854685286379,
+    "brier_score": 0.02388488750971117,
+    "confusion_matrix": {
+      "true_positive": 163,
+      "false_positive": 4583,
+      "true_negative": 3125,
+      "false_negative": 32
+    },
+    "threshold": 0.02120045257343795
+  },
+  "supported_population": {
+    "age_minimum": 45,
+    "age_maximum": 105,
+    "baseline_diabetes_status": "no_previous_physician_diagnosis",
+    "source_population": "KLoSA participants represented in official_v1 cohort"
+  },
+  "reproduction_note": "PR #26의 고정 특성·분할·하이퍼파라미터를 현재 확보한 공식 SPSS SAV 배포본으로 재현했다. 기존 DTA 산출물과 미세한 수치 차이가 있어 별도 버전과 체크섬으로 등록한다.",
+  "medical_review_required": true,
+  "intended_use": "diabetes incidence risk screening and health education research only",
+  "prohibited_use": [
+    "diagnosis",
+    "prescription",
+    "medication_start_stop_or_dose_change",
+    "emergency_triage",
+    "use_outside_supported_age_range"
+  ]
+}

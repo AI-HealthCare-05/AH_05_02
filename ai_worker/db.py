@@ -6,8 +6,8 @@ import asyncmy
 
 from ai_worker.core import config
 
-CREATE_AI_JOBS_TABLE = """
-CREATE TABLE IF NOT EXISTS ai_jobs (
+CREATE_PREDICTION_JOBS_TABLE = """
+CREATE TABLE IF NOT EXISTS prediction_jobs (
     job_id VARCHAR(36) NOT NULL PRIMARY KEY,
     task_type VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'queued',
@@ -19,9 +19,16 @@ CREATE TABLE IF NOT EXISTS ai_jobs (
     model_version VARCHAR(100) NULL,
     model_key VARCHAR(100) NOT NULL DEFAULT 'diabetes_incidence',
     feature_schema_version VARCHAR(100) NULL,
+    input_schema_version VARCHAR(100) NULL,
+    preprocessing_version VARCHAR(100) NULL,
+    target_definition_version VARCHAR(100) NULL,
+    calibration_version VARCHAR(100) NULL,
+    model_artifact_digest VARCHAR(128) NULL,
     threshold_version VARCHAR(100) NULL,
+    threshold_scope VARCHAR(100) NULL,
     user_id BIGINT NULL,
     health_checkup_id BIGINT NULL,
+    input_as_of_date DATE NULL,
     prediction_id BIGINT NULL,
     error_code VARCHAR(50) NULL,
     retryable BOOL NOT NULL DEFAULT 0,
@@ -31,7 +38,7 @@ CREATE TABLE IF NOT EXISTS ai_jobs (
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     started_at DATETIME(6) NULL,
     completed_at DATETIME(6) NULL,
-    INDEX idx_ai_jobs_status (status)
+    INDEX idx_prediction_jobs_status (status)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
 
@@ -41,6 +48,7 @@ CREATE TABLE IF NOT EXISTS predictions (
     job_id VARCHAR(36) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL,
     health_checkup_id BIGINT NOT NULL,
+    input_as_of_date DATE NOT NULL,
     model_key VARCHAR(100) NOT NULL,
     outcome_definition VARCHAR(120) NOT NULL,
     result_status VARCHAR(40) NOT NULL,
@@ -48,13 +56,43 @@ CREATE TABLE IF NOT EXISTS predictions (
     internal_score DOUBLE NULL,
     model_version VARCHAR(100) NOT NULL,
     feature_schema_version VARCHAR(100) NOT NULL,
+    input_schema_version VARCHAR(100) NOT NULL,
+    preprocessing_version VARCHAR(100) NOT NULL,
+    target_definition_version VARCHAR(100) NOT NULL,
+    calibration_version VARCHAR(100) NOT NULL,
+    model_artifact_digest VARCHAR(128) NULL,
     threshold_version VARCHAR(100) NOT NULL,
+    decision_threshold DOUBLE NULL,
+    class_probabilities JSON NULL,
+    output_status VARCHAR(80) NOT NULL DEFAULT 'uncalibrated_research_probability_only',
     model_population VARCHAR(120) NOT NULL,
     explanation_status VARCHAR(40) NOT NULL DEFAULT 'not_available',
     disclaimer TEXT NOT NULL,
+    risk_curve_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable',
+    output_definition_version VARCHAR(100) NULL,
+    age_risk_forecast JSON NULL,
+    task_type VARCHAR(80) NULL,
+    threshold_scope VARCHAR(100) NULL,
+    display_allowed BOOL NOT NULL DEFAULT 0,
+    operational_model_activated BOOL NOT NULL DEFAULT 0,
+    preview_only BOOL NOT NULL DEFAULT 0,
+    preview_signal_level VARCHAR(20) NULL,
     predicted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     INDEX idx_predictions_user_id (user_id),
     INDEX idx_predictions_health_checkup_id (health_checkup_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+"""
+
+CREATE_PREDICTION_RISK_CURVE_POINTS_TABLE = """
+CREATE TABLE IF NOT EXISTS prediction_risk_curve_points (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    prediction_id BIGINT NOT NULL,
+    age INT NOT NULL,
+    cumulative_risk DOUBLE NOT NULL,
+    lower DOUBLE NOT NULL,
+    upper DOUBLE NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    UNIQUE KEY uq_risk_curve_prediction_age (prediction_id, age)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
 
@@ -74,12 +112,31 @@ CREATE TABLE IF NOT EXISTS follow_up_actions (
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
 
-AI_JOB_COLUMNS = {
+PREDICTION_COLUMNS = {
+    "risk_curve_status": "VARCHAR(20) NOT NULL DEFAULT 'not_applicable'",
+    "output_definition_version": "VARCHAR(100) NULL",
+    "age_risk_forecast": "JSON NULL",
+    "task_type": "VARCHAR(80) NULL",
+    "threshold_scope": "VARCHAR(100) NULL",
+    "display_allowed": "BOOL NOT NULL DEFAULT 0",
+    "operational_model_activated": "BOOL NOT NULL DEFAULT 0",
+    "preview_only": "BOOL NOT NULL DEFAULT 0",
+    "preview_signal_level": "VARCHAR(20) NULL",
+}
+
+PREDICTION_JOB_COLUMNS = {
     "model_key": "VARCHAR(100) NOT NULL DEFAULT 'diabetes_incidence'",
     "feature_schema_version": "VARCHAR(100) NULL",
+    "input_schema_version": "VARCHAR(100) NULL",
+    "preprocessing_version": "VARCHAR(100) NULL",
+    "target_definition_version": "VARCHAR(100) NULL",
+    "calibration_version": "VARCHAR(100) NULL",
+    "model_artifact_digest": "VARCHAR(128) NULL",
     "threshold_version": "VARCHAR(100) NULL",
+    "threshold_scope": "VARCHAR(100) NULL",
     "user_id": "BIGINT NULL",
     "health_checkup_id": "BIGINT NULL",
+    "input_as_of_date": "DATE NULL",
     "prediction_id": "BIGINT NULL",
     "error_code": "VARCHAR(50) NULL",
     "retryable": "BOOL NOT NULL DEFAULT 0",
@@ -103,17 +160,26 @@ async def ensure_schema() -> None:
     connection = await connect_db()
     try:
         async with connection.cursor() as cursor:
-            await cursor.execute(CREATE_AI_JOBS_TABLE)
+            await cursor.execute(CREATE_PREDICTION_JOBS_TABLE)
             await cursor.execute(CREATE_PREDICTIONS_TABLE)
             await cursor.execute(CREATE_FOLLOW_UP_ACTIONS_TABLE)
+            await cursor.execute(CREATE_PREDICTION_RISK_CURVE_POINTS_TABLE)
             await cursor.execute(
-                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='ai_jobs'",
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='prediction_jobs'",
                 (config.DB_NAME,),
             )
             existing = {row[0] for row in await cursor.fetchall()}
-            for column, definition in AI_JOB_COLUMNS.items():
+            for column, definition in PREDICTION_JOB_COLUMNS.items():
                 if column not in existing:
-                    await cursor.execute(f"ALTER TABLE ai_jobs ADD COLUMN {column} {definition}")
+                    await cursor.execute(f"ALTER TABLE prediction_jobs ADD COLUMN {column} {definition}")
+            await cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='predictions'",
+                (config.DB_NAME,),
+            )
+            existing_predictions = {row[0] for row in await cursor.fetchall()}
+            for column, definition in PREDICTION_COLUMNS.items():
+                if column not in existing_predictions:
+                    await cursor.execute(f"ALTER TABLE predictions ADD COLUMN {column} {definition}")
     finally:
         connection.close()
 
@@ -138,11 +204,20 @@ async def update_job(
         async with connection.cursor() as cursor:
             await cursor.execute(
                 """
-                UPDATE ai_jobs
+                UPDATE prediction_jobs
                 SET status=%s, worker_name=%s, attempts=%s, result=%s, error=%s,
                     started_at=COALESCE(%s, started_at), completed_at=%s,
                     prediction_id=COALESCE(%s, prediction_id), error_code=%s,
-                    retryable=%s, retry_after_seconds=%s
+                    retryable=%s, retry_after_seconds=%s,
+                    model_key=COALESCE(%s, model_key), model_version=COALESCE(%s, model_version),
+                    feature_schema_version=COALESCE(%s, feature_schema_version),
+                    input_schema_version=COALESCE(%s, input_schema_version),
+                    preprocessing_version=COALESCE(%s, preprocessing_version),
+                    target_definition_version=COALESCE(%s, target_definition_version),
+                    calibration_version=COALESCE(%s, calibration_version),
+                    model_artifact_digest=COALESCE(%s, model_artifact_digest),
+                    threshold_version=COALESCE(%s, threshold_version),
+                    threshold_scope=COALESCE(%s, threshold_scope)
                 WHERE job_id=%s
                 """,
                 (
@@ -157,6 +232,16 @@ async def update_job(
                     error_code,
                     retryable,
                     retry_after_seconds,
+                    result.get("model_key") if result else None,
+                    result.get("model_version") if result else None,
+                    result.get("feature_schema_version") if result else None,
+                    result.get("input_schema_version") if result else None,
+                    result.get("preprocessing_version") if result else None,
+                    result.get("target_definition_version") if result else None,
+                    result.get("calibration_version") if result else None,
+                    result.get("model_artifact_digest") if result else None,
+                    result.get("threshold_version") if result else None,
+                    result.get("threshold_scope") if result else None,
                     job_id,
                 ),
             )
@@ -169,7 +254,7 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
     try:
         async with connection.cursor() as cursor:
             await cursor.execute(
-                "SELECT user_id, health_checkup_id FROM ai_jobs WHERE job_id=%s",
+                "SELECT user_id, health_checkup_id, input_as_of_date FROM prediction_jobs WHERE job_id=%s",
                 (job_id,),
             )
             row = await cursor.fetchone()
@@ -177,19 +262,32 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                 raise RuntimeError("예측 작업의 사용자 또는 건강정보 연결값이 없습니다.")
             result_status = "approved" if result.get("promotion_status") == "approved" else "development_only"
             risk_category = result.get("risk_category") if result_status == "approved" else None
+            output_status = result.get("output_status") or (
+                "approved" if result_status == "approved" else "uncalibrated_research_probability_only"
+            )
+            model_population = result.get("model_population", config.PREDICTION_MODEL_POPULATION)
+            disclaimer = result.get("medical_notice") or (
+                "이 결과는 당뇨병 진단이 아닌 위험 선별 및 건강교육 정보입니다."
+            )
+            age_risk_forecast = result.get("age_risk_forecast")
             await cursor.execute(
                 """
                 INSERT INTO predictions (
-                    job_id, user_id, health_checkup_id, model_key, outcome_definition,
+                    job_id, user_id, health_checkup_id, input_as_of_date, model_key, outcome_definition,
                     result_status, risk_category, internal_score, model_version,
-                    feature_schema_version, threshold_version, model_population,
-                    explanation_status, disclaimer
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    feature_schema_version, input_schema_version, preprocessing_version,
+                    target_definition_version, calibration_version, model_artifact_digest,
+                    threshold_version, decision_threshold, class_probabilities, output_status,
+                    model_population, explanation_status, disclaimer, age_risk_forecast
+                    , task_type, threshold_scope, display_allowed, operational_model_activated,
+                    preview_only, preview_signal_level
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     job_id,
                     row[0],
                     row[1],
+                    row[2],
                     result["model_key"],
                     result["outcome_definition"],
                     result_status,
@@ -197,10 +295,25 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result.get("internal_score"),
                     result["model_version"],
                     result["feature_schema_version"],
+                    result["input_schema_version"],
+                    result["preprocessing_version"],
+                    result["target_definition_version"],
+                    result["calibration_version"],
+                    result.get("model_artifact_digest"),
                     result["threshold_version"],
-                    config.PREDICTION_MODEL_POPULATION,
+                    result.get("decision_threshold"),
+                    None,
+                    output_status,
+                    model_population,
                     result.get("explanation_status", "not_available"),
-                    "이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
+                    disclaimer,
+                    json.dumps(age_risk_forecast, ensure_ascii=False) if age_risk_forecast is not None else None,
+                    result.get("task_type"),
+                    result.get("threshold_scope"),
+                    result.get("display_allowed") is True,
+                    result.get("operational_model_activated") is True,
+                    result.get("preview_only") is True,
+                    result.get("preview_signal_level"),
                 ),
             )
             prediction_id = int(cursor.lastrowid)
@@ -214,5 +327,41 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     (row[0], prediction_id),
                 )
             return prediction_id
+    finally:
+        connection.close()
+
+
+async def persist_risk_curve(
+    prediction_id: int,
+    points: list[dict[str, Any]],
+    output_definition_version: str | None,
+) -> None:
+    """Store an age-indexed risk curve for an already-approved prediction.
+
+    `points` are same-model, age-shifted approximations (no separate
+    survival model) — see src.ml.inference.diabetes_standard.predict_age_curve.
+    The model does not produce an uncertainty band, so lower/upper are set
+    equal to the point estimate rather than fabricating a confidence interval.
+    """
+    if not points:
+        return
+    connection = await connect_db()
+    try:
+        async with connection.cursor() as cursor:
+            for point in points:
+                score = float(point["risk_score"])
+                await cursor.execute(
+                    """
+                    INSERT INTO prediction_risk_curve_points (prediction_id, age, cumulative_risk, lower, upper)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE cumulative_risk=VALUES(cumulative_risk),
+                        lower=VALUES(lower), upper=VALUES(upper)
+                    """,
+                    (prediction_id, int(point["age"]), score, score, score),
+                )
+            await cursor.execute(
+                "UPDATE predictions SET risk_curve_status=%s, output_definition_version=%s WHERE id=%s",
+                ("available", output_definition_version, prediction_id),
+            )
     finally:
         connection.close()

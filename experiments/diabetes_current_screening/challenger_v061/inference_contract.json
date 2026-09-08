@@ -1,0 +1,21 @@
+{
+  "model_key": "diabetes_current_screening",
+  "model_version": "knhanes-current-diabetes-recall-v0.6.1",
+  "feature_schema_version": "knhanes-current-diabetes-screening-v4-waist-residual",
+  "threshold_version": "validation-2021-2022-spec042-v3",
+  "threshold": 0.02323125331773926,
+  "task": "current_cross_sectional_screening_not_future_incidence",
+  "waist_policy": {
+    "observed_waist_cm": "used_without_overwrite",
+    "missing_waist_cm": "estimated_from_height_cm_weight_kg_age_sex",
+    "estimator": "HistGradientBoostingRegressor fitted inside each training fold",
+    "required_for_fallback": ["height_cm", "weight_kg", "age", "sex"]
+  },
+  "derived_internal_features": [
+    "waist_height_ratio",
+    "waist_was_estimated",
+    "waist_expected_cm",
+    "waist_minus_expected_cm"
+  ],
+  "promotion_status": "candidate_internal_not_for_diagnosis_or_personal_probability_display"
+}

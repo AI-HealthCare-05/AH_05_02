@@ -7,10 +7,13 @@ from app.core import config
 TORTOISE_APP_MODELS = [
     "aerich.models",
     "app.models.users",
-    "app.models.ai_jobs",
+    "app.models.prediction_jobs",
+    "app.models.model_registry",
     "app.models.health",
     "app.models.engagement",
     "app.models.wellness",
+    "app.models.game",
+    "app.models.forest",
 ]
 
 DEFAULT_CONNECTION = (

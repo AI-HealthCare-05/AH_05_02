@@ -28,10 +28,17 @@ class AIJobResponse(BaseModel):
 class PredictionJobResponse(BaseModel):
     job_id: str
     status: Literal["queued", "running", "succeeded", "failed"]
+    task_type: str
     model_key: str
     model_version: str | None = None
     feature_schema_version: str | None = None
+    input_schema_version: str | None = None
+    preprocessing_version: str | None = None
+    target_definition_version: str | None = None
+    calibration_version: str | None = None
+    model_artifact_digest: str | None = None
     threshold_version: str | None = None
+    threshold_scope: str | None = None
     prediction_id: int | None = None
     error_code: str | None = None
     retryable: bool = False
@@ -45,10 +52,17 @@ def prediction_job_response(job: object) -> PredictionJobResponse:
     return PredictionJobResponse(
         job_id=job.job_id,
         status=job.status,
+        task_type=getattr(job, "task_type", job.model_key),
         model_key=job.model_key,
         model_version=job.model_version,
         feature_schema_version=job.feature_schema_version,
+        input_schema_version=job.input_schema_version,
+        preprocessing_version=job.preprocessing_version,
+        target_definition_version=job.target_definition_version,
+        calibration_version=job.calibration_version,
+        model_artifact_digest=job.model_artifact_digest,
         threshold_version=job.threshold_version,
+        threshold_scope=getattr(job, "threshold_scope", None),
         prediction_id=job.prediction_id,
         error_code=job.error_code,
         retryable=job.retryable,

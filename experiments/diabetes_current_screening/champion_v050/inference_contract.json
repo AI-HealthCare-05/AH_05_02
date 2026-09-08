@@ -1,0 +1,52 @@
+{
+  "model_key": "diabetes_current_screening",
+  "model_version": "knhanes-current-diabetes-recall-v0.5.0",
+  "feature_schema_version": "knhanes-current-diabetes-screening-v2",
+  "threshold_version": "validation-2021-2022-spec042-v1",
+  "threshold": 0.023227178771059433,
+  "selected_ensemble": {
+    "logistic": 0.7,
+    "random_forest": 0.3
+  },
+  "input_features": [
+    "age",
+    "height_cm",
+    "weight_kg",
+    "waist_cm",
+    "bmi",
+    "walking_days",
+    "energy_kcal",
+    "protein_g",
+    "fat_g",
+    "carbohydrate_g",
+    "sodium_mg",
+    "sex",
+    "region",
+    "urban",
+    "education",
+    "income_quartile",
+    "household_income_quartile",
+    "hypertension_family_history",
+    "diabetes_family_history",
+    "current_smoker",
+    "alcohol_frequency",
+    "aerobic_activity"
+  ],
+  "output": {
+    "score_name": "current_diabetes_screening_score",
+    "flag_name": "current_diabetes_screening_flag",
+    "meaning": "현재 미진단 성인의 당뇨 임상 신호 선별 보조값",
+    "prohibited_interpretations": [
+      "당뇨병 확진",
+      "향후 발병확률",
+      "치료 또는 투약 필요성"
+    ]
+  },
+  "klosa_integration": {
+    "mode": "parallel_auxiliary_indicator",
+    "direct_probability_average": false,
+    "use_as_klosa_model_feature": false,
+    "display_rule": "KLoSA 미래 위험과 별도 축으로 표시하고 두 점수를 하나의 확률로 합산하지 않음"
+  },
+  "promotion_status": "candidate_internal_not_for_diagnosis_or_personal_probability_display"
+}

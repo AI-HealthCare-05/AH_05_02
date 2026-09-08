@@ -1,0 +1,373 @@
+from __future__ import annotations
+
+import json
+import os
+from datetime import date
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from src.ml.evaluation.diabetes_risk_categories import categorize_risk_score
+from src.ml.inference.diabetes_standard import (
+    LoadedDiabetesModel,
+    ModelArtifactUnavailableError,
+    load_standard_model,
+    predict_with_loaded_model,
+)
+from src.ml.modeling.train_klosa_diabetes_sample import assert_no_leakage
+from src.ml.preprocessing.build_klosa_diabetes_mental_rhythm_cohort import (
+    MENTAL_RHYTHM_EXTENDED_FEATURES,
+)
+from src.ml.preprocessing.diabetes_api_features import (
+    API_INPUT_CONTRACT,
+    OPTIONAL_API_FIELDS,
+    REQUIRED_API_FIELDS,
+    STANDARD_MODEL_FEATURES,
+    DiabetesRiskInput,
+    build_standard_model_frame,
+    parse_diabetes_risk_input,
+)
+
+
+class FixedScorePipeline:
+    def __init__(self, score: float = 0.02) -> None:
+        self.score = score
+
+    def predict_proba(self, frame):
+        assert tuple(frame.columns) == STANDARD_MODEL_FEATURES
+        return np.array([[1.0 - self.score, self.score]])
+
+
+class FloatingPointJitterPipeline:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    def predict_proba(self, frame):
+        assert tuple(frame.columns) == STANDARD_MODEL_FEATURES
+        scores = (0.022930332474699750, 0.022930332474699756, 0.022930332474699753)
+        score = scores[self.call_count % len(scores)]
+        self.call_count += 1
+        return np.array([[1.0 - score, score]])
+
+
+def fixed_input(**overrides) -> DiabetesRiskInput:
+    values = {
+        "birth_date": date(1960, 4, 15),
+        "sex": "female",
+        "height_cm": 160.0,
+        "weight_kg": 62.0,
+        "smoking_status": "never",
+        "current_drinker": False,
+        "regular_exercise": True,
+        "exercise_days_per_week": 3,
+        "exercise_minutes": 40,
+        "previously_diagnosed_diabetes": False,
+    }
+    values.update(overrides)
+    return DiabetesRiskInput(**values)
+
+
+def candidate_manifest() -> dict:
+    return {
+        "model_version": "rf-25features-v001-run-test",
+        "feature_schema_version": "klosa_stage3_25features_v1",
+        "input_schema_version": "diabetes-incidence-api-25features-v1",
+        "threshold_version": "validation-recall-090-080-v1",
+        "thresholds": {"caution": 0.0167, "high": 0.0224},
+    }
+
+
+def test_api_contract_defines_required_optional_units_and_ranges() -> None:
+    assert set(API_INPUT_CONTRACT) == {
+        *REQUIRED_API_FIELDS,
+        *OPTIONAL_API_FIELDS,
+    }
+    assert API_INPUT_CONTRACT["height_cm"]["unit"] == "cm"
+    assert API_INPUT_CONTRACT["exercise_days_per_week"]["range"] == [0, 7]
+    assert API_INPUT_CONTRACT["health_satisfaction_score"]["required"] is False
+    assert API_INPUT_CONTRACT["hypertension_diagnosis"]["type"] == ("boolean|null")
+
+
+def test_model_frame_has_training_order_and_safe_missing_values() -> None:
+    frame = build_standard_model_frame(
+        fixed_input(regular_exercise=False),
+        as_of_date=date(2026, 8, 26),
+    )
+
+    assert tuple(frame.columns) == STANDARD_MODEL_FEATURES
+    assert list(STANDARD_MODEL_FEATURES) == MENTAL_RHYTHM_EXTENDED_FEATURES
+    assert frame.loc[0, "exercise_days_per_week"] == 0
+    assert frame.loc[0, "exercise_minutes"] == 0
+    assert np.isnan(frame.loc[0, "log_household_income"])
+    assert np.isnan(frame.loc[0, "hypertension_diagnosis"])
+
+
+def test_input_with_all_optional_values_missing_completes_inference() -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FixedScorePipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    result = predict_with_loaded_model(
+        loaded,
+        fixed_input(),
+        as_of_date=date(2026, 8, 27),
+    )
+
+    assert result["risk_score"] == pytest.approx(0.02)
+    assert result["risk_category"] == "caution"
+
+
+@pytest.mark.parametrize("missing_field", REQUIRED_API_FIELDS)
+def test_json_input_rejects_each_missing_required_field(missing_field: str) -> None:
+    payload = fixed_input().__dict__.copy()
+    payload.pop(missing_field)
+
+    with pytest.raises(ValueError, match="invalid diabetes risk input"):
+        parse_diabetes_risk_input(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_message"),
+    [
+        ("birth_date", "birth_date must be a date"),
+        ("sex", "sex is required"),
+        ("height_cm", "height_cm must be a number"),
+        ("weight_kg", "weight_kg must be a number"),
+        ("smoking_status", "smoking_status is required"),
+        ("current_drinker", "current_drinker must be boolean"),
+        ("regular_exercise", "regular_exercise must be boolean"),
+        ("exercise_days_per_week", "exercise_days_per_week must be a number"),
+        ("exercise_minutes", "exercise_minutes must be a number"),
+        ("previously_diagnosed_diabetes", "previously_diagnosed_diabetes must be boolean"),
+    ],
+)
+def test_model_frame_rejects_null_required_values(field: str, expected_message: str) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        build_standard_model_frame(
+            fixed_input(**{field: None}),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "expected_message"),
+    [
+        ({"height_cm": 119.9}, "height_cm must be between 120 and 220"),
+        ({"height_cm": 220.1}, "height_cm must be between 120 and 220"),
+        ({"weight_kg": 24.9}, "weight_kg must be between 25 and 250"),
+        ({"weight_kg": 250.1}, "weight_kg must be between 25 and 250"),
+        ({"exercise_days_per_week": -1}, "exercise_days_per_week must be between 0 and 7"),
+        ({"exercise_days_per_week": 8}, "exercise_days_per_week must be between 0 and 7"),
+        ({"exercise_minutes": -1}, "exercise_minutes must be between 0 and 720"),
+        ({"exercise_minutes": 721}, "exercise_minutes must be between 0 and 720"),
+        (
+            {"annual_household_income_10k_krw": -1},
+            "annual_household_income_10k_krw must be between 0 and 123500",
+        ),
+        (
+            {"annual_household_income_10k_krw": 123_501},
+            "annual_household_income_10k_krw must be between 0 and 123500",
+        ),
+        ({"health_satisfaction_score": -1}, "health_satisfaction_score must be between 0 and 100"),
+        ({"economic_satisfaction_score": 101}, "economic_satisfaction_score must be between 0 and 100"),
+        ({"overall_quality_of_life_score": float("nan")}, "overall_quality_of_life_score must be between"),
+        ({"height_cm": 220, "weight_kg": 25}, "derived bmi must be between 10 and 70"),
+        ({"height_cm": 120, "weight_kg": 250}, "derived bmi must be between 10 and 70"),
+    ],
+)
+def test_model_frame_rejects_out_of_range_values(
+    overrides: dict,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        build_standard_model_frame(
+            fixed_input(**overrides),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+@pytest.mark.parametrize(
+    ("birth_date", "expected_age"),
+    [
+        (date(1981, 8, 27), 45),
+        (date(1961, 8, 27), 65),
+        (date(1921, 8, 27), 105),
+    ],
+)
+def test_supported_ages_complete_inference(birth_date: date, expected_age: int) -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FixedScorePipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    frame = build_standard_model_frame(
+        fixed_input(birth_date=birth_date),
+        as_of_date=date(2026, 8, 27),
+    )
+    result = predict_with_loaded_model(
+        loaded,
+        fixed_input(birth_date=birth_date),
+        as_of_date=date(2026, 8, 27),
+    )
+
+    assert frame.loc[0, "age"] == expected_age
+    assert result["risk_score"] == pytest.approx(0.02)
+    assert result["risk_category"] == "caution"
+    assert result["applicability"]["minimum_age"] == 45
+    assert result["applicability"]["maximum_age"] == 105
+    assert "동일한 성능을 보장하지 않습니다" in result["applicability"]["notice"]
+
+
+@pytest.mark.parametrize(
+    ("birth_date", "expected_age"),
+    [
+        (date(1981, 8, 28), 44),
+        (date(1920, 8, 27), 106),
+    ],
+)
+def test_unsupported_ages_are_rejected(birth_date: date, expected_age: int) -> None:
+    with pytest.raises(ValueError, match=f"age {expected_age} is outside the model-supported range 45-105"):
+        build_standard_model_frame(
+            fixed_input(birth_date=birth_date),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+def test_future_birth_date_is_rejected() -> None:
+    with pytest.raises(ValueError, match="birth_date cannot be in the future"):
+        build_standard_model_frame(
+            fixed_input(birth_date=date(2026, 8, 28)),
+            as_of_date=date(2026, 8, 27),
+        )
+
+
+def test_standard_features_pass_leakage_guard() -> None:
+    assert_no_leakage(list(STANDARD_MODEL_FEATURES))
+
+
+def test_fixed_input_inference_is_deterministic_and_versioned() -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FixedScorePipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    first = predict_with_loaded_model(
+        loaded,
+        fixed_input(),
+        as_of_date=date(2026, 8, 26),
+    )
+    second = predict_with_loaded_model(
+        loaded,
+        fixed_input(),
+        as_of_date=date(2026, 8, 26),
+    )
+
+    assert first == second
+    assert first["risk_score"] == pytest.approx(0.02)
+    assert first["risk_category"] == "caution"
+    assert first["model_version"] == "rf-25features-v001-run-test"
+    assert first["feature_schema_version"] == "klosa_stage3_25features_v1"
+    assert first["threshold_version"] == "validation-recall-090-080-v1"
+    assert "진단이나 처방이 아닙니다" in first["disclaimer"]
+
+
+def test_floating_point_jitter_is_normalized_for_reproducible_output() -> None:
+    loaded = LoadedDiabetesModel(
+        pipeline=FloatingPointJitterPipeline(),
+        manifest=candidate_manifest(),
+    )
+
+    results = [
+        predict_with_loaded_model(
+            loaded,
+            fixed_input(),
+            as_of_date=date(2026, 8, 27),
+        )
+        for _ in range(3)
+    ]
+
+    assert results[0] == results[1] == results[2]
+    assert results[0]["risk_score"] == 0.022930332475
+
+
+@pytest.mark.parametrize(
+    ("score", "expected"),
+    [(0.01, "low"), (0.02, "caution"), (0.03, "high")],
+)
+def test_risk_categories(score: float, expected: str) -> None:
+    assert (
+        categorize_risk_score(
+            score,
+            caution_threshold=0.0167,
+            high_threshold=0.0224,
+        )
+        == expected
+    )
+
+
+def test_missing_model_file_has_clear_error(tmp_path: Path) -> None:
+    with pytest.raises(ModelArtifactUnavailableError, match="model artifact is missing"):
+        load_standard_model(model_path=tmp_path / "missing-model.joblib")
+
+
+def test_previously_diagnosed_user_is_rejected() -> None:
+    with pytest.raises(ValueError, match="ineligible"):
+        build_standard_model_frame(
+            fixed_input(previously_diagnosed_diabetes=True),
+            as_of_date=date(2026, 8, 26),
+        )
+
+
+def test_required_category_cannot_be_null() -> None:
+    with pytest.raises(ValueError, match="sex is required"):
+        build_standard_model_frame(
+            fixed_input(sex=None),  # type: ignore[arg-type]
+            as_of_date=date(2026, 8, 26),
+        )
+
+
+def test_json_input_parsing_accepts_iso_birth_date() -> None:
+    parsed = parse_diabetes_risk_input(
+        {
+            **fixed_input().__dict__,
+            "birth_date": "1960-04-15",
+        }
+    )
+
+    assert parsed.birth_date == date(1960, 4, 15)
+
+
+def test_candidate_manifest_records_metrics_contract_and_reproduction() -> None:
+    path = Path("models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+
+    assert manifest["features"] == list(STANDARD_MODEL_FEATURES)
+    assert {"recall", "specificity", "auroc", "auprc"} <= set(manifest["metrics"])
+    assert manifest["artifact_local_path"].startswith("models/artifacts/")
+    assert manifest["artifact_git_policy"] == ("local_only_do_not_commit_model_binary")
+    assert manifest["risk_categories"] == ["low", "caution", "high"]
+    assert manifest["reproduce"]["run"] == ("./scripts/ml-experiment.sh run rf_25features_tuned_spec40_v001")
+
+
+def test_registered_artifact_matches_fixed_input_golden_output() -> None:
+    configured_path = os.environ.get("DIABETES_RF25_MODEL_PATH")
+    if configured_path is None:
+        pytest.skip("set DIABETES_RF25_MODEL_PATH to verify the Git-excluded registered artifact")
+
+    examples_dir = Path("docs/api/examples")
+    payload = json.loads((examples_dir / "tuned_rf25_valid_input.json").read_text(encoding="utf-8"))
+    expected = json.loads((examples_dir / "tuned_rf25_response.json").read_text(encoding="utf-8"))
+    loaded = load_standard_model(model_path=Path(configured_path))
+
+    results = [
+        predict_with_loaded_model(
+            loaded,
+            parse_diabetes_risk_input(payload),
+            as_of_date=date(2026, 8, 31),
+        )
+        for _ in range(5)
+    ]
+
+    assert results == [expected] * 5

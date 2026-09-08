@@ -1,0 +1,55 @@
+{
+  "experiment_id": "knhanes-current-screening-recall-20260831",
+  "seed": 20260831,
+  "target": "target_diabetes_clinical",
+  "eligibility": "eligible_diabetes_undiagnosed and cohort_19_plus",
+  "split_contract": {
+    "train": [2016, 2017, 2018, 2019, 2020],
+    "validation": [2021, 2022],
+    "test": [2023, 2024]
+  },
+  "selection": {
+    "primary_metric": "recall",
+    "minimum_test_specificity": 0.4,
+    "validation_specificity_buffer": 0.02,
+    "minimum_auprc_lift": 1.05
+  },
+  "feature_schema_version": "knhanes-current-diabetes-screening-v2",
+  "model_version": "knhanes-current-diabetes-recall-v0.5.0",
+  "threshold_version": "validation-2021-2022-spec042-v1",
+  "numeric_features": [
+    "age",
+    "height_cm",
+    "weight_kg",
+    "waist_cm",
+    "bmi",
+    "walking_days",
+    "energy_kcal",
+    "protein_g",
+    "fat_g",
+    "carbohydrate_g",
+    "sodium_mg"
+  ],
+  "categorical_features": [
+    "sex",
+    "region",
+    "urban",
+    "education",
+    "income_quartile",
+    "household_income_quartile",
+    "hypertension_family_history",
+    "diabetes_family_history",
+    "current_smoker",
+    "alcohol_frequency",
+    "aerobic_activity"
+  ],
+  "leakage_denylist": [
+    "fasting_glucose",
+    "hba1c",
+    "diabetes_diagnosed",
+    "diabetes_medication",
+    "diabetes_state",
+    "target_diabetes_clinical",
+    "eligible_diabetes_undiagnosed"
+  ]
+}

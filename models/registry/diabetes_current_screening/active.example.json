@@ -1,0 +1,11 @@
+{
+  "model_key": "diabetes_current_screening",
+  "active_candidate": "candidates/knhanes-current-screening-v050.json",
+  "operational_model_activated": false,
+  "activation_requires": [
+    "team_review",
+    "external_or_unused_period_validation",
+    "medical_safety_review",
+    "backend_contract_test"
+  ]
+}

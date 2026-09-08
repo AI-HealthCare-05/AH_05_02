@@ -6,7 +6,7 @@ from pydantic import EmailStr
 from app.core import config
 from app.models.users import Gender, User
 
-ALLOWED_UPDATE_FIELDS = ["name", "phone_number", "gender", "birthday"]
+ALLOWED_UPDATE_FIELDS = ["name", "phone_number", "gender", "birthday", "height_cm"]
 UPDATED_AT_FIELD = "updated_at"
 
 
@@ -26,8 +26,8 @@ class UserRepository:
         hashed_password: str,
         name: str | None,
         phone_number: str | None,
-        gender: Gender,
-        birthday: date,
+        gender: Gender | None = None,
+        birthday: date | None = None,
         *,
         is_active: bool = True,
         is_admin: bool = False,

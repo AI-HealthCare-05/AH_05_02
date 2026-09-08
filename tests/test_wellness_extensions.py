@@ -14,10 +14,10 @@ from src.rag.engine import answer_with_sources
 
 async def signup_and_login(client: AsyncClient) -> dict[str, str]:
     signup = {
+        "name": "웰니스 사용자",
         "email": "wellness@example.com",
         "password": "Password123!",
-        "gender": "FEMALE",
-        "birth_date": "1965-04-12",
+        "terms_agreed": True,
     }
     response = await client.post("/api/v1/auth/signup", json=signup)
     assert response.status_code == status.HTTP_201_CREATED

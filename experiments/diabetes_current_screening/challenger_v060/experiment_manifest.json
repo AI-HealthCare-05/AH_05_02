@@ -1,0 +1,206 @@
+{
+  "experiment_id": "knhanes-current-screening-waist-estimator-20260831",
+  "source_file": "knhanes_cleaned_2016_2024.csv",
+  "source_sha256": "70c2e4a0d71e883a4181589bfb3042413f6f6e13104756b88d24e103e195ddfa",
+  "config_sha256": "81dfcee6bab2cdf6cf0da214dcedcf6e38dcceb5fd02958b88ec44da20748a3f",
+  "library_versions": {
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.9.0",
+    "lightgbm": "4.7.0"
+  },
+  "target_definition": "현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부",
+  "split_summary": {
+    "train": {
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "n": 26005,
+      "positive_n": 1140,
+      "positive_rate": 0.04383772351470871
+    },
+    "validation": {
+      "years": [
+        2021,
+        2022
+      ],
+      "n": 9132,
+      "positive_n": 415,
+      "positive_rate": 0.045444590451160755
+    },
+    "test": {
+      "years": [
+        2023,
+        2024
+      ],
+      "n": 9691,
+      "positive_n": 390,
+      "positive_rate": 0.040243524920028896
+    }
+  },
+  "selection_rule": {
+    "primary": "recall",
+    "tie_breakers": [
+      "auprc",
+      "specificity"
+    ],
+    "validation_specificity_floor": 0.42000000000000004,
+    "test_specificity_floor": 0.4
+  },
+  "waist_estimator_oof": [
+    {
+      "method": "training_fold_median",
+      "group": "all",
+      "n": 25925,
+      "mae_cm": 8.299579556412729,
+      "rmse_cm": 10.336428097036583,
+      "r2": -0.004956217194512114,
+      "bias_cm": -0.13677145612343528
+    },
+    {
+      "method": "training_fold_median",
+      "group": "19-44",
+      "n": 10294,
+      "mae_cm": 9.486030697493685,
+      "rmse_cm": 11.579675252726938,
+      "r2": -0.0364493047943939,
+      "bias_cm": 2.05502234311249
+    },
+    {
+      "method": "training_fold_median",
+      "group": "45-64",
+      "n": 9929,
+      "mae_cm": 7.458183100010072,
+      "rmse_cm": 9.35741716057432,
+      "r2": -0.012318831201363345,
+      "bias_cm": -0.7641152180481441
+    },
+    {
+      "method": "training_fold_median",
+      "group": "65+",
+      "n": 5702,
+      "mae_cm": 7.622781480182392,
+      "rmse_cm": 9.551184180843821,
+      "r2": -0.11665906592153696,
+      "bias_cm": -3.001280252542969
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "all",
+      "n": 25925,
+      "mae_cm": 3.0638770105807893,
+      "rmse_cm": 3.9704057368774084,
+      "r2": 0.8517222644843819,
+      "bias_cm": -0.0039023778140897672
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "19-44",
+      "n": 10294,
+      "mae_cm": 2.943381804684709,
+      "rmse_cm": 3.8720355501228303,
+      "r2": 0.8841131984199333,
+      "bias_cm": -0.008815685574097221
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "45-64",
+      "n": 9929,
+      "mae_cm": 3.0190491568998907,
+      "rmse_cm": 3.8506131825095564,
+      "r2": 0.8285785674535824,
+      "bias_cm": 0.021292646238532827
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "65+",
+      "n": 5702,
+      "mae_cm": 3.3594703828522543,
+      "rmse_cm": 4.334548236184496,
+      "r2": 0.7700180049925726,
+      "bias_cm": -0.0389047986729067
+    }
+  ],
+  "selected_validation": {
+    "model": "blend_0.0_0.4_0.4_0.2",
+    "split": "validation",
+    "n": 9132,
+    "positive_n": 415,
+    "prevalence": 0.045444590451160755,
+    "auroc": 0.7862979277440149,
+    "auprc": 0.14990990076098348,
+    "auprc_lift": 3.2987402740947016,
+    "brier": 0.04105974864561224,
+    "brier_skill_score": 0.05347312531890547,
+    "recall": 0.9590361445783132,
+    "specificity": 0.4219341516576804,
+    "precision": 0.07320213352951996,
+    "f1": 0.13602187286397813,
+    "tn": 3678.0,
+    "fp": 5039.0,
+    "fn": 17.0,
+    "tp": 398.0,
+    "weighted_prevalence": 0.03747460980514453,
+    "weighted_auroc": 0.810065608903477,
+    "weighted_auprc": 0.14754732216650396,
+    "weighted_auprc_lift": 3.9372610664580847,
+    "weighted_brier": 0.034087577587350315,
+    "weighted_brier_skill_score": 0.05496732348139399,
+    "weighted_recall": 0.952377127784207,
+    "weighted_specificity": 0.48446677662543586,
+    "weighted_precision": 0.06709852930407875,
+    "weighted_f1": 0.12536465029420316,
+    "weighted_tn": 4258.357286534008,
+    "weighted_fp": 4531.424576725411,
+    "weighted_fn": 16.297410595923377,
+    "weighted_tp": 325.92072614465644,
+    "threshold": 0.024972616817163548
+  },
+  "selected_test": {
+    "model": "blend_0.0_0.4_0.4_0.2",
+    "split": "test",
+    "n": 9691,
+    "positive_n": 390,
+    "prevalence": 0.040243524920028896,
+    "auroc": 0.7689790731076613,
+    "auprc": 0.11155562065143347,
+    "auprc_lift": 2.772014153161645,
+    "brier": 0.03739574772639504,
+    "brier_skill_score": 0.03179982436985085,
+    "recall": 0.9358974358974359,
+    "specificity": 0.41490162348134607,
+    "precision": 0.0628551747890477,
+    "f1": 0.11779893496853316,
+    "tn": 3859.0,
+    "fp": 5442.0,
+    "fn": 25.0,
+    "tp": 365.0,
+    "weighted_prevalence": 0.0367912755481922,
+    "weighted_auroc": 0.7877691542472083,
+    "weighted_auprc": 0.10967194807520536,
+    "weighted_auprc_lift": 2.9809226899879606,
+    "weighted_brier": 0.03419557373905312,
+    "weighted_brier_skill_score": 0.035050373982915106,
+    "weighted_recall": 0.9343748789059544,
+    "weighted_specificity": 0.4668040303864035,
+    "weighted_precision": 0.06273652050842757,
+    "weighted_f1": 0.11757849481506476,
+    "weighted_tn": 4357.361564939174,
+    "weighted_fp": 4977.094183723296,
+    "weighted_fn": 23.398259669411292,
+    "weighted_tp": 333.14599166811956,
+    "threshold": 0.024972616817163548,
+    "test_specificity_constraint_passed": true
+  },
+  "selected_weights": {
+    "lightgbm": 0.4,
+    "logistic": 0.4,
+    "random_forest": 0.2
+  },
+  "artifact_path_local_only": "outputs/ml/knhanes_current_screening_recall_v060/knhanes-current-diabetes-recall-v0.6.0.joblib",
+  "promotion_status": "candidate_internal_not_for_diagnosis_or_personal_probability_display"
+}

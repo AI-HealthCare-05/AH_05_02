@@ -1,0 +1,205 @@
+{
+  "experiment_id": "knhanes-current-screening-waist-residual-20260831",
+  "source_file": "knhanes_cleaned_2016_2024.csv",
+  "source_sha256": "70c2e4a0d71e883a4181589bfb3042413f6f6e13104756b88d24e103e195ddfa",
+  "config_sha256": "8e037c3ec127246e576d0fe650b546d8a44e7089e2106a9f82c2658c66530750",
+  "library_versions": {
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.9.0",
+    "lightgbm": "4.7.0"
+  },
+  "target_definition": "현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부",
+  "split_summary": {
+    "train": {
+      "years": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020
+      ],
+      "n": 26005,
+      "positive_n": 1140,
+      "positive_rate": 0.04383772351470871
+    },
+    "validation": {
+      "years": [
+        2021,
+        2022
+      ],
+      "n": 9132,
+      "positive_n": 415,
+      "positive_rate": 0.045444590451160755
+    },
+    "test": {
+      "years": [
+        2023,
+        2024
+      ],
+      "n": 9691,
+      "positive_n": 390,
+      "positive_rate": 0.040243524920028896
+    }
+  },
+  "selection_rule": {
+    "primary": "recall",
+    "tie_breakers": [
+      "auprc",
+      "specificity"
+    ],
+    "validation_specificity_floor": 0.42000000000000004,
+    "test_specificity_floor": 0.4
+  },
+  "waist_estimator_oof": [
+    {
+      "method": "training_fold_median",
+      "group": "all",
+      "n": 25925,
+      "mae_cm": 8.299579556412729,
+      "rmse_cm": 10.336428097036583,
+      "r2": -0.004956217194512114,
+      "bias_cm": -0.13677145612343528
+    },
+    {
+      "method": "training_fold_median",
+      "group": "19-44",
+      "n": 10294,
+      "mae_cm": 9.486030697493685,
+      "rmse_cm": 11.579675252726938,
+      "r2": -0.0364493047943939,
+      "bias_cm": 2.05502234311249
+    },
+    {
+      "method": "training_fold_median",
+      "group": "45-64",
+      "n": 9929,
+      "mae_cm": 7.458183100010072,
+      "rmse_cm": 9.35741716057432,
+      "r2": -0.012318831201363345,
+      "bias_cm": -0.7641152180481441
+    },
+    {
+      "method": "training_fold_median",
+      "group": "65+",
+      "n": 5702,
+      "mae_cm": 7.622781480182392,
+      "rmse_cm": 9.551184180843821,
+      "r2": -0.11665906592153696,
+      "bias_cm": -3.001280252542969
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "all",
+      "n": 25925,
+      "mae_cm": 3.0638770105807893,
+      "rmse_cm": 3.9704057368774084,
+      "r2": 0.8517222644843819,
+      "bias_cm": -0.0039023778140897672
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "19-44",
+      "n": 10294,
+      "mae_cm": 2.943381804684709,
+      "rmse_cm": 3.8720355501228303,
+      "r2": 0.8841131984199333,
+      "bias_cm": -0.008815685574097221
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "45-64",
+      "n": 9929,
+      "mae_cm": 3.0190491568998907,
+      "rmse_cm": 3.8506131825095564,
+      "r2": 0.8285785674535824,
+      "bias_cm": 0.021292646238532827
+    },
+    {
+      "method": "anthropometric_hgb",
+      "group": "65+",
+      "n": 5702,
+      "mae_cm": 3.3594703828522543,
+      "rmse_cm": 4.334548236184496,
+      "r2": 0.7700180049925726,
+      "bias_cm": -0.0389047986729067
+    }
+  ],
+  "selected_validation": {
+    "model": "blend_0.0_0.0_0.7_0.3",
+    "split": "validation",
+    "n": 9132,
+    "positive_n": 415,
+    "prevalence": 0.045444590451160755,
+    "auroc": 0.7871238999821702,
+    "auprc": 0.14635762470732605,
+    "auprc_lift": 3.22057308151157,
+    "brier": 0.04115703889393039,
+    "brier_skill_score": 0.051230348932904124,
+    "recall": 0.9590361445783132,
+    "specificity": 0.420098657795113,
+    "precision": 0.07298734641481754,
+    "f1": 0.1356509884117246,
+    "tn": 3662.0,
+    "fp": 5055.0,
+    "fn": 17.0,
+    "tp": 398.0,
+    "weighted_prevalence": 0.03747460980514453,
+    "weighted_auroc": 0.8092488012335403,
+    "weighted_auprc": 0.1455311326307142,
+    "weighted_auprc_lift": 3.8834595847008826,
+    "weighted_brier": 0.034133954479520785,
+    "weighted_brier_skill_score": 0.053681585930106746,
+    "weighted_recall": 0.9451041255902127,
+    "weighted_specificity": 0.47906420540389966,
+    "weighted_precision": 0.06597492707932916,
+    "weighted_f1": 0.1233398627012536,
+    "weighted_tn": 4210.869863995982,
+    "weighted_fp": 4578.911999263437,
+    "weighted_fn": 18.786363855262252,
+    "weighted_tp": 323.4317728853175,
+    "threshold": 0.02323125331773926
+  },
+  "selected_test": {
+    "model": "blend_0.0_0.0_0.7_0.3",
+    "split": "test",
+    "n": 9691,
+    "positive_n": 390,
+    "prevalence": 0.040243524920028896,
+    "auroc": 0.771187272391444,
+    "auprc": 0.11383364684234738,
+    "auprc_lift": 2.8286201834594573,
+    "brier": 0.0375451666953896,
+    "brier_skill_score": 0.027931270301044364,
+    "recall": 0.9384615384615385,
+    "specificity": 0.40662294376948716,
+    "precision": 0.06219201359388275,
+    "f1": 0.11665338645418327,
+    "tn": 3782.0,
+    "fp": 5519.0,
+    "fn": 24.0,
+    "tp": 366.0,
+    "weighted_prevalence": 0.0367912755481922,
+    "weighted_auroc": 0.7906171211929232,
+    "weighted_auprc": 0.11138186856074934,
+    "weighted_auprc_lift": 3.0273989390460883,
+    "weighted_brier": 0.034402556546719296,
+    "weighted_brier_skill_score": 0.029209618557269224,
+    "weighted_recall": 0.9366830848136393,
+    "weighted_specificity": 0.4549649400464704,
+    "weighted_precision": 0.061599994975190524,
+    "weighted_f1": 0.11559781886731275,
+    "weighted_tn": 4246.850100056651,
+    "weighted_fp": 5087.605648605817,
+    "weighted_fn": 22.575282122122903,
+    "weighted_tp": 333.9689692154079,
+    "threshold": 0.02323125331773926,
+    "test_specificity_constraint_passed": true
+  },
+  "selected_weights": {
+    "logistic": 0.7,
+    "random_forest": 0.3
+  },
+  "artifact_path_local_only": "outputs\\ml\\knhanes_current_screening_recall_v061\\knhanes-current-diabetes-recall-v0.6.1.joblib",
+  "promotion_status": "candidate_internal_not_for_diagnosis_or_personal_probability_display"
+}

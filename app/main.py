@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, ORJSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
 
@@ -22,7 +22,6 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    default_response_class=ORJSONResponse,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -40,6 +39,32 @@ if FRONTEND_DIR.exists():
 @app.get("/", include_in_schema=False)
 async def home() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/forest", include_in_schema=False)
+async def carrot_forest() -> FileResponse:
+    response = FileResponse(FRONTEND_DIR / "forest.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+async def forest_manifest() -> FileResponse:
+    response = FileResponse(
+        FRONTEND_DIR / "forest.webmanifest",
+        media_type="application/manifest+json",
+    )
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.get("/forest-sw.js", include_in_schema=False)
+async def forest_service_worker() -> FileResponse:
+    response = FileResponse(FRONTEND_DIR / "forest-sw.js", media_type="text/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/forest"
+    return response
 
 
 @app.get("/health", tags=["Health"])
