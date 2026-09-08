@@ -1,0 +1,30 @@
+{
+  "id": "/forest",
+  "name": "당근의 숲 | 간당간당",
+  "short_name": "당근의 숲",
+  "description": "생활습관 퀘스트로 함께 가꾸는 간당간당 픽셀 숲",
+  "lang": "ko-KR",
+  "start_url": "/forest?source=pwa",
+  "scope": "/forest",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#f6f0df",
+  "theme_color": "#2f7e46",
+  "prefer_related_applications": false,
+  "categories": ["health", "lifestyle", "games"],
+  "icons": [
+    {
+      "src": "/static/icons/forest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/forest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

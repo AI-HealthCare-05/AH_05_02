@@ -61,6 +61,12 @@ class ForestRepository:
     async def create_object(self, **values: Any) -> ForestObject:
         return await ForestObject.create(**values)
 
+    async def object(self, object_id: int) -> ForestObject | None:
+        return await ForestObject.get_or_none(id=object_id)
+
+    async def delete_object(self, item: ForestObject) -> None:
+        await item.delete()
+
     async def completed_today(self, user_id: int, today: date) -> int:
         return await ChallengeLog.filter(user_id=user_id, log_date=today, is_completed=True).count()
 

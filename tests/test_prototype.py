@@ -123,3 +123,16 @@ def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
     assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
     assert ACTIVE_MODEL.threshold_is_approved is False
+
+
+def test_rule_based_forecast_is_labelled_as_non_predictive_demo() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="rule-risk-chart"' in html
+    assert "개발용 룰베이스" in html + script
+    assert "개인 예측 결과가 아닙니다." in html + script
+    assert "학습된 장기 생존곡선·치료 효과·확정 발병확률이 아닙니다." in html
+    assert "survival *= 1 - hazard" in script
+    assert "prediction.public_interval_hazard_percent" in script
+    assert 'source === "approved-model"' in script

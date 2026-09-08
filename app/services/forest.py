@@ -143,6 +143,7 @@ class ForestService:
                     "object_code": item.object_code,
                     "position_x": item.position_x,
                     "position_y": item.position_y,
+                    "can_remove": item.placed_by_user_id == user.id,
                 }
                 for item in objects
             ],
@@ -219,5 +220,29 @@ class ForestService:
             "object_code": item.object_code,
             "position_x": item.position_x,
             "position_y": item.position_y,
+            "carrot_balance": avatar.carrot_balance,
+        }
+
+    async def remove_object(self, user: User, group_id: int, object_id: int) -> dict[str, object]:
+        space = await self._space_for_user(user, group_id)
+        item = await self.repo.object(object_id)
+        if item is None or item.forest_space_id != space.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="배치된 숲 장식을 찾을 수 없습니다.")
+        if item.placed_by_user_id != user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="내가 배치한 숲 장식만 회수할 수 있습니다.")
+
+        catalog_item = OBJECT_CATALOG.get(item.object_code)
+        if catalog_item is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="카탈로그에서 제거된 숲 장식입니다.")
+
+        avatar = await self.repo.avatar(user)
+        refund = int(catalog_item["cost"])
+        await self.repo.delete_object(item)
+        avatar.carrot_balance += refund
+        await avatar.save(update_fields=["carrot_balance", "updated_at"])
+        return {
+            "object_id": object_id,
+            "object_code": item.object_code,
+            "refunded_carrots": refund,
             "carrot_balance": avatar.carrot_balance,
         }

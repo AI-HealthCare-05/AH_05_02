@@ -3,15 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2f7e46">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="당근의 숲">
   <title>당근의 숲 (Beta) | 간당간당</title>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-1">
-  <script src="/static/forest-game.js?v=20260826-1" defer></script>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/forest-icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icons/forest-icon-192.png">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260826-2">
+  <script src="/static/forest-game.js?v=20260826-2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
   <header class="forest-topbar">
     <a class="forest-brand" href="/"><span aria-hidden="true">🥕</span> 간당간당</a>
     <span class="beta-badge">선택 기능 · Beta</span>
+    <button id="install-pwa" class="install-button" type="button" hidden>앱으로 설치</button>
     <button id="large-text-toggle" class="plain-button" type="button" aria-pressed="false">글자 크게</button>
   </header>
 

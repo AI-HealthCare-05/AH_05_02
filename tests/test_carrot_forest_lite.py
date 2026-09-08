@@ -176,6 +176,26 @@ async def test_carrot_forest_lite_group_reward_avatar_and_object_flow() -> None:
             home_data = home.json()["data"]
             assert home_data["me"]["accessory_code"] == reward_data["item_code"]
             assert home_data["objects"][0]["object_code"] == "sunflower"
+            assert home_data["objects"][0]["can_remove"] is True
             assert "prediction" not in str(home_data).lower()
+
+            other_member_view = await client.get(f"/api/v1/forest/spaces/{group.id}", headers=member_headers)
+            assert other_member_view.json()["data"]["objects"][0]["can_remove"] is False
+            forbidden_remove = await client.delete(
+                f"/api/v1/forest/spaces/{group.id}/objects/{placed.json()['data']['object_id']}",
+                headers=member_headers,
+            )
+            assert forbidden_remove.status_code == status.HTTP_403_FORBIDDEN
+
+            removed = await client.delete(
+                f"/api/v1/forest/spaces/{group.id}/objects/{placed.json()['data']['object_id']}",
+                headers=owner_headers,
+            )
+            assert removed.status_code == status.HTTP_200_OK
+            assert removed.json()["data"]["refunded_carrots"] == 20
+            assert removed.json()["data"]["carrot_balance"] == 150
+
+            after_remove = await client.get(f"/api/v1/forest/spaces/{group.id}", headers=owner_headers)
+            assert after_remove.json()["data"]["objects"] == []
     finally:
         await Tortoise.close_connections()

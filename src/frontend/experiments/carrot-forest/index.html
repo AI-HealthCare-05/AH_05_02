@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="간당간당 추가 기능 패키지 당근의 숲 아이디어 검증용 데모">
+  <title>당근의 숲 | 간당간당 추가 패키지 데모</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 바로가기</a>
+  <header class="topbar">
+    <div>
+      <a class="brand" href="#">간당간당</a>
+      <span class="package-name">추가 패키지 · 당근의 숲</span>
+    </div>
+    <div class="top-actions">
+      <span class="prototype-badge">아이디어 검증용 데모</span>
+      <button class="ghost-button" id="reset-demo" type="button">데모 초기화</button>
+    </div>
+  </header>
+
+  <main id="main" class="app-shell">
+    <section class="package-notice" aria-labelledby="package-title">
+      <div>
+        <p class="eyebrow">OPTIONAL ENGAGEMENT PACKAGE</p>
+        <h1 id="package-title">건강 챌린지를 하면<br>우리의 숲이 자라요</h1>
+        <p>가족·친구와 오늘의 퀘스트를 채우고, 보상으로 우리만의 숲을 꾸며보세요.</p>
+      </div>
+      <div class="package-flow" aria-label="당근의 숲 서비스 흐름">
+        <span>챌린지</span><b>→</b><span>당근 획득</span><b>→</b><span>아바타·숲 꾸미기</span>
+      </div>
+    </section>
+
+    <nav class="tabs" aria-label="당근의 숲 메뉴" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-home" id="tab-home" data-tab="home">🌳 우리 숲</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="panel-quest" id="tab-quest" data-tab="quest">✅ 오늘의 퀘스트</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="panel-closet" id="tab-closet" data-tab="closet">🎒 옷장·창고</button>
+    </nav>
+
+    <section class="tab-panel active" id="panel-home" role="tabpanel" aria-labelledby="tab-home" data-panel="home">
+      <div class="dashboard-grid">
+        <article class="forest-card">
+          <div class="forest-toolbar">
+            <div>
+              <p class="eyebrow">5명이 함께 키우는 미니홈피</p>
+              <h2>당근의 숲</h2>
+            </div>
+            <div class="currency"><span>🥕</span><strong id="carrot-balance">180</strong></div>
+          </div>
+
+          <div class="forest-stage" id="forest-stage" aria-label="가족과 친구가 함께 꾸민 당근의 숲">
+            <div class="sky-cloud cloud-one"></div>
+            <div class="sky-cloud cloud-two"></div>
+            <div class="sun"></div>
+            <div class="mountain mountain-one"></div>
+            <div class="mountain mountain-two"></div>
+            <div class="forest-house"><span>우리 집</span></div>
+            <div class="tree tree-one"><i></i></div>
+            <div class="tree tree-two"><i></i></div>
+            <div class="tree tree-three"><i></i></div>
+            <div class="garden"><span>🥕</span><span>🥕</span><span>🥕</span><span>🥕</span></div>
+            <div class="path"></div>
+            <div class="placed-items" id="placed-items"></div>
+
+            <div class="avatar avatar-main" id="avatar-main" aria-label="내 아바타">
+              <span class="avatar-shadow"></span>
+              <span class="avatar-hair"></span>
+              <span class="avatar-face"><i></i><b></b></span>
+              <span class="avatar-body"></span>
+              <span class="avatar-legs"></span>
+              <span class="avatar-accessory" aria-hidden="true">🌱</span>
+            </div>
+            <span class="avatar-name">세준</span>
+
+            <div class="npc npc-one"><span>👩‍🦳</span><small>엄마</small></div>
+            <div class="npc npc-two"><span>🧑</span><small>준혁</small></div>
+            <div class="npc npc-three"><span>👩</span><small>수인</small></div>
+            <div class="npc npc-four"><span>👨</span><small>빛샘</small></div>
+          </div>
+
+          <div class="forest-actions">
+            <button class="primary-button" type="button" data-open-tab="quest">오늘 퀘스트 하러 가기</button>
+            <button class="secondary-button" id="open-decorations" type="button">숲 오브젝트 배치</button>
+          </div>
+        </article>
+
+        <aside class="side-stack">
+          <article class="progress-card">
+            <div class="section-title"><div><p class="eyebrow">오늘의 공동 목표</p><h3>다 같이 15개 완료</h3></div><strong id="group-count">11/15</strong></div>
+            <div class="progress-track"><span id="group-progress" style="width:73%"></span></div>
+            <p id="group-message">4개만 더 완료하면 모두에게 보물상자가 열려요.</p>
+          </article>
+
+          <article class="member-card">
+            <div class="section-title"><h3>숲 구성원</h3><button class="text-button" type="button">초대 +</button></div>
+            <ul id="member-list">
+              <li class="me"><span>🧑‍🌾</span><div><strong>세준 <small>나</small></strong><p>오늘 <b id="my-member-count">2</b>/3 완료</p></div><em id="my-member-status">진행 중</em></li>
+              <li><span>👩‍🦳</span><div><strong>엄마</strong><p>오늘 3/3 완료</p></div><em class="complete">완료</em></li>
+              <li><span>🧑</span><div><strong>준혁</strong><p>오늘 2/3 완료</p></div><em>진행 중</em></li>
+              <li><span>👩</span><div><strong>수인</strong><p>오늘 2/3 완료</p></div><em>진행 중</em></li>
+              <li><span>👨</span><div><strong>빛샘</strong><p>오늘 2/3 완료</p></div><em>진행 중</em></li>
+            </ul>
+          </article>
+
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-quest" role="tabpanel" aria-labelledby="tab-quest" data-panel="quest" hidden>
+      <div class="content-heading">
+        <div><p class="eyebrow">DAILY QUEST</p><h2>오늘의 생활습관 퀘스트</h2><p>세 가지 퀘스트를 완료하고 보상 상자를 열어보세요.</p></div>
+        <div class="streak"><span>🔥</span><div><strong>6일째</strong><small>연속 참여</small></div></div>
+      </div>
+
+      <div class="quest-layout">
+        <div class="quest-list" id="quest-list">
+          <label class="quest-item complete">
+            <input type="checkbox" checked disabled>
+            <span class="quest-icon walk">👟</span>
+            <span class="quest-copy"><small>움직이기</small><strong>20분 가볍게 걷기</strong></span>
+            <span class="quest-reward">+20 🥕</span>
+          </label>
+          <label class="quest-item complete">
+            <input type="checkbox" checked disabled>
+            <span class="quest-icon water">💧</span>
+            <span class="quest-copy"><small>수분 기록</small><strong>오늘 물 마신 횟수 기록</strong></span>
+            <span class="quest-reward">+15 🥕</span>
+          </label>
+          <label class="quest-item" id="pending-quest">
+            <input id="vegetable-quest" type="checkbox">
+            <span class="quest-icon meal">🥗</span>
+            <span class="quest-copy"><small>식사 돌아보기</small><strong>채소가 포함된 식사 기록</strong><em>완벽하지 않아도 오늘 먹은 내용을 기록해 보세요.</em></span>
+            <span class="quest-reward">+20 🥕</span>
+          </label>
+        </div>
+
+        <aside class="reward-panel">
+          <p class="eyebrow">TODAY'S REWARD</p>
+          <div class="reward-box" id="reward-box"><span>?</span><i></i></div>
+          <h3>당근 보물상자</h3>
+          <p id="reward-copy">퀘스트 3개를 완료하면 무료 보상 상자를 열 수 있어요.</p>
+          <button class="primary-button" id="open-reward" type="button" disabled>퀘스트를 먼저 완료해 주세요</button>
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-closet" role="tabpanel" aria-labelledby="tab-closet" data-panel="closet" hidden>
+      <div class="content-heading">
+        <div><p class="eyebrow">AVATAR & STORAGE</p><h2>내 아바타 꾸미기</h2></div>
+        <div class="currency large"><span>🥕</span><strong id="closet-balance">180</strong></div>
+      </div>
+
+      <div class="closet-layout">
+        <div class="avatar-preview">
+          <div class="preview-halo"></div>
+          <div class="avatar avatar-large" id="avatar-preview" aria-label="꾸미기 중인 아바타">
+            <span class="avatar-shadow"></span>
+            <span class="avatar-hair"></span>
+            <span class="avatar-face"><i></i><b></b></span>
+            <span class="avatar-body"></span>
+            <span class="avatar-legs"></span>
+            <span class="avatar-accessory" aria-hidden="true">🌱</span>
+          </div>
+          <div class="avatar-level"><span>Lv. 7</span><strong>숲 새싹 지킴이</strong></div>
+        </div>
+
+        <div class="inventory">
+          <div class="inventory-tabs" role="tablist" aria-label="아이템 종류">
+            <button class="inventory-tab active" type="button" data-category="outfit">상의</button>
+            <button class="inventory-tab" type="button" data-category="hair">헤어</button>
+            <button class="inventory-tab" type="button" data-category="accessory">액세서리</button>
+          </div>
+          <div class="inventory-grid" id="inventory-grid"></div>
+          <button class="primary-button save-avatar" id="save-avatar" type="button">이 코디 저장하기</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="reward-dialog" class="dialog-card">
+    <button class="dialog-close" type="button" data-close-dialog aria-label="닫기">×</button>
+    <p class="eyebrow">NEW ITEM!</p>
+    <div class="reward-sparkles">✦ <span id="reward-icon">🧢</span> ✦</div>
+    <h2 id="reward-title">새싹 베레모</h2>
+    <p id="reward-description">당근의 숲에서만 얻을 수 있는 희귀 코디 아이템이에요.</p>
+    <button class="primary-button" type="button" data-close-dialog>옷장에서 확인하기</button>
+  </dialog>
+
+  <dialog id="decoration-dialog" class="dialog-card wide">
+    <button class="dialog-close" type="button" data-close-dialog aria-label="닫기">×</button>
+    <p class="eyebrow">FOREST DECORATION</p>
+    <h2>우리 숲에 무엇을 놓을까요?</h2>
+    <p>아이디어 데모에서는 선택한 오브젝트가 숲에 즉시 배치됩니다.</p>
+    <div class="decoration-grid">
+      <button type="button" data-decoration="🌻" data-cost="20"><span>🌻</span><strong>해바라기</strong><small>20 🥕</small></button>
+      <button type="button" data-decoration="🪑" data-cost="30"><span>🪑</span><strong>숲 벤치</strong><small>30 🥕</small></button>
+      <button type="button" data-decoration="🍄" data-cost="25"><span>🍄</span><strong>버섯 조명</strong><small>25 🥕</small></button>
+      <button type="button" data-decoration="🐇" data-cost="40"><span>🐇</span><strong>토끼 친구</strong><small>40 🥕</small></button>
+    </div>
+    <p class="dialog-message" id="decoration-message" role="status"></p>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <footer>간당간당 추가 패키지 아이디어 검증용 · 진단·치료·처방 기능이 아닙니다.</footer>
+</body>
+</html>

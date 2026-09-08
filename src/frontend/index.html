@@ -87,6 +87,22 @@
         <p class="eyebrow">비동기 예측 작업</p><h2 id="result-title">분석 결과를 확인하세요</h2>
         <p id="job-status" class="lead">분석 상태: 대기</p>
         <div class="result-card"><div><p>미래 당뇨병 발병 위험 범주</p><strong id="result-stage">분석 중</strong><p id="result-explain"></p></div></div>
+        <section class="rule-forecast" aria-labelledby="rule-forecast-title">
+          <div class="rule-forecast-heading">
+            <div><p class="eyebrow">약 2년 단위 참고 시나리오</p><h3 id="rule-forecast-title">누적 위험 신호의 계산 예시</h3></div>
+            <span class="rule-forecast-badge" id="rule-forecast-badge">개발용 룰베이스</span>
+          </div>
+          <p class="rule-forecast-copy" id="rule-forecast-copy">PR #26의 high 경계값 2.12%를 구간 위험 예시로 사용합니다. 개인 예측 결과가 아닙니다.</p>
+          <form class="rule-forecast-controls" id="rule-forecast-form">
+            <label for="rule-interval-hazard">약 2년 구간 위험 신호 예시(%)</label>
+            <input id="rule-interval-hazard" type="number" min="0.01" max="30" step="0.01" value="2.12" inputmode="decimal">
+            <button class="secondary" type="submit">그래프 다시 계산</button>
+          </form>
+          <div class="rule-risk-chart" id="rule-risk-chart" role="img" aria-label="약 2년 단위 누적 위험 신호 계산 예시">
+            <ol id="rule-risk-bars"></ol>
+          </div>
+          <div class="notice compact"><span>ⓘ</span><div><strong>표시 기준</strong><p>각 구간의 위험이 같다고 가정한 수학적 외삽입니다. 학습된 장기 생존곡선·치료 효과·확정 발병확률이 아닙니다.</p></div></div>
+        </section>
         <div id="analysis-failure" class="notice safety" role="alert" hidden>
           <span>!</span><div><strong id="analysis-failure-title">분석을 완료하지 못했습니다</strong><p id="analysis-failure-message">입력정보는 보존되어 있습니다. 내용을 확인하거나 같은 정보로 다시 시도할 수 있습니다.</p><p>분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다.</p></div>
         </div>
@@ -265,6 +281,8 @@
               <article class="focus-card">
                 <p class="eyebrow">FOREST OBJECT</p><h3>숲 꾸미기</h3>
                 <div class="forest-lite-shop" id="forest-object-shop"></div>
+                <h4 class="forest-placed-title">배치한 장식</h4>
+                <div class="forest-placed-list" id="forest-placed-list"></div>
               </article>
             </div>
           </div>

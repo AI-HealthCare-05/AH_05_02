@@ -184,6 +184,55 @@ function renderPrediction(prediction, factors) {
   $("#retry-analysis").hidden = true;
   $("#result-next").hidden = !isApprovedRisk;
   $("#result-next").disabled = !isApprovedRisk;
+  syncRuleForecastFromPrediction(prediction, isApprovedRisk);
+}
+
+function cumulativeRuleCurve(intervalHazardPercent, intervals = 4) {
+  const hazard = Number(intervalHazardPercent) / 100;
+  if (!Number.isFinite(hazard) || hazard <= 0 || hazard > 0.30) return [];
+  let survival = 1;
+  return Array.from({ length: intervals }, (_, index) => {
+    survival *= 1 - hazard;
+    return {
+      horizonYears: (index + 1) * 2,
+      cumulativePercent: (1 - survival) * 100,
+    };
+  });
+}
+
+function renderRuleForecast(intervalHazardPercent, source = "development") {
+  const points = cumulativeRuleCurve(intervalHazardPercent);
+  const bars = $("#rule-risk-bars");
+  if (!points.length) {
+    bars.innerHTML = "<li>0.01%부터 30% 사이의 값을 입력해 주세요.</li>";
+    return;
+  }
+  const scaleMaximum = Math.max(10, Math.ceil(points.at(-1).cumulativePercent / 5) * 5);
+  bars.innerHTML = points.map((point) => {
+    const height = Math.max(4, (point.cumulativePercent / scaleMaximum) * 100);
+    return `<li><strong>${point.cumulativePercent.toFixed(1)}%</strong><span class="rule-risk-column"><i style="height:${height.toFixed(1)}%"></i></span><small>약 ${point.horizonYears}년</small></li>`;
+  }).join("");
+  $("#rule-risk-chart").setAttribute(
+    "aria-label",
+    `약 2년 단위 누적 위험 신호 ${points.map((point) => `${point.horizonYears}년 ${point.cumulativePercent.toFixed(1)}%`).join(", ")}`,
+  );
+  const approved = source === "approved-model";
+  $("#rule-forecast-badge").textContent = approved ? "승인된 모델값 기반" : "개발용 룰베이스";
+  $("#rule-forecast-badge").dataset.status = approved ? "approved" : "development";
+  $("#rule-forecast-copy").textContent = approved
+    ? "공개 승인을 받은 약 2년 구간 위험 신호를 동일하게 유지한 참고 누적곡선입니다."
+    : "PR #26의 high 경계값 2.12%를 구간 위험 예시로 사용합니다. 개인 예측 결과가 아닙니다.";
+}
+
+function syncRuleForecastFromPrediction(prediction, isApprovedRisk) {
+  const publicHazard = Number(prediction.public_interval_hazard_percent);
+  if (isApprovedRisk && Number.isFinite(publicHazard) && publicHazard > 0 && publicHazard <= 30) {
+    $("#rule-interval-hazard").value = publicHazard.toFixed(2);
+    renderRuleForecast(publicHazard, "approved-model");
+    return;
+  }
+  $("#rule-interval-hazard").value = "2.12";
+  renderRuleForecast(2.12, "development");
 }
 async function runPrediction() {
   $("#analysis-failure").hidden = true;
@@ -324,6 +373,15 @@ function renderForest(home) {
   $("#forest-accessory").innerHTML = forestOptions(state.forestCatalog.accessories, home.me.accessory_code, allowedAccessories);
   $("#forest-object-shop").innerHTML = state.forestCatalog.objects.map((item) => `<button class="secondary forest-object-buy" type="button" data-code="${item.code}"><span>${forestObjectIcons[item.code]}</span>${escapeHtml(item.name)} · 🥕 ${item.cost}</button>`).join("");
   $("#forest-object-layer").innerHTML = home.objects.map((item) => `<span class="forest-placed-object" style="left:${item.position_x}%;top:${item.position_y}%" title="${item.object_code}">${forestObjectIcons[item.object_code]}</span>`).join("");
+  $("#forest-placed-list").innerHTML = home.objects.length
+    ? home.objects.map((item) => {
+      const catalog = state.forestCatalog.objects.find((candidate) => candidate.code === item.object_code);
+      const remove = item.can_remove
+        ? `<button class="text-button forest-object-remove" type="button" data-id="${item.object_id}">회수</button>`
+        : `<small>다른 구성원이 배치</small>`;
+      return `<div class="forest-placed-row"><span aria-hidden="true">${forestObjectIcons[item.object_code]}</span><strong>${escapeHtml(catalog?.name || item.object_code)}</strong>${remove}</div>`;
+    }).join("")
+    : `<p class="lead">아직 배치한 장식이 없습니다.</p>`;
 }
 
 async function loadForest(groupId) {
@@ -634,6 +692,15 @@ $("#forest-object-shop").addEventListener("click", async (event) => {
     showMessage("숲에 새 장식을 배치했습니다.", "success");
   } catch (error) { showMessage(error.message); }
 });
+$("#forest-placed-list").addEventListener("click", async (event) => {
+  const button = event.target.closest(".forest-object-remove");
+  if (!button || !state.forestGroupId) return;
+  try {
+    const result = await api(`/forest/spaces/${state.forestGroupId}/objects/${button.dataset.id}`, { method: "DELETE" });
+    await loadForest(state.forestGroupId);
+    showMessage(`장식을 회수하고 당근 ${result.refunded_carrots}개를 돌려받았습니다.`, "success");
+  } catch (error) { showMessage(error.message); }
+});
 $("#wearable-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
@@ -704,3 +771,8 @@ $("#download-report").addEventListener("click", async () => {
   } catch (error) { showMessage(error.message); }
 });
 $("#restart").addEventListener("click", () => window.location.reload());
+$("#rule-forecast-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  renderRuleForecast(Number($("#rule-interval-hazard").value), "development");
+});
+renderRuleForecast(2.12, "development");

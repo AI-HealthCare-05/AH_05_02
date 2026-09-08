@@ -52,3 +52,12 @@ async def place_forest_object(
     user: Annotated[User, Depends(get_request_user)],
 ) -> dict[str, object]:
     return envelope(await ForestService().place_object(user, group_id, request))
+
+
+@forest_router.delete("/spaces/{group_id}/objects/{object_id}")
+async def remove_forest_object(
+    group_id: int,
+    object_id: int,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await ForestService().remove_object(user, group_id, object_id))
