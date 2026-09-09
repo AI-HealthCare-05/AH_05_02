@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v179-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v180-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -19,7 +19,7 @@ const CORE_SHELL = [
   "/static/forest-riverduck.js?v=20260908-1",
   "/static/forest-riverduck-art.js?v=20260908-1",
   "/static/forest-memories.js?v=20260908-10",
-  "/static/forest-garden.js?v=20260908-1",
+  "/static/forest-garden.js?v=20260909-2",
   "/static/forest-phaser.js?v=20260909-1",
   "/static/forest-profile.js?v=20260907-1",
   "/static/forest-game.js?v=20260908-25",

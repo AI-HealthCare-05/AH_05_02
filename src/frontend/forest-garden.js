@@ -1,4 +1,4 @@
-/* The garden artwork is an empty base; these six weeks own all 30 carrots. */
+/* Four spacious weekly rows; only the current first week is planted. */
 ((root) => {
   "use strict";
 
@@ -6,16 +6,16 @@
     background: Object.freeze({ key: "garden-bg", url: "/static/assets/carrot-forest-garden-v3.png?v=20260908-1" }),
     carrot: Object.freeze({ key: "garden-carrot", url: "/static/assets/garden-carrot-v168.png?v=20260908-1" }),
   });
-  const columns = Object.freeze([255, 320, 440, 500, 560]);
-  const rows = Object.freeze([124, 164, 204, 244, 284, 324].map((y, index) => Object.freeze({
+  const columns = Object.freeze([270, 335, 435, 500, 565]);
+  const rows = Object.freeze([154, 214, 274, 334].map((y, index) => Object.freeze({
     week: index + 1,
     label: `${index + 1}주차`,
     y,
     // Both signs and carrots use a bottom-center anchor in world coordinates.
-    sign: Object.freeze({ x: 207, y, width: 43, height: 20, postHeight: 8 }),
-    carrots: Object.freeze(columns.map(x => Object.freeze({ x, y, width: 36, height: 40 }))),
+    sign: Object.freeze({ x: 216, y, width: 56, height: 28, postHeight: 10 }),
+    carrots: Object.freeze((index === 0 ? columns : []).map(x => Object.freeze({ x, y, width: 54, height: 60 }))),
   })));
-  const layout = Object.freeze({ width: 768, height: 512, weeks: 6, carrotsPerWeek: 5, totalCarrots: 30, rows });
+  const layout = Object.freeze({ width: 768, height: 512, weeks: 4, currentWeek: 1, carrotsPerWeek: 5, totalCarrots: 5, rows });
   const measuredBounds = new WeakMap();
 
   function alphaBounds(pixels, width, height, threshold = 16) {
@@ -71,7 +71,7 @@
     context.fillStyle = "#a46c39";
     context.fillRect(left + 2, top + height - 3, width - 4, 1);
     context.fillStyle = "#3f2a1b";
-    context.font = '700 12px "Noto Sans KR", Pretendard, system-ui, sans-serif';
+    context.font = '700 16px "Noto Sans KR", Pretendard, system-ui, sans-serif';
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(row.label, x, top + height / 2 + .5);

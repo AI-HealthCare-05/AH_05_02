@@ -43,25 +43,27 @@ function browserGarden() {
   return { garden: window.ForestGarden, canvases };
 }
 
-test('the garden has six ordered weekly rows, five separate carrots per row, and exactly thirty positions', () => {
+test('the garden has four spacious weeks with five enlarged carrots only in week one', () => {
   assert.deepEqual([garden.layout.width, garden.layout.height], [768, 512]);
-  assert.equal(garden.layout.rows.length, 6);
-  assert.deepEqual(garden.layout.rows.map(row => row.week), [1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(garden.layout.rows.map(row => row.label), ['1주차', '2주차', '3주차', '4주차', '5주차', '6주차']);
-  assert.equal(new Set(garden.layout.rows.map(row => row.y)).size, 6);
+  assert.equal(garden.layout.rows.length, 4);
+  assert.deepEqual(garden.layout.rows.map(row => row.week), [1, 2, 3, 4]);
+  assert.deepEqual(garden.layout.rows.map(row => row.label), ['1주차', '2주차', '3주차', '4주차']);
+  assert.equal(new Set(garden.layout.rows.map(row => row.y)).size, 4);
   const carrots = garden.layout.rows.flatMap(row => {
-    assert.equal(row.carrots.length, 5, `${row.label} contains five carrots`);
-    assert.equal(new Set(row.carrots.map(carrot => carrot.x)).size, 5);
+    assert.equal(row.carrots.length, row.week === 1 ? 5 : 0, `${row.label} is planted only in week one`);
+    assert.equal(new Set(row.carrots.map(carrot => carrot.x)).size, row.carrots.length);
     assert.ok(row.carrots.every(carrot => carrot.y === row.y), 'each week is one horizontal row');
     assert.equal(row.sign.y, row.y, 'the wooden sign aligns with its own row');
     return row.carrots;
   });
-  assert.equal(carrots.length, 30);
-  assert.equal(new Set(carrots.map(carrot => `${carrot.x},${carrot.y}`)).size, 30);
-  assert.ok(garden.layout.rows.every((row, index, rows) => !index || row.y > rows[index - 1].y));
+  assert.equal(carrots.length, 5);
+  assert.equal(garden.layout.totalCarrots, 5);
+  assert.ok(carrots.every(carrot => carrot.width === 54 && carrot.height === 60));
+  assert.equal(new Set(carrots.map(carrot => `${carrot.x},${carrot.y}`)).size, 5);
+  assert.ok(garden.layout.rows.every((row, index, rows) => !index || row.y - rows[index - 1].y >= 60));
 });
 
-test('all thirty carrots and six wooden signs stay inside the field and clear the open entrance', () => {
+test('enlarged carrots and four wooden signs stay inside the field and clear the open entrance', () => {
   const entrance = { left: 330, top: 370, right: 445, bottom: 458 };
   const assertClear = (x, y, width, height, label) => {
     const bounds = { left: x - width / 2, right: x + width / 2, top: y - height, bottom: y };
@@ -76,13 +78,14 @@ test('all thirty carrots and six wooden signs stay inside the field and clear th
   }
 });
 
-test('one Canvas draw renders thirty cropped carrot sprites and six legible wooden weekly signs', () => {
+test('one Canvas draw renders five cropped carrots and four signs, leaving later weeks empty', () => {
   const { context, calls } = canvasContext();
   const carrotImage = { complete: true, naturalWidth: 1024, naturalHeight: 1024 };
   const bounds = { x: 440, y: 350, width: 100, height: 180 };
-  assert.equal(garden.draw(context, carrotImage, { bounds }), 30);
-  assert.equal(calls.images.length, 30);
-  assert.deepEqual(calls.labels.map(call => call[0]), ['1주차', '2주차', '3주차', '4주차', '5주차', '6주차']);
+  assert.equal(garden.draw(context, carrotImage, { bounds }), 5);
+  assert.equal(calls.images.length, 5);
+  assert.ok(calls.images.every(draw => draw[6] + draw[8] === garden.layout.rows[0].y));
+  assert.deepEqual(calls.labels.map(call => call[0]), ['1주차', '2주차', '3주차', '4주차']);
   assert.ok(calls.rectangles.length >= 12, 'each sign includes a wooden plate and supporting post');
   assert.equal(calls.saves, calls.restores, 'shared drawing must preserve the caller Canvas state');
   for (const draw of calls.images) {
@@ -93,12 +96,12 @@ test('one Canvas draw renders thirty cropped carrot sprites and six legible wood
   }
 });
 
-test('unavailable carrot art does not throw or hide the six week labels', () => {
+test('unavailable carrot art does not throw or hide the four week labels', () => {
   for (const carrotImage of [null, { complete: false, naturalWidth: 1024 }, { complete: true, naturalWidth: 0 }]) {
     const { context, calls } = canvasContext();
     assert.equal(garden.draw(context, carrotImage), 0);
     assert.equal(calls.images.length, 0);
-    assert.deepEqual(calls.labels.map(call => call[0]), ['1주차', '2주차', '3주차', '4주차', '5주차', '6주차']);
+    assert.deepEqual(calls.labels.map(call => call[0]), ['1주차', '2주차', '3주차', '4주차']);
   }
 });
 
@@ -113,14 +116,14 @@ test('alpha bounds trim transparent padding and safely handle fully transparent 
   assert.equal(garden.alphaBounds(null, 0, 0), null);
 });
 
-test('the dense Phaser layer and Canvas fallback draw the same thirty carrots at the same world coordinates', () => {
+test('the dense Phaser layer and Canvas fallback draw the same five carrots at the same world coordinates', () => {
   const browser = browserGarden();
   const carrotImage = { complete: true, naturalWidth: 20, naturalHeight: 40 };
   const layer = browser.garden.createLayerCanvas(carrotImage, { resolution: 4 });
   assert.deepEqual([layer.width, layer.height], [3072, 2048]);
   assert.deepEqual(layer.calls.scales, [[4, 4]]);
-  assert.equal(layer.calls.images.length, 30);
-  assert.equal(layer.calls.labels.length, 6);
+  assert.equal(layer.calls.images.length, 5);
+  assert.equal(layer.calls.labels.length, 4);
   const { context, calls } = canvasContext();
   browser.garden.draw(context, carrotImage);
   assert.deepEqual(layer.calls.images, calls.images, 'only backing density differs, never crop positions or dimensions');
@@ -215,7 +218,7 @@ test('the empty background and independent carrot are versioned consistently in 
   assert.ok(html.indexOf(gardenScript[1]) < html.indexOf('/static/forest-game.js'));
 });
 
-test('thirty display carrots neither cap earned rewards nor allow duplicate harvesting', async () => {
+test('five display carrots neither cap earned rewards nor allow duplicate harvesting', async () => {
   const state = { carrots: 100, challengeCarrotClaims: {
     walk: { amount: 17, harvested: false }, meal: { amount: 21, harvested: false }, water: { amount: 8, harvested: true },
   } };
@@ -229,7 +232,7 @@ test('thirty display carrots neither cap earned rewards nor allow duplicate harv
   });
   vm.runInContext(section(gameSource, '  function pendingChallengeCarrots(', '  function accrueChallengeCarrots(')
     + section(gameSource, '  async function harvestChallengeCarrots(', '  function outfitCardMarkup('), env);
-  assert.equal(env.pendingChallengeCarrots(), 38, 'reward accounting is independent of the thirty visual slots');
+  assert.equal(env.pendingChallengeCarrots(), 38, 'reward accounting is independent of the five displayed carrots');
   await env.harvestChallengeCarrots();
   assert.equal(state.carrots, 138);
   assert.ok(Object.values(state.challengeCarrotClaims).every(claim => claim.harvested));
