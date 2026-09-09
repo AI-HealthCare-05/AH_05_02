@@ -49,11 +49,11 @@ test('missing or incomplete forecast stays hidden without throwing', () => {
 test('error navigation follows field DOM instead of outdated field-name lists', () => {
   let panel, focused = false;
   const focus = load('focusHealthField', {
-    document: { getElementById: () => ({ closest: () => ({ id: 'lifestyle-input-panel' }), focus: () => { focused = true; } }) },
+    document: { getElementById: () => ({ closest: () => ({ id: 'health-activity-panel' }), focus: () => { focused = true; } }) },
     showHealthInputPanel: value => { panel = value; },
   });
   focus('walking-days');
-  assert.equal(panel, 'lifestyle');
+  assert.equal(panel, 'activity');
   assert.equal(focused, true);
 });
 test('missing snapshot endpoint is explicit and cannot reuse stale snapshot ID', async () => {

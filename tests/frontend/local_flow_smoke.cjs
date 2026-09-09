@@ -29,6 +29,7 @@ fs.mkdirSync(dir, { recursive: true });
   try {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.locator('#sidebar-signup').click();
+    await page.locator('#signup-nickname').fill('시연집주인');
     await page.locator('#email').fill(email);
     await page.locator('#password').fill(password);
     await page.locator('#signup-birth-date').fill('1966-04-12');
