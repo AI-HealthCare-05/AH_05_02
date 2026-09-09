@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HealthData [
+<!ELEMENT HealthData (ExportDate,Me,(Record|Workout|ActivitySummary)*)>
+<!ATTLIST HealthData locale CDATA #REQUIRED>
+<!ELEMENT ExportDate EMPTY>
+<!ATTLIST ExportDate value CDATA #REQUIRED>
+<!ELEMENT Me EMPTY>
+<!ATTLIST Me
+  HKCharacteristicTypeIdentifierDateOfBirth CDATA #REQUIRED
+  HKCharacteristicTypeIdentifierBiologicalSex CDATA #REQUIRED
+  HKCharacteristicTypeIdentifierBloodType CDATA #REQUIRED
+  HKCharacteristicTypeIdentifierFitzpatrickSkinType CDATA #REQUIRED
+  HKCharacteristicTypeIdentifierCardioFitnessMedicationsUse CDATA #REQUIRED
+>
+<!ELEMENT Record ((MetadataEntry)*)>
+<!ATTLIST Record
+  type CDATA #REQUIRED
+  unit CDATA #IMPLIED
+  value CDATA #IMPLIED
+  sourceName CDATA #REQUIRED
+  sourceVersion CDATA #IMPLIED
+  device CDATA #IMPLIED
+  creationDate CDATA #IMPLIED
+  startDate CDATA #REQUIRED
+  endDate CDATA #REQUIRED
+>
+<!ELEMENT MetadataEntry EMPTY>
+<!ATTLIST MetadataEntry key CDATA #REQUIRED value CDATA #REQUIRED>
+<!ELEMENT Workout ((WorkoutStatistics)*)>
+<!ATTLIST Workout
+  workoutActivityType CDATA #REQUIRED
+  duration CDATA #IMPLIED
+  durationUnit CDATA #IMPLIED
+  totalDistance CDATA #IMPLIED
+  totalDistanceUnit CDATA #IMPLIED
+  totalEnergyBurned CDATA #IMPLIED
+  totalEnergyBurnedUnit CDATA #IMPLIED
+  sourceName CDATA #REQUIRED
+  sourceVersion CDATA #IMPLIED
+  device CDATA #IMPLIED
+  creationDate CDATA #IMPLIED
+  startDate CDATA #REQUIRED
+  endDate CDATA #REQUIRED
+>
+<!ELEMENT WorkoutStatistics EMPTY>
+<!ATTLIST WorkoutStatistics type CDATA #REQUIRED startDate CDATA #REQUIRED endDate CDATA #REQUIRED sum CDATA #IMPLIED unit CDATA #IMPLIED>
+<!ELEMENT ActivitySummary EMPTY>
+<!ATTLIST ActivitySummary
+  dateComponents CDATA #IMPLIED
+  activeEnergyBurned CDATA #IMPLIED
+  activeEnergyBurnedGoal CDATA #IMPLIED
+  activeEnergyBurnedUnit CDATA #IMPLIED
+  appleExerciseTime CDATA #IMPLIED
+  appleExerciseTimeGoal CDATA #IMPLIED
+  appleStandHours CDATA #IMPLIED
+  appleStandHoursGoal CDATA #IMPLIED
+>
+]>
+<HealthData locale="ko_KR">
+ <ExportDate value="2026-09-09 09:00:00 +0900"/>
+ <Me HKCharacteristicTypeIdentifierDateOfBirth="1990-01-01" HKCharacteristicTypeIdentifierBiologicalSex="HKBiologicalSexNotSet" HKCharacteristicTypeIdentifierBloodType="HKBloodTypeNotSet" HKCharacteristicTypeIdentifierFitzpatrickSkinType="HKFitzpatrickSkinTypeNotSet" HKCharacteristicTypeIdentifierCardioFitnessMedicationsUse="None"/>
+
+ <!-- 2026-03-01: 정상적인 하루, Apple Watch 단일 소스 -->
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count" value="812" creationDate="2026-03-01 08:05:00 +0900" startDate="2026-03-01 08:00:00 +0900" endDate="2026-03-01 08:05:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count" value="1523" creationDate="2026-03-01 12:30:00 +0900" startDate="2026-03-01 12:00:00 +0900" endDate="2026-03-01 12:30:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="km" value="1.8" creationDate="2026-03-01 12:30:00 +0900" startDate="2026-03-01 12:00:00 +0900" endDate="2026-03-01 12:30:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="kcal" value="145" creationDate="2026-03-01 23:59:00 +0900" startDate="2026-03-01 00:00:00 +0900" endDate="2026-03-01 23:59:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count/min" value="72" creationDate="2026-03-01 09:00:05 +0900" startDate="2026-03-01 09:00:00 +0900" endDate="2026-03-01 09:00:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count/min" value="58" creationDate="2026-03-02 03:00:00 +0900" startDate="2026-03-01 00:00:00 +0900" endDate="2026-03-01 23:59:00 +0900"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" value="HKCategoryValueSleepAnalysisAsleepCore" creationDate="2026-03-01 07:00:00 +0900" startDate="2026-03-01 00:30:00 +0900" endDate="2026-03-01 06:45:00 +0900"/>
+
+ <!-- 2026-03-02: Apple Watch + 서드파티 수면앱(Pillow) 중복 기록 -->
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="테스트유저의 iPhone" sourceVersion="18.1" device="&lt;&lt;HKDevice: iPhone&gt;&gt;" unit="count" value="2450" creationDate="2026-03-02 21:00:00 +0900" startDate="2026-03-02 00:00:00 +0900" endDate="2026-03-02 21:00:00 +0900"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" value="HKCategoryValueSleepAnalysisAsleepCore" creationDate="2026-03-02 07:10:00 +0900" startDate="2026-03-02 00:15:00 +0900" endDate="2026-03-02 06:50:00 +0900"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Pillow" sourceVersion="5.2" device="" value="HKCategoryValueSleepAnalysisAsleepUnspecified" creationDate="2026-03-02 07:00:00 +0900" startDate="2026-03-02 00:20:00 +0900" endDate="2026-03-02 06:40:00 +0900"/>
+
+ <!-- 2026-03-03: 결측 의심 - 걸음수 0, 안정시 심박수 없음 (미착용 의심 케이스) -->
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count" value="0" creationDate="2026-03-03 23:59:00 +0900" startDate="2026-03-03 00:00:00 +0900" endDate="2026-03-03 23:59:00 +0900"/>
+
+ <!-- 2026-03-04: 자정을 걸친 수면 기록 (전날 밤 -> 다음날 새벽), 시간대 변환 검증용 UTC 근접 시각 -->
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" value="HKCategoryValueSleepAnalysisAsleepCore" creationDate="2026-03-04 07:30:00 +0900" startDate="2026-03-03 23:40:00 +0900" endDate="2026-03-04 06:55:00 +0900"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" unit="count/min" value="410" creationDate="2026-03-04 09:15:05 +0900" startDate="2026-03-04 09:15:00 +0900" endDate="2026-03-04 09:15:00 +0900"/>
+
+ <!-- 운동 세션 -->
+ <Workout workoutActivityType="HKWorkoutActivityTypeWalking" duration="32.5" durationUnit="min" totalDistance="2.6" totalDistanceUnit="km" totalEnergyBurned="180" totalEnergyBurnedUnit="kcal" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" creationDate="2026-03-01 13:05:00 +0900" startDate="2026-03-01 12:30:00 +0900" endDate="2026-03-01 13:02:30 +0900"/>
+ <Workout workoutActivityType="HKWorkoutActivityTypeBadminton" duration="55" durationUnit="min" totalDistance="0" totalDistanceUnit="km" totalEnergyBurned="410" totalEnergyBurnedUnit="kcal" sourceName="테스트유저의 Apple Watch" sourceVersion="10.4" device="&lt;&lt;HKDevice: Apple Watch&gt;&gt;" creationDate="2026-03-02 20:10:00 +0900" startDate="2026-03-02 19:15:00 +0900" endDate="2026-03-02 20:10:00 +0900"/>
+
+ <!-- 일일 활동 링 -->
+ <ActivitySummary dateComponents="2026-03-01" activeEnergyBurned="145" activeEnergyBurnedGoal="300" activeEnergyBurnedUnit="kcal" appleExerciseTime="32" appleExerciseTimeGoal="30" appleStandHours="9" appleStandHoursGoal="12"/>
+ <ActivitySummary dateComponents="2026-03-02" activeEnergyBurned="410" activeEnergyBurnedGoal="300" activeEnergyBurnedUnit="kcal" appleExerciseTime="55" appleExerciseTimeGoal="30" appleStandHours="11" appleStandHoursGoal="12"/>
+ <ActivitySummary dateComponents="2026-03-03" activeEnergyBurned="0" activeEnergyBurnedGoal="300" activeEnergyBurnedUnit="kcal" appleExerciseTime="0" appleExerciseTimeGoal="30" appleStandHours="0" appleStandHoursGoal="12"/>
+</HealthData>

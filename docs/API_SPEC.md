@@ -1,5 +1,7 @@
 # 만성질환 생활습관 챌린지 웹서비스 API 명세서
 
+> 2026-09-08 챌린지 V3 추가 계약: [3영역·선호·난이도 및 사진 인증 API](CHALLENGES_V3.md#6-api-계약). 신규 선택은 `catalog_version=evidence-v3`를 사용하며 기존 사이클과 PUT 로그 계약은 유지한다. 사진 제출 endpoint는 `multipart/form-data`를 사용한다. 아래 기존 기준선 전체가 갱신되었다는 뜻은 아니다.
+
 | 항목 | 내용 |
 |---|---|
 | 문서 버전 | v2.1 |
@@ -530,6 +532,7 @@
 | 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 실제 제조사 OAuth 전에는 `development_mock` 또는 수동 파일 가져오기로 표시 |
 | 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
 | 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
+| 퀴즈 조회 | GET | `/api/v1/health-education/quizzes` | 승인 문서에서 규칙 기반(rule-based) 자동 생성, OX·빈칸 채우기 2종, 조회 응답에는 정답·해설 미포함(제출 API는 후속) |
 | 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
 | 채소 식사 사진 자동 인증 | POST | `/api/v1/user-challenges/{id}/meal-photo-verifications` | multipart 사진 업로드, 채소 포함 여부·시각적 비율(%)만 자동 판별해 챌린지 인증·기록, 칼로리·영양·치료 판정 금지, 원본 이미지 미저장(SHA-256 다이제스트만 보관) |
 | OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 허용 필드만 반환, 건강검진 기록 자동 저장 금지 |

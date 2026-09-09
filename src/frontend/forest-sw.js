@@ -1,26 +1,61 @@
 "use strict";
 
-const CACHE_NAME = "gandang-carrot-forest-pwa-v119";
+const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v178-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260902-34",
+  "/static/forest-game.css?v=20260908-16",
+  "/static/forest-atmosphere.css?v=20260903-2",
+  "/static/forest-atmosphere.js?v=20260907-4",
+  "/static/forest-hud.js?v=20260908-4",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
-  "/static/lpc-avatar-engine.js?v=20260901-25",
-  "/static/forest-phaser.js?v=20260902-29",
-  "/static/forest-game.js?v=20260902-71",
+  "/static/lpc-avatar-engine.js?v=20260908-2",
+  "/static/forest-objects.js?v=20260908-4",
+  "/static/forest-fire.js?v=20260907-3",
+  "/static/forest-animals.js?v=20260908-5",
+  "/static/forest-pets.js?v=20260908-6",
+  "/static/forest-riverduck.js?v=20260908-1",
+  "/static/forest-riverduck-art.js?v=20260908-1",
+  "/static/forest-memories.js?v=20260908-10",
+  "/static/forest-garden.js?v=20260908-1",
+  "/static/forest-phaser.js?v=20260908-24",
+  "/static/forest-profile.js?v=20260907-1",
+  "/static/forest-game.js?v=20260908-25",
+  "/static/challenge-v2.js?v=2.1.9",
+  "/static/challenge-v2.css?v=2.1.3",
+  "/static/suin/design-tokens.css?v=20260908-1",
   "/static/icons/forest-icon-192.png",
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
+  ...["tent", "light_tent", "picnic_table", "bbq_table", "chair_green", "chair_red", "picnic_blanket", "pond", "lantern", "fence", "flower_cart", "flower_pot", "mushroom", "bench", "campfire", "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow", "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"].map(code => `/static/assets/furniture-v153/${code}.png?v=20260907-1`),
+  "/static/assets/animals/lpc-cow-eat.png",
+  "/static/assets/animals/lpc-cow-walk.png",
+  "/static/assets/animals/lpc-rabbit.png",
+  "/static/assets/animals/riverduck-v160/riverduck.png?v=20260908-1",
+  ...["idle-2", "swim-1", "swim-2", "flee-1", "flee-2"].map(name => `/static/assets/animals/riverduck-v160/${name}.png?v=20260908-1`),
+  "/static/assets/animals/licensed-rabbits/bunbun.png?v=20260908-1",
+  "/static/assets/animals/licensed-rabbits/last-tick.png?v=20260908-1",
+  ...["white", "gray", "ginger", "winter-antlers-green", "winter-antlers-red", "winter-santa-hat-1", "winter-santa-hat-2",
+    "valentine-cupid", "valentine-nimbus", "valentine-wings", "valentine-bow-blue", "valentine-bow-gold",
+    "valentine-glasses-gold", "valentine-bow-green", "valentine-bow-pink-2", "valentine-bow-pink",
+    "valentine-bow-red", "valentine-glasses-red"].map(name => `/static/assets/animals/licensed-kittens/${name}.png?v=20260908-2`),
+  "/static/assets/animals/cow-moo-joseph-sardin-cc0.mp3",
+  "/static/assets/challenge-water-team-v171.webp?v=20260908-1",
+  "/static/assets/challenge-compost-team-v171.webp?v=20260908-1",
+  "/static/assets/challenge-weeding-team-v171.webp?v=20260908-1",
+  "/static/assets/home-record-player-v159.png?v=20260908-1",
+  "/static/assets/forest-memory-camera-v159.png?v=20260908-1",
   "/static/assets/town-pro-sensory-cc0.mp3",
-  "/static/assets/home-small-fire-cc0.wav",
+  "/static/assets/home-drowsy-evening-cc0.wav",
   "/static/assets/avatar-forget-me-not-cc0.ogg",
   "/static/assets/lp-our-home-v2.mp3",
   "/static/assets/lp-warm-afternoon-v2.mp3",
   "/static/assets/lp-bright-sam-v2.mp3",
   "/static/assets/lp-untitled-v2.mp3",
+  "/static/assets/lp-going-home-v1.mp3",
   "/static/assets/carrot-forest-main-theme.mp3",
   "/static/assets/forest-canopy-original.wav",
   "/static/assets/peaceful-forest-samza-cc0.wav",
@@ -47,20 +82,15 @@ const MEDIA_ASSETS = [
   "/static/assets/sfx/object-off.wav",
   "/static/assets/sfx/cow-toggle.wav",
   "/static/assets/carrot-forest-cat-pets-v1.png",
-  "/static/assets/carrot-forest-storage-atlas-v1.png",
-  "/static/assets/carrot-forest-storage-atlas-v2.png",
-  "/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1",
-  "/static/assets/carrot-forest-animated-objects-v1.png?v=20260831-1",
-  "/static/assets/carrot-forest-reward-cow-v1.png",
-  "/static/assets/carrot-forest-reward-cow-body-v2.png?v=20260901-1",
-  "/static/assets/carrot-forest-reward-cow-base-v2.png?v=20260901-1",
-  "/static/assets/carrot-forest-campfire-off-v3.png?v=20260902-1",
+  "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1",
+  "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1",
   "/static/assets/carrot-forest-lpc-pets-v1.png",
   "/static/assets/carrot-forest-lpc-rat-v1.png",
-  "/static/assets/carrot-forest-loading-v1.png?v=20260831-1",
-  "/static/assets/carrot-forest-world-v3.png?v=20260831-1",
-  "/static/assets/carrot-forest-home-v1.png",
-  "/static/assets/carrot-forest-garden-v1.png",
+  "/static/assets/carrot-forest-loading-v2.png?v=20260907-1",
+  "/static/assets/carrot-forest-world-v6.png?v=20260907-1",
+  "/static/assets/carrot-forest-home-v3.png?v=20260907-1",
+  "/static/assets/carrot-forest-garden-v3.png?v=20260908-1",
+  "/static/assets/garden-carrot-v168.png?v=20260908-1",
   "/static/assets/lpc-pack/manifest.json?v=20260901-10",
 ];
 
@@ -76,7 +106,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
@@ -87,20 +117,24 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
+    // Login/service pages and other /forest* routes are never the offline shell.
+    if (url.pathname !== "/forest") return;
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/forest", copy));
+          if (response.ok && !response.redirected) {
+            const copy = response.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put("/forest", copy)).catch(() => {}));
+          }
           return response;
         })
-        .catch(() => caches.match("/forest"))
+        .catch(() => caches.open(CACHE_NAME).then((cache) => cache.match("/forest")))
     );
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+    caches.open(CACHE_NAME).then((cache) => cache.match(request)).then((cached) => cached || fetch(request).then((response) => {
       if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
       return response;
     }))

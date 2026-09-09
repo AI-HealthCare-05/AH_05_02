@@ -12,6 +12,10 @@ from app.repositories.game_repository import GameRepository
 
 WELCOME_CARROTS = 100
 
+# Placeholder shown for accounts that have not set an account name yet. Never derived
+# from the email address -- an avatar display name must not leak account contact info.
+GENERIC_DISPLAY_NAME = "숲지기"
+
 # Mirrors the adjective/noun pool the forest world's demo mode generates nicknames from
 # (src/frontend/forest-game.js), so a brand-new avatar's display name looks the same
 # whether it came from a real account or the local demo.
@@ -52,11 +56,44 @@ class ForestRepository:
     async def nickname_taken(self, display_name: str, exclude_user_id: int) -> bool:
         return await ForestAvatar.filter(display_name=display_name).exclude(user_id=exclude_user_id).exists()
 
+    def _resolved_display_name(self, user: User) -> str:
+        # The forest avatar's display name is a derived view of the account name, not an
+        # independently editable nickname -- it must always read back either the user's
+        # current name or this generic placeholder, never a stale value, a legacy
+        # request-supplied nickname, or anything derived from the account's email.
+        return user.name if user.name else GENERIC_DISPLAY_NAME
+
+    async def sync_existing_avatar_name(self, user: User) -> None:
+        # Keep the forest avatar's display name in step with the account name shown
+        # elsewhere in the app whenever the user renames themselves via PATCH
+        # /api/v1/users/me. Deliberately uses get_or_none rather than the get_or_create
+        # pattern `avatar()` uses: a user who has never opened the forest feature must
+        # not have an avatar (and the welcome-carrot grant that comes with creating one)
+        # created as a side effect of an unrelated profile edit. Only this user's own
+        # avatar is ever touched, and only display_name changes -- cosmetics and
+        # carrot_balance are left exactly as they were.
+        avatar = await ForestAvatar.get_or_none(user_id=user.id)
+        if avatar is None:
+            return
+        resolved_name = self._resolved_display_name(user)
+        if avatar.display_name == resolved_name:
+            return
+        avatar.display_name = resolved_name
+        await avatar.save(update_fields=["display_name", "updated_at"])
+
     async def avatar(self, user: User) -> ForestAvatar:
-        avatar, _ = await ForestAvatar.get_or_create(
+        resolved_name = self._resolved_display_name(user)
+        avatar, created = await ForestAvatar.get_or_create(
             user_id=user.id,
-            defaults={"display_name": await self._unique_nickname(), "carrot_balance": WELCOME_CARROTS},
+            defaults={"display_name": resolved_name, "carrot_balance": WELCOME_CARROTS},
         )
+        if not created and avatar.display_name != resolved_name:
+            # Self-heal any avatar row that has drifted from the account name -- e.g. one
+            # created back when avatars had independently chosen nicknames, or a legacy
+            # email-derived name. The account name (or the generic placeholder above) is
+            # always the source of truth now.
+            avatar.display_name = resolved_name
+            await avatar.save(update_fields=["display_name", "updated_at"])
         # Wallet (UserWallet) is the single source of truth for the carrot balance shown
         # across the app now. Migrate/grant the balance this row already held (100 for a
         # brand-new avatar, or whatever an existing avatar had accumulated before this
