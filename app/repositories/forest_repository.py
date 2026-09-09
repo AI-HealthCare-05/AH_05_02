@@ -11,7 +11,6 @@ from app.repositories.game_repository import GameRepository
 
 WELCOME_CARROTS = 100
 
-
 def forest_display_name(user: User) -> str:
     """Use the account profile as the single source of truth for forest names."""
     return user.name or "숲지기"

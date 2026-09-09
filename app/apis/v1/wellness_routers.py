@@ -19,6 +19,7 @@ from app.dtos.wellness import (
 from app.models.users import User
 from app.services.engagement import EngagementService
 from app.services.wellness import WellnessService
+from src.quiz.generator import generate_quizzes
 from src.rag.engine import answer_with_sources
 
 wellness_router = APIRouter(tags=["Wellness extensions"])
@@ -92,6 +93,13 @@ async def ask_health_education(request: RagQuestionRequest, user: Annotated[User
     result = answer_with_sources(request.question)
     result["medical_notice"] = "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."
     return envelope(result)
+
+
+@wellness_router.get("/health-education/quizzes")
+async def list_health_education_quizzes(user: Annotated[User, Depends(get_request_user)]):
+    _ = user
+    items = [item.as_public_dict() for item in generate_quizzes()]
+    return envelope({"items": items})
 
 
 @wellness_router.post("/food-analyses", status_code=status.HTTP_201_CREATED)
