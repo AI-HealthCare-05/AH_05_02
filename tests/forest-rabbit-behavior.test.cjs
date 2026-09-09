@@ -98,6 +98,69 @@ function setup({ animals = fixtureAnimals, loaded = animals.rabbitVariants?.map(
   return { scene, events, labels, listeners, tweens, window, setReduced: value => { reduced = value; } };
 }
 
+function ageMouse(scene) {
+  scene.add.container = (x, y) => Object.assign(actor(x, y), { add() {} });
+  scene.add.sprite = () => actor();
+  scene.setRatSpecies('mouse');
+  scene.ratEventId = 21;
+  scene.ratActor.setPosition(420, 350);
+  scene.ratDespawnAt = 13000;
+  scene.updateRat(13001, 16);
+  return scene.mouseCrowd[0];
+}
+
+test('a mouse remains individually clickable and catchable after its spawn interval and an hour idle', () => {
+  const { scene, events } = setup();
+  const mouse = ageMouse(scene);
+  assert.equal(mouse.eventId, 21);
+  assert.notEqual(scene.ratEventId, mouse.eventId);
+  mouse.sprite.handlers.pointerover();
+  mouse.sprite.handlers.pointerdown({ button: 0 }, 0, 0, { stopPropagation() {} });
+  assert.equal(scene.pointerAttackEventId, 21);
+  assert.equal(scene.getRatAttackTarget(21).actor, mouse.actor);
+  scene.playAction = () => scene.tryAttackRat(3600000);
+  scene.pointerMovementStep(2, 3600000);
+  assert.equal(mouse.actor.destroyed, true);
+  assert.equal(scene.mouseCrowd.length, 0);
+  scene.catchCrowdMouse(mouse);
+  const caught = events.filter(event => event.type === 'forest-rat-caught');
+  assert.equal(caught.length, 1);
+  assert.equal(caught[0].detail.eventId, 21);
+  assert.equal(caught[0].detail.amount, 0);
+});
+
+test('keyboard and pet attacks can catch old mice while the newest encounter is inactive', () => {
+  for (const method of ['keyboard', 'pet']) {
+    const { scene, events, window } = setup();
+    const mouse = ageMouse(scene);
+    scene.ratActive = false;
+    if (method === 'keyboard') scene.tryAttackRat(3600000);
+    else {
+      scene.pet = actor(420, 350);
+      scene.petEmoji = actor().setVisible(false);
+      scene.petFollowX = 420;
+      scene.petFollowY = 350;
+      scene.updatePet(3600000, 40, false);
+    }
+    assert.equal(mouse.actor.destroyed, true, method);
+    assert.equal(window.ForestMonsterPresence, false);
+    assert.equal(events.filter(event => event.type === 'forest-rat-caught').length, 1);
+  }
+});
+
+test('crowd capacity postpones spawning without deleting uncaught mice', () => {
+  const { scene } = setup();
+  const mouse = ageMouse(scene);
+  scene.mouseCrowd = Array.from({ length: 7 }, (_, index) => ({ ...mouse, actor: actor(), eventId: index + 30 }));
+  const id = scene.ratEventId;
+  scene.ratDespawnAt = 20000;
+  scene.updateRat(20001, 16);
+  assert.equal(scene.ratEventId, id);
+  assert.equal(scene.mouseCrowd.length, 7);
+  assert.ok(scene.mouseCrowd.every(item => !item.actor.destroyed));
+  assert.ok(scene.ratDespawnAt > 20001);
+});
+
 test('encounter creation keeps the monster body and marker without allocating a ground shadow', () => {
   const start = source.indexOf('      this.ratActor = this.add.container(0, 0)');
   const end = source.indexOf('      this.createRatAttackButton();', start);

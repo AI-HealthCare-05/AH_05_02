@@ -1314,7 +1314,7 @@
       const keepVisible = () => { this.ratHoverUntil = performance.now() + 650; };
       const press = () => { this.ratAttackPressedUntil = performance.now() + 140; };
       this.ratSprite.setInteractive({ useHandCursor: true })
-        .on("pointerover", () => { this.ratHovered = true; keepVisible(); })
+        .on("pointerover", () => { this.hoveredMouse = null; this.ratHovered = true; keepVisible(); })
         .on("pointermove", keepVisible)
         .on("pointerout", () => { this.ratHovered = false; keepVisible(); })
         .on("pointerdown", (pointer, _x, _y, event) => {
@@ -1324,6 +1324,7 @@
           press();
           // Clicking the animal and its visible button share one action.
           // A distant target is approached before the equipped attack plays.
+          this.hoveredMouse = null;
           this.requestRatAttack();
           this.updateRatAttackButton();
         });
@@ -1350,7 +1351,9 @@
 
     updateRatAttackButton() {
       if (!this.ratAttackButton) return;
-      const visible = this.sceneName === "world" && this.ratActive && !this.placementActive && !this.isWorldInputBlocked()
+      const target = (this.pointerAttackEventId != null ? this.getRatAttackTarget(this.pointerAttackEventId) : null)
+        || (this.mouseCrowd.includes(this.hoveredMouse) ? this.hoveredMouse : this.getRatAttackTarget());
+      const visible = this.sceneName === "world" && !!target && !this.placementActive && !this.isWorldInputBlocked()
         && (this.ratHovered || this.ratAttackHovered || this.ratAttackPinned || this.pointerAttackEventId != null || performance.now() < this.ratHoverUntil);
       this.ratAttackButton.setVisible(visible);
       this.ratAttackPlate.setVisible(visible);
@@ -1381,8 +1384,9 @@
         swordPart([[-40, 2], [-29, -9], [-24, -11], [-26, -6], [-37, 5]], 0xfffbeb);
         swordPart([[-44, -1], [-35, 8], [-33, 6], [-42, -3]], 0xffd58b);
       }
-      let x = Math.max(60, Math.min(WORLD.width - 60, this.ratActor.x));
-      let y = Math.max(24, this.ratActor.y - 72);
+      const targetActor = target?.actor || this.ratActor;
+      let x = Math.max(60, Math.min(WORLD.width - 60, targetActor.x));
+      let y = Math.max(24, targetActor.y - 72);
       let buttonScale = 1;
       const camera = this.cameras?.main;
       if (camera && typeof camera.getWorldPoint === "function" && Number.isFinite(camera.width) && camera.width > 0
@@ -1396,20 +1400,30 @@
           // Include the halo/pointer plus one follow frame (at most 7.4 world units).
           const margin = Math.min(12, viewWidth / 4, viewHeight / 4);
           buttonScale = Math.min(1, (viewWidth - margin * 2) / 122, (viewHeight - margin * 2) / 52);
-          x = Math.max(topLeft.x + margin + 61 * buttonScale, Math.min(bottomRight.x - margin - 61 * buttonScale, this.ratActor.x));
-          y = Math.max(topLeft.y + margin + 24 * buttonScale, Math.min(bottomRight.y - margin - 28 * buttonScale, this.ratActor.y - 72));
+          x = Math.max(topLeft.x + margin + 61 * buttonScale, Math.min(bottomRight.x - margin - 61 * buttonScale, targetActor.x));
+          y = Math.max(topLeft.y + margin + 24 * buttonScale, Math.min(bottomRight.y - margin - 28 * buttonScale, targetActor.y - 72));
         }
       }
       this.ratAttackButton.setScale(buttonScale).setPosition(x, y);
       this.ratAttackPlate.setScale(buttonScale).setPosition(x, y);
     }
 
+    getRatAttackTarget(eventId = null) {
+      if (eventId != null) {
+        const mouse = this.mouseCrowd.find(item => item.eventId === eventId);
+        if (mouse) return mouse;
+      }
+      return this.ratActive && (eventId == null || eventId === this.ratEventId)
+        ? { actor: this.ratActor, eventId: this.ratEventId } : null;
+    }
+
     requestRatAttack() {
-      if (this.sceneName !== "world" || !this.ratActive || this.placementActive || this.mountTransitioning || this.isWorldInputBlocked()) return;
+      const target = this.mouseCrowd.includes(this.hoveredMouse) ? this.hoveredMouse : this.getRatAttackTarget();
+      if (this.sceneName !== "world" || !target || this.placementActive || this.mountTransitioning || this.isWorldInputBlocked()) return;
       this.cancelPointerMovement();
       this.forcedUntil = 0;
       this.forcedDirection = null;
-      this.pointerAttackEventId = this.ratEventId;
+      this.pointerAttackEventId = target.eventId;
       this.nextPointerRepathAt = 0;
       this.ratAttackPinned = true;
       this.avatar.sitting = false;
@@ -1419,12 +1433,13 @@
 
     pointerMovementStep(distance, time) {
       if (this.pointerAttackEventId != null) {
-        if (this.sceneName !== "world" || !this.ratActive || this.pointerAttackEventId !== this.ratEventId) {
+        const target = this.getRatAttackTarget(this.pointerAttackEventId);
+        if (this.sceneName !== "world" || !target) {
           this.cancelPointerMovement();
           return null;
         }
-        const dx = this.ratActor.x - this.avatar.x;
-        const dy = this.ratActor.y - this.avatar.y;
+        const dx = target.actor.x - this.avatar.x;
+        const dy = target.actor.y - this.avatar.y;
         if (Math.hypot(dx, dy) <= 68) {
           this.avatar.direction = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
           this.emitPosition(true);
@@ -1433,7 +1448,7 @@
           return null;
         }
         if (time >= this.nextPointerRepathAt) {
-          this.movePath = this.findMovePath(this.ratActor.x, this.ratActor.y);
+          this.movePath = this.findMovePath(target.actor.x, target.actor.y);
           this.nextPointerRepathAt = time + 300;
         }
       }
@@ -1538,8 +1553,21 @@
       const actor = this.add.container(this.ratActor.x, this.ratActor.y).setDepth(this.ratActor.y - 3);
       const sprite = this.add.sprite(0, 0, "lpc-rat", 1).setOrigin(.5, 1).setScale(1.4);
       actor.add(sprite);
-      this.mouseCrowd.push({ actor, sprite, bornAt: time });
-      while (this.mouseCrowd.length > 7) this.mouseCrowd.shift()?.actor?.destroy?.();
+      const mouse = { actor, sprite, bornAt: time, eventId: this.ratEventId };
+      this.mouseCrowd.push(mouse);
+      sprite.setInteractive({ useHandCursor: true })
+        .on("pointerover", () => {
+          this.hoveredMouse = mouse;
+          this.ratHovered = true;
+          this.ratHoverUntil = performance.now() + 650;
+        })
+        .on("pointerout", () => { this.ratHovered = false; this.ratHoverUntil = performance.now() + 650; })
+        .on("pointerdown", (pointer, _x, _y, event) => {
+          if (this.placementActive || (!pointer.wasTouch && pointer.button !== 0)) return;
+          event?.stopPropagation?.();
+          this.hoveredMouse = mouse;
+          this.requestRatAttack();
+        });
     }
 
     updateMouseCrowd(time) {
@@ -1697,7 +1725,7 @@
       this.ratAttackPlate?.setVisible(false);
       if (this.pointerAttackEventId != null) this.cancelPointerMovement();
       this.ratNextSpawnAt = time + Phaser.Math.Between(12000, 22000);
-      window.ForestMonsterPresence = this.mouseCrowd.length > 0 && this.ratSpecies === "mouse";
+      window.ForestMonsterPresence = this.mouseCrowd.length > 0;
       window.dispatchEvent(new CustomEvent("forest-monster-presence", {
         detail: { active: window.ForestMonsterPresence },
       }));
@@ -1743,17 +1771,37 @@
 
     tryAttackRat(time) {
       if (this.memoryCapturing) return;
-      if (this.sceneName !== "world" || !this.ratActive || time - this.lastRatAttackAt < 320) return;
-      this.lastRatAttackAt = time;
-      const dx = this.ratActor.x - this.avatar.x;
-      const dy = this.ratActor.y - this.avatar.y;
-      const distance = Math.hypot(dx, dy);
+      if (this.sceneName !== "world" || time - this.lastRatAttackAt < 320) return;
       const facing = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[this.avatar.direction] || [0, 1];
-      const facingScore = distance ? (dx * facing[0] + dy * facing[1]) / distance : 1;
-      if (distance > 76 || facingScore < -0.1) return;
+      const candidates = [...this.mouseCrowd, ...(this.ratActive ? [this.getRatAttackTarget()] : [])]
+        .map(target => {
+          const dx = target.actor.x - this.avatar.x, dy = target.actor.y - this.avatar.y;
+          const distance = Math.hypot(dx, dy);
+          return { target, distance, facingScore: distance ? (dx * facing[0] + dy * facing[1]) / distance : 1 };
+        }).filter(item => item.distance <= 76 && item.facingScore >= -0.1)
+        .sort((a, b) => a.distance - b.distance);
+      if (!candidates.length) return;
+      this.lastRatAttackAt = time;
+      const mouse = candidates[0].target;
+      if (this.mouseCrowd.includes(mouse)) {
+        this.catchCrowdMouse(mouse);
+        return;
+      }
       const eventId = this.ratEventId;
       this.dismissRat(time, true);
       window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, species: this.ratSpecies } }));
+    }
+
+    catchCrowdMouse(mouse, source) {
+      const index = this.mouseCrowd.indexOf(mouse);
+      if (index < 0) return;
+      this.mouseCrowd.splice(index, 1);
+      mouse.actor.destroy();
+      if (this.hoveredMouse === mouse) { this.hoveredMouse = null; this.ratHovered = false; this.ratHoverUntil = 0; }
+      if (this.pointerAttackEventId === mouse.eventId) this.cancelPointerMovement();
+      window.ForestMonsterPresence = this.ratActive || this.mouseCrowd.length > 0;
+      window.dispatchEvent(new CustomEvent("forest-monster-presence", { detail: { active: window.ForestMonsterPresence } }));
+      window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId: mouse.eventId, amount: 0, species: "mouse", ...(source ? { source } : {}) } }));
     }
 
     updateRat(time, delta) {
@@ -1791,8 +1839,10 @@
           this.ratNextSpawnAt = time + Phaser.Math.Between(2200, 4200);
         }
         else {
-          this.addMouseCrowdReplica(time);
-          this.spawnRat(time, "mouse");
+          if (this.mouseCrowd.length < 7) {
+            this.addMouseCrowdReplica(time);
+            this.spawnRat(time, "mouse");
+          } else this.ratDespawnAt = time + Phaser.Math.Between(12000, 18000);
         }
         return;
       }
@@ -1882,10 +1932,12 @@
         ? [...this.petTrail].reverse().find((point) => point.time <= time - 330)
         : null;
       const petActor = this.pet?.visible ? this.pet : this.petEmoji;
-      const ratDistanceFromPlayer = this.ratActive ? Phaser.Math.Distance.Between(this.ratActor.x, this.ratActor.y, this.avatar.x, this.avatar.y) : Infinity;
-      const autoHunting = stepMs > 0 && !feeding && !attacking && !togetherSitting && this.sceneName === "world" && this.ratActive && this.pet?.visible && ratDistanceFromPlayer < 92.5;
-      const targetX = autoHunting ? this.ratActor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
-      const targetY = autoHunting ? this.ratActor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
+      const petTarget = [...this.mouseCrowd, ...(this.ratActive ? [this.getRatAttackTarget()] : [])]
+        .sort((a, b) => Math.hypot(a.actor.x - this.avatar.x, a.actor.y - this.avatar.y) - Math.hypot(b.actor.x - this.avatar.x, b.actor.y - this.avatar.y))[0];
+      const ratDistanceFromPlayer = petTarget ? Phaser.Math.Distance.Between(petTarget.actor.x, petTarget.actor.y, this.avatar.x, this.avatar.y) : Infinity;
+      const autoHunting = stepMs > 0 && !feeding && !attacking && !togetherSitting && this.sceneName === "world" && !!petTarget && this.pet?.visible && ratDistanceFromPlayer < 92.5;
+      const targetX = autoHunting ? petTarget.actor.x : delayed ? delayed.x : this.avatar.x + directionOffset[0];
+      const targetY = autoHunting ? petTarget.actor.y : delayed ? delayed.y + 8 : this.avatar.y + directionOffset[1];
       const follow = feeding || attacking || togetherSitting ? 0 : 1 - Math.exp(-stepMs / (autoHunting ? 260 : playerMoving ? 120 : 210));
       const actor = petActor;
       const previousX = this.petFollowX, previousY = this.petFollowY;
@@ -1907,13 +1959,16 @@
       if (this.pet?.visible) this.renderPetPose(action, this.petPoseElapsedMs, reducedMotion);
       else actor.setPosition(this.petFollowX, this.petFollowY).setDepth(this.petFollowY - 1).setAngle(0).setScale(1);
       if (time >= this.petActionUntil) this.petAction = null;
-      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, this.ratActor.x, this.ratActor.y) < 25 && time - this.lastPetAttackAt > 2600) {
+      if (autoHunting && Phaser.Math.Distance.Between(this.petFollowX, this.petFollowY, petTarget.actor.x, petTarget.actor.y) < 25 && time - this.lastPetAttackAt > 2600) {
         this.lastPetAttackAt = time;
         this.petAction = "attack";
         this.petActionUntil = time + 760;
-        const eventId = this.ratEventId;
-        this.dismissRat(time, true);
-        window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, source: "pet", species: this.ratSpecies } }));
+        if (this.mouseCrowd.includes(petTarget)) this.catchCrowdMouse(petTarget, "pet");
+        else {
+          const eventId = this.ratEventId;
+          this.dismissRat(time, true);
+          window.dispatchEvent(new CustomEvent("forest-rat-caught", { detail: { eventId, amount: this.ratSpecies === "rabbit" ? 1 : 0, source: "pet", species: this.ratSpecies } }));
+        }
         if (!reducedMotion) {
           this.petAttackRemainingMs = window.ForestPets?.actionDurations?.attack || 760;
           this.petPoseAction = "attack";
