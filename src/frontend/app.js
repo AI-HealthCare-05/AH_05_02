@@ -1,4 +1,13 @@
 const state = { step: 1, token: null, checkupId: null, predictionId: null, prediction: null, cycle: null, wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, sharedGroups: [], forestGroupId: null, forestCatalog: null, forestHome: null };
+window.challengeV2TokenProvider = () => state.token;
+// Only this fixed return destination is accepted; never redirect to arbitrary query URLs.
+const returningToForest = new URLSearchParams(window.location.search).get("returnTo") === "forest-challenges";
+function returnToForestSettings(eligibility) {
+  const blocked = (eligibility.reason_codes || []).some(code => ["DIAGNOSED_DIABETES", "URGENT_MEDICAL_ATTENTION", "CONSENT_REQUIRED", "UNDER_MINIMUM_SERVICE_AGE"].includes(code));
+  if (!returningToForest || !eligibility.service_eligible || blocked) return false;
+  window.location.assign("/forest?challenge=settings-v139#daily-settings");
+  return true;
+}
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -75,6 +84,7 @@ function showStep(step) {
   $("#step-current").textContent = state.step;
   $("#progress-bar").style.width = `${(state.step / 8) * 100}%`;
   if (state.step === 6) { syncLifestyleAvatar(); updateLifestyleMap(state.mapTopic || "rhythm"); }
+  window.dispatchEvent(new CustomEvent("challenge-v2-step", { detail: state.step }));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -317,7 +327,6 @@ function renderForest(home) {
   const rewardButton = $("#forest-reward");
   rewardButton.disabled = !home.today.group_reward_ready || home.today.group_reward_claimed;
   rewardButton.textContent = home.today.group_reward_claimed ? "오늘 보상 받음" : home.today.group_reward_ready ? "보상 상자 열기" : "공동 목표 진행 중";
-  $("#forest-display-name").value = home.me.display_name;
   $("#forest-hair").innerHTML = forestOptions(state.forestCatalog.hair, home.me.hair_code);
   $("#forest-outfit").innerHTML = forestOptions(state.forestCatalog.outfits, home.me.outfit_code);
   const allowedAccessories = new Set(["none", ...home.inventory]);
@@ -357,12 +366,13 @@ async function loadNotifications() {
   $("#notification-list").innerHTML = notifications.items.length ? notifications.items.map((item) => `<article class="challenge-card"><span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.message)}</small></span></article>`).join("") : `<p class="lead">표시할 웹 알림이 없습니다.</p>`;
 }
 async function refreshDashboard() {
+  window.dispatchEvent(new Event("challenge-v2-auth"));
   const summary = await api("/dashboard/summary");
   const card = summary.risk_cards[0];
   $("#dashboard-stage").textContent = card ? card.risk_category_label : "기록 없음";
   $("#dashboard-notice").textContent = summary.disclaimer;
   const progress = await api("/dashboard/challenge-progress");
-  $("#dashboard-complete").textContent = `${progress.recent_7_days.completed}개`;
+  $("#dashboard-complete").textContent = `${(progress.challenge_v2 || progress).recent_7_days.completed}개`;
   await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadNotifications()]);
 }
 
@@ -415,6 +425,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
       has_urgent_warning_sign: $("#urgent-warning").checked,
       population_in_scope: true,
     }) });
+    if (returnToForestSettings(result)) return;
     if (!result.model_eligible) {
       showEligibilityGuidance(result.reason_codes);
       return;
@@ -459,7 +470,14 @@ $("#feedback-form").addEventListener("submit", async (event) => {
   } catch (error) { showMessage(error.message); }
 });
 $("#to-challenges").addEventListener("click", async () => {
-  try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }
+  try {
+    if (window.ForestChallengeV2?.enabled) { showStep(7); window.dispatchEvent(new Event("challenge-v2-auth")); }
+    else { await loadChallenges(); showStep(7); }
+  } catch (error) { showMessage(error.message); }
+});
+window.addEventListener("challenge-v2-open-dashboard", async () => {
+  try { await refreshDashboard(); showStep(8); showWorkspace("challenge"); }
+  catch (error) { showMessage(error.message); }
 });
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -554,8 +572,18 @@ $("#login-existing").addEventListener("click", async () => {
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#email").value, password: $("#password").value }) });
     state.token = login.access_token;
     const consents = await api("/consents");
-    if (!consents.items.some((item) => item.is_agreed && !item.withdrawn_at)) {
+    if (!consents.items.some((item) => item.consent_item === "health_data" && item.is_agreed && !item.withdrawn_at)) {
       showMessage("활성 건강정보 동의가 없습니다. 새 동의 절차를 진행해 주세요.");
+      return;
+    }
+    if (returningToForest) {
+      // Re-check eligibility on the server, not from the displayed profile defaults.
+      try {
+        const eligibility = await api("/eligibility-checks/latest");
+        if (returnToForestSettings(eligibility)) return;
+        showStep(3);
+        showEligibilityGuidance(eligibility.reason_codes);
+      } catch { showStep(3); }
       return;
     }
     try {
@@ -604,7 +632,6 @@ $("#forest-avatar-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     await api("/forest/avatar", { method: "PATCH", body: JSON.stringify({
-      display_name: $("#forest-display-name").value,
       hair_code: $("#forest-hair").value,
       outfit_code: $("#forest-outfit").value,
       accessory_code: $("#forest-accessory").value,
@@ -706,6 +733,10 @@ $("#download-report").addEventListener("click", async () => {
 $("#restart").addEventListener("click", () => window.location.reload());
 
 const requestedView = new URLSearchParams(window.location.search);
+if (returningToForest) {
+  showStep(2);
+  showMessage("로그인과 이용 확인을 마치면 숲의 챌린지 설정으로 돌아가요.", "success");
+}
 const requestedStep = Number(requestedView.get("step"));
 if (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 8) showStep(requestedStep);
 const requestedWorkspace = requestedView.get("workspace");

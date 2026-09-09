@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>테스트 데이터 · 실제 기록 아님 | 숲 퀘스트 v166</title>
+  <link rel="stylesheet" href="../../src/frontend/forest-game.css">
+  <link rel="stylesheet" href="../../src/frontend/challenge-v2.css">
+  <style>
+    .fixture-page{min-height:100vh;padding:24px 16px 48px}
+    .fixture-banner{width:min(960px,100%);margin:0 auto 22px;padding:16px 18px;border:2px solid #ad6c14;border-radius:12px;background:#fff5d8;color:#623c06}
+    .fixture-banner h1{margin:0;font-size:20px;line-height:1.4}
+    .fixture-banner p{margin:7px 0 0;font-size:14px;line-height:1.6}
+    .fixture-shell{display:flex;justify-content:flex-end;width:min(960px,100%);margin:0 auto}
+    .fixture-shell>.right-hud{position:static!important;inset:auto!important;display:block!important;flex:none;width:min(330px,100%)!important;min-width:0;max-width:100%;max-height:none!important;overflow:visible!important;transform:none!important}
+    .fixture-note{width:min(960px,100%);margin:18px auto 0;font-size:13px;color:#476051;line-height:1.6}
+    @media(max-width:560px){.fixture-page{padding:14px 10px 32px}.fixture-banner{padding:12px}.fixture-banner h1{font-size:17px}.fixture-shell{justify-content:center}}
+  </style>
+  <script>
+    (() => {
+      'use strict';
+      // Browser QA only. These are synthetic records, never an account plan.
+      // connect-src 'none' is a second guard if code ever bypasses this mock.
+      Object.defineProperty(window, 'BroadcastChannel', { value: undefined, writable: false, configurable: false });
+      const source = { title: '가상 출처 · 화면 확인용', url: '#fixture-source' };
+      const baseGoal = {
+        difficulty: 'E', goal_unit: 'record', per_session_quantity: 1,
+        target_sessions: 1, required_uploads: 0, sources: [source],
+        safety: '테스트 안내: 무리한 활동은 피하고 의료진의 기존 지침을 따르세요. 진단·처방을 대신하지 않습니다.',
+      };
+      const fixturePlan = {
+        enrolled: true, day_id: 166, date: '2026-09-08', completed: 1,
+        carrot_balance: 110, chest_issued: false,
+        preferences: {
+          mode: 'balanced', max_difficulty: 'E', planned_meals: 1,
+          sugary_drink_opportunities: 0, transition_consent: true,
+          safety_confirmed: true, exercise_allowed: true,
+          dietary_changes_allowed: false, fluid_restriction: true,
+          swallowing_restriction: true, therapeutic_diet: true, food_allergy: true,
+          photo_accessible: true, photo_consent: true,
+        },
+        proof_mix_exception_reason: ['difficulty_safety_or_preference_limit'],
+        substitutions: [],
+        items: [
+          {
+            id: 'fixture-walk', status: 'assigned', verification_status: 'not_required',
+            completed_sessions: 0, total_quantity: 0, sessions: [], evidence: [],
+            goal: { ...baseGoal, code: 'A01-E-C', family_id: 'A01', domain: 'activity',
+              title: '편안한 속도로 5분 걷기', proof_type: 'T3', goal_unit: 'minute', per_session_quantity: 5 },
+          },
+          {
+            id: 'fixture-meal', status: 'submitted', verification_status: 'pending',
+            completed_sessions: 1, total_quantity: 1, sessions: [{ index: 1, note: '가상 식사 기록' }],
+            evidence: [{ index: 1, status: 'pending', expired: false }],
+            goal: { ...baseGoal, code: 'D01-E', family_id: 'D01', domain: 'diet',
+              title: '한 끼 식사 구성 돌아보기', proof_type: 'T1', required_uploads: 1 },
+          },
+          {
+            id: 'fixture-routine', status: 'completed', verification_status: 'not_required',
+            completed_sessions: 1, total_quantity: 1, sessions: [{ index: 1 }], evidence: [],
+            goal: { ...baseGoal, code: 'R01-E', family_id: 'R01', domain: 'routine',
+              title: '오늘의 생활습관 기록하기', proof_type: 'T3' },
+          },
+        ],
+      };
+      const reply = (data, status = 200) => Promise.resolve(new Response(JSON.stringify(data), {
+        status, headers: { 'Content-Type': 'application/json' },
+      }));
+      const readOnly = () => reply({ detail: '테스트 데이터 · 실제 기록 아님: 이 페이지에서는 기록·사진·설정을 저장하지 않아요.' }, 409);
+      const fakeFetch = (input, options = {}) => {
+        const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+        const method = (options.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+        const route = `${method} ${url.pathname}`;
+        if (route === 'GET /api/v1/challenge-v2/capabilities') return reply({ data: { enabled: true } });
+        if (route === 'GET /api/v1/auth/token/refresh') return reply({ access_token: 'fixture-only-not-a-real-account-token' });
+        if (route === 'POST /api/v1/challenge-v2/today') return reply({ data: fixturePlan });
+        if (route === 'PUT /api/v1/challenge-v2/preferences') return readOnly();
+        if (/^GET \/api\/v1\/challenge-v2\/assignments\/fixture-(walk|meal|routine)\/alternatives$/.test(route)) return reply({ data: { items: [] } });
+        if (/^(PUT|PATCH) \/api\/v1\/challenge-v2\/assignments\/fixture-(walk|meal|routine)\/(sessions\/\d+|evidence\/\d+|replacement)$/.test(route)) return readOnly();
+        throw new Error(`테스트에서 허용하지 않은 요청입니다. 네트워크로 전송하지 않았어요: ${route}`);
+      };
+      // Intentionally no native-fetch reference or network fallback is retained.
+      Object.defineProperty(window, 'fetch', { value: fakeFetch, writable: false, configurable: false });
+      window.addEventListener('challenge-v2-updated', event => {
+        const progress = document.querySelector('#personal-progress');
+        if (progress) progress.textContent = `${event.detail?.completed || 0}/${event.detail?.items?.length || 0}`;
+      });
+    })();
+  </script>
+  <script src="../../src/frontend/challenge-v2.js" defer></script>
+</head>
+<body>
+  <main class="fixture-page">
+    <header class="fixture-banner">
+      <h1>테스트 데이터 · 실제 기록 아님</h1>
+      <p>미완료 · 검토 대기 · 완료 상태의 가상 퀘스트 3개입니다. 실제 계정과 연결되지 않으며 기록·사진·설정은 저장되지 않습니다.</p>
+      <p>인증하기를 눌러 기존 기록 입력칸의 펼침과 포커스를 확인하세요. 자세히 보기와 설정도 확인할 수 있습니다.</p>
+    </header>
+    <div class="fixture-shell">
+      <div class="right-hud">
+        <aside class="inspector" aria-label="퀘스트와 구성원 정보">
+          <div class="inspector-tabs" role="tablist" aria-label="인스펙터 보기">
+            <button class="inspector-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="quests-panel">오늘 할 일</button>
+            <button class="inspector-tab" type="button" role="tab" aria-selected="false" disabled>함께하기</button>
+          </div>
+          <section id="quests-panel" class="inspector-panel" role="tabpanel" aria-labelledby="quest-title" tabindex="-1">
+            <div class="panel-title"><div><h2 id="quest-title">오늘의 퀘스트</h2></div><button id="forest-quest-settings" type="button" aria-label="챌린지 설정" aria-expanded="false" aria-controls="daily-settings" hidden>설정</button><strong id="personal-progress">0/3</strong></div>
+            <button id="start-prediction-flow" class="prediction-flow-button" type="button">당뇨 예방 챌린지</button>
+            <p id="quest-generation-status" class="quest-generation-status" role="status" aria-live="polite" hidden>테스트 퀘스트를 준비하고 있어요</p>
+            <div id="quest-list" class="quest-list"></div>
+            <div data-challenge-v2 data-challenge-v2-view="forest" hidden></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <p class="fixture-note" id="fixture-source">가상 출처 · 화면 확인용입니다. 의료 근거 또는 실제 인증 결과가 아닙니다. 패널은 최대 330px이며 좁은 화면에서는 화면 폭에 맞춰집니다.</p>
+  </main>
+</body>
+</html>

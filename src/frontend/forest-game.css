@@ -22,10 +22,10 @@
 .avatar-item-card .sprite-thumb{background-color:#f6f7fa;background-repeat:no-repeat;box-shadow:inset 0 0 0 1px rgba(54,58,73,.06);image-rendering:pixelated}.avatar-item-card .avatar-sprite-thumb{background-image:url('/static/assets/carrot-forest-avatar-atlas-v1.png');background-size:400% 300%}.avatar-item-card .cosmetic-sprite-thumb{background-image:url('/static/assets/carrot-forest-cosmetics-atlas-v1.png');background-size:500% 400%}.avatar-item-card .empty-sprite-thumb{background:#f1f2f6;color:#9699a4;font-size:11px;font-weight:900}.avatar-preview-stage canvas{image-rendering:auto}
 .avatar-item-card .cat-pet-sprite-thumb{background-image:url('/static/assets/carrot-forest-cat-pets-v1.png');background-size:200% 100%;background-repeat:no-repeat;background-color:#f3f6fb}
 .avatar-item-card canvas.catalog-thumb{display:block;width:72px;height:72px;padding:0;border:0;background:linear-gradient(145deg,#f7f8fb,#eceef4);object-fit:contain;image-rendering:auto}
-#storage-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));overflow:visible}.inventory-item.storage-icon-item{display:grid;place-items:center;min-width:0;min-height:92px;aspect-ratio:1;grid-template-columns:1fr;grid-template-rows:1fr;padding:5px;border-radius:14px;background:linear-gradient(145deg,#fff,#eef4ef);box-shadow:0 4px 10px rgba(30,61,42,.07)}.inventory-item.storage-icon-item:hover{border-color:#77ae88;transform:translateY(-2px)}.inventory-item.storage-icon-item>.storage-sprite-thumb{display:block;width:76px;height:76px;grid-row:auto;border-radius:10px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1');background-repeat:no-repeat;background-size:500% 400%;image-rendering:auto}.inventory-item.storage-icon-item[data-placement="true"]{border:3px solid var(--orange);background:#fff7e7;box-shadow:0 0 0 4px rgba(240,138,48,.14)}
+#storage-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));overflow:visible}.inventory-item.storage-icon-item{display:grid;place-items:center;min-width:0;min-height:92px;aspect-ratio:1;grid-template-columns:1fr;grid-template-rows:1fr;padding:5px;border-radius:14px;background:linear-gradient(145deg,#fff,#eef4ef);box-shadow:0 4px 10px rgba(30,61,42,.07)}.inventory-item.storage-icon-item:hover{border-color:#77ae88;transform:translateY(-2px)}.inventory-item.storage-icon-item>.storage-sprite-thumb{display:block;width:76px;height:76px;grid-row:auto;border-radius:10px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1');background-repeat:no-repeat;background-size:500% 400%;image-rendering:auto}.inventory-item.storage-icon-item[data-placement="true"]{border:3px solid var(--orange);background:#fff7e7;box-shadow:0 0 0 4px rgba(240,138,48,.14)}
 .recent-outfit-entry{flex:0 0 136px;display:grid;gap:6px}.recent-outfit-card{width:100%;display:grid;place-items:center;min-height:142px;padding:7px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(#fff,#f1f5f2);color:var(--ink);cursor:pointer}.recent-outfit-entry:first-child .recent-outfit-card{border-color:#6aa681;box-shadow:0 0 0 3px rgba(45,138,95,.12)}.recent-outfit-card canvas{width:88px;height:88px;aspect-ratio:1;background:radial-gradient(circle at 50% 75%,#dcebdd 0 24%,transparent 25%);image-rendering:pixelated}.recent-outfit-card strong{max-width:100%;overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.recent-outfit-card small{color:var(--muted);font-size:9px}.recent-outfit-card:hover{border-color:var(--green);transform:translateY(-2px)}.outfit-name-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px}.outfit-name-form input{width:100%;min-height:36px;padding:5px 7px;border:1px solid var(--line-dark);border-radius:7px;font-size:10px}.outfit-name-form button{min-height:36px;padding:4px 7px;border:1px solid var(--line-dark);border-radius:7px;background:#fff;color:var(--green-dark);font-size:9px;font-weight:900;cursor:pointer}.inventory-dialog-grid .recent-outfit-entry{width:100%}.inventory-dialog-grid .recent-outfit-card{width:100%;min-height:132px}.inventory-dialog-grid .recent-outfit-card canvas{width:82px;height:82px}
 .avatar-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.avatar-quick-actions button{min-height:42px;padding:7px 9px;border:1px solid #c9c6f6;border-radius:9px;background:#fff;color:#5146b5;font-size:12px;font-weight:900;cursor:pointer}.avatar-quick-actions button:hover{border-color:#7a6df0;background:#f0eeff}
-.storage-reward-cow{width:78px;height:78px;background:url('/static/assets/carrot-forest-reward-cow-v1.png?v=20260831-1') center/contain no-repeat;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
+.animal-thumbnail-canvas{display:block!important;width:78px!important;height:78px!important;aspect-ratio:1!important;border-radius:10px;background:transparent!important;image-rendering:pixelated!important;touch-action:auto;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
 .animated-object-thumbnail-canvas{display:block!important;width:76px!important;height:76px!important;aspect-ratio:1!important;border-radius:10px;background:transparent!important;image-rendering:auto!important;filter:drop-shadow(0 5px 6px rgba(28,61,42,.14));touch-action:auto}.inventory-dialog-grid .animated-object-thumbnail-canvas{width:84px!important;height:84px!important}
 .thread-icon{display:inline-block;width:19px;height:19px;border-radius:50%;background:repeating-radial-gradient(circle at 42% 38%,transparent 0 2px,currentColor 3px 4px);border:2px solid currentColor}.thread-green{color:#39a85f}.thread-blue{color:#4385d8}.thread-mono{color:#353a3e;background-color:#f5f5f1}
 .avatar-item-card{position:relative;min-height:104px}.avatar-item-card .selected-check{position:absolute;right:8px;bottom:7px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#6558e8;color:#fff;font-weight:900}.avatar-item-card.action-view-only{opacity:1;cursor:default}.avatar-item-card .shortcut-badge{position:absolute;left:7px;bottom:7px;padding:3px 7px;border-radius:999px;background:#263c34;color:#fff;font-size:11px;font-weight:800}
@@ -95,7 +95,7 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .face-section-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 3px 14px;padding:8px;border:1px solid #e1e2e8;border-radius:12px;background:#f7f7fb}.face-section-tabs button{min-height:36px;padding:6px 11px;border:1px solid transparent;border-radius:999px;background:transparent;color:#696d78;font-size:11px;font-weight:900;cursor:pointer}.face-section-tabs button:hover{background:#fff}.face-section-tabs button[aria-selected="true"]{border-color:#8d82f4;background:#fff;color:#5b4dd6;box-shadow:0 2px 8px rgba(88,75,206,.12)}
 
 /* 창고 팝업에서도 실제 오브젝트 스프라이트를 사용한다. */
-.inventory-dialog-grid .storage-sprite-thumb{display:block;width:78px;height:78px;border-radius:11px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v3.png?v=20260831-1');background-repeat:no-repeat;background-size:500% 400%;font-size:0;image-rendering:auto}.inventory-dialog-grid .storage-reward-cow{display:block;width:78px;height:78px;font-size:0}
+.inventory-dialog-grid .storage-sprite-thumb{display:block;width:78px;height:78px;border-radius:11px;background-color:transparent;background-image:url('/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1');background-repeat:no-repeat;background-size:500% 400%;font-size:0;image-rendering:auto}.inventory-dialog-grid .animal-thumbnail-canvas{display:block;width:78px;height:78px;font-size:0}
 
 /* 보상 UI: 반복 점멸과 과한 파티클 대신 한 번만 열리는 차분한 연출. */
 .reward-button:not(:disabled){animation:none;background:linear-gradient(135deg,#fff7df,#f4ddb0);border-color:#cba76d;color:#614521;box-shadow:0 4px 12px rgba(105,76,35,.12);transition:transform .18s ease,box-shadow .18s ease}.reward-button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(105,76,35,.18)}.reward-celebration{background:radial-gradient(circle at 50% 44%,rgba(246,232,187,.18),transparent 34%),linear-gradient(145deg,rgba(16,44,34,.98),rgba(8,25,20,.98))}.reward-rays,.reward-particles{display:none}.reward-stage h2{font-size:clamp(30px,5vw,56px);letter-spacing:-.04em;text-shadow:0 6px 24px rgba(0,0,0,.34)}.treasure-chest{filter:drop-shadow(0 22px 22px rgba(0,0,0,.34));animation:chestArrival .7s cubic-bezier(.2,.85,.25,1) forwards}.chest-lid,.chest-body{border-color:#49321e;background:linear-gradient(#a77a48,#69472d);box-shadow:inset 0 0 0 5px #c59a63}.chest-lid{animation:chestOpen .72s .68s cubic-bezier(.25,.8,.3,1) forwards}.chest-lock{border-color:#49321e;background:#d4b56e;color:#4d3b20}.chest-light{box-shadow:0 0 22px 12px rgba(255,250,220,.9),0 0 65px 34px rgba(223,198,130,.55)}.reward-reveal{border-color:rgba(240,225,188,.46);background:rgba(255,255,255,.1);animation:rewardReveal .5s 1.25s forwards}.reward-reveal small{color:#eadbb4}.reward-flight{background:#fffaf0;box-shadow:0 0 18px 7px rgba(255,250,224,.8),0 0 46px 18px rgba(218,190,117,.38)}
@@ -104,8 +104,8 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .match-body-color{display:flex;align-items:flex-start;gap:10px;margin:0 4px 14px;padding:10px 12px;border:1px solid #e2e4ea;border-radius:10px;background:#fafbfc;color:#444854}.match-body-color input{width:18px;height:18px;margin-top:2px;accent-color:#6b5ce7}.match-body-color span{display:grid;gap:2px}.match-body-color strong{font-size:13px}.match-body-color small{color:#858995;font-size:10px}.avatar-item-group-title{grid-column:1/-1;margin:8px 0 -2px;padding:8px 2px 5px;border-bottom:1px solid #ececf2;color:#555a67;font-size:12px;font-weight:900}
 .avatar-color-controls{max-height:190px;overflow:auto;padding:10px 11px;border:1px solid #dfe1e7;border-radius:11px;background:#fff}.avatar-color-controls h3{margin:0 0 7px;color:#4e46a8;font-size:12px}.avatar-color-row{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:6px;margin-top:5px}.avatar-color-row>strong{color:#5b5f6b;font-size:10px}.avatar-color-row>div{display:flex;gap:4px;overflow-x:auto;padding:2px}.avatar-color-row button{flex:0 0 22px;width:22px;height:22px;padding:0;border:2px solid #fff;border-radius:50%;background:var(--avatar-swatch);box-shadow:0 0 0 1px #c8cad2;cursor:pointer}.avatar-color-row button[aria-pressed="true"]{box-shadow:0 0 0 2px #6c5ce7,0 0 0 4px #fff}
 
-/* Generic inventory backgrounds must not erase the rare cow artwork. */
-.inventory-item .storage-reward-cow,.storage-icon-item .storage-reward-cow,.inventory-dialog-grid .storage-reward-cow{display:block;width:78px;height:78px;grid-row:auto;border-radius:10px;background-color:transparent;background-image:url('/static/assets/carrot-forest-reward-cow-v1.png?v=20260901-1');background-position:center;background-size:contain;background-repeat:no-repeat;font-size:0;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
+/* Animal thumbnails draw the same isolated sprite as the world renderer. */
+.inventory-item .animal-thumbnail-canvas,.storage-icon-item .animal-thumbnail-canvas,.inventory-dialog-grid .animal-thumbnail-canvas{display:block;width:78px;height:78px;grid-row:auto;border-radius:10px;background:transparent;font-size:0;filter:drop-shadow(0 4px 5px rgba(35,65,42,.2))}
 
 /* 긴 얼굴·의상 목록에서도 우측 미리보기의 크기와 위치를 유지한다. */
 @media(min-width:921px){
@@ -167,7 +167,7 @@ html:not(.phaser-world-ready) .phaser-quality-badge{display:none}
 .stage-footer .recent-outfit-entry{flex:0 0 112px;grid-template-rows:100px 28px;gap:3px;height:131px;scroll-snap-align:start}
 .stage-footer .recent-outfit-card{min-height:100px;height:100px;padding:3px}.stage-footer .recent-outfit-card canvas{width:72px;height:72px}.stage-footer .recent-outfit-card small{font-size:8px}
 .stage-footer .outfit-name-form{height:28px}.stage-footer .outfit-name-form input,.stage-footer .outfit-name-form button{min-height:28px;height:28px;padding:2px 5px}.stage-footer .fixed-preset-name{display:grid;place-items:center;text-align:center}.stage-footer .fixed-preset-name small{color:var(--ink);font-size:11px;font-weight:900}
-.stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .storage-reward-cow{width:86px!important;height:86px!important}
+.stage-footer #storage-list .storage-icon-item{flex:0 0 100px;width:100px;min-width:100px;height:124px;min-height:124px;aspect-ratio:auto;scroll-snap-align:start}.stage-footer #storage-list .storage-sprite-thumb,.stage-footer #storage-list .animated-object-thumbnail-canvas,.stage-footer #storage-list .animal-thumbnail-canvas{width:86px!important;height:86px!important}
 @media(max-width:620px){.stage-footer .asset-group{min-height:198px;max-height:198px}.stage-footer .asset-library-grid{height:auto}}
 
 /* v105 workspace: avatar rail owns wardrobe/storage; stage footer owns placed objects. */
@@ -185,7 +185,7 @@ body{overflow-x:hidden}
 .rail-assets .recent-outfit-card{min-height:82px;height:82px;padding:2px}.rail-assets .recent-outfit-card canvas{width:60px;height:60px}.rail-assets .recent-outfit-card small{font-size:7px}
 .rail-assets .outfit-name-form{height:27px}.rail-assets .outfit-name-form input,.rail-assets .outfit-name-form button{min-height:27px;height:27px;padding:2px 4px;font-size:8px}
 .rail-assets #storage-list .storage-icon-item{flex:0 0 88px;width:88px;min-width:88px;height:108px;min-height:108px;padding:3px;aspect-ratio:auto;scroll-snap-align:start}
-.rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .storage-reward-cow{width:78px!important;height:78px!important}
+.rail-assets #storage-list .storage-sprite-thumb,.rail-assets #storage-list .animated-object-thumbnail-canvas,.rail-assets #storage-list .animal-thumbnail-canvas{width:78px!important;height:78px!important}
 .rail-assets #storage-list{display:grid;grid-auto-flow:column;grid-auto-columns:88px;grid-template-columns:none;justify-content:start;align-items:stretch;height:128px;max-height:128px;padding-bottom:10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#4c8b60 #e6eee8}
 .rail-assets #storage-list::-webkit-scrollbar{height:8px}.rail-assets #storage-list::-webkit-scrollbar-track{border-radius:999px;background:#e6eee8}.rail-assets #storage-list::-webkit-scrollbar-thumb{border-radius:999px;background:#4c8b60}.rail-assets #storage-list::-webkit-scrollbar-thumb:hover{background:#315b40}
 .rail-assets #wardrobe-list,.stage-footer .footer-objects .placed-list{scrollbar-width:thin;scrollbar-color:#4c8b60 #e6eee8}
@@ -206,3 +206,330 @@ body{overflow-x:hidden}
 @media(max-width:1200px){.workspace{grid-template-columns:228px minmax(0,1fr);grid-template-areas:"rail stage" "rail inspector"}.stage-footer.arcade-deck{grid-template-columns:1fr;grid-template-areas:"controls" "objects"}.stage-footer .footer-objects{max-height:none}.tool-rail{max-height:none}}
 @media(max-width:820px){.workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"rail" "stage" "inspector"}.tool-rail{position:static}.rail-assets .asset-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.stage-footer .footer-objects .placed-list{grid-template-columns:1fr}.stage-footer .footer-objects{min-height:210px}.rail-assets .asset-library-grid{grid-template-columns:1fr}.rail-assets .inventory-list{height:116px}}
+
+/* v143 storybook cleanup: keep the controls, remove presentation scaffolding. */
+:root{--paper:#fffdf6;--line:#d8dfcc;--line-dark:#b9c9ae;--shadow-soft:0 7px 22px rgba(42,73,42,.09)}
+body{background:linear-gradient(180deg,#edf4e9 0,#f7f2e4 100%);color:#193d2c}
+.studio-topbar{min-height:62px;padding:7px clamp(14px,2vw,28px);background:rgba(255,253,246,.97);border-bottom-color:#d8dfcc}
+.forest-brand{font-size:19px}.brand-mark{width:38px;height:38px;background:#fff0cf}.breadcrumb{font-size:13px}
+.topbar-actions{gap:7px}.topbar-actions>button,.volume-control>button,.profile-button{min-height:42px;padding:7px 11px}
+.sync-state{width:10px;min-width:10px}.sync-state i{width:9px;height:9px}
+.studio-shell{width:min(1700px,calc(100% - 24px));margin:16px auto 42px}
+.studio-heading{align-items:center;margin-bottom:12px}.studio-heading h1{font-size:clamp(28px,3vw,42px);letter-spacing:-.055em}
+.heading-summary div{min-width:108px;padding:9px 13px;background:rgba(255,253,246,.9)}.heading-summary strong{font-size:18px}
+.workspace{gap:10px}.tool-rail,.world-stage,.inspector{border-color:#cbd8c3;border-radius:18px;background:#fffdf8}
+.tool-nav{gap:6px;padding:9px}.tool-button{min-height:72px;border-radius:12px;background:#f3f7ef}.tool-button span{font-size:22px}.tool-button small{display:none}
+.rail-editor{padding:13px}.rail-editor h2{margin-bottom:9px;font-size:17px}.avatar-form{gap:8px}
+.rail-assets{background:#f8f8ef}.rail-assets .asset-group{border-color:#d7dfce;background:#fffef9}
+.world-stage{overflow:hidden}.stage-toolbar{min-height:56px;padding:8px 12px;background:#fffdf6}.stage-title h2{font-size:18px}
+.forest-weather-strip{min-height:48px;padding:8px 14px;background:#f8f4e7}.weather-main{justify-content:center;gap:18px}.weather-main strong,.weather-main span,.weather-main time{font-size:12px}
+.canvas-workarea{padding:10px;background:#e6ecdd}.canvas-frame{border-color:#40553b;border-width:6px;border-radius:13px}
+.stage-footer.arcade-deck{background:#f8f4e9}.stage-footer .footer-objects{background:#fffef9}
+.inspector-tabs{background:#f1f5eb}.inspector-panel{padding:14px}.panel-title h2{font-size:18px}.panel-description{display:none}
+.rag-guide{margin-top:10px}.rag-guide-heading h3{font-size:14px}.rag-result:empty{display:none}
+.adapter-details,body>footer{display:none}
+.eyebrow,.section-kicker{letter-spacing:.04em}
+.inventory-dialog>p{margin:10px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:1180px){.breadcrumb{display:none}.topbar-actions{overflow-x:auto}.studio-heading{align-items:flex-start}.heading-summary{overflow-x:auto}}
+@media(max-width:820px){.studio-shell{width:min(100% - 14px,1700px)}.studio-heading{display:block}.heading-summary{margin-top:10px}.tool-nav{grid-template-columns:repeat(4,1fr)}.tool-button{min-height:64px}.weather-main{justify-content:flex-start}.canvas-workarea{padding:6px}}
+
+/* Full-screen game shell: native-size world with side HUD, never stretched. */
+:root{--forest-native-width:768px;--hud-left:216px;--hud-right:282px}
+html,body{height:100%;overflow:hidden}
+.studio-topbar{position:relative;z-index:50;min-height:62px;height:62px}
+.studio-shell{width:100%;height:calc(100dvh - 62px);margin:0;padding:12px}
+.studio-heading{display:none}
+.workspace{display:grid;grid-template-columns:var(--hud-left) minmax(0,1fr) var(--hud-right);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"toolbar toolbar toolbar" "rail stage right";gap:12px;height:100%;width:100%;min-height:0;align-items:stretch}
+.workspace>.stage-toolbar{grid-area:toolbar;position:relative;z-index:25;display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:10px;min-width:0;min-height:60px;padding:9px 12px;border:1px solid var(--line);border-radius:15px;background:#fffdf6;box-shadow:var(--shadow-soft)}
+.forest-brand{flex-shrink:0;white-space:nowrap}.topbar-actions>button,.volume-control,.profile-button{flex-shrink:0;white-space:nowrap}
+.stage-title{position:relative;flex:0 1 auto;min-width:0;gap:8px}
+.stage-title h2{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px}
+#edit-forest-name{min-width:34px;min-height:36px;padding:4px;font-size:18px}
+#forest-name-form{position:absolute;top:calc(100% + 12px);left:0;z-index:30;display:flex;gap:6px;width:360px;max-width:calc(100vw - 48px);padding:10px;border:1px solid var(--line-dark);border-radius:12px;background:#fffdf6;box-shadow:var(--shadow-soft)}
+#forest-name-form[hidden]{display:none}#forest-name-input{width:100%;min-width:0;min-height:40px;border:1px solid var(--line-dark);border-radius:8px;padding:6px 9px}
+.stage-tools{margin-left:auto;flex:none;gap:6px}
+.world-zoom{display:flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:10px;background:#f3f7ef}
+.world-zoom .toolbar-button{min-width:36px;border:0;background:transparent;font-size:20px;padding:0 8px}
+#zoom-level{min-width:40px;font-size:11px;text-align:center;font-variant-numeric:tabular-nums}
+.toolbar-button:disabled{opacity:.4;cursor:not-allowed}
+.workspace>.stage-toolbar .chat-panel{position:static;flex:1 1 320px;display:flex;align-items:center;gap:7px;width:auto;min-width:240px;padding:0 10px;border:0;border-inline:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}
+.workspace>.stage-toolbar .chat-panel[hidden]{display:none}
+.stage-toolbar .chat-messages{display:block;flex:1 1 180px;min-width:80px;height:38px;max-height:38px;overflow-y:auto;padding:0;scrollbar-width:thin}
+.stage-toolbar .chat-messages p{display:flex;align-items:center;gap:7px;min-height:38px;padding:4px 0;border-radius:0;background:transparent;white-space:nowrap}
+.stage-toolbar .chat-messages strong{flex:none;font-size:11px}
+.stage-toolbar .chat-messages span{overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.stage-toolbar .chat-form{flex:1 1 200px;grid-template-columns:minmax(65px,1fr) auto;min-width:130px;gap:5px;padding:0;border:0}
+.stage-toolbar .chat-form input,.stage-toolbar .chat-form button{min-height:38px;padding:6px 8px;font-size:12px}
+#chat-close{min-width:28px;min-height:32px;padding:0;border:0;background:transparent;font-size:18px}
+.tool-rail{grid-area:rail;position:relative;top:auto;left:auto;bottom:auto;z-index:10;width:auto;min-width:0;max-height:none;overflow:auto;background:#fffdf6;border-radius:16px;scrollbar-width:thin;scrollbar-color:#749b72 transparent}
+.tool-nav{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:7px}.tool-button{min-height:58px;padding:6px 1px}.tool-button b{font-size:10px}.tool-button span{font-size:19px}
+.rail-editor{display:block;padding:10px}.rail-editor h2{font-size:16px}.avatar-form{grid-template-columns:1fr}.avatar-form button{font-size:12px;min-height:40px}
+.rail-assets{padding:8px}.rail-assets .asset-library-grid{grid-template-columns:1fr}.rail-assets .asset-group{padding:6px}.rail-assets .asset-group-title{gap:7px}.rail-assets .asset-group-title h3{font-size:13px}.rail-assets .asset-group-title>span{width:28px;height:28px;font-size:16px}
+.world-stage{grid-area:stage;position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
+.forest-weather-strip{position:static;align-self:center;flex:none;width:100%;max-width:768px;min-width:0;min-height:38px;padding:5px 9px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:#fffdf2;transform:none;box-shadow:none}
+.weather-main{justify-content:center;gap:10px;flex-wrap:wrap}.weather-main strong,.weather-main span,.weather-main time{font-size:11px}
+.canvas-workarea{position:relative;flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;background:none}
+.canvas-frame,.canvas-frame.is-zoomed{position:relative;flex:none;width:min(100%,var(--forest-native-width));height:auto;aspect-ratio:3/2;border:0;border-radius:10px;background:#6f995a;box-shadow:0 8px 28px rgba(29,60,33,.16);transition:none}
+#phaser-world{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:3/2}
+#phaser-world canvas{aspect-ratio:3/2;margin:0!important}
+#forest-canvas{width:100%;height:100%;aspect-ratio:3/2}
+.phaser-quality-badge{display:none!important}
+.right-hud{grid-area:right;min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#749b72 transparent}
+.right-hud .stage-footer.arcade-deck{position:static;display:flex;flex-direction:column;gap:12px;padding:0;border:0;min-width:0;border-radius:0;background:transparent;box-shadow:none}
+.right-hud .control-cluster{width:100%;display:block;padding:10px;border:1px solid var(--line);border-radius:15px;background:#fffdf6}
+.hud-panel-heading{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.hud-panel-heading h2{flex:1;margin:0;font-size:14px}
+.hud-panel-heading .toolbar-button,.footer-objects .toolbar-button{min-height:30px;padding:3px 6px;font-size:10px;white-space:nowrap}
+.right-hud .arcade-deck .touch-controls{display:grid;width:100%;height:190px;min-height:190px;max-height:190px;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:6px;padding:6px;border:0;border-radius:10px;background:#fff;box-shadow:none}
+.right-hud .arcade-deck .touch-controls button{min-width:0;min-height:0;height:auto;padding:2px;border-width:1px;border-bottom-width:4px}
+.right-hud .arcade-deck .touch-controls button.arcade-action{min-width:0;min-height:0;border-width:2px;border-bottom-width:5px}
+.right-hud .arcade-deck .touch-controls button.arcade-action span{font-size:10px;letter-spacing:-.07em}
+#controls-content[hidden],#placed-list[hidden]{display:none!important}
+.right-hud .stage-footer .footer-objects{width:100%;min-height:0;max-height:none;height:auto;padding:10px;border:1px solid var(--line);border-radius:15px;background:#fffdf6}
+.right-hud .footer-objects .panel-title{gap:6px;margin-bottom:8px}.right-hud .footer-objects .panel-title>div{flex:1}.right-hud .footer-objects .panel-title h2{font-size:14px}
+.right-hud .footer-objects .placed-list{display:grid;grid-template-columns:1fr;max-height:190px;overflow-y:auto}
+.right-hud .footer-objects .placed-object-row{grid-template-columns:22px minmax(0,1fr);gap:4px;padding:7px}
+.right-hud .footer-objects .placed-object-row .remove-object{grid-column:1/-1;justify-self:end;min-width:110px;width:auto;min-height:28px;font-size:10px}
+.right-hud>.inspector,html.challenge-v2-enabled .right-hud>.inspector{position:static!important;display:block;width:100%;flex:none;max-height:none;overflow:visible;border-radius:15px;background:#fffdf6}
+.right-hud .inspector-panel{padding:10px}.right-hud .panel-title h2{font-size:16px}.right-hud .quest-item{padding:8px;gap:6px}
+body.forest-ui-hidden .workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"toolbar" "stage"}
+body.forest-ui-hidden .tool-rail,body.forest-ui-hidden .right-hud,body.forest-ui-hidden .forest-weather-strip,body.forest-ui-hidden .map-label,body.forest-ui-hidden .stage-title,body.forest-ui-hidden #chat-panel,body.forest-ui-hidden #chat-toggle{display:none!important}
+body.forest-ui-hidden .stage-toolbar{justify-self:end;width:auto;background:#fffdf6}
+@media(min-width:1600px){:root{--hud-left:236px;--hud-right:300px}.workspace{gap:16px}.studio-shell{padding:16px}}
+@media(max-width:1150px) and (min-width:901px){:root{--hud-left:190px;--hud-right:258px}.studio-shell{padding:8px}.workspace{gap:8px}.workspace>.stage-toolbar .chat-panel{flex-basis:100%;order:3}.stage-toolbar .chat-messages{flex:1}.stage-title h2{max-width:210px}}
+@media(max-width:900px){html,body{height:auto;overflow:auto}.studio-topbar{height:auto;min-height:58px}.studio-shell{height:auto;min-height:calc(100dvh - 58px);padding:8px}.workspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto;grid-template-areas:"toolbar toolbar" "stage stage" "rail right";gap:9px}.world-stage{height:min(74vw,650px);min-height:250px}.tool-rail,.right-hud{max-height:660px}.workspace>.stage-toolbar{gap:8px}.stage-title h2{max-width:180px}.workspace>.stage-toolbar .chat-panel{flex-basis:100%;order:3;padding:5px 0 0;border-inline:0;border-top:1px solid var(--line)}.topbar-actions{min-width:0}.forest-ui-hidden .world-stage{height:calc(100dvh - 144px);min-height:220px}}
+@media(max-width:520px){.studio-topbar{padding:6px 9px}.forest-brand{font-size:15px;gap:5px}.brand-mark{width:30px;height:30px}.topbar-actions{gap:4px}.topbar-actions>button,.volume-control>button,.profile-button{min-height:34px;padding:4px 7px;font-size:11px}.stage-title h2{max-width:150px;font-size:15px}.stage-tools{gap:4px}.stage-tools .toolbar-button{padding:4px 7px;font-size:11px}.stage-tools .world-zoom .toolbar-button{font-size:20px;min-width:30px}.workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"toolbar" "stage" "rail" "right"}.tool-rail,.right-hud{max-height:none}.rail-assets .asset-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stage-toolbar .chat-messages{flex-basis:100px}.stage-toolbar .chat-form{min-width:125px}.right-hud{display:grid;grid-template-columns:1fr}.right-hud .stage-footer.arcade-deck{align-items:stretch;max-width:320px;justify-self:center;width:100%}.stage-toolbar .chat-form button{font-size:11px}}
+.world-dialog>.eyebrow,.avatar-studio-header .eyebrow,.avatar-browser-heading .section-kicker,.flow-dialog .eyebrow,.inventory-dialog .eyebrow,.profile-dialog .eyebrow,.reward-celebration .eyebrow,.chat-panel .eyebrow{display:none}
+/* Canvas thumbnails share the exact isolated texture used in the field. */
+.inventory-item.storage-icon-item>canvas.storage-sprite-thumb,.inventory-dialog-grid canvas.storage-sprite-thumb{background-image:none;background-color:transparent}
+
+/* v152: fixed viewport, balanced side panels, camera-only zoom and bottom chat. */
+:root{--hud-right:var(--hud-left)}
+.workspace,body.forest-ui-hidden .workspace{grid-template-columns:var(--hud-left) minmax(0,1fr) var(--hud-left);grid-template-rows:minmax(0,1fr);grid-template-areas:"rail stage right"}
+.viewport-tools{position:absolute;right:9px;top:9px;z-index:20;display:flex;align-items:center;justify-content:flex-end;gap:5px;max-width:calc(100% - 18px);flex-wrap:wrap}
+.viewport-tools .toolbar-button{min-height:32px;padding:4px 8px;font-size:11px;background:#fffdf5ed;box-shadow:0 2px 6px #16392720}
+.viewport-tools .world-zoom .toolbar-button{font-size:20px;padding:0 7px;min-width:30px;box-shadow:none;background:transparent}
+.viewport-tools .world-zoom{background:#fffdf5ed}
+.hud-panel-heading{display:grid;grid-template-columns:1fr;gap:5px}
+.hud-panel-heading .toolbar-button{width:100%;font-size:11px;min-height:30px}
+.right-hud .arcade-deck .touch-controls{height:172px;min-height:172px;max-height:172px;gap:4px;padding:3px}
+.right-hud .arcade-deck .touch-controls button.arcade-action span{font-size:9px;letter-spacing:-.06em;white-space:nowrap}
+.tool-rail>.footer-objects{display:block;position:static;min-width:0;width:auto;margin:8px;padding:9px;border:1px solid var(--line);border-radius:12px;background:#fffdf6}
+.tool-rail .footer-objects .panel-title{display:flex;gap:4px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.tool-rail .footer-objects .panel-title>div{flex:1}.tool-rail .footer-objects h2{font-size:13px;white-space:nowrap}
+.tool-rail .footer-objects .object-count{font-size:10px;padding:3px 5px}
+.tool-rail .placed-list{display:grid;grid-template-columns:1fr;max-height:210px;overflow:auto;scrollbar-color:#749b72 transparent}
+.tool-rail .placed-object-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px;padding:7px;min-width:0;width:100%}
+.tool-rail .placed-object-copy strong{font-size:12px}.tool-rail .placed-object-copy small{font-size:10px}
+.tool-rail .placed-object-row .remove-object{grid-column:1/-1;justify-self:end;width:auto;min-width:110px;min-height:28px;font-size:10px;white-space:nowrap}
+.tool-rail #placement-controls{position:static;display:flex;flex-wrap:wrap;width:100%;transform:none;margin:0 0 8px;padding:5px;gap:4px;box-shadow:none}
+.tool-rail #placement-controls[hidden]{display:none}.tool-rail #placement-controls button{flex:1;min-height:32px;min-width:0;font-size:10px;padding:4px}
+body.forest-ui-hidden .workspace>.tool-rail{display:block!important;visibility:hidden;pointer-events:none}
+body.forest-ui-hidden .workspace>.right-hud{display:flex!important;visibility:hidden;pointer-events:none}
+body.forest-ui-hidden .forest-weather-strip{display:block!important;visibility:hidden;pointer-events:none}
+.map-label{transform:translate(-50%,-50%);right:auto;bottom:auto;pointer-events:none}
+.chat-launcher{position:fixed;z-index:39;left:50%;bottom:12px;transform:translateX(-50%);padding:8px 14px;border:1px solid var(--line);border-radius:12px;background:#fffdf6ed;color:var(--ink);font-size:12px;box-shadow:0 4px 12px #16392720}
+.chat-launcher[hidden]{display:none}.bottom-chat{position:fixed;z-index:60;left:50%;right:auto;bottom:12px;transform:translateX(-50%);width:min(768px,calc(100% - 28px));border-radius:14px;background:#fffdf8f5}
+.bottom-chat .chat-heading{padding:6px 10px;gap:8px}.bottom-chat .chat-heading h2{font-size:13px;white-space:nowrap}.bottom-chat .chat-heading small{flex:1;font-size:11px;color:var(--muted)}
+.bottom-chat .chat-messages{display:flex;flex-direction:column;gap:3px;max-height:118px;padding:7px 12px}
+.bottom-chat .chat-messages p{display:flex;gap:10px;padding:3px 0;background:none;align-items:baseline}.bottom-chat .chat-messages strong{flex:none}.bottom-chat .chat-messages span{overflow-wrap:anywhere}
+.bottom-chat .chat-form{padding:7px 10px}.bottom-chat .chat-form input,.bottom-chat .chat-form button{min-height:36px;font-size:12px}
+body.forest-ui-hidden #chat-panel.bottom-chat:not([hidden]){display:block!important}
+@media(min-width:1600px){:root{--hud-right:var(--hud-left)}}
+@media(max-width:1150px) and (min-width:901px){:root{--hud-right:var(--hud-left)}}
+@media(max-width:900px){.workspace,body.forest-ui-hidden .workspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto;grid-template-areas:"stage stage" "rail right"}.world-stage,.forest-ui-hidden .world-stage{height:min(74vw,650px);min-height:250px}.right-hud{display:flex}.studio-shell{padding-bottom:64px}.bottom-chat{bottom:8px}.chat-launcher{bottom:8px}}
+@media(max-width:520px){.workspace,body.forest-ui-hidden .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;grid-template-areas:"stage" "rail" "right"}.rail-assets .asset-library-grid{grid-template-columns:1fr}.viewport-tools{right:5px;top:5px;gap:3px}.viewport-tools .toolbar-button{font-size:10px;min-height:28px;padding:3px 6px}.bottom-chat .chat-heading small{font-size:10px}}
+
+/* Enlarged viewport and Suin's final landing palette. Import tokens only, never its page layout. */
+:root{--forest-native-width:1536px;--landing-paper:#f5f4ef;--landing-surface:#eeeee8;--landing-ink:#292e32;--landing-muted:#51595d;--landing-accent:#236657;--ink:var(--landing-ink);--muted:var(--landing-muted);--green:var(--landing-accent);--green-dark:#194f43;--mint:#e9f4f0;--green-soft:var(--mint);--paper:var(--landing-paper);--surface:var(--landing-surface);--bg:var(--landing-paper);--line:#d5dedb;--line-dark:#b9c5c1;--warning:#8a4b08;--warning-bg:#fff4df;--danger:#a32828;--shadow-soft:0 12px 35px rgba(20,33,61,.09)}
+body{font-family:Pretendard,"Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select,textarea{font-family:inherit}
+.studio-topbar,.tool-rail,.tool-rail>.footer-objects,.right-hud .control-cluster,.right-hud>.inspector,html.challenge-v2-enabled .right-hud>.inspector,.forest-weather-strip{background:var(--paper);border-color:var(--line)}
+.studio-topbar{box-shadow:0 2px 14px rgba(20,33,61,.06)}
+.rail-title,.rail-assets,.inspector-tabs,.tool-button,.bottom-chat .chat-heading,.profile-summary>div{background:var(--surface)}
+.rail-assets .asset-group,.tool-rail .placed-object-row{background:var(--paper);border-color:var(--line)}
+.tool-button.is-active{background:var(--mint);border-color:var(--green);color:var(--green-dark)}
+.avatar-form label,.hud-panel-heading,.right-hud .panel-title{color:var(--ink)}
+.forest-weather-strip{max-width:var(--forest-native-width)}
+.viewport-tools .toolbar-button,.viewport-tools .world-zoom,.chat-launcher,.bottom-chat{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.viewport-tools .world-zoom .toolbar-button{background:transparent}
+.viewport-tools .toolbar-button:hover,.chat-launcher:hover{background:var(--mint);border-color:var(--green)}
+.right-hud .arcade-deck .touch-controls{background:var(--paper)}
+.right-hud .arcade-deck .touch-controls button:not(.arcade-action){background:var(--surface);border-color:var(--line-dark);border-bottom-color:var(--green-dark);color:var(--ink);text-shadow:none}
+.right-hud .arcade-deck .touch-controls button.arcade-action{background:var(--green);border-color:var(--green-dark);color:var(--paper);text-shadow:none;box-shadow:inset 0 1px rgba(255,255,255,.2)}
+.right-hud .arcade-deck .touch-controls button.arcade-action:hover{background:var(--green-dark)}
+.right-hud .arcade-deck .touch-controls button.arcade-action kbd{font-family:inherit}
+.right-hud [data-challenge-v2]{color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;min-width:0}
+.right-hud [data-challenge-v2] .v2-heading>h3{flex:0 1 auto;max-width:100%;margin:0;font-size:14px;line-height:1.5;word-break:keep-all;white-space:nowrap;color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-heading>[data-refresh]{flex:0 0 auto;width:auto;max-width:100%;min-height:34px;margin-left:auto;padding:6px 8px;font-size:12px;font-weight:800;line-height:1.5;white-space:nowrap}
+.right-hud [data-challenge-v2] button,.right-hud [data-challenge-v2] .v2-setup-link,.right-hud [data-challenge-v2] .v2-settings-button{border-color:var(--line-dark);background:var(--mint);color:var(--green-dark)}
+.right-hud [data-challenge-v2] button:hover,.right-hud [data-challenge-v2] .v2-setup-link:hover{border-color:var(--green)}
+.right-hud [data-challenge-v2] .v2-card,.right-hud [data-challenge-v2]>details,.right-hud [data-challenge-v2] [data-settings]{background:var(--paper);border-color:var(--line)}
+.right-hud [data-challenge-v2] .v2-tags span{background:var(--surface)}
+.right-hud [data-challenge-v2] input:not([type=checkbox]),.right-hud [data-challenge-v2] select,.right-hud [data-challenge-v2] textarea{background:var(--paper);border-color:var(--line-dark);color:var(--ink)}
+.right-hud [data-challenge-v2] .v2-safety{color:var(--muted)}
+.right-hud [data-challenge-v2] .v2-notice{background:var(--warning-bg)}
+.right-hud [data-challenge-v2] [data-message]{color:var(--warning)}
+.right-hud [data-challenge-v2] progress{accent-color:var(--green)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:#bce6dc}
+
+/* Three text levels affect DOM typography, not the world canvas or its zoom. */
+body{--forest-ui-scale:1;font-size:calc(16px * var(--forest-ui-scale))}
+body[data-font-size="small"]{--forest-ui-scale:.9}
+body[data-font-size="default"]{--forest-ui-scale:1}
+body[data-font-size="large"]{--forest-ui-scale:1.12}
+.font-size-control{display:flex;align-items:center;gap:6px;flex:none;white-space:nowrap;color:var(--muted);font-size:calc(11px * var(--forest-ui-scale))}
+.font-size-control select{min-height:34px;max-width:88px;padding:5px 7px;border:1px solid var(--line-dark);border-radius:9px;background:var(--paper);color:var(--ink);font-size:calc(12px * var(--forest-ui-scale));cursor:pointer}
+.studio-topbar .forest-brand{font-size:calc(21px * var(--forest-ui-scale))}
+.topbar-actions .icon-button,.topbar-actions .profile-button,.inspector-tab{font-size:calc(12px * var(--forest-ui-scale))}
+.tool-rail h2,.right-hud .panel-title h2{font-size:calc(15px * var(--forest-ui-scale))}
+.tool-rail .asset-group-title h3,.right-hud [data-challenge-v2] .v2-heading>h3{font-size:calc(14px * var(--forest-ui-scale))}
+.tool-rail .avatar-form input,.tool-rail .avatar-form label,.tool-rail .avatar-form button,.tool-rail .placed-object-copy strong,.inspector-panel button,.inspector-panel input,.inspector-panel textarea,.inspector-panel select{font-size:calc(12px * var(--forest-ui-scale))}
+.tool-rail .tool-button b,.tool-rail .placed-object-copy small,.tool-rail .remove-object,.viewport-tools .toolbar-button{font-size:calc(10px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] h4,.right-hud [data-challenge-v2] button,.right-hud [data-challenge-v2] label,.right-hud [data-challenge-v2] p,.right-hud [data-challenge-v2] summary{font-size:calc(13px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] .v2-heading>[data-refresh]{font-size:calc(12px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] .v2-safety,.right-hud [data-challenge-v2] small,.right-hud [data-challenge-v2] [data-message],.panel-description,.group-reward-help,.rag-guide>p,.rag-result p,.profile-form>small,.weather-main strong,.weather-main span,.weather-main time{font-size:calc(11px * var(--forest-ui-scale));line-height:1.55}
+.bottom-chat .chat-heading h2,.bottom-chat .chat-messages span,.bottom-chat .chat-form input,.bottom-chat .chat-form button,.chat-launcher{font-size:calc(12px * var(--forest-ui-scale))}
+.bottom-chat .chat-heading small,.bottom-chat .chat-messages strong{font-size:calc(10px * var(--forest-ui-scale))}
+dialog{font-size:calc(16px * var(--forest-ui-scale))}
+dialog h2{font-size:calc(25px * var(--forest-ui-scale))}
+dialog h3{font-size:calc(19px * var(--forest-ui-scale))}
+dialog button,dialog input,dialog select,dialog textarea,dialog label{font-size:calc(13px * var(--forest-ui-scale))}
+dialog small,dialog>p,.profile-form>small,.avatar-studio-description{font-size:calc(12px * var(--forest-ui-scale))}
+
+/* The tab strip is clipped to the inspector's top corners, not painted over them. */
+.right-hud>.inspector,html.challenge-v2-enabled .right-hud>.inspector{overflow:hidden;border-radius:16px;border:1px solid var(--line)}
+.right-hud .inspector-tabs{overflow:hidden;border-radius:15px 15px 0 0;background:var(--surface)}
+.avatar-nameplate{z-index:22;display:inline-flex;max-width:calc(100% - 20px);font-size:calc(12px * var(--forest-ui-scale));line-height:1.35;white-space:nowrap;transform:translate(-50%,-100%);pointer-events:none}
+
+/* Light, floating lower-left controls. Gaps pass through to the game canvas. */
+.game-controls-overlay{position:absolute;z-index:24;left:10px;bottom:10px;width:clamp(238px,22vw,270px);max-width:calc(100% - 20px);padding:7px;border:1px solid rgba(213,222,219,.65);border-radius:15px;background:rgba(245,244,239,.58);box-shadow:0 5px 18px rgba(20,33,61,.12);backdrop-filter:blur(3px);pointer-events:none}
+.game-controls-overlay .control-cluster{display:block;min-width:0;width:100%;padding:0;border:0;background:transparent;pointer-events:none}
+.game-controls-overlay .hud-panel-heading{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:4px;margin:0 0 5px;pointer-events:none}
+.game-controls-overlay .hud-panel-heading .toolbar-button{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:36px;min-height:36px;padding:3px 2px;font-size:calc(9px * var(--forest-ui-scale));font-weight:800;line-height:1.2;text-align:center;white-space:normal;word-break:keep-all;background:rgba(245,244,239,.84);pointer-events:auto}
+.game-controls-overlay .hud-panel-heading .toolbar-button:focus-visible{outline:3px solid #236657;outline-offset:2px}
+.game-controls-overlay .touch-controls{display:grid;width:100%;height:auto;min-height:0;max-height:none;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,40px);gap:4px;padding:0;border:0;background:transparent;box-shadow:none;pointer-events:none}
+.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;width:100%;height:40px;margin:0;padding:3px;border:1px solid rgba(25,79,67,.48);border-bottom-width:2px;border-radius:10px;text-align:center;text-shadow:none;box-shadow:inset 0 1px rgba(255,255,255,.3);pointer-events:auto;touch-action:manipulation}
+.game-controls-overlay .touch-controls button:not(.arcade-action){background:rgba(238,238,232,.78);color:var(--ink);font-size:calc(16px * var(--forest-ui-scale))}
+.game-controls-overlay .touch-controls button.arcade-action{background:rgba(35,102,87,.76);color:var(--paper)}
+.game-controls-overlay .touch-controls button.arcade-action span{display:block;width:100%;font-size:calc(10px * var(--forest-ui-scale));font-weight:800;line-height:1.2;letter-spacing:0;text-align:center;white-space:normal;word-break:keep-all}
+.game-controls-overlay .touch-controls button:hover,.game-controls-overlay .touch-controls button[aria-pressed="true"]{background:var(--green-dark);color:var(--paper);filter:none;transform:none}
+.game-controls-overlay .touch-controls button:active{transform:translateY(1px)}
+/* Keep the one UI restore path outside the hidden controls; its grid slot stays put. */
+body.forest-ui-hidden .game-controls-overlay{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none}
+body.forest-ui-hidden .game-controls-overlay #controls-content,body.forest-ui-hidden .game-controls-overlay #controls-toggle,body.forest-ui-hidden .game-controls-overlay #reset-position{display:none!important}
+body.forest-ui-hidden .game-controls-overlay .hud-panel-heading{margin:0}
+body.forest-ui-hidden .game-controls-overlay #ui-toggle{grid-column:3;background:var(--paper);box-shadow:0 2px 8px #16392725}
+/* A warm, tactile attack key; feedback is interaction-only, never a looping bounce. */
+@media(max-width:520px){.font-size-control{gap:3px}.font-size-control>span{font-size:10px}.font-size-control select{max-width:70px;min-height:32px;padding:4px}.studio-topbar .forest-brand{font-size:calc(15px * var(--forest-ui-scale))}.game-controls-overlay{left:7px;bottom:7px;max-width:calc(100% - 14px);padding:5px}.game-controls-overlay .touch-controls{grid-template-rows:repeat(3,36px)}.game-controls-overlay .touch-controls button,.game-controls-overlay .touch-controls button.arcade-action{height:36px}}
+
+/* v157: the measured viewport fills the space left by actual UI, not a 3:2 box. */
+.mobile-panel-shortcut{display:none;position:fixed;z-index:30;left:10px;bottom:calc(16px + env(safe-area-inset-bottom,0px));align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font-size:12px;text-decoration:none;box-shadow:0 3px 14px #16392715}
+body.forest-ui-hidden .mobile-panel-shortcut{display:none}
+html,body{height:100%;min-height:0;overflow:hidden}
+body{display:flex;flex-direction:column;height:100dvh}
+.studio-topbar{flex:0 0 auto;height:auto;min-height:62px}
+.studio-shell{flex:1 1 0;min-width:0;min-height:0;width:100%;height:auto;margin:0;padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.workspace,body.forest-ui-hidden .workspace{height:100%;min-height:0;grid-template-columns:var(--hud-left) minmax(0,1fr) var(--hud-left);grid-template-rows:minmax(0,1fr);grid-template-areas:"rail stage right"}
+.world-stage,.forest-ui-hidden .world-stage{height:100%;min-height:0;max-height:none}
+.forest-weather-strip{max-width:none;flex:0 0 auto}
+.canvas-workarea{flex:1 1 0;min-width:0;min-height:0;align-items:stretch;justify-content:stretch;overflow:hidden;padding:0}
+.canvas-frame,.canvas-frame.is-zoomed{flex:1 1 auto;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;box-sizing:border-box;border:0;padding:0}
+#phaser-world{width:100%;height:100%;min-width:0;min-height:0;aspect-ratio:auto}
+/* Phaser resizes its backing buffer to this exact box; CSS must not fit an old aspect. */
+#phaser-world canvas{display:block;width:100%!important;height:100%!important;max-width:none;max-height:none;aspect-ratio:auto;margin:0!important}
+/* A legacy fallback may letterbox, but must never distort its original bitmap. */
+#forest-canvas{width:100%;height:100%;aspect-ratio:auto;object-fit:contain}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen){height:100dvh;min-height:0;max-height:none}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .canvas-workarea{flex:1 1 0;min-width:0;min-height:0;padding:0;align-items:stretch;justify-content:stretch;overflow:hidden}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .canvas-frame{flex:1 1 auto;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;border:0;padding:0}
+#world-stage.world-stage:is(:fullscreen,.game-fullscreen) .game-controls-overlay .control-cluster{width:100%;height:auto;min-height:0}
+@media(max-width:900px){
+  .mobile-panel-shortcut{display:inline-flex}
+  .studio-topbar{min-height:58px}
+  .studio-shell{overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin}
+  /* Definite first-item height uses the flex shell, including wrapped toolbar text. */
+  .workspace,body.forest-ui-hidden .workspace{display:flex;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;height:100%;gap:9px}
+  .world-stage,.forest-ui-hidden .world-stage{order:0;flex:0 0 100%;width:100%;height:100%;min-height:0;max-height:none}
+  .workspace>.tool-rail,.workspace>.right-hud{order:1;flex:0 0 calc((100% - 9px)/2);min-height:0;max-height:none;height:auto;margin-bottom:12px}
+}
+@media(max-width:520px){
+  .workspace>.tool-rail,.workspace>.right-hud{flex-basis:100%}
+  .workspace>.right-hud{order:2}
+}
+
+/* v175: a quiet nonmodal photo card leaves the animated gathering visible. */
+.forest-memory-dialog{position:absolute;inset:auto 12px 12px auto;z-index:45;width:min(310px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;box-sizing:border-box;margin:0;padding:14px;border:2px solid #84603d;border-radius:13px;background:#fff8eaf2;color:#3f4b36;box-shadow:0 6px 24px #18382535;font-size:13px;line-height:1.5}
+.forest-memory-dialog[open]{display:block}
+.forest-memory-dialog header{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.forest-memory-dialog header button{flex:none;min-height:34px;padding:6px 10px;border:1px solid #c8bba0;border-radius:8px;background:#fffdf4;color:#60482f;font-size:12px;font-weight:900;line-height:1.2}
+.forest-memory-dialog progress{width:100%;height:8px;accent-color:#799c53}
+.forest-memory-dialog figure{margin:10px 0}
+.forest-memory-dialog img{display:block;width:100%;height:auto;max-height:32vh;object-fit:contain;border:1px solid #dbc5a3;border-radius:5px;background:#f3ead7;image-rendering:pixelated}
+.forest-memory-actions{display:flex;gap:8px;margin-top:10px}
+.forest-memory-actions :is(button,a){display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:1;min-height:36px;padding:7px;border:1px solid #a89c7d;border-radius:8px;background:#fffdf5;color:#4d4a36;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}
+.forest-memory-actions #forest-memory-save{border-color:#597747;background:#66864f;color:#fff}
+.forest-memory-dialog :is(button:disabled,a[aria-disabled="true"]){opacity:.5;cursor:wait}
+.forest-memory-dialog :is(button,a):focus-visible{outline:3px solid #bb792f;outline-offset:2px}
+.forest-memory-shooting .canvas-frame :is(.viewport-tools,.map-label,.interaction-prompt,.game-controls-overlay,.garden-harvest-panel,.forest-time-toast,.forest-catch-toast){visibility:hidden;pointer-events:none}
+.forest-memory-developing #phaser-world canvas,.forest-memory-developing #forest-canvas{animation:forestMemoryToMonochrome 5.2s cubic-bezier(.3,.05,.25,1) forwards;transform:translateZ(0)}
+@keyframes forestMemoryToMonochrome{0%,8%{filter:grayscale(0) saturate(1) contrast(1)}100%{filter:grayscale(1) saturate(.18) contrast(1.08) sepia(.08)}}
+@media(prefers-reduced-motion:reduce){.forest-memory-developing #phaser-world canvas,.forest-memory-developing #forest-canvas{animation:none;filter:grayscale(1) saturate(.18) contrast(1.08) sepia(.08)}}
+@media(max-width:520px){.forest-memory-dialog{inset:auto 8px 8px auto;width:min(270px,calc(100% - 16px));padding:10px;font-size:12px}.forest-memory-dialog img{max-height:25vh}}
+
+/* Capture results stay visible without restoring the old persistent guidance bar. */
+.forest-catch-toast{position:absolute;z-index:44;top:56px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);box-sizing:border-box;padding:10px 16px;border:1px solid #c4d7b7;border-radius:12px;background:#fffbeef5;color:#294c37;box-shadow:0 4px 14px #18382530;font-size:14px;font-weight:800;line-height:1.5;text-align:center;overflow-wrap:anywhere;pointer-events:none}
+.forest-catch-toast[hidden]{display:none}
+
+/* v176: side panels end with their content and never expose a stray bottom scrollbar. */
+.workspace>.tool-rail,.workspace>.right-hud{align-self:start;height:auto;max-height:100%}
+.tool-rail{overflow-x:hidden;overflow-y:auto}
+.tool-rail .placed-list,.right-hud{overflow-x:hidden}
+.tool-rail .placed-list{overflow-y:auto}
+.touch-controls .action-attack.is-monster-ready{border-color:#8a4b08!important;background:#e9ad35!important;color:#14213d!important;box-shadow:inset 0 1px #fff7cf,0 0 0 3px #d5e7af!important}
+.touch-controls .action-attack.is-monster-ready:hover{background:#f2c45f!important}
+.right-hud [data-challenge-v2] .v2-repeat-button{width:100%;min-height:40px;border-color:var(--green);background:var(--green);color:var(--paper);font-weight:900}
+.daily-reward-panel{position:static;display:grid;gap:5px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
+.daily-reward-panel .daily-reward-button{min-height:54px;font-size:calc(18px * var(--forest-ui-scale));font-weight:950;line-height:1.25}
+.daily-reward-panel .group-reward-help{margin:5px 2px 0;text-align:center;font-size:calc(11px * var(--forest-ui-scale))}
+
+/* v166: three short quests; the original records and evidence stay in details. */
+#quests-panel>.panel-title{min-height:38px;gap:8px}
+#quests-panel>.panel-title>div{margin-right:auto;min-width:0}
+#forest-quest-settings{flex:none;min-height:32px;padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--green-dark);font:inherit;font-size:calc(11px * var(--forest-ui-scale));cursor:pointer}
+#forest-quest-settings[hidden]{display:none}
+.right-hud [data-challenge-v2][data-compact="true"]>[data-message]:empty{display:none}
+.right-hud .v2-compact-cards{display:grid;gap:9px}
+.right-hud [data-challenge-v2] .v2-quest-card{min-width:0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--paper)}
+.right-hud [data-challenge-v2] .v2-quest-card>h4{margin:0 0 7px;font-size:calc(14px * var(--forest-ui-scale));line-height:1.45;overflow-wrap:anywhere}
+.right-hud .v2-quest-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.right-hud [data-challenge-v2] .v2-quest-row>small{color:var(--muted);font-size:calc(11px * var(--forest-ui-scale))}
+.right-hud [data-challenge-v2] [data-certify]{flex:none;min-height:36px;padding:6px 11px;border-color:var(--green);background:var(--green);color:#fff;font-size:calc(12px * var(--forest-ui-scale));font-weight:800}
+.right-hud [data-challenge-v2] [data-certify]:disabled{opacity:1;border-color:var(--line);background:var(--surface);color:var(--muted);cursor:default}
+.right-hud [data-challenge-v2] .v2-quest-card.is-complete{border-color:var(--line-dark);background:var(--mint)}
+.right-hud [data-challenge-v2] .v2-quest-card.is-complete [data-certify]{background:var(--mint);color:var(--green-dark)}
+.right-hud [data-challenge-v2] .v2-quest-details{margin-top:7px}
+.right-hud [data-challenge-v2] .v2-quest-details>summary{width:fit-content;min-height:30px;box-sizing:border-box;padding:5px 0;color:var(--muted);font-size:calc(11px * var(--forest-ui-scale));line-height:1.7}
+.right-hud [data-challenge-v2] .v2-quest-details>.v2-card{padding:10px 0 0;margin:5px 0 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.right-hud [data-challenge-v2] .v2-quest-details>.v2-card>h4{display:none}
+.right-hud [data-challenge-v2] .v2-quest-details :is(input,textarea,select):focus-visible,.right-hud [data-challenge-v2] :is(button,summary):focus-visible,#forest-quest-settings:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.has-compact-quests>.rag-guide{display:none}
+.has-compact-quests:has(#forest-quest-settings[aria-expanded="true"])>.rag-guide{display:block}
+
+/* v178: right-side actions stay in document flow and never overlap. */
+.right-hud>.inspector{display:block;min-width:0;overflow:visible!important}
+.right-hud .inspector-tabs,.right-hud .daily-reward-panel,.right-hud .inspector-panel{position:static;float:none;width:100%;max-width:100%}
+.right-hud .inspector-panel{overflow:visible}
+.right-hud [data-challenge-v2][data-compact="true"]{display:grid;gap:9px;min-width:0}
+.right-hud [data-challenge-v2] .v2-settings-button{width:100%;margin:0;white-space:normal}
+.right-hud [data-challenge-v2] .v2-compact-settings{display:grid;gap:9px;margin:0;padding:10px;border:1px solid var(--line);border-radius:12px}
+.right-hud [data-challenge-v2] .v2-compact-settings[hidden]{display:none}
+.right-hud [data-challenge-v2] .v2-mode-buttons{display:grid;grid-template-columns:1fr;gap:7px}
+.right-hud [data-challenge-v2] .v2-mode-buttons>button{width:100%;min-width:0;min-height:42px;margin:0;padding:7px 9px;white-space:normal}
+.right-hud [data-challenge-v2] [data-custom-preferences]{display:grid;gap:8px;min-width:0;padding-top:9px;border-top:1px solid var(--line)}
+.right-hud [data-challenge-v2] [data-custom-preferences][hidden]{display:none}
+.right-hud [data-challenge-v2] [data-custom-preferences]>label{min-width:0;margin:0}
+/* Persistent warning for mice that have stopped to watch the carrots. */
+.mouse-warning { position:absolute; z-index:12; top:62px; left:50%; transform:translateX(-50%); margin:0; padding:10px 16px; border:1px solid #8A4B08; border-radius:12px; background:#FFF4DF; color:#8A4B08; font-weight:700; white-space:nowrap; pointer-events:none; }
+.mouse-warning[hidden] { display:none; }

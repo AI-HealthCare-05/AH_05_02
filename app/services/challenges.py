@@ -103,9 +103,7 @@ class ChallengeService:
                     "최근 입력에서 규칙적인 운동을 하지 않는 것으로 확인되어 우선 제안합니다."
                 )
                 reasons["two_minute_activity_break"] = "작게 시작할 수 있는 활동 목표로 제안합니다."
-            if checkup.meal_count_yesterday != 3:
-                priority_codes.append("regular_meals_log")
-                reasons["regular_meals_log"] = "최근 식사 횟수를 바탕으로 식사 패턴 확인을 제안합니다."
+            # Meal count alone does not establish an irregular or unhealthy pattern.
             if checkup.bmi >= 25:
                 priority_codes.append("weekly_weight_log")
                 reasons["weekly_weight_log"] = "체중 변화가 아닌 생활습관 기록을 위해 주 1회 기록을 제안합니다."

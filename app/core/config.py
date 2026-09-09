@@ -32,6 +32,10 @@ class Config(BaseSettings):
     DB_GENERATE_SCHEMAS: bool = False
     DATABASE_URL: str | None = None
     DEMO_MODE: bool = False
+    CHALLENGE_V2_ENABLED: bool = False
+    CHALLENGE_V2_CONTENT_APPROVED: bool = False
+    # Actual human review is opt-in; never infer availability from a submitted photo.
+    CHALLENGE_V2_REVIEWER_IDS: list[int] = []
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -51,7 +55,7 @@ class Config(BaseSettings):
     PREDICTION_MODEL_POPULATION: str = "baseline_undiagnosed_age_45_plus"
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
-    COOKIE_DOMAIN: str = "localhost"
+    COOKIE_DOMAIN: str = ""  # Host-only by default; supports localhost and 127.0.0.1 without cross-host cookies.
 
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
