@@ -45,7 +45,7 @@ def main() -> None:
     if args.today:
         provision(
             args.today.resolve(),
-            ROOT / "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json",
+            ROOT / "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json",
         )
     if args.tomorrow:
         provision(
