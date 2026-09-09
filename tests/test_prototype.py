@@ -134,16 +134,24 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="model-version"' not in html
     assert "prediction.model_version" not in script
     assert "prediction.feature_schema_version" not in script
-    assert "약 2년 뒤" not in html
+    assert 'id="risk-forecast-panel"' in html
+    assert 'id="age-risk-chart" role="img"' in html
+    assert "현재 위험 신호와 별도로 약 2년 뒤" in html
 
 
-def test_mvp_excludes_research_forecast_and_retains_separate_results() -> None:
+def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-    for panel in ("risk-forecast-panel", "age-risk-chart", "uncertainty-panel", "scenario-comparison-title"):
+    for panel in ("risk-forecast-panel", "age-risk-chart"):
+        assert f'id="{panel}"' in html
+    for panel in ("uncertainty-panel", "scenario-comparison-title"):
         assert f'id="{panel}"' not in html
     assert 'id="risk-confirm-card"' in html
     assert 'id="future-risk-category"' in html
+    assert "function selectTwoYearForecastPoint" in script
+    assert "prediction?.age_risk_forecast?.points" in script
+    assert "Number(item?.years_from_now) === 2" in script
+    assert "생활습관 시나리오는 표시하지 않습니다." in html
     assert "/research/models/" not in script
     assert "isPublicRiskDisplayAllowed" in script
 
@@ -225,32 +233,38 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     for label in (
-        "이메일로 초대",
-        "초대 코드로 초대",
+        "받은 초대",
+        "가족·친구 초대하기",
+        "초대 코드 만들기",
         "워치 연결하기",
         "근거 자료에서 찾기",
         "검진표 사진 올리기",
         "PDF로 받기",
     ):
         assert label in html
+    assert "이메일로 초대" not in html
     assert "기존 계정으로 로그인해 주세요" in script
     assert "accept-shared" in script
     assert "cheer-shared" in script
     assert "[hidden]{display:none!important}" in (ROOT / "src/frontend/styles.css").read_text(encoding="utf-8")
 
 
-def test_invite_method_starts_unselected_and_reveals_only_requested_panel() -> None:
+def test_invite_cards_start_closed_and_reveal_only_requested_panel() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert 'id="relation-type"' not in html
     assert 'id="invite-nickname"' not in html
-    assert 'id="invite-tab-email" type="button" aria-expanded="false"' in html
-    assert 'id="invite-tab-code" type="button" aria-expanded="false"' in html
-    assert 'id="invite-form"' in html and 'data-invite-panel="email" hidden' in html
-    assert 'id="invite-panel-code"' in html and 'data-invite-panel="code" hidden' in html
-    assert "panel.hidden = !selected" in script
-    assert 'button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode))' in script
+    assert 'id="open-received-invites" type="button" aria-expanded="false"' in html
+    assert 'id="open-create-invite" type="button" aria-expanded="false"' in html
+    assert 'id="received-invite-panel"' in html and 'tabindex="-1" hidden' in html
+    assert 'id="create-invite-panel"' in html and 'tabindex="-1" hidden' in html
+    assert 'id="accept-invitation-form"' in html
+    assert 'id="invite-form"' in html
+    assert "function setInviteDisclosure" in script
+    assert "panel.hidden = !(shouldOpen && panel.id === panelId)" in script
+    assert 'button.addEventListener("click", () => {' in script
+    assert 'setInviteDisclosure(button.getAttribute("aria-controls"))' in script
 
 
 def test_demo_controls_and_invite_placeholders_are_environment_safe() -> None:
@@ -260,22 +274,24 @@ def test_demo_controls_and_invite_placeholders_are_environment_safe() -> None:
     assert 'class="status-demo-panel" aria-label="분석 결과 상태 확인용" hidden' in html
     assert "statusPanel.hidden = !isDemoEnvironment()" in script
     assert '<strong id="forest-invite-code">7F K3 Q1</strong>' not in html
-    assert '<strong id="forest-invite-code">초대 코드 발급 준비 중</strong>' in html
+    assert 'id="forest-invite-code" tabindex="-1">초대 코드를 먼저 만들어 주세요</strong>' in html
     assert 'id="copy-invite-code" type="button" disabled' in html
-    assert 'codeNode.dataset.copyValue = isDemo ? "DEMO-CODE" : ""' in script
-    assert "로컬 화면 확인용 코드입니다. 실제 초대에는 사용할 수 없어요." in script
-    assert "실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요." in html + script
+    assert 'codeNode.dataset.copyValue = ""' in script
+    assert "DEMO-CODE" not in script
+    assert "초대 코드를 먼저 만들어 주세요" in html + script
+    assert 'api("/invitations", { method: "POST"' in script
 
 
-def test_invite_api_response_is_rendered_as_text_not_html() -> None:
+def test_invite_code_response_is_rendered_as_text_not_html() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "function renderInviteEmailResult(result = {})" in script
-    assert 'token.textContent = result.token || "초대 요청 접수 완료"' in script
-    assert 'notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요."' in script
-    assert "box.replaceChildren(content)" in script
-    assert "renderInviteEmailResult(result)" in script
-    assert "box.innerHTML = `<div><strong>초대 이메일을 보낼 준비가 되었습니다" not in script
+    assert "function renderInviteCodeResult(result = {})" in script
+    assert 'const inviteCode = typeof result.token === "string" ? result.token.trim() : ""' in script
+    assert "codeNode.textContent = inviteCode" in script
+    assert "codeNote.textContent = `초대받을 분에게 이 코드를 전달해 주세요." in script
+    assert "box.replaceChildren()" in script
+    assert "renderInviteCodeResult(result)" in script
+    assert "codeNode.innerHTML" not in script
 
 
 def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() -> None:
@@ -340,16 +356,15 @@ def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> No
     assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
 
 
-def test_lifestyle_summary_uses_expandable_cards_without_result_feedback_form() -> None:
+def test_challenge_selection_excludes_removed_lifestyle_summary() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-
-    assert html.count('class="lifestyle-summary-toggle"') == 4
-    assert html.count('aria-expanded="false"') >= 4
-    assert 'id="feedback-form"' not in html
-    assert "결과 안내가 이해하기 쉬웠나요?" not in html
-    assert '$("#lifestyle-summary-grid")?.addEventListener("click"' in script
-    assert 'button.setAttribute("aria-expanded", String(expanded))' in script
+    assert 'id="challenge-lifestyle-summary"' not in html
+    assert "지금 살펴볼 생활습관" not in html
+    assert "#challenge-lifestyle-summary" not in script
+    assert "updateLifestyleSummary" not in script
+    assert 'id="challenge-v3-focus"' in html
+    assert 'id="lifestyle-map-detail"' in html
 
 
 def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:
@@ -505,7 +520,8 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "챌린지 시작 중…",
         "기록 저장 중…",
         "오늘 기록 저장 중…",
-        "초대 이메일 보내는 중…",
+        "초대 코드 만드는 중…",
+        "초대 수락 중…",
         "워치 기록 저장 중…",
         "PDF 만드는 중…",
     ):
@@ -533,7 +549,11 @@ def test_challenge_step_navigation_loads_cards_and_guards_start_button() -> None
     assert "챌린지 목록을 불러오고 있어요." in script
     assert 'const startButton = $("#start-challenge")' in script
     assert "startButton.disabled = true" in script
-    assert "if (!result.medical_guidance_required_first) startButton.disabled = false" in script
+    assert "function updateChallengeStartState()" in script
+    assert "button.disabled = blocked" in script
+    assert "세부 챌린지를 하나 이상 선택해 주세요." in script
+    assert "의료기관 안내를 먼저 확인해 주세요." in script
+    assert "state.challengeStartSafetyBlocked" in script
 
 
 def test_returning_user_routes_from_persisted_eligibility_state() -> None:
@@ -570,7 +590,9 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert "전체" in html
     assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
     assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
-    assert "report.challenge_details || []" in script
+    assert "const items = Array.isArray(report.challenge_details) ? report.challenge_details : []" in script
+    assert "enrichWeeklyReportDetails" in script
+    assert "renderWeeklyChallengeProgress(detailedReport.challenge_details || [], detailedReport)" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
     assert "답 확인 중…" in script
@@ -598,11 +620,12 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "공동 챌린지를 불러오지 못했어요." in script
     assert "실제 4주 집계 API" not in html
     assert "전체 기간 이력 API" not in html
-    assert "내 생활습관 지도" in html
-    assert "지도 보기" in html
-    assert "지도 닫기" in html
+    assert 'id="map-entry-title">생활습관 지도</h3>' in html
+    assert 'id="habit-carousel"' in html
+    assert 'id="habit-map-dialog"' in html
+    assert 'id="habit-dialog-close"' in html
     assert "체형이나 건강 위험을 판정하지 않습니다." in html
-    assert "3D 생활습관 안내 캐릭터" in html
+    assert "window.lifestyleMapView?.refresh()" in script
 
 
 def test_forest_return_accepts_resume_and_workspace_links() -> None:
@@ -612,16 +635,14 @@ def test_forest_return_accepts_resume_and_workspace_links() -> None:
     assert 'requestedView.get("resume") !== "together"' in script
     assert 'requestedView.get("workspace")' in script
     assert 'showWorkspace(requestedWorkspace || "together"' in script
-    assert "lifestyle-avatar-female-60.webp" in html
-    assert '"male" : "female"' in script
-    assert "ageBand" in script
-    assert "Math.floor(age / 10) * 10" in script
     assert "syncLifestyleAvatar" in script
-    assert "avatar-width-scale" in script
-    assert "avatar-height-scale" in script
-    assert "입력값을 반영한 참고 표현" in script
+    assert "lifestyleMapSnapshot" in script
+    assert "window.lifestyleMapView" in script
     assert "updateLifestyleMap" in script
     assert "체형 기록" in html + script
+    assert 'id="forest-entry-dialog"' in html
+    assert "FOREST_SESSION_STORAGE_KEY" in script
+    assert "loadForestEntryGroups" in script
     assert 'id="workspace-top-nav" aria-label="로그인 후 주요 메뉴"' in html
     assert html.count("data-workspace-panel=") >= 5
     assert html.count('role="region"') >= 5

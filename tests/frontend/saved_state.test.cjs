@@ -50,11 +50,11 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
 });
 
 function dailyHarness(api) {
-  const state = { token: 'test-only', cycle: { user_challenges: [{ user_challenge_id: 1 }, { user_challenge_id: 2 }] }, dailyCompleted: new Set(['old']) };
-  const context = load(['loadDailyRecords'], {
-    state, api, isLocalPreview: () => false,
-    challengeDay: () => new Date().toISOString().slice(0, 10),
-    renderDailyRecordList() {}, renderTodayTaskStatus() {},
+  const state = { token: 'test-only', cycle: { user_challenges: [{ user_challenge_id: 1 }, { user_challenge_id: 2 }] }, dailyCompleted: new Set(['old']), dailyRecordFailures: new Set() };
+  const nodes = { '#barrier-challenge': { innerHTML: '' } };
+  const context = load(['hasCurrentChallengeCycle', 'isServerChallengeId', 'clearCurrentChallengeCycle', 'loadDailyRecords'], {
+    state, api, isLocalPreview: () => false, challengeDay: () => new Date().toISOString().slice(0, 10), renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    $: key => nodes[key] ||= { innerHTML: '' },
   });
   return { state, read: context.loadDailyRecords };
 }
@@ -72,7 +72,7 @@ test('today logs restore only completed records, and successful empty logs clear
   await read();
   assert.equal(state.dailyCompleted.size, 0);
 });
-test('failed or malformed read preserves records and exposes retry; retry recovers', async () => {
+test('fully failed or malformed read preserves records and exposes retry; retry recovers', async () => {
   let mode = 'fail';
   const { state, read } = dailyHarness(async () => {
     if (mode === 'fail') throw new Error('503');
@@ -86,6 +86,32 @@ test('failed or malformed read preserves records and exposes retry; retry recove
   mode = 'ready';
   await read();
   assert.equal(state.dailyRecordsStatus, 'ready');
+});
+test('partial daily log failure keeps available cards and marks only failed items', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const { state, read } = dailyHarness(async url => {
+    if (url.includes('/2/')) throw new Error('503');
+    return { items: [{ log_date: today, is_completed: true }] };
+  });
+  await read();
+  assert.equal(state.dailyRecordsStatus, 'ready');
+  assert.deepEqual([...state.dailyCompleted], ['1']);
+  assert.deepEqual([...state.dailyRecordFailures], ['2']);
+});
+test('local demo challenge ids are cleared before daily log API calls in authenticated mode', async () => {
+  const calls = [];
+  const state = { token: 'real-session', cycle: { user_challenges: [{ user_challenge_id: 'local-1' }] }, dailyCompleted: new Set(['old']), dailyRecordFailures: new Set() };
+  const nodes = { '#barrier-challenge': { innerHTML: 'stale' } };
+  const context = load(['hasCurrentChallengeCycle', 'isServerChallengeId', 'clearCurrentChallengeCycle', 'loadDailyRecords'], {
+    state, api: async url => { calls.push(url); return { items: [] }; }, isLocalPreview: () => false,
+    challengeDay: () => '2026-09-09', renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    $: key => nodes[key] ||= { innerHTML: '' },
+  });
+  await context.loadDailyRecords();
+  assert.equal(calls.length, 0);
+  assert.equal(state.cycle, null);
+  assert.equal(state.dailyCompleted.size, 0);
+  assert.equal(nodes['#barrier-challenge'].innerHTML, '');
 });
 test('an old cycle response cannot replace the new cycle or login state', async () => {
   const resolvers = [];

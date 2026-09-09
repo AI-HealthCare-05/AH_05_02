@@ -6,9 +6,13 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260908-challenge-v3">
+  <link rel="stylesheet" href="/static/styles.css?v=20260908-challenge-current-v2">
   <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7f2a1f37ce159b787ecc694265ebf333&autoload=false&libraries=services"></script>
-  <script src="/static/app.js?v=20260908-challenge-v3" defer></script>
+  <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
+  <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
+  <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
+  <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
+  <script src="/static/app.js?v=20260909-challenge-summary-removed-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -39,7 +43,12 @@
     <div class="header-utilities">
       <details class="header-my-page" id="header-my-page" hidden>
         <summary id="header-my-page-toggle">마이페이지</summary>
-        <div class="header-my-page-menu"><button class="text-button" id="profile-edit" type="button">생년월일·성별 수정</button></div>
+        <div class="header-my-page-menu">
+          <button class="text-button" id="profile-edit" type="button">생년월일·성별 수정</button>
+          <button class="text-button" id="open-privacy-settings" type="button">개인정보 설정</button>
+          <button class="text-button" id="account-logout" type="button">로그아웃</button>
+          <button class="text-button danger" id="open-account-delete" type="button">회원탈퇴</button>
+        </div>
       </details>
       <button class="text-button font-toggle-button" id="font-toggle" type="button" aria-pressed="false">글자 크게</button>
     </div>
@@ -98,7 +107,7 @@
             <p class="story-description">실천한 날도, 쉬어간 날도.<br>기록을 돌아보며 나만의 속도를 찾아가요.</p>
           </section>
           <section class="story-forest" id="story-forest" aria-labelledby="story-forest-title"><div class="story-forest-heading"><p class="story-kicker">05 · 함께하기</p><h2 id="story-forest-title">함께할수록 즐거워지는,<br>우리의 숲</h2></div><img class="story-forest-image" src="/static/assets/carrot-forest-entry.webp" alt="당근의 숲 — 함께 실천하고, 같이 성장하는 모두의 건강 숲" width="1644" height="863"><p class="story-description">가족·친구와 작은 실천을 나누고,<br>나만의 숲을 꾸미는 즐거움을 만나보세요.</p></section>
-          <section class="story-closing" aria-labelledby="story-closing-title"><p class="story-kicker">06 · 함께 시작하기</p><h2 id="story-closing-title">우리, 오늘부터<br>함께 시작해요.</h2><p>완벽하지 않아도 괜찮아요.<br>나에게 맞는 작은 실천부터 간당간당과 함께해요.</p><button class="primary" type="button" data-story-start>회원가입하고 시작하기 <span aria-hidden="true">→</span></button></section>
+          <section class="story-closing" aria-labelledby="story-closing-title"><p class="story-kicker">06 · 함께 시작하기</p><h2 id="story-closing-title">우리, 오늘부터<br>함께 시작해요.</h2><p>완벽하지 않아도 괜찮아요.<br>나에게 맞는 작은 실천부터 간당간당과 함께해요.</p><button class="primary story-arrow-reveal" type="button" data-story-start><span class="story-arrow-badge" aria-hidden="true"></span><span class="story-arrow-icon" aria-hidden="true">→</span><span class="story-arrow-label">회원가입하고 시작하기</span></button></section>
         </div>
       </section>
       <section class="screen" data-step="2" aria-labelledby="signup-title">
@@ -484,11 +493,22 @@
           </div>
         </section>
         <div id="future-prediction-result">
-        <section class="current-health-result" aria-labelledby="future-onset-title">
-          <p class="eyebrow">미래 신규 발병 위험</p>
-          <h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3>
-          <strong id="future-risk-category">결과 준비 중</strong>
-          <p>현재 위험 신호와 별도로 계산한 예측입니다. 진단이나 확정 발병확률이 아닙니다.</p>
+        <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="future-onset-title">
+          <div class="risk-forecast-heading">
+            <div><p class="eyebrow">미래 신규 발병 위험</p><h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3></div>
+            <span class="forecast-status-badge" id="forecast-status-badge" data-status="pending">결과 준비 중</span>
+          </div>
+          <strong class="future-risk-category" id="future-risk-category">결과 준비 중</strong>
+          <p class="risk-forecast-description">현재 위험 신호와 별도로 약 2년 뒤의 신규 발병 위험 신호를 확인합니다.</p>
+          <div class="forecast-state" id="forecast-state" role="status" aria-live="polite" data-state="loading">
+            <strong id="forecast-state-title">2년 위험 전망 결과를 불러오고 있어요</strong>
+            <p id="forecast-state-message">공개 가능한 결과가 도착하면 그래프에 표시합니다.</p>
+          </div>
+          <div class="age-risk-chart age-risk-chart-single" id="age-risk-chart" role="img" aria-label="약 2년 뒤 당뇨병 위험 신호 전망 그래프" hidden>
+            <div class="age-risk-chart-scale" aria-hidden="true"><span>높음</span><span>주의</span><span>낮음</span></div>
+            <div class="age-risk-chart-points" id="age-risk-chart-points"></div>
+          </div>
+          <p class="risk-forecast-description">진단이나 확정 발병확률이 아니며, 생활습관 시나리오는 표시하지 않습니다.</p>
         </section>
         </div>
         <aside class="notice safety result-safety-card" role="note"><span aria-hidden="true">안내</span><div><strong>안전 안내</strong><p>이 결과는 진단이나 확정 발병확률이 아닙니다.</p><p>건강관리를 돕기 위한 선별 정보이며, 증상이 있거나 결과가 걱정된다면 의료기관에서 검사를 받아보세요.</p></div></aside>
@@ -522,7 +542,7 @@
       </section>
       <section class="screen" data-step="7" aria-labelledby="challenge-title">
         <p class="eyebrow">4주 생활습관 챌린지</p><h2 id="challenge-title">오늘부터 실천할 수 있는 생활습관을 골라보세요</h2>
-        <div class="challenge-safety-copy">
+        <div class="challenge-safety-copy" id="challenge-safety-copy">
           <p>챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다.</p>
           <p>무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.</p>
         </div>
@@ -534,28 +554,6 @@
             <button class="secondary" id="acknowledge-challenge-follow-up" type="button">안내 확인 완료</button>
           </div>
         </div>
-        <section class="lifestyle-summary-card" aria-labelledby="lifestyle-map-title">
-          <div class="lifestyle-summary-heading">
-            <img id="risk-hyeoldangi" src="/static/assets/hyeoldangi-risk-low.png" alt="생활습관 방향을 안내하는 혈당이">
-            <div>
-              <p class="eyebrow">생활습관 요약</p>
-              <h3 id="lifestyle-map-title">지금 살펴볼 생활습관</h3>
-              <p>항목을 누르면 입력한 내용과 실천 방향을 확인할 수 있어요.</p>
-            </div>
-          </div>
-          <div class="lifestyle-summary-grid" id="lifestyle-summary-grid" aria-label="생활습관 실천 방향 요약">
-            <button class="lifestyle-summary-toggle" id="summary-meals-toggle" type="button" aria-expanded="false" aria-controls="summary-meals-panel">식사</button>
-            <button class="lifestyle-summary-toggle" id="summary-activity-toggle" type="button" aria-expanded="false" aria-controls="summary-activity-panel">활동</button>
-            <button class="lifestyle-summary-toggle" id="summary-metabolic-toggle" type="button" aria-expanded="false" aria-controls="summary-metabolic-panel">생활습관</button>
-            <button class="lifestyle-summary-toggle" id="summary-checkup-toggle" type="button" aria-expanded="false" aria-controls="summary-checkup-panel">정기 점검</button>
-          </div>
-          <div class="lifestyle-summary-details" aria-live="polite">
-            <section class="lifestyle-summary-panel" id="summary-meals-panel" aria-labelledby="summary-meals-toggle" hidden><p id="summary-meals">식사 횟수와 리듬을 확인했어요.</p><p id="summary-meals-action">규칙적인 식사 습관을 챌린지로 이어갈 수 있어요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-activity-panel" aria-labelledby="summary-activity-toggle" hidden><p id="summary-activity">운동과 움직임 기록을 확인했어요.</p><p id="summary-activity-action">무리 없는 걷기·활동부터 이어가요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-metabolic-panel" aria-labelledby="summary-metabolic-toggle" hidden><p id="summary-metabolic">입력한 생활습관을 확인했어요.</p><p id="summary-metabolic-action">생활습관을 천천히 점검해 볼 수 있어요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-checkup-panel" aria-labelledby="summary-checkup-toggle" hidden><p id="summary-checkup">현재 확인할 정기 점검 방향이에요.</p><p id="summary-checkup-action">정기 검진과 기록을 이어가요.</p></section>
-          </div>
-        </section>
         <form id="challenge-form">
           <section class="challenge-v3-controls" aria-labelledby="challenge-v3-heading">
             <p class="eyebrow">자료 기반 생활습관 챌린지</p>
@@ -621,13 +619,14 @@
             <p class="walking-level-safety">운동 중 통증·어지럼·심한 호흡곤란이 생기면 즉시 중단하고 의료진의 안내를 확인해 주세요.</p>
           </fieldset>
           <div class="actions challenge-start-actions"><button class="primary" id="start-challenge" type="submit">4주 챌린지 시작</button></div>
+          <p class="challenge-start-reason" id="challenge-start-reason" role="status" aria-live="polite">세부 챌린지를 하나 이상 선택해 주세요.</p>
         </form>
       </section>
       <section class="screen" data-step="8" aria-labelledby="dashboard-title">
         <div class="dashboard-hero">
-          <div><p class="eyebrow" id="dashboard-eyebrow">나의 건강 홈</p><div class="dashboard-title-row"><img id="dashboard-together-mascot" src="/static/assets/hyeoldangi-forest-carrot.png" alt="" hidden><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2></div><p class="lead" id="dashboard-lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
+          <div id="dashboard-hero-copy"><p class="eyebrow" id="dashboard-eyebrow">나의 건강 홈</p><div class="dashboard-title-row"><img id="dashboard-together-mascot" src="/static/assets/hyeoldangi-forest-carrot.png" alt="" hidden><h2 id="dashboard-title">오늘 할 일부터 확인하세요</h2></div><p class="lead" id="dashboard-lead">상세 기능은 아래 메뉴에서 필요한 때에만 열 수 있습니다.</p></div>
           <details class="profile-menu">
-            <summary aria-label="알림 설정 메뉴 열기"><span aria-hidden="true"><svg class="profile-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span></summary>
+            <summary aria-label="계정 및 알림 메뉴 열기"><span aria-hidden="true"><svg class="profile-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span></summary>
             <div class="profile-menu-panel">
               <button class="text-button" id="profile-notification-settings" type="button">웹 알림 설정</button>
             </div>
@@ -641,6 +640,7 @@
             <h3 id="today-task-title">챌린지 실천을 기록해 주세요</h3>
             <p id="today-task-description">기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
             <button class="primary workspace-shortcut" id="today-record-action" type="button" data-workspace="challenge">오늘 기록하기</button>
+            <button class="secondary" id="today-select-challenge" type="button" hidden>챌린지 선택하러 가기</button>
           </div>
           <div class="dashboard-grid summary-grid">
             <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
@@ -679,7 +679,7 @@
         <section class="workspace-panel" id="workspace-panel-challenge" role="region" tabindex="-1" data-workspace-panel="challenge" aria-label="챌린지" hidden>
           <section class="daily-record-panel" aria-labelledby="daily-record-title">
             <h4 id="daily-record-title">오늘 기록할 항목</h4>
-            <div id="daily-log-list" class="daily-record-list"></div>
+            <div id="daily-log-list" class="daily-record-list"><article class="daily-record-empty daily-record-empty-selection"><strong>기록할 챌린지가 없습니다</strong><p>챌린지를 선택하고 오늘의 실천을 시작해 보세요.</p><button type="button" class="primary daily-record-select">챌린지 선택하러 가기</button></article></div>
           </section>
           <div id="record-modal" class="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title" hidden>
             <div class="record-modal-card">
@@ -693,9 +693,11 @@
                 </div>
                 <h4 id="record-modal-title">오늘 하셨나요?</h4>
                 <p id="record-simple-description">사진 없이 바로 기록돼요.</p>
+                <p id="record-action-error" role="alert" hidden></p>
                 <div class="record-modal-actions">
                   <button class="primary" id="confirm-simple-record" type="button">네, 했어요</button>
                   <button class="secondary record-cancel" type="button">아직이요</button>
+                  <button class="secondary" id="undo-daily-record" type="button" hidden>오늘 기록 취소하기</button>
                 </div>
               </section>
               <section id="record-photo-panel" hidden>
@@ -708,7 +710,7 @@
                     <input id="v3-photo-file" type="file" accept="image/jpeg,image/png,image/webp">
                     <label for="v3-photo-value" id="v3-photo-value-label">실제 실천량</label>
                     <input id="v3-photo-value" type="number" min="0" max="720" step="1" inputmode="numeric">
-                    <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 원본은 보관하지 않습니다. 1유형은 외부 이미지 검토 서비스에 사진이 전송됩니다.</p>
+                    <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 이 서비스는 원본 사진을 저장하지 않습니다. 채소 확인형은 외부 이미지 검토 서비스로 사진을 전송하며 외부 서비스의 처리 정책이 적용됩니다.</p>
                   </div>
                   <button class="photo-upload-box" id="start-photo-check" type="button">
                     <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
@@ -719,11 +721,11 @@
                 </div>
                 <div id="photo-state-analyzing" class="photo-state" hidden>
                   <span class="record-spinner" aria-hidden="true"></span>
-                  <h4>사진을 확인하고 있어요</h4>
+                  <h4 id="photo-analyzing-title">사진을 확인하고 있어요</h4>
                   <p>잠시만 기다려 주세요.</p>
                 </div>
                 <div id="photo-state-fail" class="photo-state fail" hidden>
-                  <h4>사진에서 식사를 확인하지 못했어요</h4>
+                  <h4 id="photo-fail-title">사진 기록을 완료하지 못했어요</h4>
                   <p id="photo-fail-hint">밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.</p>
                   <div class="record-modal-actions">
                     <button class="secondary" id="retake-photo-record" type="button">다시 찍기</button>
@@ -748,86 +750,99 @@
           </form>
           <p id="barrier-suggestion" class="lead">실패가 아니라 다음 목표를 조정하기 위한 기록입니다.</p>
           </section>
-          <section class="dashboard-section" aria-labelledby="education-title">
-            <h3 id="education-title">4주 건강교육·퀴즈</h3>
-            <div id="education-list" class="challenge-grid" aria-live="polite">
-              <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
-            </div>
-            <section class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
-              <div class="education-flow-heading">
-                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
-                <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
-              </div>
-              <article class="education-reading-card" id="education-reading-card">
-                <strong>먼저 교육 내용을 확인해 주세요</strong>
-                <p id="education-flow-summary"></p>
-                <p class="education-medical-notice" id="education-flow-notice"></p>
-                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
-                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
-              </article>
-              <form class="education-quiz-card" id="education-quiz-form" hidden>
-                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
-                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
-                <button class="primary" type="submit">답 확인하기</button>
-              </form>
-              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
-                <strong id="education-feedback-title"></strong>
-                <p id="education-feedback-explanation"></p>
-                <p class="education-feedback-source" id="education-feedback-source"></p>
-                <button class="primary" id="education-feedback-action" type="button"></button>
-              </article>
-            </section>
-          </section>
         </section>
 
         <section class="workspace-panel" id="workspace-panel-report" role="region" tabindex="-1" data-workspace-panel="report" aria-label="리포트" hidden>
           <section class="dashboard-section first-section report-page" aria-label="생활습관 리포트">
           <div class="report-period-tabs" role="tablist" aria-label="리포트 기간 선택">
             <button class="report-period-tab active" id="report-period-week" type="button" role="tab" aria-selected="true" aria-controls="report-panel-week" data-report-period="week">이번 주</button>
-            <button class="report-period-tab" id="report-period-four-week" type="button" role="tab" aria-selected="false" aria-controls="report-panel-four-week" data-report-period="four-week">지난 4주</button>
-            <button class="report-period-tab" id="report-period-all" type="button" role="tab" aria-selected="false" aria-controls="report-panel-all" data-report-period="all">전체</button>
+            <button class="report-period-tab" id="report-period-four-week" type="button" role="tab" aria-selected="false" aria-controls="report-panel-four-week" data-report-period="four-week" tabindex="-1">지난 4주</button>
+            <button class="report-period-tab" id="report-period-all" type="button" role="tab" aria-selected="false" aria-controls="report-panel-all" data-report-period="all" tabindex="-1">전체</button>
           </div>
           <div id="weekly-report" class="report-panels">
             <section class="report-period-panel active" id="report-panel-week" role="tabpanel" aria-labelledby="report-period-week" data-report-panel="week">
+              <div class="report-period-line">
+                <strong id="report-week-period">기간 확인 중</strong>
+                <span class="report-period-pill">진행 중 포함</span>
+              </div>
               <article class="report-hero-card">
                 <img src="/static/assets/hyeoldangi-report.png" alt="이번 주 생활습관 기록을 설명하는 혈당이" class="report-mascot">
                 <div>
-                  <div class="report-hero-meta"><p class="eyebrow">이번 주 건강 리포트</p><span id="report-week-period">기간 확인 중</span></div>
+                  <div class="report-hero-meta"><p class="eyebrow">이번 주, 나의 속도로</p></div>
                   <strong id="report-week-streak">이번 주 기록을 불러오고 있어요</strong>
+                  <p>오늘까지 남긴 기록이에요. 남은 날도 천천히 이어가세요.</p>
                 </div>
               </article>
-              <div id="report-week-days" class="weekly-dot-row" aria-label="요일별 실천 현황" hidden></div>
-              <div id="report-week-challenges" class="report-progress-list" aria-live="polite">
-                <article class="report-empty"><strong>기록을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
+              <div class="report-summary-stats" id="report-week-stats" aria-label="이번 주 실천 요약">
+                <div class="report-summary-stat"><small>완료한 실천</small><strong id="report-week-completed">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>계획한 실천</small><strong id="report-week-planned">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>목표 달성률</small><strong id="report-week-rate">—</strong><span>종료된 목표 기준</span></div>
+              </div>
+              <div class="report-week-layout">
+                <article class="report-detail-card">
+                  <div class="report-section-heading"><div><h4>선택한 챌린지 기록</h4><p>서버에 저장된 이번 주 기록만 표시해요.</p></div></div>
+                  <div id="report-week-days" class="weekly-dot-row" aria-label="요일별 실천 현황" hidden></div>
+                  <div id="report-week-challenges" class="report-progress-list" aria-live="polite">
+                    <article class="report-empty"><strong>기록을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
+                  </div>
+                </article>
+                <aside class="report-insight-stack" id="report-week-insights" aria-live="polite">
+                  <article class="report-insight-card"><p class="report-overline">이번 주 돌아보기</p><h4>기록을 모으고 있어요</h4><p>저장된 기록을 바탕으로 요약을 준비하고 있어요.</p></article>
+                </aside>
               </div>
             </section>
 
             <section class="report-period-panel" id="report-panel-four-week" role="tabpanel" aria-labelledby="report-period-four-week" data-report-panel="four-week" hidden>
-              <article class="report-empty"><strong>지난 4주 리포트는 연결 준비 중입니다</strong><p>아직 이 기간의 기록을 조회하지 않았습니다. 이번 주 탭에서 제공 중인 기록을 확인해 주세요.</p></article>
+              <div class="report-period-line"><strong id="report-four-week-period">지난 4주</strong><span class="report-period-pill" id="report-four-week-status">선택하면 불러와요</span></div>
+              <article class="report-hero-card report-hero-muted">
+                <img src="/static/assets/hyeoldangi-report.png" alt="지난 기록을 돌아보는 혈당이" class="report-mascot">
+                <div><p class="eyebrow">네 번의 일주일을 돌아보면</p><strong id="report-four-week-headline">지난 4주의 흐름을 한눈에</strong><p>현재 주를 제외한 최근 네 번의 주간 기록을 보여드려요.</p></div>
+              </article>
+              <div class="report-summary-stats" id="report-four-week-stats" aria-label="지난 4주 실천 요약">
+                <div class="report-summary-stat"><small>실천한 날</small><strong id="report-four-week-days">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>완료한 실천</small><strong id="report-four-week-completed">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>목표 달성률</small><strong id="report-four-week-rate">—</strong><span>평가 가능한 목표 기준</span></div>
+              </div>
+              <div class="report-placeholder-grid" id="report-four-week-content" aria-live="polite">
+                <article class="report-empty report-period-unavailable"><strong>지난 4주 탭을 선택해 주세요</strong><p>선택하면 저장된 기록을 불러옵니다.</p></article>
+              </div>
             </section>
 
             <section class="report-period-panel" id="report-panel-all" role="tabpanel" aria-labelledby="report-period-all" data-report-panel="all" hidden>
-              <article class="report-empty"><strong>전체 리포트는 연결 준비 중입니다</strong><p>아직 전체 기록을 조회하지 않았습니다. 기록이 없다는 의미는 아닙니다.</p></article>
+              <div class="report-period-line"><strong id="report-all-period">전체 기간</strong><span class="report-period-pill" id="report-all-status">선택하면 불러와요</span></div>
+              <article class="report-hero-card report-hero-muted">
+                <img src="/static/assets/hyeoldangi-report.png" alt="전체 챌린지 여정을 안내하는 혈당이" class="report-mascot">
+                <div><p class="eyebrow">차곡차곡 쌓인 나의 실천</p><strong id="report-all-headline">나의 챌린지 여정</strong><p>첫 회차부터 오늘까지 저장된 챌린지 기록을 돌아봐요.</p></div>
+              </article>
+              <div class="report-summary-stats" id="report-all-stats" aria-label="전체 기간 실천 요약">
+                <div class="report-summary-stat"><small>실천한 날</small><strong id="report-all-days">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>완료한 실천</small><strong id="report-all-completed">—</strong><span>기록 확인 중</span></div>
+                <div class="report-summary-stat"><small>완료한 회차</small><strong id="report-all-cycles">—</strong><span>기록 확인 중</span></div>
+              </div>
+              <div id="report-all-content" class="report-all-content" aria-live="polite"><article class="report-empty report-period-unavailable"><strong>전체 탭을 선택해 주세요</strong><p>선택하면 저장된 회차를 불러옵니다.</p></article></div>
             </section>
           </div>
+          <p class="report-safety" id="report-disclaimer">기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.</p>
           <div class="report-pdf-card" id="report-pdf-card">
             <div class="report-pdf-copy"><strong>리포트를 저장하고 싶으신가요?</strong><p>현재는 주간 PDF만 제공됩니다. 지난 4주·전체는 연결 준비 중입니다.</p><p id="report-pdf-status" role="status">주간 리포트는 최근 최대 7일의 생활습관 기록 요약입니다.</p></div>
-            <fieldset class="report-pdf-options" id="report-pdf-options" aria-labelledby="report-pdf-period-title" hidden>
-              <legend id="report-pdf-period-title">PDF에 담을 기간 선택</legend>
-              <div class="report-pdf-periods">
-                <label><input type="radio" name="report-pdf-period" value="week" checked><span>이번 주</span></label>
-                <label><input type="radio" name="report-pdf-period" value="four-week"><span>지난 4주</span></label>
-                <label><input type="radio" name="report-pdf-period" value="all"><span>전체</span></label>
-              </div>
-            </fieldset>
-            <button class="secondary" id="download-report" type="button" aria-expanded="false" aria-controls="report-pdf-options">PDF로 받기</button>
+            <div class="report-pdf-control">
+              <button class="secondary" id="download-report" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="report-pdf-options">PDF로 받기</button>
+              <fieldset class="report-pdf-options" id="report-pdf-options" aria-labelledby="report-pdf-period-title" hidden>
+                <legend id="report-pdf-period-title">PDF에 담을 기간 선택</legend>
+                <div class="report-pdf-periods">
+                  <label><input type="radio" name="report-pdf-period" value="week" checked><span>이번 주</span></label>
+                  <label><input type="radio" name="report-pdf-period" value="four-week"><span>지난 4주</span></label>
+                  <label><input type="radio" name="report-pdf-period" value="all"><span>전체</span></label>
+                </div>
+              </fieldset>
+            </div>
           </div>
           </section>
         </section>
 
         <section class="workspace-panel" id="workspace-panel-together" role="region" tabindex="-1" data-workspace-panel="together" aria-label="함께하기" hidden>
           <section class="dashboard-section first-section together-page" aria-labelledby="dashboard-title">
-            <a class="forest-preview" href="/forest" aria-label="당근의 숲 게임 열기">
+            <a class="forest-preview" id="open-forest-game" href="/forest" aria-label="당근의 숲 게임 열기">
               <img src="/static/assets/carrot-forest-entry.webp" alt="당근의 숲 — 함께 실천하고, 같이 성장하는 모두의 건강 숲" width="1644" height="863">
             </a>
 
@@ -849,28 +864,45 @@
             </div>
             <div id="connection-list" class="together-member-list"></div>
 
-            <section class="forest-invite-card" aria-labelledby="forest-invite-title">
-              <div class="forest-section-heading forest-invite-heading">
-                <img class="forest-section-mascot" src="/static/assets/hyeoldangi-forest-invite.png" alt="가족과 친구를 초대하는 혈당이">
-                <h4 id="forest-invite-title">새로운 가족·친구 초대하기</h4>
+            <section class="forest-invite-hub" aria-label="가족·친구 초대 관리">
+              <div class="forest-invite-card-grid">
+                <button class="forest-invite-summary" id="open-received-invites" type="button" aria-expanded="false" aria-controls="received-invite-panel" data-invite-disclosure="received-invite-panel">
+                  <img src="/static/assets/hyeoldangi-forest-family-friends.png" alt="">
+                  <span><strong>받은 초대</strong><small>도착한 초대 확인·수락</small></span>
+                </button>
+                <button class="forest-invite-summary" id="open-create-invite" type="button" aria-expanded="false" aria-controls="create-invite-panel" data-invite-disclosure="create-invite-panel">
+                  <img src="/static/assets/hyeoldangi-forest-invite.png" alt="">
+                  <span><strong>가족·친구 초대하기</strong><small>초대 코드 만들기·복사</small></span>
+                </button>
               </div>
-              <p>기본적으로 챌린지 수행 상태만 공유합니다. 건강정보와 예측 결과는 공유하지 않습니다.</p>
-              <div class="invite-mode-tabs" aria-label="가족·친구 초대 방식">
-                <button class="invite-mode-tab" id="invite-tab-email" type="button" aria-expanded="false" aria-controls="invite-form" data-invite-mode="email">이메일로 초대</button>
-                <button class="invite-mode-tab" id="invite-tab-code" type="button" aria-expanded="false" aria-controls="invite-panel-code" data-invite-mode="code">초대 코드로 초대</button>
-              </div>
-              <form id="invite-form" class="forest-invite-form invite-panel" aria-labelledby="invite-tab-email" data-invite-panel="email" hidden>
-                <div class="form-row"><label for="invite-email">이메일</label><input id="invite-email" type="email" placeholder="family@example.com" required></div>
-                <button class="primary full" type="submit">초대 이메일 보내기</button>
-                <div id="invite-result" class="notice" hidden></div>
-              </form>
-              <div class="invite-panel invite-code-panel" id="invite-panel-code" aria-labelledby="invite-tab-code" data-invite-panel="code" hidden>
-                <div class="invite-code-box">
-                  <strong id="forest-invite-code">초대 코드 발급 준비 중</strong>
-                  <button class="secondary" id="copy-invite-code" type="button" disabled>준비 중</button>
+
+              <section class="forest-invite-card forest-invite-detail received-invite-card" id="received-invite-panel" aria-labelledby="received-invite-title" tabindex="-1" hidden>
+                <div class="forest-invite-detail-heading"><div><h4 id="received-invite-title">받은 초대</h4><p>초대받은 계정으로 로그인했을 때 받은 목록을 확인할 수 있어요.</p></div><button class="secondary" type="button" data-invite-close="received-invite-panel">닫기</button></div>
+                <div id="received-invitation-list" class="received-invitation-list" aria-live="polite">
+                  <article class="together-empty"><strong>초대 목록을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
                 </div>
-                <p class="invite-code-note" id="invite-code-note">실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요.</p>
-              </div>
+                <form id="accept-invitation-form" class="forest-invite-form invitation-accept-form">
+                  <div class="form-row"><label for="invitation-token">초대 코드</label><input id="invitation-token" type="text" minlength="20" maxlength="200" autocomplete="off" placeholder="전달받은 초대 코드를 붙여 넣어 주세요" required></div>
+                  <button class="primary full" type="submit">초대 수락하기</button>
+                  <p class="invite-code-note">목록에는 보안을 위해 초대 코드가 표시되지 않으므로, 전달받은 코드를 입력해야 수락할 수 있어요.</p>
+                </form>
+              </section>
+
+              <section class="forest-invite-card forest-invite-detail" id="create-invite-panel" aria-labelledby="forest-invite-title" tabindex="-1" hidden>
+                <div class="forest-invite-detail-heading"><div><h4 id="forest-invite-title">새로운 가족·친구 초대하기</h4><p>챌린지 수행 상태만 공유하며 건강정보와 예측 결과는 공유하지 않습니다.</p></div><button class="secondary" type="button" data-invite-close="create-invite-panel">닫기</button></div>
+                <form id="invite-form" class="forest-invite-form" aria-labelledby="forest-invite-title">
+                  <div class="form-row"><label for="invite-email">초대받을 분의 이메일</label><input id="invite-email" type="email" placeholder="family@example.com" required></div>
+                  <button class="primary full" type="submit">초대 코드 만들기</button>
+                  <div id="invite-result" class="notice" hidden></div>
+                </form>
+                <div class="invite-code-panel" id="invite-panel-code" aria-live="polite">
+                  <div class="invite-code-box">
+                    <strong id="forest-invite-code" tabindex="-1">초대 코드를 먼저 만들어 주세요</strong>
+                    <button class="secondary" id="copy-invite-code" type="button" disabled>복사</button>
+                  </div>
+                  <p class="invite-code-note" id="invite-code-note">이메일을 입력해 코드를 만들면 여기에 표시됩니다.</p>
+                </div>
+              </section>
             </section>
 
             <button class="danger-outline group-leave-button" type="button">이 그룹 나가기</button>
@@ -878,41 +910,90 @@
         </section>
 
         <section class="workspace-panel" id="workspace-panel-tools" role="region" tabindex="-1" data-workspace-panel="tools" aria-label="건강도구" hidden>
-          <section class="tool-feature-card" aria-labelledby="map-entry-title">
-            <div><p class="eyebrow">맞춤형 3D 일러스트</p><h3 id="map-entry-title">내 생활습관 지도</h3><p>기록한 습관을 3D 캐릭터로 확인해요.</p></div>
-            <button class="primary" id="open-lifestyle-map" type="button" aria-controls="lifestyle-map-detail" aria-expanded="false">지도 보기</button>
-          </section>
-
-          <section class="lifestyle-map-detail" id="lifestyle-map-detail" aria-label="내 생활습관 지도" tabindex="-1" hidden>
-            <div class="lifestyle-map-actions">
-              <button class="primary" id="close-lifestyle-map" type="button">지도 닫기</button>
-            </div>
-            <div class="lifestyle-map">
-              <div class="map-visual" aria-label="연령과 입력한 키·몸무게를 반영한 생활습관 캐릭터">
-                <img class="lifestyle-avatar" id="lifestyle-avatar" src="/static/assets/lifestyle-avatar-female-60.webp" alt="여성형 60대 3D 생활습관 안내 캐릭터 전신">
-                <button class="body-map-point point-head active" type="button" data-map-topic="rhythm" aria-pressed="true" aria-label="생활 리듬 보기">1</button>
-                <button class="body-map-point point-torso" type="button" data-map-topic="activity" aria-pressed="false" aria-label="활동 습관 보기">2</button>
-                <button class="body-map-point point-waist" type="button" data-map-topic="body" aria-pressed="false" aria-label="체형 기록 보기">3</button>
-                <button class="body-map-point point-legs" type="button" data-map-topic="walking" aria-pressed="false" aria-label="걷기 습관 보기">4</button>
-                <p class="avatar-profile-summary" id="avatar-profile-summary">키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.</p>
+          <section class="dashboard-section habit-map" id="lifestyle-map-detail" aria-labelledby="map-entry-title">
+            <p class="eyebrow">생활습관 요약</p>
+            <h3 id="map-entry-title">생활습관 지도</h3>
+            <p>항목을 누르면 입력한 내용과 실천 방향을 확인할 수 있어요.</p>
+            <div class="education-carousel" id="habit-carousel" role="region" aria-roledescription="캐러셀" aria-label="생활습관 선택">
+              <div class="education-magnetic-track" id="habit-carousel-list">
+                <div class="habit-topic-items" id="habit-map-topics"></div>
+                <article class="education-overview-card" data-content-id="help" data-label="생활습관 도움말" style="--education-art:#d4e7ec">
+                  <button class="education-card-toggle" id="habit-map-help" type="button" aria-label="생활습관 도움말 팝업 열기" aria-haspopup="dialog" aria-controls="habit-map-dialog">
+                    <span class="education-card-week">생활습관 도움말</span>
+                    <span class="education-card-art"><img src="/static/assets/hyeoldangi-question.png" alt="" loading="lazy"></span>
+                  </button>
+                </article>
               </div>
-              <div class="map-copy">
-                <p class="eyebrow">선택한 생활습관</p>
-                <div class="map-detail" aria-live="polite">
-                  <span id="map-detail-number">1</span>
-                  <div><strong id="map-detail-title">생활 리듬</strong><p id="map-detail-value">현재 건강입력에는 수면 정보가 포함되지 않았어요.</p><small id="map-detail-action">웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다.</small></div>
-                </div>
-                <div class="map-topic-guide" aria-label="생활습관 지도 번호 안내">
-                  <span><b>1</b> 생활 리듬</span><span><b>2</b> 활동 습관</span><span><b>3</b> 체형 기록</span><span><b>4</b> 걷기 습관</span>
-                </div>
-                <div class="notice compact">이 그림은 입력한 연령·키·몸무게를 시각적으로 표현한 참고 자료입니다. 체형이나 건강 위험을 판정하지 않습니다.</div>
-              </div>
+              <div class="education-carousel-controls"><button type="button" data-education-prev aria-label="이전 생활습관">←</button><span id="habit-carousel-status" role="status" aria-live="polite"></span><button type="button" data-education-next aria-label="다음 생활습관">→</button></div>
             </div>
-          </section>
-
-          <section class="health-tool-section" aria-labelledby="wearable-title">
-            <h3 id="wearable-title">워치 연동</h3>
+            <dialog class="habit-map-dialog" id="habit-map-dialog" aria-labelledby="habit-dialog-title" hidden>
+              <div class="habit-dialog-heading"><h3 id="habit-dialog-title" tabindex="-1">식사</h3><button class="secondary" id="habit-dialog-close" type="button" aria-label="생활습관 팝업 닫기">닫기 ×</button></div>
+              <div class="habit-map-content" id="habit-map-content">
+                <section id="habit-body-panel" aria-labelledby="habit-bmi-title">
+                  <p class="eyebrow">5 · 체형 기록</p><h4 id="habit-bmi-title">내 BMI 확인하기</h4><p>입력한 키와 몸무게로 자동 계산해요.</p>
+                  <div class="habit-body-inputs"><label for="map-height">키 (cm)<input id="map-height" type="number" min="0.1" step="any" inputmode="decimal" aria-describedby="habit-bmi-note"></label><label for="map-weight">몸무게 (kg)<input id="map-weight" type="number" min="0.1" step="any" inputmode="decimal" aria-describedby="habit-bmi-note"></label></div>
+                  <div class="habit-bmi-result" aria-live="polite"><div><strong>BMI 지수</strong><span>자동 계산</span></div><output id="map-bmi-value" for="map-height map-weight">—</output><small id="map-bmi-summary">키와 몸무게를 모두 입력해 주세요.</small></div>
+                  <p class="habit-bmi-note" id="map-waist" hidden></p>
+                  <p class="habit-bmi-note" id="habit-bmi-note">계산용 입력입니다. 저장된 건강정보와 예측 결과는 변경하지 않습니다.</p><p class="habit-bmi-note">입력값을 확인하는 참고 정보이며, 체형이나 건강 위험을 판정하지 않습니다.</p>
+                  <button class="habit-reset" id="habit-bmi-reset" type="button">불러온 값으로 되돌리기</button>
+                </section>
+                <section id="habit-record-panel" aria-labelledby="habit-detail-title" hidden><p class="eyebrow" id="habit-detail-label"></p><h4 id="habit-detail-title"></h4><strong class="habit-record-metric" id="habit-detail-metric"></strong><small class="habit-record-source" id="habit-detail-source"></small><p id="habit-detail-note"></p></section>
+                <section id="habit-map-shared-actions" aria-label="연결된 챌린지"><div id="habit-map-challenges"></div></section>
+          <section class="habit-help" id="lifestyle-help" aria-labelledby="rag-title" hidden>
+            <button class="secondary habit-help-back" id="habit-help-back" type="button">← 습관으로 돌아가기</button><p class="eyebrow" id="habit-help-topic"></p><h4 id="rag-title">생활습관 도움말</h4>
             <div class="health-tool-card">
+              <img class="health-tool-question-mascot" src="/static/assets/hyeoldangi-question.png" alt="공공기관 생활습관 자료를 안내하는 혈당이">
+              <p class="tool-help-copy">공공기관 자료를 바탕으로 답해드려요.</p>
+              <form id="rag-form"><div class="form-row"><label for="rag-question">궁금한 생활습관</label><input id="rag-question" maxlength="500" placeholder="예: 걷기 운동은 어떻게 시작하나요?" required></div><button class="primary" type="submit">근거 자료에서 찾기</button></form>
+              <div id="rag-result" class="notice compact" hidden></div>
+            </div>
+          </section>
+              </div>
+            </dialog>
+          </section>
+
+          <section class="dashboard-section health-education-tool" aria-labelledby="education-title">
+            <p class="eyebrow">건강정보·교육·퀴즈</p>
+            <h3 id="education-title">4주 건강교육·퀴즈</h3>
+            <p>매주 필요한 건강정보를 확인하고 간단한 퀴즈로 이해한 내용을 점검해요.</p>
+            <div class="education-carousel" id="education-carousel" role="region" aria-roledescription="캐러셀" aria-label="주차별 건강교육">
+            <div id="education-list" class="education-magnetic-track">
+              <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
+            </div>
+            <div class="education-carousel-controls" hidden><button type="button" data-education-prev aria-label="이전 주차">←</button><span id="education-carousel-status" role="status" aria-live="polite"></span><button type="button" data-education-next aria-label="다음 주차">→</button></div>
+            </div>
+            <dialog class="education-learning-flow education-learning-modal" id="education-learning-flow" aria-labelledby="education-flow-title" aria-modal="true" hidden>
+              <div class="education-flow-heading">
+                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
+                <button class="text-button education-modal-close" id="close-education-flow" type="button" aria-label="교육 팝업 닫기">닫기 <span aria-hidden="true">×</span></button>
+              </div>
+              <article class="education-reading-card" id="education-reading-card">
+                <strong>먼저 교육 내용을 확인해 주세요</strong>
+                <p id="education-flow-summary"></p>
+                <p class="education-medical-notice" id="education-flow-notice"></p>
+                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
+                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
+              </article>
+              <form class="education-quiz-card" id="education-quiz-form" hidden>
+                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
+                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
+                <button class="primary" type="submit">답 확인하기</button>
+              </form>
+              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
+                <strong id="education-feedback-title"></strong>
+                <p id="education-feedback-explanation"></p>
+                <p class="education-feedback-source" id="education-feedback-source"></p>
+                <button class="primary" id="education-feedback-action" type="button"></button>
+              </article>
+            </dialog>
+          </section>
+
+          <div class="health-tools-pending-grid">
+          <section class="health-tool-section is-coming-soon" aria-labelledby="wearable-title" aria-describedby="wearable-coming-soon">
+            <h3 id="wearable-title">워치 연동</h3>
+            <div class="health-tool-overlay-wrap">
+            <p class="health-tool-coming-soon health-tool-overlay-label" id="wearable-coming-soon">준비 중</p>
+            <div class="health-tool-card" inert>
               <div class="health-tool-status-row">
                 <div class="health-tool-row">
                   <img class="health-tool-mascot" src="/static/assets/hyeoldangi-wearable.png" alt="워치 연동을 안내하는 혈당이">
@@ -921,7 +1002,7 @@
                     <p>연결하면 걸음 수와 활동 시간이 자동으로 기록돼요.</p>
                   </div>
                 </div>
-                <button class="secondary health-tool-inline-action" id="connect-watch" type="button">워치 연결하기</button>
+                <button class="secondary health-tool-inline-action" id="connect-watch" type="button" disabled>워치 연결하기</button>
               </div>
               <details class="manual-input-details">
                 <summary>워치가 없다면, 직접 입력할게요</summary>
@@ -933,21 +1014,24 @@
               </details>
               <div id="wearable-result" class="notice compact" hidden></div>
             </div>
+            </div>
           </section>
 
-          <section class="health-tool-section" aria-labelledby="ocr-upload-title">
+          <section class="health-tool-section is-coming-soon" aria-labelledby="ocr-upload-title" aria-describedby="checkup-coming-soon">
             <h3 id="ocr-upload-title">건강정보 다시 입력하기</h3>
-            <div class="health-tool-card">
+            <div class="health-tool-overlay-wrap">
+            <p class="health-tool-coming-soon health-tool-overlay-label" id="checkup-coming-soon">준비 중</p>
+            <div class="health-tool-card" inert>
               <div class="health-tool-status-row">
                 <div class="health-tool-row">
                   <img class="health-tool-mascot" src="/static/assets/hyeoldangi-health-input.png" alt="건강정보 재입력을 안내하는 혈당이">
                   <div>
-                    <strong>검진표로 혈압 기록</strong>
+                    <strong>검진표로 기록연동</strong>
                     <p>검진표 사진을 올리면 수치를 자동으로 읽어와요. 결과는 저장 전에 확인할 수 있어요.</p>
                   </div>
                 </div>
                 <input id="checkup-image-input" class="sr-only" type="file" accept="image/*" capture="environment">
-                <button class="secondary health-tool-inline-action upload-checkup-button" id="upload-checkup-image" type="button">
+                <button class="secondary health-tool-inline-action upload-checkup-button" id="upload-checkup-image" type="button" disabled>
                   <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
                   <strong>검진표 사진 올리기</strong>
                 </button>
@@ -963,21 +1047,61 @@
                 <button class="primary full" type="submit">이 값으로 업데이트하기</button>
               </form>
             </div>
-          </section>
-
-          <section class="health-tool-section" aria-labelledby="rag-title">
-            <h3 id="rag-title">궁금한 생활습관 물어보기</h3>
-            <div class="health-tool-card">
-              <img class="health-tool-question-mascot" src="/static/assets/hyeoldangi-question.png" alt="공공기관 생활습관 자료를 안내하는 혈당이">
-              <p class="tool-help-copy">공공기관 자료를 바탕으로 답해드려요.</p>
-              <form id="rag-form"><div class="form-row"><label for="rag-question">궁금한 생활습관</label><input id="rag-question" maxlength="500" placeholder="예: 걷기 운동은 어떻게 시작하나요?" required></div><button class="primary" type="submit">근거 자료에서 찾기</button></form>
-              <div id="rag-result" class="notice compact" hidden></div>
             </div>
           </section>
+
+
+          </div>
         </section>
       </section>
     </section>
   </main>
+  <dialog class="account-delete-dialog" id="account-delete-dialog" aria-labelledby="account-delete-title">
+    <form method="dialog" class="account-delete-card" id="account-delete-form">
+      <button class="dialog-close" id="close-account-delete" type="button" aria-label="회원탈퇴 창 닫기">×</button>
+      <p class="eyebrow">계정 관리</p>
+      <h2 id="account-delete-title">정말 회원탈퇴하시겠어요?</h2>
+      <p>탈퇴하면 이 계정으로 다시 로그인할 수 없습니다. 저장된 정보의 처리 범위는 서비스 개인정보 처리방침을 따라요.</p>
+      <div class="form-row"><label for="account-delete-confirm">확인을 위해 <strong>탈퇴</strong>를 입력해 주세요</label><input id="account-delete-confirm" type="text" autocomplete="off" placeholder="탈퇴" required></div>
+      <p class="auth-error-summary" id="account-delete-error" role="alert" tabindex="-1" hidden></p>
+      <div class="account-delete-actions"><button class="secondary" id="cancel-account-delete" type="button">취소</button><button class="danger-button" id="confirm-account-delete" type="submit" disabled>회원탈퇴</button></div>
+    </form>
+  </dialog>
+  <dialog class="account-delete-dialog consent-settings-dialog" id="consent-settings-dialog" aria-labelledby="consent-settings-title">
+    <div class="account-delete-card">
+      <button class="dialog-close" id="close-consent-settings" type="button" aria-label="개인정보 설정 창 닫기">×</button>
+      <p class="eyebrow">개인정보 설정</p>
+      <h2 id="consent-settings-title">건강정보 수집·이용 동의</h2>
+      <div class="consent-status-card" id="consent-status-card" data-status="loading">
+        <span class="consent-status-badge" id="consent-status-badge">확인 중</span>
+        <p id="consent-status-copy" role="status">동의 상태를 확인하고 있어요.</p>
+      </div>
+      <p class="consent-policy-copy">동의를 철회해도 계정과 일반 페이지는 계속 이용할 수 있어요. 다만 새 건강정보 저장, 현재·미래 위험 신호 분석, 새 4주 챌린지 시작은 재동의 전까지 제한돼요.</p>
+      <p class="consent-policy-copy">기존 건강정보와 예측 결과의 보관·파기는 서비스 개인정보 처리방침을 따릅니다.</p>
+      <p class="auth-error-summary" id="consent-settings-error" role="alert" tabindex="-1" hidden></p>
+      <div class="account-delete-actions consent-settings-actions">
+        <button class="secondary" id="cancel-consent-settings" type="button">닫기</button>
+        <button class="danger-button" id="withdraw-health-consent" type="button" hidden>동의 철회</button>
+        <button class="primary" id="renew-health-consent" type="button" hidden>다시 동의하기</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog class="account-delete-dialog forest-entry-dialog" id="forest-entry-dialog" aria-labelledby="forest-entry-title">
+    <div class="account-delete-card">
+      <button class="dialog-close" id="close-forest-entry" type="button" aria-label="당근의 숲 입장 창 닫기">×</button>
+      <p class="eyebrow">당근의 숲</p>
+      <h2 id="forest-entry-title">함께할 그룹을 선택해 주세요</h2>
+      <p>로그인한 계정과 선택한 공동 챌린지를 확인한 뒤 서버에 저장된 숲을 불러옵니다.</p>
+      <div class="forest-entry-list" id="forest-entry-list" aria-live="polite">
+        <p>참여 중인 그룹을 확인하고 있어요.</p>
+      </div>
+      <p class="auth-error-summary" id="forest-entry-error" role="alert" tabindex="-1" hidden></p>
+      <div class="account-delete-actions">
+        <button class="secondary" id="retry-forest-groups" type="button">다시 불러오기</button>
+        <button class="primary" id="enter-forest-game" type="button" disabled>선택한 숲으로 들어가기</button>
+      </div>
+    </div>
+  </dialog>
   <footer><p>간당간당 개발용 서비스 · 진단·처방이 아닌 위험 선별과 건강교육</p></footer>
 </body>
 </html>

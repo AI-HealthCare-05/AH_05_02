@@ -36,6 +36,7 @@ function recommendationHarness(api) {
   let renders = 0;
   const context = load(['loadChallenges'], {
     $, state, challengeV3, api, URLSearchParams, isLocalPreview: () => false,
+    showChallengeSelectionView() {}, updateChallengeStartState() {},
     closeRagChallengeGenerator() {}, renderChallengeChoices() { renders++; }, showMessage() {},
   });
   return { ...context, $, state, challengeV3, renders: () => renders };
@@ -73,9 +74,10 @@ test('new account request is not blocked by previous request and old finalizer c
 });
 test('daily log lookup uses Korean date around UTC previous day', async () => {
   const state = { token: 'test', cycle: { user_challenges: [{ user_challenge_id: 2 }] } };
-  const context = load(['loadDailyRecords'], {
-    state, challengeDay: () => '2026-09-09', isLocalPreview: () => false,
+  const context = load(['isServerChallengeId', 'clearCurrentChallengeCycle', 'loadDailyRecords'], {
+    hasCurrentChallengeCycle: () => true, state, challengeDay: () => '2026-09-09', isLocalPreview: () => false,
     renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    $: () => ({ innerHTML: '' }),
     api: async url => {
       assert.ok(url.endsWith('start_date=2026-09-09&end_date=2026-09-09'));
       return { items: [{ log_date: '2026-09-09', is_completed: true }] };
@@ -85,9 +87,9 @@ test('daily log lookup uses Korean date around UTC previous day', async () => {
   assert.deepEqual([...state.dailyCompleted], ['2']);
 });
 test('V3 photo card states proof scope, not simple-check fallback', () => {
-  const list = { innerHTML: '' };
+  const list = { innerHTML: '', closest() { return this; } };
   const context = load(['renderDailyRecordList'], {
-    $: () => list, state: { dailyCompleted: new Set(), cycle: { user_challenges: [{
+    hasCurrentChallengeCycle: () => true, $: () => list, state: { dailyCompleted: new Set(), cycle: { user_challenges: [{
       user_challenge_id: 1, title: '걷기', catalog_version: 'evidence-v3', verification_type: 2,
       daily_goal: '누적 20분', verification_scope: '사진 제출만 확인',
     }] } }, challengeRecordType: () => 'photo', habitRecordIcon: () => '',
@@ -96,6 +98,71 @@ test('V3 photo card states proof scope, not simple-check fallback', () => {
   });
   context.renderDailyRecordList();
   assert.match(list.innerHTML, /누적 20분/);
-  assert.match(list.innerHTML, /유형 2/);
+  assert.match(list.innerHTML, /사진 제출만 확인/);
+  assert.match(list.innerHTML, /^<button class="daily-record-card daily-record-open/);
+  assert.doesNotMatch(list.innerHTML, /record-type-badge/);
   assert.doesNotMatch(list.innerHTML, /간편 체크/);
+});
+
+function photoHarness(response) {
+  const target = { id: '9', item: { catalog_version: 'evidence-v3', verification_type: 2, goal: { target_minutes: 20 } } };
+  const state = { token: 'session-A', cycle: { cycle_id: 1 }, recordTarget: target, dailyCompleted: new Set() };
+  const nodes = { '#v3-photo-file': { files: [{ size: 1200 }] }, '#v3-photo-value': { value: '20' } };
+  const $ = key => nodes[key] ||= {};
+  let calls = 0;
+  let photoState;
+  const formFields = {};
+  const context = load(['submitV3Photo'], {
+    $, state, isLocalPreview: () => false, challengeDay: () => '2026-09-09',
+    FormData: class { append(key, value) { formFields[key] = value; } },
+    setButtonBusy: () => () => {}, showPhotoRecordState(value) { photoState = value; },
+    api: async (url, options) => { calls++; assert.match(url, /\/9\/photo-verifications$/); assert.equal(options.method, 'POST'); return await response(); },
+    renderDailyRecordList() {}, updateDailyRecordSummary() {}, showMessage() {}, loadWeeklyReport: async () => {},
+  });
+  return { ...context, $, state, target, fields: formFields, calls: () => calls, photoState: () => photoState };
+}
+test('HTTP success without accepted completion never marks a photo challenge done', async () => {
+  for (const response of [
+    { challenge_completed: false, review_status: 'needs_review' },
+    { challenge_completed: true, review_status: 'needs_review' },
+    { challenge_completed: 'true', review_status: 'accepted' },
+  ]) {
+    const h = photoHarness(async () => response);
+    await h.submitV3Photo();
+    assert.equal(h.state.dailyCompleted.size, 0);
+    assert.equal(h.photoState(), 'photo-state-fail');
+    assert.equal(h.target.submitting, false);
+  }
+});
+test('accepted photo uses self-reported amount and Korean date, and cannot submit twice', async () => {
+  const h = photoHarness(async () => ({ challenge_completed: true, review_status: 'accepted' }));
+  await h.submitV3Photo();
+  await h.submitV3Photo();
+  assert.equal(h.calls(), 1);
+  assert.equal(h.fields.actual_value, '20');
+  assert.equal(h.fields.verification_date, '2026-09-09');
+  assert.ok(h.state.dailyCompleted.has('9'));
+  assert.equal(h.photoState(), 'photo-state-success');
+});
+test('late photo responses cannot mark a new account or a new cycle done', async () => {
+  for (const change of ['token', 'cycle']) {
+    let resolve;
+    const h = photoHarness(() => new Promise(r => { resolve = r; }));
+    const pending = h.submitV3Photo();
+    await h.submitV3Photo();
+    assert.equal(h.calls(), 1);
+    if (change === 'token') h.state.token = 'session-B';
+    else h.state.cycle = { cycle_id: 2 };
+    resolve({ challenge_completed: true, review_status: 'accepted' });
+    await pending;
+    assert.equal(h.state.dailyCompleted.size, 0);
+  }
+});
+test('missing, insufficient and out-of-contract amounts send no photo request', async () => {
+  for (const amount of ['', '0', '19', '721', 'Infinity']) {
+    const h = photoHarness(async () => { throw new Error('must not submit'); });
+    h.$('#v3-photo-value').value = amount;
+    await h.submitV3Photo();
+    assert.equal(h.calls(), 0);
+  }
 });
