@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
-  <script src="/static/app.js?v=20260908-challenge-current-v2" defer></script>
+  <script src="/static/app.js?v=20260909-challenge-summary-removed-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -554,28 +554,6 @@
             <button class="secondary" id="acknowledge-challenge-follow-up" type="button">안내 확인 완료</button>
           </div>
         </div>
-        <section class="lifestyle-summary-card" id="challenge-lifestyle-summary" aria-labelledby="lifestyle-map-title">
-          <div class="lifestyle-summary-heading">
-            <img id="risk-hyeoldangi" src="/static/assets/hyeoldangi-risk-low.png" alt="생활습관 방향을 안내하는 혈당이">
-            <div>
-              <p class="eyebrow">생활습관 요약</p>
-              <h3 id="lifestyle-map-title">지금 살펴볼 생활습관</h3>
-              <p>항목을 누르면 입력한 내용과 실천 방향을 확인할 수 있어요.</p>
-            </div>
-          </div>
-          <div class="lifestyle-summary-grid" id="lifestyle-summary-grid" aria-label="생활습관 실천 방향 요약">
-            <button class="lifestyle-summary-toggle" id="summary-meals-toggle" type="button" aria-expanded="false" aria-controls="summary-meals-panel">식사</button>
-            <button class="lifestyle-summary-toggle" id="summary-activity-toggle" type="button" aria-expanded="false" aria-controls="summary-activity-panel">활동</button>
-            <button class="lifestyle-summary-toggle" id="summary-metabolic-toggle" type="button" aria-expanded="false" aria-controls="summary-metabolic-panel">생활습관</button>
-            <button class="lifestyle-summary-toggle" id="summary-checkup-toggle" type="button" aria-expanded="false" aria-controls="summary-checkup-panel">정기 점검</button>
-          </div>
-          <div class="lifestyle-summary-details" aria-live="polite">
-            <section class="lifestyle-summary-panel" id="summary-meals-panel" aria-labelledby="summary-meals-toggle" hidden><p id="summary-meals">식사 횟수와 리듬을 확인했어요.</p><p id="summary-meals-action">규칙적인 식사 습관을 챌린지로 이어갈 수 있어요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-activity-panel" aria-labelledby="summary-activity-toggle" hidden><p id="summary-activity">운동과 움직임 기록을 확인했어요.</p><p id="summary-activity-action">무리 없는 걷기·활동부터 이어가요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-metabolic-panel" aria-labelledby="summary-metabolic-toggle" hidden><p id="summary-metabolic">입력한 생활습관을 확인했어요.</p><p id="summary-metabolic-action">생활습관을 천천히 점검해 볼 수 있어요.</p></section>
-            <section class="lifestyle-summary-panel" id="summary-checkup-panel" aria-labelledby="summary-checkup-toggle" hidden><p id="summary-checkup">현재 확인할 정기 점검 방향이에요.</p><p id="summary-checkup-action">정기 검진과 기록을 이어가요.</p></section>
-          </div>
-        </section>
         <form id="challenge-form">
           <section class="challenge-v3-controls" aria-labelledby="challenge-v3-heading">
             <p class="eyebrow">자료 기반 생활습관 챌린지</p>
@@ -662,6 +640,7 @@
             <h3 id="today-task-title">챌린지 실천을 기록해 주세요</h3>
             <p id="today-task-description">기록은 약 1분이면 끝납니다. 못 한 날도 이유를 남기면 다음 목표를 조정할 수 있어요.</p>
             <button class="primary workspace-shortcut" id="today-record-action" type="button" data-workspace="challenge">오늘 기록하기</button>
+            <button class="secondary" id="today-select-challenge" type="button" hidden>챌린지 선택하러 가기</button>
           </div>
           <div class="dashboard-grid summary-grid">
             <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
@@ -700,7 +679,7 @@
         <section class="workspace-panel" id="workspace-panel-challenge" role="region" tabindex="-1" data-workspace-panel="challenge" aria-label="챌린지" hidden>
           <section class="daily-record-panel" aria-labelledby="daily-record-title">
             <h4 id="daily-record-title">오늘 기록할 항목</h4>
-            <div id="daily-log-list" class="daily-record-list"></div>
+            <div id="daily-log-list" class="daily-record-list"><article class="daily-record-empty daily-record-empty-selection"><strong>기록할 챌린지가 없습니다</strong><p>챌린지를 선택하고 오늘의 실천을 시작해 보세요.</p><button type="button" class="primary daily-record-select">챌린지 선택하러 가기</button></article></div>
           </section>
           <div id="record-modal" class="record-modal" role="dialog" aria-modal="true" aria-labelledby="record-modal-title" hidden>
             <div class="record-modal-card">

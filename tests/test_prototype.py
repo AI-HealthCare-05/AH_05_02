@@ -356,16 +356,15 @@ def test_challenge_grid_opens_rag_custom_challenge_without_manual_editor() -> No
     assert "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요." in script
 
 
-def test_lifestyle_summary_uses_expandable_cards_without_result_feedback_form() -> None:
+def test_challenge_selection_excludes_removed_lifestyle_summary() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-
-    assert html.count('class="lifestyle-summary-toggle"') == 4
-    assert html.count('aria-expanded="false"') >= 4
-    assert 'id="feedback-form"' not in html
-    assert "결과 안내가 이해하기 쉬웠나요?" not in html
-    assert '$("#lifestyle-summary-grid")?.addEventListener("click"' in script
-    assert 'button.setAttribute("aria-expanded", String(expanded))' in script
+    assert 'id="challenge-lifestyle-summary"' not in html
+    assert "지금 살펴볼 생활습관" not in html
+    assert "#challenge-lifestyle-summary" not in script
+    assert "updateLifestyleSummary" not in script
+    assert 'id="challenge-v3-focus"' in html
+    assert 'id="lifestyle-map-detail"' in html
 
 
 def test_high_risk_medical_guidance_opens_only_after_cta_click() -> None:

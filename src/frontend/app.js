@@ -674,10 +674,8 @@ function showStep(step, { recordHistory = true } = {}) {
     }
     else {
       updateResultConfirmation();
-      updateLifestyleSummary();
     }
   }
-  if (state.step === 7) updateLifestyleSummary();
   const activeScreen = $(`.screen[data-step="${state.step}"]`);
   const activeHeading = activeScreen?.querySelector("h1, h2, h3");
   if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
@@ -1977,11 +1975,6 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
       ? "현재 위험 신호 결과 준비 중"
       : `현재 위험 신호 ${content.label}`,
   );
-  const riskMascot = $("#risk-hyeoldangi");
-  if (riskMascot) {
-    riskMascot.src = content.mascot;
-    riskMascot.alt = content.mascotAlt;
-  }
   $("#medical-guidance-detail").hidden = true;
   const challengeButton = $("#to-challenges");
   if (challengeButton) challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next;
@@ -2449,42 +2442,7 @@ function setForecastRiskPreview(risk) {
   });
 }
 
-function updateLifestyleSummary() {
-  const mealCount = $("#meal-count").value;
-  const smokingStatus = selectedRadioValue("smoking-status");
-  const drinker = boolLabel(selectedRadioValue("current-drinker"));
-  const exercise = boolLabel(selectedRadioValue("regular-exercise"));
-  if (!$("#summary-meals")) return;
-  $("#summary-meals").textContent = mealCount
-    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요.`
-    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요.";
-  $("#summary-meals-action").textContent = mealCount
-    ? "규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요."
-    : "다음 입력 때 식사 리듬을 함께 점검해요.";
-  $("#summary-activity").textContent = exercise === "예"
-    ? "규칙적인 운동을 하고 있다고 기록했어요."
-    : "규칙적인 운동을 하지 않는다고 기록했어요.";
-  $("#summary-activity-action").textContent = exercise === "예"
-    ? "지금의 활동 습관을 무리 없이 유지해 보세요."
-    : "짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
-  $("#summary-metabolic").textContent = smokingStatus === "current" || drinker === "예"
-    ? "흡연·음주와 관련된 생활습관 기록이 있어요."
-    : smokingStatus === "former"
-    ? "과거 흡연 이력이 기록되어 있어요."
-    : "입력한 생활습관과 신체·검진 정보를 확인했어요.";
-  $("#summary-metabolic-action").textContent = smokingStatus === "current" || drinker === "예"
-    ? "현재 기록을 바탕으로 바꾸기 쉬운 생활습관부터 점검해요."
-    : "이 정보는 위험 판정이 아니라 생활습관 점검을 위한 참고 신호예요.";
-  $("#summary-checkup").textContent = normalizeRiskKey() === "high"
-    ? "현재 위험 신호가 높음으로 확인되었어요."
-    : "현재 위험 신호와 관계없이 정기적인 확인이 필요해요.";
-  $("#summary-checkup-action").textContent = normalizeRiskKey() === "high"
-    ? "챌린지보다 검사·의료기관 상담 안내를 먼저 확인해 주세요."
-    : "정기 검진과 생활습관 기록을 이어가 주세요.";
-}
-
 function syncLifestyleAvatar() {
-  updateLifestyleSummary();
   window.lifestyleMapView?.refresh();
 }
 
@@ -2710,7 +2668,6 @@ function renderPrediction(prediction, factors) {
     preview: Boolean(developmentPreviewRisk),
   });
   updateResultConfirmation();
-  updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
 }
@@ -3046,7 +3003,6 @@ function clearCurrentChallengeCycle() {
 function showChallengeSelectionView() {
   $("#challenge-form").hidden = false;
   $("#challenge-safety-copy").hidden = false;
-  $("#challenge-lifestyle-summary").hidden = false;
   $("#challenge-title").textContent = "오늘부터 실천할 수 있는 생활습관을 골라보세요";
 }
 
@@ -3075,9 +3031,9 @@ async function openChallengeTab({ selectionCompleted = false } = {}) {
     return;
   }
   showChallengeSelectionView();
+  showStep(7);
   await loadChallenges();
   if (state.token !== token) return;
-  showStep(7);
 }
 
 function customChallengeSlot() {
@@ -3463,6 +3419,14 @@ function renderTodayTaskStatus() {
   const action = $("#today-record-action");
   if (!title || !description || !action) return;
   const challenges = hasCurrentChallengeCycle() ? state.cycle.user_challenges : [];
+  const selectAction = $("#today-select-challenge");
+  if (selectAction) selectAction.hidden = challenges.length > 0;
+  if (!challenges.length) {
+    title.textContent = "아직 선택한 챌린지가 없어요";
+    description.textContent = "분석을 마쳤다면 실천할 챌린지를 선택해 주세요. 선택한 뒤 오늘 기록을 시작할 수 있어요.";
+    action.textContent = "오늘 기록하기";
+    return;
+  }
   if (challenges.length && ["loading", "error"].includes(state.dailyRecordsStatus)) {
     title.textContent = state.dailyRecordsStatus === "error" ? "오늘 기록을 다시 확인해 주세요" : "오늘 기록을 확인하고 있어요";
     description.textContent = "저장된 기록을 불러온 뒤 완료 상태를 표시합니다.";
@@ -4447,6 +4411,7 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   if (name === "together") syncForestOverview();
   if (name === "tools") window.lifestyleMapView?.refresh();
   if (name === "challenge") renderDailyRecordList();
+  if (name === "home") renderTodayTaskStatus();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -5556,17 +5521,6 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
 $("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
-$("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
-  const toggle = event.target.closest(".lifestyle-summary-toggle");
-  if (!toggle) return;
-  const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
-  $$(".lifestyle-summary-toggle").forEach((button) => {
-    const panel = $(`#${button.getAttribute("aria-controls")}`);
-    const expanded = button === toggle && shouldOpen;
-    button.setAttribute("aria-expanded", String(expanded));
-    if (panel) panel.hidden = !expanded;
-  });
-});
 $("#to-challenges").addEventListener("click", async () => {
   if (requiresMedicalResultGuidance()) {
     const guidance = $("#medical-guidance-detail");
@@ -5770,6 +5724,11 @@ $("#acknowledge-challenge-follow-up").addEventListener("click", async (event) =>
     button.disabled = false;
     button.textContent = "안내 확인 완료";
   }
+});
+$("#today-select-challenge").addEventListener("click", async (event) => {
+  const releaseBusy = setButtonBusy(event.currentTarget, "챌린지 불러오는 중…");
+  try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+  finally { releaseBusy(); }
 });
 $("#daily-log-list").addEventListener("click", async (event) => {
   const selectButton = event.target.closest(".daily-record-select");
