@@ -99,6 +99,9 @@ class ChallengeCycleCreateRequest(BaseModel):
     start_date: date
     challenge_ids: list[int] = Field(min_length=1, max_length=3)
     prediction_id: int | None = Field(default=None, gt=0)
+    catalog_version: Literal["evidence-v3"] | None = None
+    focus: Literal["balanced", "diet", "activity"] = "balanced"
+    difficulty: Literal["easy", "moderate", "advanced"] = "easy"
 
     @model_validator(mode="after")
     def unique_challenges(self) -> ChallengeCycleCreateRequest:
