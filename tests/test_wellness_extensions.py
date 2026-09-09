@@ -30,10 +30,37 @@ def test_rag_returns_citations_and_refuses_medication_changes() -> None:
     assert grounded["answer_status"] == "grounded"
     assert grounded["citations"]
     assert all(item["url"].startswith("https://") for item in grounded["citations"])
+    assert all("checked_at" in item for item in grounded["citations"])
 
     refused = answer_with_sources("당뇨약 용량을 줄여도 되나요?")
     assert refused["answer_status"] == "medical_safety_refusal"
     assert "의료진" in refused["answer"]
+
+
+def test_rag_redirects_emergency_symptoms_before_normal_answer() -> None:
+    emergency = answer_with_sources("갑자기 가슴 통증이 심하고 숨쉬기 힘들어요")
+    assert emergency["answer_status"] == "emergency_redirect"
+    assert "119" in emergency["answer"]
+    assert emergency["citations"]
+    assert emergency["citations"][0]["document_id"] == "kdca-hyperglycemia-emergency"
+
+    unconscious = answer_with_sources("어지러워서 쓰러졌는데 의식이 흐려요")
+    assert unconscious["answer_status"] == "emergency_redirect"
+
+
+def test_rag_emergency_takes_priority_over_medication_pattern() -> None:
+    result = answer_with_sources("의식을 잃었는데 약을 늘려도 되나요?")
+    assert result["answer_status"] == "emergency_redirect"
+
+
+def test_rag_diet_and_complication_questions_are_grounded_in_new_documents() -> None:
+    diet = answer_with_sources("당뇨병 식이요법에서 탄수화물은 얼마나 먹어야 하나요?")
+    assert diet["answer_status"] == "grounded"
+    assert any(item["document_id"] == "kdca-diabetes-diet" for item in diet["citations"])
+
+    complications = answer_with_sources("당뇨병 합병증으로 어떤 검진을 받아야 하나요?")
+    assert complications["answer_status"] == "grounded"
+    assert any(item["document_id"] == "kdca-diabetes-complications" for item in complications["citations"])
 
 
 @pytest.mark.asyncio
@@ -67,6 +94,13 @@ async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
                 json={"question": "걷기 운동은 어떻게 시작하나요?"},
             )
             assert rag.json()["data"]["citations"]
+
+            quizzes = await client.get("/api/v1/health-education/quizzes", headers=headers)
+            quiz_items = quizzes.json()["data"]["items"]
+            assert quiz_items
+            for item in quiz_items:
+                assert "answer" not in item
+                assert "explanation" not in item
 
             food = await client.post("/api/v1/food-analyses", headers=headers, json={"image_name": "lunch_salad.jpg"})
             food_data = food.json()["data"]

@@ -26,6 +26,7 @@ COPY ./src/frontend ./src/frontend
 COPY ./src/rag ./src/rag
 COPY ./src/ml ./src/ml
 COPY ./models/registry ./models/registry
+COPY ./docs/CHALLENGE_CATALOG_V2_20260903.json ./docs/CHALLENGE_CATALOG_V2_20260903.json
 
 # 5. 해당 이미지를 활용하여 도커컨테이너 실행시 실행되는 명령어입니다.
 # FastAPI를 uvicorn을 활용하여 비동기 환경으로 서버를 실행합니다.
