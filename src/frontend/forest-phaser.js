@@ -4,6 +4,7 @@
   if (!window.Phaser || !document.getElementById("phaser-world")) return;
   window.ForestMonsterPresence = false;
 
+  const STORAGE_KEY = "gandang-carrot-forest-demo-v1";
   const ATMOSPHERE_KEY = "gandang-carrot-forest-atmosphere-v1";
   const WORLD = { width: 768, height: 512 };
   // Phaser 3.90 has no game-level resolution option. Render into a denser
@@ -67,7 +68,7 @@
   };
 
   function storedState() {
-    return window.carrotForestRuntimeState || {};
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
   }
 
   function normalizedAvatar(source = {}) {

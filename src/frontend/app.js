@@ -1,11 +1,7 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), dailyRecordFailures: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const challengeV3 = { active: false, busy: false, rotation: 0, focus: "balanced", difficulty: "easy", policy: null, owner: null, request: 0 };
-const challengeDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-const challengeLevelLabel = (level) => ({ easy: "쉬움", moderate: "보통", advanced: "도전" }[level] || "공통");
-const challengeProofLabel = (type) => ({ 1: "1유형 · 사진 + 채소 확인", 2: "2유형 · 사진 제출", 3: "3유형 · 자가 체크" }[type] || "기존 기록 방식");
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const safeExternalUrl = (value) => {
   try {
@@ -19,13 +15,7 @@ const isDemoEnvironment = () => ["localhost", "127.0.0.1", "::1"].includes(windo
 const isLocalPreview = () => isDemoEnvironment() && state.token === "local-demo-token";
 const HEALTH_DRAFT_STORAGE_KEY = "gandang-health-draft-v1";
 const SESSION_RECOVERY_STORAGE_KEY = "gandang-session-recovery-v1";
-const FOREST_SESSION_STORAGE_KEY = "gandang-forest-api-session-v1";
-const FOREST_SESSION_MAX_AGE_MS = 30 * 60 * 1000;
 const HEALTH_DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
-// Keep the UI wait bounded to roughly one model timeout. Today and tomorrow
-// run in parallel, so their timeout windows must not be added together.
-const PREDICTION_POLL_TIMEOUT_MS = 35 * 1000;
-const PREDICTION_POLL_INTERVAL_MS = 1000;
 
 function setFormBusy(form, activeButton, busyLabel) {
   if (!form) return () => {};
@@ -142,9 +132,9 @@ const workspaceHeroCopy = {
     lead: "챌린지를 눌러 오늘의 실천을 기록해요.",
   },
   report: {
-    eyebrow: "작은 실천이 쌓이는 곳",
-    title: "생활습관 리포트",
-    lead: "기록을 돌아보고, 나에게 맞는 다음 실천을 찾아보세요.",
+    eyebrow: "나의 변화",
+    title: "주간 리포트",
+    lead: "위험도의 변화가 아니라 생활습관 기록을 요약합니다.",
   },
   together: {
     eyebrow: "함께하기",
@@ -512,7 +502,6 @@ function setupAuthAccessibility() {
   });
 }
 function challengeRecordType(item = {}) {
-  if (item.catalog_version === "evidence-v3") return item.verification_type === 3 ? "simple" : "photo";
   const title = item.title || "";
   return title.includes("식사") ? "photo" : "simple";
 }
@@ -523,10 +512,6 @@ function recordActionLabel(type) {
   return type === "photo" ? "사진 올리기" : "체크하기";
 }
 function simpleRecordPresentation(item = {}) {
-  if (item.domain === "hydration") return {
-    kind: "water", title: "오늘 음료 선택을 확인해 주세요",
-    description: "당 음료 대신 물을 선택했거나 당 음료를 마시지 않았나요? 수분 제한이 있다면 개인 지침을 지켰는지 확인해요. 물을 더 마실 필요는 없어요.", action: "네, 실천했어요",
-  };
   const title = item.title || "";
   if (title.includes("걷")) return {
     kind: "walking", title: "오늘 가볍게 걸으셨나요?",
@@ -611,9 +596,7 @@ function syncTopNavigation() {
     button.setAttribute("aria-current", selected ? "page" : "false");
   });
   $$("[data-top-step]").forEach((button) => {
-    const targetStep = Number(button.dataset.topStep);
-    const selected = state.step === targetStep
-      || (targetStep === 7 && state.step === 8 && state.activeWorkspace === "challenge");
+    const selected = state.step === Number(button.dataset.topStep);
     button.classList.toggle("active", selected);
     button.setAttribute("aria-current", selected ? "page" : "false");
   });
@@ -708,7 +691,8 @@ async function goStepFromNav(step) {
     return;
   }
   if (step === 7) {
-    await openChallengeTab();
+    showStep(step);
+    await loadChallenges();
     return;
   }
   showStep(step);
@@ -935,74 +919,6 @@ function hasHealthDataConsent(payload) {
     && item.is_agreed === true && !item.withdrawn_at);
 }
 
-function healthDataConsentItems(payload) {
-  return Array.isArray(payload?.items)
-    ? payload.items.filter(item => item.consent_item === "health_data" && item.version === "1.0")
-    : [];
-}
-
-function syncHealthConsentState(payload) {
-  const items = healthDataConsentItems(payload);
-  const active = items.find(item => item.is_agreed === true && !item.withdrawn_at) || null;
-  state.healthConsent = active || items[0] || null;
-  state.healthConsentStatus = active ? "active" : items.length ? "withdrawn" : "missing";
-  if (!active) {
-    state.capabilities = { challenge: false, currentHealth: false, futurePrediction: false };
-    state.currentHealthOnly = false;
-    state.modelOutOfRange = false;
-  }
-  return state.healthConsentStatus;
-}
-
-function renderHealthConsentSettings() {
-  const status = state.healthConsentStatus;
-  const card = $("#consent-status-card");
-  const badge = $("#consent-status-badge");
-  const copy = $("#consent-status-copy");
-  if (!card || !badge || !copy) return;
-  card.dataset.status = status;
-  badge.textContent = status === "active" ? "동의 중" : status === "withdrawn" ? "철회됨" : status === "missing" ? "동의 필요" : "확인 중";
-  copy.textContent = status === "active"
-    ? "건강정보 저장과 위험 신호 선별, 새 챌린지 시작에 동의가 적용되어 있어요."
-    : status === "withdrawn"
-      ? "동의가 철회되어 새 건강정보 저장·분석·챌린지 시작이 제한되어 있어요."
-      : status === "missing" ? "건강정보 기능을 이용하려면 동의가 필요해요." : "동의 상태를 확인하고 있어요.";
-  $("#withdraw-health-consent").hidden = status !== "active";
-  $("#renew-health-consent").hidden = !["withdrawn", "missing"].includes(status);
-}
-
-async function refreshHealthConsentState() {
-  const consents = await api("/consents");
-  if (!Array.isArray(consents?.items)) throw new Error("동의 정보를 확인하지 못했습니다.");
-  syncHealthConsentState(consents);
-  renderHealthConsentSettings();
-  return consents;
-}
-
-function openHealthConsentSettings({ blockedAction = "" } = {}) {
-  $(".profile-menu")?.removeAttribute("open");
-  $("#header-my-page")?.removeAttribute("open");
-  $("#consent-settings-error").hidden = true;
-  $("#consent-settings-dialog").showModal();
-  renderHealthConsentSettings();
-  if (blockedAction) {
-    const error = $("#consent-settings-error");
-    error.textContent = `${blockedAction} 전에 건강정보 수집·이용에 다시 동의해 주세요.`;
-    error.hidden = false;
-  }
-  void refreshHealthConsentState().catch(error => {
-    const errorNode = $("#consent-settings-error");
-    errorNode.textContent = error.message || "동의 상태를 불러오지 못했습니다. 다시 시도해 주세요.";
-    errorNode.hidden = false;
-  });
-}
-
-function requireActiveHealthConsent(actionLabel) {
-  if (state.healthConsentStatus === "active") return true;
-  openHealthConsentSettings({ blockedAction: actionLabel });
-  return false;
-}
-
 function showAccountRecovery(recovery, message) {
   state.accountRecovery = recovery;
   showStep(2);
@@ -1058,7 +974,6 @@ async function saveAccountSetup(recovery) {
     checkSession();
     recovery.consentSaved = true;
   }
-  state.healthConsentStatus = "active";
   $("#eligibility-birth-date").value = recovery.birthday;
   $("#gender").value = recovery.gender;
   state.accountRecovery = null;
@@ -1089,7 +1004,6 @@ function healthSubmitLabel() {
 }
 
 function openReturningUserHealthEdit() {
-  if (!isLocalPreview() && !requireActiveHealthConsent("건강정보 수정")) return;
   hydrateSavedHealthForm();
   state.visitedSteps.add(4);
   $("#submit-analysis").textContent = healthSubmitLabel();
@@ -1245,42 +1159,6 @@ function storedSessionRecovery() {
 function clearSessionRecovery() {
   state.sessionRecovery = null;
   try { sessionStorage.removeItem(SESSION_RECOVERY_STORAGE_KEY); } catch { /* storage may be unavailable */ }
-}
-
-function clearAuthenticatedClientState({ keepEmail = true } = {}) {
-  const email = keepEmail ? (state.userProfile?.email || $("#login-email")?.value || "") : "";
-  clearHealthDraft();
-  clearSessionRecovery();
-  try { sessionStorage.removeItem(FOREST_SESSION_STORAGE_KEY); } catch { /* storage may be unavailable */ }
-  state.token = null;
-  state.userProfile = null;
-  state.accountRecovery = null;
-  state.healthConsent = null;
-  state.healthConsentStatus = "unknown";
-  state.analysisRun = null;
-  state.healthCheckupResult = null;
-  state.healthCheckupHistory = [];
-  state.checkupId = null;
-  state.currentScreeningInputId = null;
-  state.currentScreeningPredictionId = null;
-  state.currentScreeningPrediction = null;
-  state.predictionId = null;
-  state.prediction = null;
-  state.cycle = null;
-  state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
-  state.invitations = { sent: [], received: [] };
-  state.reportPeriods = {};
-  state.reportPeriodStatus = { week: "idle", "four-week": "idle", all: "idle" };
-  state.returningUser = false;
-  state.navigationHistory = [1, 2];
-  state.visitedSteps = new Set([1, 2]);
-  $(".profile-menu")?.removeAttribute("open");
-  $("#header-my-page")?.removeAttribute("open");
-  $("#account-recovery-form").hidden = true;
-  showStep(2, { recordHistory: false });
-  showAuthMode("login", { moveFocus: false });
-  $("#login-email").value = email;
 }
 
 function beginSessionRecovery() {
@@ -2484,39 +2362,66 @@ function updateLifestyleSummary() {
 }
 
 function syncLifestyleAvatar() {
-  updateLifestyleSummary();
-  window.lifestyleMapView?.refresh();
+  const isMale = $("#gender").value === "MALE";
+  const avatar = $("#lifestyle-avatar");
+  if (!avatar) {
+    updateLifestyleSummary();
+    return;
+  }
+  const birthDate = new Date(`${$("#eligibility-birth-date").value || "1965-04-12"}T00:00:00`);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
+  if (!Number.isFinite(age)) age = 20;
+  const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
+  const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
+  const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
+  const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
+  const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
+  avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
+  avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
+  avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
+  avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
+  $("#avatar-profile-summary").textContent = height && bmi
+    ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
+    : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
+}
+
+function lifestyleMapContent(topic) {
+  const height = Number($("#height").value || 0);
+  const weight = Number($("#weight").value || 0);
+  const bmi = height && weight ? (weight / ((height / 100) ** 2)).toFixed(1) : null;
+  const waist = $("#waist").value;
+  return {
+    rhythm: { number: "1", title: "생활 리듬", value: "현재 건강입력에는 수면 정보가 포함되지 않았어요.", action: "웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다." },
+    activity: { number: "2", title: "활동 습관", value: $("#regular-exercise").checked ? "규칙적으로 운동한다고 기록했어요." : "규칙적인 운동을 하지 않는다고 기록했어요.", action: "몸 상태에 맞는 작은 활동 챌린지를 직접 선택할 수 있습니다." },
+    body: { number: "3", title: "체형 기록", value: bmi ? `입력값으로 계산한 BMI는 ${bmi}${waist ? `, 허리둘레는 ${waist}cm` : ""}입니다.` : "키와 몸무게 기록이 필요합니다.", action: "수치는 위험 판정이 아니라 입력한 건강정보를 다시 확인하기 위한 표시입니다." },
+    walking: { number: "4", title: "걷기 습관", value: "아직 걸음 수 기록을 연결하지 않았어요.", action: "챌린지에서 걷기 목표를 고르거나 건강도구에서 워치 기록을 연결해 보세요." },
+  }[topic];
 }
 
 function updateLifestyleMap(topic) {
-  window.lifestyleMapView?.select(topic);
+  if (!$("#map-detail-number")) {
+    updateLifestyleSummary();
+    return;
+  }
+  state.mapTopic = topic;
+  const content = lifestyleMapContent(topic);
+  $("#map-detail-number").textContent = content.number;
+  $("#map-detail-title").textContent = content.title;
+  $("#map-detail-value").textContent = content.value;
+  $("#map-detail-action").textContent = content.action;
+  $$(".body-map-point").forEach((button) => {
+    const selected = button.dataset.mapTopic === topic;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
 }
-
-function lifestyleMapSnapshot() {
-  const saved = state.healthCheckupHistory?.[0] || state.healthCheckupResult || {};
-  return {
-    owner: state.token, health: saved,
-    medicalGuidance: requiresMedicalResultGuidance(),
-    challenges: state.cycle?.user_challenges || [],
-    catalog: [...state.challengeCatalog, ...fallbackChallenges, ...localNotionChallenges],
-    completed: state.dailyCompleted, dailyStatus: state.dailyRecordsStatus,
-    report: state.lifestyleReport?.owner === state.token && state.lifestyleReport?.cycle === state.cycle ? state.lifestyleReport.data : null,
-    reportStatus: state.lifestyleReportStatus,
-    preview: isLocalPreview(),
-  };
-}
-
-function openLifestyleChallenge(item) {
-  if (!item) { void openChallengeTab(); return; }
-  showWorkspace("challenge");
-  const card = [...document.querySelectorAll("[data-user-challenge-id]")]
-    .find(node => node.dataset.userChallengeId === String(item.user_challenge_id));
-  if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); if (!card.disabled) card.focus({ preventScroll: true }); }
-}
-
 async function api(path, options = {}) {
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-  const headers = { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...(options.headers || {}) };
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   const authenticatedRequest = Boolean(state.token) && !path.startsWith("/auth/");
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
   let response;
@@ -2553,7 +2458,7 @@ async function api(path, options = {}) {
 }
 async function pollPrediction(jobId) {
   const startedAt = Date.now();
-  while (Date.now() - startedAt < PREDICTION_POLL_TIMEOUT_MS) {
+  while (Date.now() - startedAt < 35000) {
     const job = await api(`/prediction-jobs/${jobId}`);
     if (job.status === "queued") renderPredictionStatus("queued");
     if (job.status === "running") renderPredictionStatus("running");
@@ -2576,7 +2481,7 @@ async function pollPrediction(jobId) {
       error.retryAfterSeconds = job.retry_after_seconds;
       throw error;
     }
-    await sleep(PREDICTION_POLL_INTERVAL_MS);
+    await sleep(1000);
   }
   const error = new Error("상태 확인 시간이 초과되었습니다. 작업 이력에서 다시 확인해 주세요.");
   error.code = "TIMEOUT";
@@ -2635,19 +2540,9 @@ function renderPrediction(prediction, factors) {
   $("#development-preview-notice").hidden = !developmentPreviewRisk;
   $("#medical-guidance-detail").hidden = true;
   // A future-model result must never populate the current-screening traffic light.
-  const futureRiskLabel = canDisplayRisk
+  $("#future-risk-category").textContent = canDisplayRisk
     ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
     : "현재 공개할 수 있는 예측 결과가 없습니다";
-  $("#future-risk-category").textContent = futureRiskLabel;
-  const futureHorizon = $("#future-risk-horizon");
-  const futureHorizonSummary = $("#future-risk-horizon-summary");
-  if (futureHorizon) {
-    futureHorizon.dataset.state = canDisplayRisk ? normalizeRiskKey(displayPrediction) : "unavailable";
-    futureHorizon.setAttribute("aria-label", `내일이 약 2년 위험 그림: ${futureRiskLabel}`);
-  }
-  if (futureHorizonSummary) futureHorizonSummary.textContent = canDisplayRisk
-    ? `내일이 모델은 약 2년 안에 새로 나타날 수 있는 위험 신호를 ${forecastSignalLabel(normalizeRiskKey(displayPrediction))}으로 분류했어요.`
-    : "내일이 모델의 2년 위험 그림은 공개 가능한 결과가 있을 때만 위험 단계를 표시해요.";
   updateResultConfirmation();
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
@@ -2695,7 +2590,6 @@ function renderPartialAnalysisNotice(run) {
 }
 
 async function runPrediction({ retryFailed = false } = {}) {
-  if (!isLocalPreview() && !requireActiveHealthConsent("새 건강 분석")) return;
   const key = analysisInputKey();
   if (state.analysisRun?.busy && state.analysisRun.key === key) return;
   if (retryFailed && state.step === 6) {
@@ -2726,24 +2620,18 @@ async function runPrediction({ retryFailed = false } = {}) {
   $("#retry-partial-analysis").disabled = true;
   renderPredictionStatus("queued");
   try {
-    // 오늘이·내일이를 순차로 하나씩 기다리면 각 모델이 개별 타임아웃(약 30~35초)에
-    // 걸릴 때 합산으로 최대 60~70초까지 걸릴 수 있다. 두 모델을 동시에 요청해서
-    // 사용자 체감 대기시간을 모델 하나의 타임아웃 수준(최대 약 35초)으로 맞춘다.
-    await Promise.all(modelKeys.map(async (modelKey) => {
-      if (run.models[modelKey].status === "succeeded") return;
+    for (const modelKey of modelKeys) {
+      if (run.models[modelKey].status === "succeeded") continue;
       try {
         const result = await requestPredictionModel(modelKey);
         if (!isCurrent()) return;
-        if (!result.prediction || !result.predictionId) {
-          throw Object.assign(new Error("분석 결과가 비어 있습니다."), { code: "EMPTY_RESULT" });
-        }
+        if (!result.prediction || !result.predictionId) throw Object.assign(new Error("분석 결과가 비어 있습니다."), { code: "EMPTY_RESULT" });
         run.models[modelKey] = { status: "succeeded", ...result };
       } catch (error) {
         if (!isCurrent()) return;
         run.models[modelKey] = { status: "failed", error };
       }
-    }));
-    if (!isCurrent()) return;
+    }
     const current = run.models.diabetes_current_screening;
     const future = run.models.diabetes_incidence;
     state.currentScreeningPredictionId = current?.predictionId || null;
@@ -2769,14 +2657,7 @@ async function runPrediction({ retryFailed = false } = {}) {
       if (!isCurrent()) return;
     }
     renderPrediction(future?.prediction || { display_allowed: false }, run.factors);
-    if (future?.status === "failed") {
-      $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
-      const futureHorizon = $("#future-risk-horizon");
-      const futureHorizonSummary = $("#future-risk-horizon-summary");
-      if (futureHorizon?.setAttribute) futureHorizon.setAttribute("aria-label", "내일이 약 2년 위험 그림: 분석 실패");
-      if (futureHorizon?.dataset) futureHorizon.dataset.state = "unavailable";
-      if (futureHorizonSummary) futureHorizonSummary.textContent = "내일이 결과는 실패한 분석만 다시 시도하면 이어서 확인할 수 있어요.";
-    }
+    if (future?.status === "failed") $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
     if (state.currentScreeningPrediction) {
       renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
     }
@@ -2810,101 +2691,11 @@ async function runPrediction({ retryFailed = false } = {}) {
   }
 }
 async function loadChallenges() {
-  showChallengeSelectionView();
-  const token = state.token;
-  if (challengeV3.busy && challengeV3.owner === token) return;
-  if (challengeV3.owner !== token) {
-    challengeV3.active = false;
-    state.challengeRecommendations = [];
-    state.challengeCatalog = [];
-    state.selectedChallengeIds = new Set();
-    state.openFollowUpActionIds = [];
-    $("#challenge-list").replaceChildren();
-  }
-  challengeV3.owner = token;
-  challengeV3.busy = true;
-  state.challengeListStatus = "loading";
-  state.challengeStartSafetyBlocked = false;
-  const request = ++challengeV3.request;
-  const isCurrent = () => state.token === token && challengeV3.request === request;
-  const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
-  controls.forEach((control) => { control.disabled = true; });
-  $("#retry-challenges").hidden = true;
-  $("#challenge-v3-policy").textContent = "자료 기반 후보를 불러오고 있어요…";
-  try {
-    const focus = $("#challenge-v3-focus").value;
-    const difficulty = $("#challenge-v3-difficulty").value;
-    const query = new URLSearchParams({ catalog_version: "evidence-v3", focus, difficulty, rotation: String(challengeV3.rotation) });
-    if (state.predictionId && !isLocalPreview()) query.set("prediction_id", String(state.predictionId));
-    let result;
-    if (isLocalPreview()) {
-      // Preview uses the real public catalog, not invented RAG/model results.
-      const catalog = await api("/challenges?catalog_version=evidence-v3");
-      result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
-    } else result = await api(`/challenge-recommendations?${query}`);
-    if (!isCurrent()) return;
-    if (result.items?.length !== 3 || !result.items.every((item) => item.catalog_version === "evidence-v3")) {
-      throw new Error("새 챌린지 응답을 확인할 수 없습니다. 통합 서버 버전을 확인해 주세요.");
-    }
-    Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
-    state.challengeRecommendations = result.items;
-    state.challengeCatalog = result.items;
-    state.selectedChallengeIds = new Set(result.items.map((item) => Number(item.challenge_id)));
-    state.customChallengeSelected = false;
-    state.activeChallengeCategory = null;
-    closeRagChallengeGenerator();
-    $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
-    state.openFollowUpActionIds = [];
-    $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-    if (result.medical_guidance_required_first) {
-      $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
-      const actions = await api("/follow-up-actions");
-      if (!isCurrent()) return;
-      state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
-      $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-    }
-    state.challengeListStatus = "ready";
-    renderChallengeChoices();
-  } catch (error) {
-    if (!isCurrent()) return;
-    state.challengeListStatus = "failed";
-    $("#challenge-v3-focus").value = challengeV3.focus;
-    $("#challenge-v3-difficulty").value = challengeV3.difficulty;
-    $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
-    $("#retry-challenges").hidden = false;
-    showMessage(error.message);
-  } finally {
-    if (challengeV3.request === request) {
-      challengeV3.busy = false;
-      controls.forEach((control) => { control.disabled = false; });
-      updateChallengeStartState();
-      if (!isCurrent() || !challengeV3.active) $("#start-challenge").disabled = true;
-    }
-  }
-}
-
-function previewV3Recommendations(items, focus, difficulty, rotation) {
-  const levels = ["easy", "moderate", "advanced"];
-  const index = levels.indexOf(difficulty);
-  const diet = levels[Math.max(0, index - Number(focus === "activity"))];
-  const exercise = levels[Math.max(0, index - Number(focus === "diet"))];
-  const codes = ["v3_hydration_choice", `v3_wholegrain_${diet}`, `v3_${["walk", "indoor_aerobic"][Math.floor(rotation / 2) % 2]}_${exercise}`];
-  return { items: codes.map((code) => items.find((item) => item.code === code)).filter(Boolean),
-    medical_guidance_required_first: false, photo_review_available: false,
-    policy: { notice: "3영역을 유지하고 선호하지 않은 영역은 한 단계 가볍게 제안합니다." } };
-}
-
-async function loadLegacyChallenges() {
   const challengeList = $("#challenge-list");
   const startButton = $("#start-challenge");
-  showChallengeSelectionView();
-  state.challengeListStatus = "loading";
-  state.challengeStartSafetyBlocked = false;
   $("#retry-challenges").hidden = true;
-  $("#challenge-follow-up").hidden = true;
   challengeList.innerHTML = '<p class="empty-state" role="status">챌린지 목록을 불러오고 있어요.</p>';
   startButton.disabled = true;
-  updateChallengeStartState();
   const query = state.predictionId ? `?prediction_id=${state.predictionId}` : "";
   let result;
   let catalogResult;
@@ -2918,10 +2709,8 @@ async function loadLegacyChallenges() {
         api("/challenges"),
       ]);
     } catch (error) {
-      state.challengeListStatus = "failed";
       challengeList.innerHTML = '<p class="empty-state">챌린지 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>';
       $("#retry-challenges").hidden = false;
-      updateChallengeStartState();
       showMessage(error.message);
       return;
     }
@@ -2932,7 +2721,6 @@ async function loadLegacyChallenges() {
   state.challengeCatalog = catalogResult?.items || items;
   state.selectedChallengeIds = new Set();
   state.activeChallengeCategory = null;
-  state.challengeListStatus = "ready";
   closeRagChallengeGenerator();
   const followUpPanel = $("#challenge-follow-up");
   state.openFollowUpActionIds = [];
@@ -2947,11 +2735,9 @@ async function loadLegacyChallenges() {
         ? "이전에 입력한 긴급 증상 안내를 확인한 뒤 챌린지를 시작해 주세요."
         : "이전 의료기관 안내를 확인한 뒤 챌린지를 시작해 주세요.";
       $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-      state.challengeStartSafetyBlocked = !state.openFollowUpActionIds.length;
     } catch (error) {
       $("#challenge-follow-up-message").textContent = error.message;
       $("#acknowledge-challenge-follow-up").hidden = true;
-      state.challengeStartSafetyBlocked = true;
     }
     followUpPanel.hidden = false;
     startButton.disabled = true;
@@ -2961,66 +2747,8 @@ async function loadLegacyChallenges() {
     return;
   }
   renderChallengeChoices();
-  updateChallengeStartState();
+  if (!result.medical_guidance_required_first) startButton.disabled = false;
   syncWalkingLevelPicker();
-}
-
-function hasCurrentChallengeCycle(cycle = state.cycle) {
-  return Boolean(cycle?.user_challenges?.length)
-    && !["completed", "cancelled"].includes(cycle?.status);
-}
-
-function isServerChallengeId(id) {
-  const value = Number(id);
-  return Number.isInteger(value) && value > 0 && String(id).trim() === String(value);
-}
-
-function clearCurrentChallengeCycle() {
-  state.cycle = null;
-  state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
-  state.dailyRecordsStatus = "ready";
-  const barrierSelect = $("#barrier-challenge");
-  if (barrierSelect) barrierSelect.innerHTML = "";
-  renderDailyRecordList();
-  renderTodayTaskStatus();
-}
-
-function showChallengeSelectionView() {
-  $("#challenge-form").hidden = false;
-  $("#challenge-safety-copy").hidden = false;
-  $("#challenge-lifestyle-summary").hidden = false;
-  $("#challenge-title").textContent = "오늘부터 실천할 수 있는 생활습관을 골라보세요";
-}
-
-async function openChallengeTab({ selectionCompleted = false } = {}) {
-  const token = state.token;
-  if (!hasCurrentChallengeCycle(state.cycle) && !isLocalPreview() && !requireActiveHealthConsent("새 챌린지 시작")) return;
-  let cycle = state.cycle;
-  if (!hasCurrentChallengeCycle(cycle) && !isLocalPreview()) {
-    try {
-      cycle = await api("/challenge-cycles/current");
-      if (state.token !== token) return;
-      renderCycle(cycle);
-    } catch (error) {
-      if (state.token !== token) return;
-      if (error.status !== 404 && !error.message.includes("진행 중인 챌린지가 없습니다")) throw error;
-      cycle = null;
-      clearCurrentChallengeCycle();
-    }
-  }
-  if (hasCurrentChallengeCycle(cycle)) {
-    showWorkspace("challenge", { moveFocus: false });
-    showStep(8);
-    await loadDailyRecords();
-    if (state.token !== token) return;
-    if (selectionCompleted) showMessage("챌린지 선택이 완료되었습니다.", "success");
-    return;
-  }
-  showChallengeSelectionView();
-  await loadChallenges();
-  if (state.token !== token) return;
-  showStep(7);
 }
 
 function customChallengeSlot() {
@@ -3180,25 +2908,6 @@ async function generateRagChallengeDraft() {
 }
 
 function renderChallengeChoices() {
-  if (challengeV3.active) {
-    const labels = { hydration: "음료 선택", fiber_diet: "식이섬유 중심 식사", aerobic_activity: "유산소 활동" };
-    const images = { hydration: "water", fiber_diet: "meal", aerobic_activity: "walking" };
-    $("#challenge-list").innerHTML = state.challengeRecommendations.map((item) => {
-      const url = safeExternalUrl(item.source?.url);
-      return `<article class="challenge-v3-card" data-v3-domain="${escapeHtml(item.domain)}">
-        <img src="/static/assets/hyeoldangi-challenge-${images[item.domain]}.png" alt="">
-        <p class="eyebrow">${labels[item.domain]} · ${item.always_include ? "항상 포함 / 공통 목표" : challengeLevelLabel(item.difficulty)}</p>
-        <h4>${escapeHtml(item.title)}</h4><strong>${escapeHtml(item.daily_goal)}</strong>
-        <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${challengeProofLabel(item.verification_type)}</span>
-        <p class="challenge-v3-safety">${escapeHtml(item.safety)}</p>
-        <details><summary>근거와 인증 범위</summary><p>${escapeHtml(item.verification_scope)}</p><p>${escapeHtml(item.goal_basis)}</p>${item.weekly_guidance ? `<p>${escapeHtml(item.weekly_guidance)}</p>` : ""}${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.source.title)}</a>` : ""}</details>
-      </article>`;
-    }).join("");
-    $("#challenge-category-panel").hidden = true;
-    $("#walking-level-picker").hidden = true;
-    updateChallengeSelectionCount();
-    return;
-  }
   const challengeList = $("#challenge-list");
   const emptyMessage = state.challengeCatalog.length ? "" : '<p class="empty-state">현재 선택할 수 있는 챌린지가 없습니다. 맞춤 챌린지 후보를 생성해 선택할 수 있어요.</p>';
   challengeList.innerHTML = emptyMessage + Object.entries(challengeCategories).map(([key, category]) => {
@@ -3212,7 +2921,6 @@ function renderChallengeChoices() {
 }
 
 function syncWalkingLevelPicker() {
-  if (challengeV3.active) { $("#walking-level-picker").hidden = true; return; }
   const walkingSelected = state.challengeCatalog.some((item) => state.selectedChallengeIds.has(Number(item.challenge_id)) && item.title.includes("걷"));
   $("#walking-level-picker").hidden = state.activeChallengeCategory !== "activity" || !walkingSelected;
 }
@@ -3238,99 +2946,38 @@ function renderChallengeDetails() {
 function updateChallengeSelectionCount() {
   const count = state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0);
   $("#challenge-selection-count").textContent = `${count}/3 선택`;
-  updateChallengeStartState();
-}
-
-function updateChallengeStartState() {
-  const button = $("#start-challenge");
-  const reason = $("#challenge-start-reason");
-  if (!button || !reason || $("#challenge-form").hidden) return;
-  const count = state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0);
-  const followUpVisible = !$("#challenge-follow-up").hidden;
-  let message = "선택한 챌린지로 4주 실천을 시작할 수 있어요.";
-  let blocked = false;
-  if (challengeV3.busy || state.challengeListStatus === "loading") {
-    blocked = true;
-    message = "챌린지 목록을 불러온 뒤 선택할 수 있어요.";
-  } else if (state.challengeListStatus === "failed") {
-    blocked = true;
-    message = "챌린지 목록을 다시 불러와 주세요.";
-  } else if (challengeV3.active && (challengeV3.owner !== state.token || count !== 3)) {
-    blocked = true;
-    message = "음료·식단·운동 후보 3개를 다시 불러와 주세요.";
-  } else if (state.challengeStartSafetyBlocked) {
-    blocked = true;
-    message = "현재 안전 확인 결과에서는 챌린지를 시작할 수 없습니다.";
-  } else if (followUpVisible) {
-    blocked = true;
-    message = "의료기관 안내를 먼저 확인해 주세요.";
-  } else if (!state.challengeCatalog.length && !state.customChallenge) {
-    blocked = true;
-    message = "현재 선택할 수 있는 챌린지가 없습니다.";
-  } else if (count === 0) {
-    blocked = true;
-    message = "세부 챌린지를 하나 이상 선택해 주세요.";
-  } else if (state.customChallengeSelected) {
-    blocked = true;
-    message = "맞춤 챌린지는 저장 API가 연결된 뒤 시작할 수 있어요.";
-  }
-  button.disabled = blocked;
-  reason.textContent = message;
-  reason.dataset.state = blocked ? "blocked" : "ready";
 }
 function renderCycle(cycle) {
-  const userChallenges = Array.isArray(cycle?.user_challenges) ? cycle.user_challenges : [];
-  state.cycle = { ...cycle, user_challenges: userChallenges };
+  state.cycle = cycle;
   state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
   state.dailyRecordsStatus = isLocalPreview() ? "ready" : "loading";
   $("#dashboard-cycle").textContent = `${cycle.cycle_number}회차 · 4주`;
   renderDailyRecordList();
   renderTodayTaskStatus();
-  $("#barrier-challenge").innerHTML = userChallenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
+  $("#barrier-challenge").innerHTML = cycle.user_challenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
 }
 
 async function loadDailyRecords() {
   const cycle = state.cycle;
-  if (!hasCurrentChallengeCycle(cycle) || isLocalPreview()) return;
-  const challenges = cycle.user_challenges || [];
-  if (challenges.some((item) => !isServerChallengeId(item.user_challenge_id))) {
-    clearCurrentChallengeCycle();
-    return;
-  }
+  if (!cycle || isLocalPreview()) return;
   const token = state.token;
   const request = (state.dailyRecordsRequest || 0) + 1;
   state.dailyRecordsRequest = request;
-  const today = challengeDay();
+  const today = new Date().toISOString().slice(0, 10);
   const isCurrent = () => state.cycle === cycle && state.token === token && state.dailyRecordsRequest === request;
   state.dailyRecordsStatus = "loading";
   renderDailyRecordList();
   renderTodayTaskStatus();
   try {
-    const responses = await Promise.allSettled(challenges.map(async (item) => {
+    const results = await Promise.all(cycle.user_challenges.map(async (item) => {
       const result = await api(`/user-challenges/${item.user_challenge_id}/logs?start_date=${today}&end_date=${today}`);
       if (!Array.isArray(result.items)) throw new Error("Invalid daily record response");
       return result.items.some((log) => log.log_date === today && log.is_completed === true)
         ? String(item.user_challenge_id) : null;
     }));
     if (!isCurrent()) return;
-    const completed = [];
-    const failures = [];
-    responses.forEach((response, index) => {
-      const id = String(challenges[index].user_challenge_id);
-      if (response.status === "fulfilled") {
-        if (response.value !== null) completed.push(response.value);
-      } else {
-        failures.push(id);
-      }
-    });
-    if (failures.length === responses.length) {
-      state.dailyRecordsStatus = "error";
-    } else {
-      state.dailyCompleted = new Set(completed);
-      state.dailyRecordFailures = new Set(failures);
-      state.dailyRecordsStatus = "ready";
-    }
+    state.dailyCompleted = new Set(results.filter((id) => id !== null));
+    state.dailyRecordsStatus = "ready";
   } catch {
     if (!isCurrent()) return;
     // A failed read is not evidence that the user has no completed records.
@@ -3341,18 +2988,11 @@ async function loadDailyRecords() {
 }
 
 function renderDailyRecordList() {
-  if (typeof window !== "undefined") window.lifestyleMapView?.refresh();
   const list = $("#daily-log-list");
   if (!list) return;
-  const challenges = hasCurrentChallengeCycle() ? state.cycle.user_challenges : [];
-  $("#daily-record-title").hidden = !challenges.length;
-  $("#barrier-form").closest("section").hidden = !challenges.length;
-  if (state.activeWorkspace === "challenge") {
-    $("#dashboard-lead").textContent = challenges.length
-      ? workspaceHeroCopy.challenge.lead : "실천할 챌린지를 선택하면 오늘의 기록을 남길 수 있어요.";
-  }
+  const challenges = state.cycle?.user_challenges || [];
   if (!challenges.length) {
-    list.innerHTML = `<article class="daily-record-empty daily-record-empty-selection"><strong>기록할 챌린지가 없습니다</strong><p>챌린지를 선택하고 오늘의 실천을 시작해 보세요.</p><button type="button" class="primary daily-record-select">챌린지 선택하러 가기</button></article>`;
+    list.innerHTML = `<article class="daily-record-empty"><strong>기록할 챌린지가 없습니다.</strong><p>먼저 챌린지를 선택해 주세요.</p></article>`;
     return;
   }
   if (["loading", "error"].includes(state.dailyRecordsStatus)) {
@@ -3364,29 +3004,21 @@ function renderDailyRecordList() {
     const id = String(item.user_challenge_id);
     const type = challengeRecordType(item);
     const done = state.dailyCompleted.has(id);
-    const failed = state.dailyRecordFailures?.has(id);
     const presentation = type === "simple" ? simpleRecordPresentation(item) : null;
     const icon = habitRecordIcon(type === "photo" ? "photo" : presentation.kind);
-    const v3 = item.catalog_version === "evidence-v3";
-    const recordHint = v3 ? `${item.daily_goal} · ${item.verification_scope}`
-      : type === "photo" ? "식사 사진을 올리거나 간편 체크로 기록해요." : "사진 없이 간편 체크로 바로 기록해요.";
-    return `<button class="daily-record-card daily-record-open ${done ? "done" : ""} ${failed ? "record-load-failed" : ""}" type="button" data-user-challenge-id="${escapeHtml(id)}" data-record-type="${type}" aria-label="${escapeHtml(item.title)} · ${done ? "오늘 기록 확인" : "기록하기"}" aria-haspopup="dialog">
+    return `<article class="daily-record-card ${done ? "done" : ""}" data-user-challenge-id="${escapeHtml(id)}" data-record-type="${type}">
       <span class="daily-record-icon" aria-hidden="true"><b>${done ? "✓" : icon}</b></span>
-      <span class="daily-record-copy">
+      <div>
         <strong>${escapeHtml(item.title)}</strong>
-        <small>${failed ? "이 항목의 기록 상태를 확인하지 못했어요." : done ? "오늘 실천을 기록했어요." : escapeHtml(recordHint)}</small>
-        ${failed ? '<em class="record-type-badge record-error-badge">상태 확인 필요</em>' : ""}
-        ${done ? '<em class="record-type-badge">오늘 기록 완료</em>' : ""}
-      </span>
-    </button>`;
+        <small>${done ? "오늘 실천을 기록했어요." : type === "photo" ? "식사 사진을 올리거나 간편 체크로 기록해요." : "사진 없이 간편 체크로 바로 기록해요."}</small>
+        <em class="record-type-badge ${type === "photo" ? "photo" : ""}">${recordTypeLabel(type)}</em>
+      </div>
+      <button class="${done ? "secondary" : "primary"} daily-record-open" type="button" ${done ? "disabled" : ""}>${done ? "완료" : recordActionLabel(type)}</button>
+    </article>`;
   }).join("");
 }
 
 function createLocalDemoCycle(ids, customChallenge = null) {
-  if (challengeV3.active) return {
-    cycle_id: "local-demo-cycle", cycle_number: 1,
-    user_challenges: state.challengeRecommendations.map((item, index) => ({ ...item, user_challenge_id: `local-${index + 1}` })),
-  };
   const selected = [...fallbackChallenges, ...localNotionChallenges].filter((challenge) => ids.includes(challenge.challenge_id));
   if (customChallenge) selected.push({ challenge_id: "custom", title: customChallenge.title });
   return {
@@ -3405,7 +3037,7 @@ function renderTodayTaskStatus() {
   const description = $("#today-task-description");
   const action = $("#today-record-action");
   if (!title || !description || !action) return;
-  const challenges = hasCurrentChallengeCycle() ? state.cycle.user_challenges : [];
+  const challenges = state.cycle?.user_challenges || [];
   if (challenges.length && ["loading", "error"].includes(state.dailyRecordsStatus)) {
     title.textContent = state.dailyRecordsStatus === "error" ? "오늘 기록을 다시 확인해 주세요" : "오늘 기록을 확인하고 있어요";
     description.textContent = "저장된 기록을 불러온 뒤 완료 상태를 표시합니다.";
@@ -3454,7 +3086,6 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
   const count = $("#health-history-count");
   if (!list || !count) return;
   state.healthCheckupHistory = Array.isArray(items) ? items : [];
-  if (typeof window !== "undefined") window.lifestyleMapView?.refresh();
   count.textContent = `${state.healthCheckupHistory.length}건`;
   if (!state.healthCheckupHistory.length) {
     list.innerHTML = '<p class="health-history-empty">저장된 건강정보가 없습니다.</p>';
@@ -3540,36 +3171,20 @@ function localHealthCheckupSnapshot() {
 }
 
 function renderLocalDemoDashboard() {
-  const demoChallenges = state.cycle?.user_challenges || [];
-  const demoCompleted = state.dailyCompleted?.size || 0;
-  const demoPlanned = demoChallenges.length;
-  const demoRate = demoPlanned ? Math.round((demoCompleted / demoPlanned) * 1000) / 10 : null;
   $("#dashboard-stage").textContent = state.prediction ? getRiskCategoryLabel(state.prediction) : "최근 결과 없음";
   $("#dashboard-notice").textContent = "결과는 진단이나 치료 판단을 대신하지 않습니다.";
-  $("#dashboard-complete").textContent = `${demoCompleted}개`;
+  $("#dashboard-complete").textContent = `${state.dailyCompleted?.size || 0}개`;
   $("#report-week-period").textContent = "로컬 화면 확인";
-  $("#report-week-streak").textContent = demoCompleted
-    ? `오늘 ${demoCompleted}개를 기록했어요`
+  $("#report-week-streak").textContent = state.dailyCompleted.size
+    ? `오늘 ${state.dailyCompleted.size}개를 기록했어요`
     : "아직 이번 주 기록이 없어요";
-  setWeeklyReportSummary({ completed: demoCompleted, planned: demoPlanned, rate: demoRate }, "로컬 화면 확인용");
-  renderWeeklyReportInsights(demoCompleted ? {
-    best_habit: { title: demoChallenges.find((item) => state.dailyCompleted.has(String(item.user_challenge_id)))?.title || demoChallenges[0]?.title, completion_rate: demoRate },
-    barrier_summary: {},
-    next_adjustment: { message: "오늘 기록한 작은 실천을 내일도 이어가 보세요." },
-  } : null, demoCompleted ? "ready" : "empty");
   renderTodayTaskStatus();
   $("#report-week-days").hidden = true;
-  const demoReport = {
-    period: { start_date: shiftReportDate(reportDateKey(), -3), end_date: reportDateKey() },
-    cycle: { start_date: shiftReportDate(reportDateKey(), -3) },
-  };
-  renderWeeklyChallengeProgress(demoChallenges.map((item) => ({
+  renderWeeklyChallengeProgress((state.cycle?.user_challenges || []).map((item) => ({
     title: item.title,
     completed: state.dailyCompleted.has(String(item.user_challenge_id)) ? 1 : 0,
     planned: 1,
-    daily_records: [{ log_date: reportDateKey(), is_completed: state.dailyCompleted.has(String(item.user_challenge_id)) ? true : null }],
-    detail_status: "ready",
-  })), demoReport);
+  })));
   const education = localEducationContents();
   state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
   renderEducationList();
@@ -3583,53 +3198,20 @@ function updateDailyRecordSummary() {
   // Today's completion must not replace the server's multi-day report totals.
 }
 async function completeDailyRecord(target, source = "self_report") {
-  if (!target?.id || target.completed || state.dailyCompleted.has(String(target.id))) return;
-  const token = state.token;
-  const cycle = state.cycle;
-  if (target.item?.catalog_version === "evidence-v3" && target.item.verification_type !== 3) throw new Error("사진 제출 절차로 완료해 주세요.");
-  const today = challengeDay();
+  if (!target?.id) return;
+  const today = new Date().toISOString().slice(0, 10);
   if (!isLocalPreview()) {
     await api(`/user-challenges/${target.id}/logs/${today}`, {
       method: "PUT",
-      body: JSON.stringify({ is_completed: true, source, note: null, ...(target.item?.catalog_version === "evidence-v3" ? { value: 1 } : {}) }),
+      body: JSON.stringify({ is_completed: true, source, note: null }),
     });
   }
-  if (state.token !== token || state.cycle !== cycle) return;
   state.dailyCompleted.add(String(target.id));
   renderDailyRecordList();
   updateDailyRecordSummary();
-  if (!isLocalPreview()) void loadWeeklyReport().catch(() => {});
-  showMessage(target.item?.domain === "hydration" ? "음료 선택 실천을 기록했어요. 당근에 물을 주었습니다! (게임 응원 문구)" : "오늘 기록을 저장했습니다.", "success");
+  if (!isLocalPreview()) await loadWeeklyReport();
+  showMessage("오늘 기록을 저장했습니다.", "success");
 }
-async function undoDailyRecord(target) {
-  if (!target?.id || target.undoPending || !state.dailyCompleted.has(String(target.id))) return false;
-  const token = state.token;
-  const cycle = state.cycle;
-  const today = challengeDay();
-  target.undoPending = true;
-  try {
-    if (!isLocalPreview()) {
-      await api(`/user-challenges/${target.id}/logs/${today}`, {
-        method: "PUT",
-        body: JSON.stringify({ is_completed: false, value: null, source: "self_report", note: null }),
-      });
-    }
-    if (state.token !== token || state.cycle !== cycle) return false;
-    if (challengeDay() !== today) {
-      await loadDailyRecords();
-      return true;
-    }
-    state.dailyCompleted.delete(String(target.id));
-    target.completed = false;
-    target.saved = false;
-    renderDailyRecordList();
-    updateDailyRecordSummary();
-    if (!isLocalPreview()) void loadWeeklyReport().catch(() => {});
-    showMessage("오늘 기록을 취소했어요. 카드를 눌러 다시 기록할 수 있어요.", "success");
-    return true;
-  } finally { target.undoPending = false; }
-}
-
 function closeRecordModal() {
   $("#record-modal").hidden = true;
   $("#record-simple-panel").hidden = false;
@@ -3638,31 +3220,21 @@ function closeRecordModal() {
   resetPhotoRecordModal();
 }
 function openSimpleRecordModal(item) {
-  const completed = state.dailyCompleted.has(String(item.user_challenge_id));
-  state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "simple", completed, item };
+  state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "simple" };
   const presentation = simpleRecordPresentation(item);
   const visual = $("#record-simple-visual");
   visual.dataset.kind = presentation.kind;
-  visual.classList.toggle("completed", completed);
-  $("#record-simple-icon").innerHTML = habitRecordIcon(challengeRecordType(item) === "photo" ? "photo" : presentation.kind);
-  $("#record-modal").setAttribute("aria-labelledby", "record-modal-title");
-  $("#record-modal-title").textContent = completed ? `${item.title}, 오늘 기록했어요` : presentation.title;
-  $("#record-simple-description").textContent = completed ? "오늘의 실천이 저장되어 있어요. 잘못 기록했다면 취소할 수 있어요." : presentation.description;
-  $("#confirm-simple-record").textContent = completed ? "확인" : presentation.action;
-  $("#record-simple-panel .record-cancel").hidden = completed;
-  $("#undo-daily-record").hidden = !completed;
-  $("#undo-daily-record").disabled = false;
-  $("#undo-daily-record").textContent = "오늘 기록 취소하기";
-  $("#record-action-error").hidden = true;
+  visual.classList.remove("completed");
+  $("#record-simple-icon").innerHTML = habitRecordIcon(presentation.kind);
+  $("#record-modal-title").textContent = presentation.title;
+  $("#record-simple-description").textContent = presentation.description;
+  $("#confirm-simple-record").textContent = presentation.action;
   $("#confirm-simple-record").disabled = false;
   $("#record-simple-panel").hidden = false;
   $("#record-photo-panel").hidden = true;
   $("#record-modal").hidden = false;
-  $("#confirm-simple-record").focus({ preventScroll: true });
 }
 function showPhotoRecordState(stateId) {
-  const titles = { "photo-state-upload": "v3-photo-heading", "photo-state-analyzing": "photo-analyzing-title", "photo-state-fail": "photo-fail-title", "photo-state-success": "photo-success-title" };
-  $("#record-modal").setAttribute("aria-labelledby", titles[stateId]);
   ["photo-state-upload", "photo-state-analyzing", "photo-state-fail", "photo-state-success"].forEach((id) => {
     $(`#${id}`).hidden = id !== stateId;
   });
@@ -3675,23 +3247,8 @@ function resetPhotoRecordModal() {
   $("#photo-success-title").textContent = "확인됐어요!";
 }
 function openPhotoRecordModal(item) {
-  if (state.dailyCompleted.has(String(item.user_challenge_id))) {
-    openSimpleRecordModal(item);
-    return;
-  }
-  state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "photo", item };
+  state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "photo" };
   resetPhotoRecordModal();
-  const v3 = item.catalog_version === "evidence-v3";
-  $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
-  $("#v3-photo-fields").hidden = !v3;
-  $("#v3-photo-file").value = "";
-  $("#v3-photo-value").value = "";
-  $("#confirm-photo-record").disabled = false;
-  $("#confirm-photo-record").textContent = v3 ? "사진과 실천량 제출하기" : "사진으로 인증하기";
-  $("#v3-photo-heading").textContent = v3 ? item.title : "식사 사진을 올려주세요";
-  $("#v3-photo-scope").textContent = v3 ? item.verification_scope : "사진 또는 간편 체크로 기록해요.";
-  $("#v3-photo-value-label").textContent = v3 ? `${item.goal.target_minutes ? "실제 활동 시간(분)" : "실제 실천한 끼니 수"} · 목표 ${item.goal.target_minutes || item.goal.target_count}` : "실천량";
-  $$(".record-fallback").forEach((button) => { button.hidden = v3; });
   $("#record-simple-panel").hidden = true;
   $("#record-photo-panel").hidden = false;
   $("#record-modal").hidden = false;
@@ -3710,155 +3267,21 @@ function simulatePhotoAnalysis() {
     showPhotoRecordState("photo-state-fail");
   }, 750);
 }
-
-async function submitV3Photo() {
-  const target = state.recordTarget;
-  if (target?.item?.catalog_version !== "evidence-v3" || target.submitting || target.saved) return;
-  if (isLocalPreview()) return showMessage("화면 미리보기에서는 사진 인증을 완료하지 않습니다. 실제 계정으로 로그인해 주세요.");
-  const file = $("#v3-photo-file").files[0];
-  const valueText = $("#v3-photo-value").value;
-  const value = Number(valueText);
-  const goal = target.item.goal.target_minutes || target.item.goal.target_count;
-  if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
-  if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
-  const token = state.token;
-  const cycleId = state.cycle?.cycle_id;
-  target.submitting = true;
-  const releaseBusy = setButtonBusy($("#confirm-photo-record"), "사진 제출 중…");
-  showPhotoRecordState("photo-state-analyzing");
-  try {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("verification_date", challengeDay());
-    form.append("actual_value", String(value));
-    const result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
-    if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
-    if (result.challenge_completed !== true || result.review_status !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
-    state.dailyCompleted.add(target.id);
-    target.saved = true;
-    renderDailyRecordList(); updateDailyRecordSummary();
-    if (state.recordTarget === target) {
-      $("#photo-success-title").textContent = target.item.verification_type === 1 ? "채소 사진 확인 · 기록 저장 완료" : "사진 제출 · 기록 저장 완료";
-      showPhotoRecordState("photo-state-success");
-    }
-    showMessage(result.notice, "success");
-    void loadWeeklyReport().catch(() => {});
-  } catch (error) {
-    if (state.recordTarget !== target || state.token !== token || state.cycle?.cycle_id !== cycleId) return;
-    $("#photo-fail-hint").textContent = error.message;
-    showPhotoRecordState("photo-state-fail");
-  } finally { target.submitting = false; releaseBusy(); }
-}
-const reportDayState = {
-  completed: { label: "완료", mark: "✓" },
-  not_completed: { label: "미실천", mark: "×" },
-  unrecorded: { label: "미기록", mark: "○" },
-  pending: { label: "진행 중", mark: "진행" },
-  future: { label: "예정", mark: "예정" },
-  unavailable: { label: "기록 확인 중", mark: "확인" },
-};
-
-function reportDateKey(value = new Date()) {
-  const date = value instanceof Date ? value : new Date(`${value}T12:00:00`);
-  if (!Number.isFinite(date.getTime())) return "";
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function shiftReportDate(value, days) {
-  const date = new Date(`${value}T12:00:00`);
-  if (!Number.isFinite(date.getTime())) return "";
-  date.setDate(date.getDate() + days);
-  return reportDateKey(date);
-}
-
-function reportWeekBounds(report = {}) {
-  const asOfDate = report.period?.effective_end_date || report.period?.end_date || reportDateKey();
-  const cycleStart = report.cycle?.start_date || state.cycle?.start_date || report.period?.start_date || asOfDate;
-  const start = new Date(`${cycleStart}T12:00:00`);
-  const asOf = new Date(`${asOfDate}T12:00:00`);
-  const elapsedDays = Number.isFinite(start.getTime()) && Number.isFinite(asOf.getTime())
-    ? Math.max(0, Math.floor((asOf - start) / 86400000)) : 0;
-  const weekStart = shiftReportDate(cycleStart, Math.floor(elapsedDays / 7) * 7);
-  return { start: weekStart, end: shiftReportDate(weekStart, 6), asOf: asOfDate };
-}
-
-function normalizeReportDay(record = {}) {
-  const date = record.start_date || record.log_date || record.date;
-  let status = record.status;
-  if (!status) status = record.is_completed === true ? "completed" : record.is_completed === false ? "not_completed" : "unrecorded";
-  if (!reportDayState[status]) status = "unrecorded";
-  return { date, status };
-}
-
-function reportWeekRecords(item = {}, report = {}) {
-  const source = Array.isArray(item.goal_windows) && item.goal_windows.length
-    ? item.goal_windows : Array.isArray(item.daily_records) ? item.daily_records : [];
-  const byDate = new Map(source.map((record) => [record.start_date || record.log_date || record.date, record]).filter(([date]) => date));
-  const bounds = reportWeekBounds(report);
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = shiftReportDate(bounds.start, index);
-    const original = byDate.get(date);
-    if (original) return normalizeReportDay(original);
-    if (date > bounds.asOf) return { date, status: "future" };
-    if (date === bounds.asOf) return { date, status: "pending" };
-    if (item.detail_status === "error" || item.detail_status === "unavailable") return { date, status: "unavailable" };
-    return { date, status: "unrecorded" };
-  });
-}
-
-function reportDayGrid(item = {}, report = {}) {
-  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-  return `<div class="report-week-grid">${reportWeekRecords(item, report).map((record) => {
-    const date = new Date(`${record.date}T12:00:00`);
-    const weekday = Number.isFinite(date.getTime()) ? weekdays[date.getDay()] : formatReportDate(record.date);
-    const copy = reportDayState[record.status];
-    return `<div class="report-day"><span>${escapeHtml(weekday)}</span><i class="${record.status}" role="img" aria-label="${escapeHtml(`${formatReportDate(record.date)} ${copy.label}`)}">${copy.mark}</i></div>`;
-  }).join("")}</div>`;
-}
-
-function reportLegend() {
-  return `<div class="report-legend" aria-label="기록 상태 범례">
-    ${["completed", "not_completed", "unrecorded", "pending", "future"].map((status) => `<span><i class="${status}" aria-hidden="true">${reportDayState[status].mark}</i>${reportDayState[status].label}</span>`).join("")}
-  </div>`;
-}
-
-async function enrichWeeklyReportDetails(report, owner, cycle) {
-  const items = Array.isArray(report.challenge_details) ? report.challenge_details : [];
-  if (!items.length || !owner || isLocalPreview()) return report;
-  const bounds = reportWeekBounds(report);
-  const enriched = await Promise.all(items.map(async (item) => {
-    if ((Array.isArray(item.goal_windows) && item.goal_windows.length) || Array.isArray(item.daily_records)) return item;
-    if (!item.user_challenge_id) return { ...item, detail_status: "unavailable" };
-    try {
-      const result = await api(`/user-challenges/${item.user_challenge_id}/logs?start_date=${bounds.start}&end_date=${bounds.end}`);
-      if (!Array.isArray(result?.items)) throw new Error("Invalid challenge log response");
-      return { ...item, daily_records: result.items, detail_status: "ready" };
-    } catch {
-      return { ...item, daily_records: [], detail_status: "error" };
-    }
-  }));
-  if (state.token !== owner || state.cycle !== cycle) return report;
-  return { ...report, cycle: { ...(report.cycle || {}), start_date: report.cycle?.start_date || cycle?.start_date }, challenge_details: enriched };
-}
-
-function renderWeeklyChallengeProgress(items = [], report = {}) {
+function renderWeeklyChallengeProgress(items = []) {
   const list = $("#report-week-challenges");
   if (!list) return;
-  list.classList.toggle("has-daily-detail", Boolean(items.length));
   if (!items.length) {
     list.innerHTML = `<article class="report-empty"><strong>첫 기록을 기다리고 있어요</strong><p>오늘 챌린지를 기록하면 이번 주 요약이 여기에 표시됩니다.</p></article>`;
     return;
   }
-  list.innerHTML = `${reportLegend()}${items.map((item) => {
-    const planned = Number(item.planned ?? item.planned_count ?? 7);
-    const completed = Number(item.completed ?? item.completed_count ?? 0);
+  list.innerHTML = items.map((item) => {
+    const planned = Number(item.planned || item.planned_count || 7);
+    const completed = Number(item.completed || item.completed_count || 0);
     const width = Math.max(0, Math.min(100, Math.round((completed / Math.max(1, planned)) * 100)));
     const title = item.title || item.challenge_title || "생활습관";
     const kind = title.includes("걷") ? "walking" : title.includes("식사") ? "meal" : title.includes("마시") || title.includes("물") ? "water" : title.includes("수면") ? "sleep" : title.includes("점검") ? "checkup" : "generic";
     const statusText = completed >= planned ? "이번 목표 완료" : `${planned - completed}회 남았어요`;
-    const detailNotice = item.detail_status === "error" || item.detail_status === "unavailable"
-      ? '<p class="report-detail-notice">일별 기록을 확인하지 못해 날짜별 상태는 ‘확인’으로 표시했어요.</p>' : "";
-    return `<article class="report-progress-item report-progress-detailed ${completed >= planned ? "complete" : ""}">
+    return `<article class="report-progress-item ${completed >= planned ? "complete" : ""}">
       <div class="report-progress-title">
         <span class="report-progress-icon">${habitRecordIcon(kind)}</span>
         <div><strong>${escapeHtml(title)}</strong><small>${statusText}</small></div>
@@ -3867,10 +3290,8 @@ function renderWeeklyChallengeProgress(items = [], report = {}) {
         <div class="report-progress-bar" aria-label="${escapeHtml(title)} ${width}% 완료"><i style="width:${width}%"></i></div>
         <b>${completed}/${planned}</b>
       </div>
-      ${reportDayGrid(item, report)}
-      ${detailNotice}
     </article>`;
-  }).join("")}<p class="report-card-note">챌린지를 시작한 요일부터 7일을 표시해요. 오늘은 ‘진행 중’, 앞으로의 날짜는 ‘예정’으로 구분합니다.</p>`;
+  }).join("");
 }
 
 function formatReportDate(value) {
@@ -3880,254 +3301,32 @@ function formatReportDate(value) {
   return `${month}/${day}`;
 }
 
-function setWeeklyReportSummary(completion = null, statusText = "기록 확인 중") {
-  const completed = Number(completion?.completed);
-  const planned = Number(completion?.planned);
-  const rate = Number(completion?.rate);
-  $("#report-week-completed").textContent = Number.isFinite(completed) ? `${completed}회` : "—";
-  $("#report-week-planned").textContent = Number.isFinite(planned) ? `${planned}회` : "—";
-  $("#report-week-rate").textContent = Number.isFinite(rate) ? `${rate}%` : "—";
-  $$("#report-week-stats .report-summary-stat span").forEach((node, index) => {
-    node.textContent = index === 2 && Number.isFinite(planned) && planned > 0 ? `완료 ${Number.isFinite(completed) ? completed : 0}/${planned}회` : statusText;
-  });
-}
-
-function reportBarrierLabel(code) {
-  return {
-    no_time: "시간이 없었음",
-    forgot: "잊어버림",
-    physical_discomfort: "몸이 불편했음",
-    goal_too_hard: "목표가 어려웠음",
-    environment: "환경이 적합하지 않았음",
-    other: "기타",
-  }[code] || code;
-}
-
-function renderWeeklyReportInsights(report = null, stateName = "ready") {
-  const root = $("#report-week-insights");
-  if (!root) return;
-  if (stateName !== "ready") {
-    const title = stateName === "error" ? "요약을 불러오지 못했어요" : stateName === "empty" ? "첫 기록을 기다리고 있어요" : "기록을 모으고 있어요";
-    const message = stateName === "error" ? "잠시 후 다시 시도해 주세요." : stateName === "empty" ? "오늘의 실천을 기록하면 돌아보기 내용이 표시돼요." : "저장된 기록을 바탕으로 요약을 준비하고 있어요.";
-    root.innerHTML = `<article class="report-insight-card"><p class="report-overline">이번 주 돌아보기</p><h4>${title}</h4><p>${message}</p></article>`;
-    return;
-  }
-  const best = report?.best_habit;
-  const bestTitle = best?.title || "작은 기록부터 시작해 보세요";
-  const bestRate = Number(best?.completion_rate);
-  const barrierEntries = Object.entries(report?.barrier_summary || {}).filter(([, count]) => Number(count) > 0);
-  const barrierText = barrierEntries.length
-    ? barrierEntries.map(([code, count]) => `${escapeHtml(reportBarrierLabel(code))} · ${Number(count)}번`).join("<br>")
-    : "기록된 어려움이 없어요";
-  const nextMessage = report?.next_adjustment?.message || "현재 목표를 이어가세요.";
-  root.innerHTML = `<article class="report-insight-card">
-    <div class="report-insight-section"><p class="report-overline">잘 이어가고 있어요</p><h4>${escapeHtml(bestTitle)}</h4><p>${Number.isFinite(bestRate) ? `이번 주 완료율 ${bestRate}%를 기록했어요.` : "종료된 목표의 기록을 바탕으로 돌아봤어요."}</p></div>
-    <div class="report-insight-section"><p class="report-overline">어려웠던 순간</p><h4>${barrierText}</h4><p>${barrierEntries.length ? "직접 남긴 이유만 모았어요. 나에게 맞는 시간과 목표를 살펴보세요." : "어려움이 있었다면 다음 기록에 남겨 주세요."}</p></div>
-  </article>
-  <article class="report-insight-card report-next-action"><h4>다음 실천</h4><p>${escapeHtml(nextMessage)}</p><button class="primary" id="report-open-record" type="button">오늘 기록하기</button></article>`;
-  $("#report-open-record")?.addEventListener("click", () => {
-    showWorkspace("home");
-    $("#daily-log-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
-
-function renderWeeklyReportMessage(title, message, retry = false) {
-  $("#report-week-challenges").innerHTML = `<article class="report-empty"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p>${retry ? '<button class="secondary retry-weekly-report" type="button">다시 불러오기</button>' : ""}</article>`;
+function renderWeeklyReportMessage(title, message) {
+  $("#report-week-challenges").innerHTML = `<article class="report-empty"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(message)}</p></article>`;
 }
 
 async function loadWeeklyReport() {
-  const mapOwner = state.token, mapCycle = state.cycle;
-  state.lifestyleReportStatus = "loading";
   $("#report-week-period").textContent = "기간 확인 중";
   $("#report-week-streak").textContent = "이번 주 기록을 불러오고 있어요";
   $("#report-week-days").hidden = true;
-  setWeeklyReportSummary();
-  renderWeeklyReportInsights(null, "loading");
   renderWeeklyReportMessage("기록을 불러오고 있어요", "잠시만 기다려 주세요.");
   try {
     const report = await api("/weekly-reports/current");
-    if (state.token !== mapOwner || state.cycle !== mapCycle) return;
-    const detailedReport = report.status === "empty" ? report : await enrichWeeklyReportDetails(report, mapOwner, mapCycle);
-    if (state.token !== mapOwner || state.cycle !== mapCycle) return;
-    state.lifestyleReport = { owner: mapOwner, cycle: mapCycle, data: detailedReport };
-    state.lifestyleReportStatus = "ready";
-    if (typeof window !== "undefined") window.lifestyleMapView?.refresh();
-    const start = formatReportDate(detailedReport.period?.start_date);
-    const end = formatReportDate(detailedReport.period?.end_date);
+    const start = formatReportDate(report.period?.start_date);
+    const end = formatReportDate(report.period?.end_date);
     $("#report-week-period").textContent = start && end ? `${start}~${end}` : "이번 주";
-    if (detailedReport.status === "empty") {
+    if (report.status === "empty") {
       $("#report-week-streak").textContent = "아직 이번 주 기록이 없어요";
-      setWeeklyReportSummary({ completed: 0, planned: 0 }, "아직 기록 없음");
-      renderWeeklyReportInsights(null, "empty");
-      renderWeeklyReportMessage("첫 기록을 기다리고 있어요", detailedReport.message || "오늘 챌린지를 기록하면 이번 주 요약이 여기에 표시됩니다.");
-      $("#report-disclaimer").textContent = detailedReport.disclaimer || "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.";
+      renderWeeklyReportMessage("첫 기록을 기다리고 있어요", report.message || "오늘 챌린지를 기록하면 이번 주 요약이 여기에 표시됩니다.");
       return;
     }
-    $("#report-week-streak").textContent = detailedReport.record_summary || `${detailedReport.completion?.completed || 0}번 실천했어요`;
-    setWeeklyReportSummary(detailedReport.completion, "이번 주 저장 기록");
-    renderWeeklyReportInsights(detailedReport);
-    renderWeeklyChallengeProgress(detailedReport.challenge_details || [], detailedReport);
-    $("#report-disclaimer").textContent = detailedReport.disclaimer || "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.";
+    $("#report-week-streak").textContent = report.record_summary || `${report.completion?.completed || 0}번 실천했어요`;
+    renderWeeklyChallengeProgress(report.challenge_details || []);
   } catch (error) {
     $("#report-week-period").textContent = "이번 주";
     $("#report-week-streak").textContent = "리포트를 불러오지 못했어요";
-    if (state.token === mapOwner && state.cycle === mapCycle) {
-      state.lifestyleReport = null; state.lifestyleReportStatus = "error";
-      if (typeof window !== "undefined") window.lifestyleMapView?.refresh();
-    }
-    setWeeklyReportSummary(null, "확인 실패");
-    renderWeeklyReportInsights(null, "error");
-    renderWeeklyReportMessage("주간 기록을 확인할 수 없어요", error.message || "잠시 후 다시 시도해 주세요.", true);
+    renderWeeklyReportMessage("주간 기록을 확인할 수 없어요", "잠시 후 다시 시도해 주세요.");
   }
-}
-
-function reportRangeLabel(period, fallback) {
-  const start = formatReportDate(period?.start_date);
-  const end = formatReportDate(period?.end_date);
-  return start && end ? `${start}~${end}` : fallback;
-}
-
-function reportMetric(value, suffix = "") {
-  if (value === null || value === undefined || value === "") return "—";
-  const number = Number(value);
-  return Number.isFinite(number) ? `${number}${suffix}` : "—";
-}
-
-function setExtendedReportSummary(period, summary = null, statusText = "기록 확인 중") {
-  if (period === "four-week") {
-    $("#report-four-week-days").textContent = reportMetric(summary?.practiced_days, "일");
-    $("#report-four-week-completed").textContent = reportMetric(summary?.completed_count, "회");
-    $("#report-four-week-rate").textContent = reportMetric(summary?.completion_rate, "%");
-    $$("#report-four-week-stats .report-summary-stat span").forEach((node) => { node.textContent = statusText; });
-    return;
-  }
-  $("#report-all-days").textContent = reportMetric(summary?.practiced_days, "일");
-  $("#report-all-completed").textContent = reportMetric(summary?.completed_count, "회");
-  $("#report-all-cycles").textContent = reportMetric(summary?.completed_cycles_count, "회차");
-  $$("#report-all-stats .report-summary-stat span").forEach((node) => { node.textContent = statusText; });
-}
-
-function reportFrequencyLabel(value) {
-  return { daily: "매일 목표", weekly: "주간 목표", unconfirmed: "목표 빈도 확인 중" }[value] || "기록";
-}
-
-function renderExtendedChallengeRows(challenges = []) {
-  if (!Array.isArray(challenges) || !challenges.length) return '<p class="report-muted-copy">표시할 챌린지 기록이 없습니다.</p>';
-  return challenges.map((item) => {
-    const rate = Number(item.completion_rate);
-    const evaluable = item.frequency !== "unconfirmed" && Number.isFinite(rate);
-    const detail = evaluable
-      ? `완료 ${Number(item.evaluated_completed_count || 0)}/${Number(item.evaluated_target_count || 0)}회 · 달성률 ${rate}%`
-      : `저장된 기록 ${Number(item.record_count || 0)}회 · 목표 달성률은 표시하지 않음`;
-    return `<article class="report-history-row"><div><strong>${escapeHtml(item.title || "생활습관 챌린지")}</strong><small>${escapeHtml(reportFrequencyLabel(item.frequency))}</small></div><p>${escapeHtml(detail)}</p></article>`;
-  }).join("");
-}
-
-function renderFourWeekReport(report) {
-  $("#report-four-week-period").textContent = reportRangeLabel(report.period, "지난 4주");
-  $("#report-four-week-status").textContent = report.period?.is_partial ? "진행 기록 포함" : "조회 완료";
-  $("#report-four-week-headline").textContent = report.headline || "지난 4주의 흐름을 한눈에";
-  $("#report-disclaimer").textContent = report.disclaimer || "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.";
-  if (report.status === "empty") {
-    setExtendedReportSummary("four-week", report.summary || {}, "아직 기록 없음");
-    $("#report-four-week-content").innerHTML = '<article class="report-empty report-period-unavailable"><strong>아직 지난 4주 기록이 없어요</strong><p>챌린지를 시작하고 실천을 기록하면 주별 흐름이 표시됩니다.</p></article>';
-    return;
-  }
-  setExtendedReportSummary("four-week", report.summary, "지난 4주 저장 기록");
-  const buckets = Array.isArray(report.trend?.buckets) ? report.trend.buckets : [];
-  const trendRows = buckets.length ? buckets.map((bucket, index) => {
-    const participation = Number(bucket.participation_days || 0);
-    const practiced = Number(bucket.practiced_days || 0);
-    const width = participation > 0 ? Math.min(100, Math.round((practiced / participation) * 100)) : 0;
-    return `<li><div><strong>${index + 1}주차</strong><small>${escapeHtml(reportRangeLabel(bucket, "기간 확인 중"))}</small></div><div class="report-trend-meter"><i style="width:${width}%"></i></div><b>${practiced}/${participation}일</b></li>`;
-  }).join("") : '<li class="report-muted-copy">주별 흐름이 아직 없습니다.</li>';
-  $("#report-four-week-content").innerHTML = `<article class="report-placeholder-card report-trend-card"><h4>최근 4주의 실천 흐름</h4><p>달력상 기간이 아닌, 실제 챌린지 참여일과 실천일을 비교해요.</p><ol class="report-trend-list">${trendRows}</ol></article>
-    <article class="report-placeholder-card"><h4>습관별로 돌아보기</h4><div class="report-history-list">${renderExtendedChallengeRows(report.challenges)}</div></article>`;
-}
-
-function renderCycleRows(cycles = [], { append = false, nextCursor = null } = {}) {
-  const root = $("#report-all-content");
-  if (!root) return;
-  const cards = cycles.map((cycle) => {
-    const titles = (cycle.selected_challenges || []).map((item) => item.title).filter(Boolean).join(" · ") || "선택한 챌린지";
-    const rate = Number(cycle.completion_rate);
-    return `<article class="report-cycle-card">
-      <div class="report-cycle-heading"><div><small>${Number(cycle.cycle_number) ? `${Number(cycle.cycle_number)}회차` : "챌린지 회차"}</small><strong>${escapeHtml(reportRangeLabel(cycle, "기간 확인 중"))}</strong></div><span class="report-period-pill">${escapeHtml(cycle.status === "completed" ? "완료" : "진행 기록")}</span></div>
-      <p>${escapeHtml(titles)}</p>
-      <dl><div><dt>실천한 날</dt><dd>${reportMetric(cycle.practiced_days, "일")}</dd></div><div><dt>완료한 실천</dt><dd>${reportMetric(cycle.completed_count, "회")}</dd></div><div><dt>달성률</dt><dd>${Number.isFinite(rate) ? `${rate}%` : "평가 전"}</dd></div></dl>
-    </article>`;
-  }).join("");
-  if (append) root.querySelector(".report-load-more")?.remove();
-  else root.innerHTML = '<div class="report-cycle-list"></div>';
-  const list = root.querySelector(".report-cycle-list");
-  if (cards) list.insertAdjacentHTML("beforeend", cards);
-  if (nextCursor !== null && nextCursor !== undefined && nextCursor !== "") {
-    root.insertAdjacentHTML("beforeend", `<button class="secondary report-load-more" type="button" data-cursor="${escapeHtml(String(nextCursor))}">이전 회차 더 보기</button>`);
-  }
-}
-
-function renderAllReport(report) {
-  $("#report-all-period").textContent = reportRangeLabel(report.period, "전체 기간");
-  $("#report-all-status").textContent = report.period?.is_partial ? "진행 기록 포함" : "조회 완료";
-  $("#report-all-headline").textContent = report.headline || "나의 챌린지 여정";
-  $("#report-disclaimer").textContent = report.disclaimer || "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.";
-  if (report.status === "empty") {
-    setExtendedReportSummary("all", report.summary || {}, "아직 기록 없음");
-    $("#report-all-content").innerHTML = '<article class="report-empty report-period-unavailable"><strong>아직 시작한 챌린지가 없어요</strong><p>챌린지를 시작하면 회차별 기록이 이곳에 쌓입니다.</p></article>';
-    return;
-  }
-  setExtendedReportSummary("all", report.summary, "전체 저장 기록");
-  const cycles = Array.isArray(report.cycles?.items) ? report.cycles.items : [];
-  if (!cycles.length) {
-    $("#report-all-content").innerHTML = '<article class="report-empty report-period-unavailable"><strong>표시할 회차가 아직 없어요</strong><p>진행 중인 기록은 요약에 포함되며, 완료된 회차부터 목록에 표시됩니다.</p></article>';
-    return;
-  }
-  renderCycleRows(cycles, { nextCursor: report.cycles?.next_cursor });
-}
-
-function renderExtendedReportError(period, error) {
-  const label = period === "four-week" ? "지난 4주" : "전체";
-  const status = $(period === "four-week" ? "#report-four-week-status" : "#report-all-status");
-  const root = $(period === "four-week" ? "#report-four-week-content" : "#report-all-content");
-  status.textContent = "불러오기 실패";
-  setExtendedReportSummary(period, null, "확인 실패");
-  root.innerHTML = `<article class="report-empty report-period-unavailable"><strong>${label} 리포트를 불러오지 못했어요</strong><p>${escapeHtml(error.message || "잠시 후 다시 시도해 주세요.")}</p><button class="secondary retry-period-report" type="button" data-period="${period}">다시 불러오기</button></article>`;
-}
-
-async function loadReportPeriod(period, { force = false } = {}) {
-  if (!["four-week", "all"].includes(period)) return;
-  if (!force && state.reportPeriodStatus[period] === "ready") return;
-  const root = $(period === "four-week" ? "#report-four-week-content" : "#report-all-content");
-  const status = $(period === "four-week" ? "#report-four-week-status" : "#report-all-status");
-  state.reportPeriodStatus[period] = "loading";
-  status.textContent = "불러오는 중";
-  setExtendedReportSummary(period);
-  root.innerHTML = '<article class="report-empty report-period-unavailable"><strong>기록을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>';
-  try {
-    const report = await api(`/reports?period=${encodeURIComponent(period)}`);
-    state.reportPeriods[period] = report;
-    state.reportPeriodStatus[period] = "ready";
-    if (period === "four-week") renderFourWeekReport(report);
-    else renderAllReport(report);
-  } catch (error) {
-    state.reportPeriodStatus[period] = "error";
-    renderExtendedReportError(period, error);
-  }
-}
-
-async function loadMoreReportCycles(cursor) {
-  const report = state.reportPeriods.all;
-  if (!report?.report_id || !cursor) return;
-  const button = $("#report-all-content .report-load-more");
-  const releaseBusy = button ? setButtonBusy(button, "불러오는 중…") : () => {};
-  try {
-    const page = await api(`/reports/${encodeURIComponent(report.report_id)}/cycles?cursor=${encodeURIComponent(cursor)}`);
-    const items = Array.isArray(page?.items) ? page.items : Array.isArray(page?.cycles?.items) ? page.cycles.items : [];
-    const nextCursor = page?.next_cursor ?? page?.cycles?.next_cursor ?? null;
-    renderCycleRows(items, { append: true, nextCursor });
-  } catch (error) {
-    showMessage(error.message || "이전 회차를 불러오지 못했습니다.");
-  } finally { releaseBusy(); }
 }
 function localEducationContents() {
   const source = { title: "CDC PreventT2 Curriculum", url: "https://www.cdc.gov/diabetes-prevention/php/lifestyle-change-resources/t2-curriculum.html" };
@@ -4161,30 +3360,17 @@ function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
     list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
-    window.educationCarouselView?.refresh();
     return;
   }
-  const educationArt = [
-    ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
-    ["hyeoldangi-challenge-meal.png", "#e5ddec"], ["hyeoldangi-cheer.png", "#d4e7ec"],
-  ];
-  list.innerHTML = state.educationContents.map((item, index) => {
+  list.innerHTML = state.educationContents.map((item) => {
     const completed = Boolean(item.completed && item.is_correct !== false);
     const questionCount = educationQuestions(item).length;
-    const [art, color] = educationArt[(Number(item.week_number) - 1 + educationArt.length) % educationArt.length] || educationArt[0];
-    return `<article class="education-overview-card" data-completed="${completed}" data-content-id="${escapeHtml(item.content_id)}" data-week="${escapeHtml(item.week_number)}" style="--education-art:${color}" role="group" aria-roledescription="슬라이드" aria-label="${index + 1} / ${state.educationContents.length} · ${escapeHtml(item.week_number)}주차">
-      <button class="education-card-toggle" type="button" aria-haspopup="dialog" aria-controls="education-learning-flow" aria-label="${escapeHtml(item.week_number)}주차 ${escapeHtml(item.title)} 교육·퀴즈 열기">
-        <span class="education-card-art" aria-hidden="true"><img src="/static/assets/${art}" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">${escapeHtml(item.week_number)}주차</span>
-        <span class="education-card-cover-copy"><strong>${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></span>
-      </button>
-      <div class="education-card-details" id="education-card-details-${index}" hidden>
+    return `<article class="education-overview-card" data-completed="${completed}">
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
       <p>${escapeHtml(item.summary)}</p>
-      <small>건강정보 읽기 · 확인 퀴즈 ${questionCount}문항</small>
       <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
-      </div>
     </article>`;
   }).join("");
-  window.educationCarouselView?.refresh();
 }
 
 function activeEducationContent() {
@@ -4211,8 +3397,7 @@ function openEducationFlow(contentId) {
   $("#education-feedback-card").hidden = true;
   const flow = $("#education-learning-flow");
   flow.hidden = false;
-  if (!flow.open) flow.showModal();
-  document.body.classList.add("education-modal-open");
+  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   $("#education-flow-title").setAttribute("tabindex", "-1");
   $("#education-flow-title").focus({ preventScroll: true });
 }
@@ -4236,13 +3421,15 @@ function renderEducationQuizQuestion() {
 }
 
 function closeEducationFlow() {
-  $("#education-learning-flow").close();
+  $("#education-learning-flow").hidden = true;
+  const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
+  state.activeEducationId = null;
+  button?.focus();
 }
 
 async function loadEducation() {
   const list = $("#education-list");
   list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
-  window.educationCarouselView?.refresh();
   try {
     const contents = isLocalPreview() ? localEducationContents() : await api("/education-contents");
     state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
@@ -4250,7 +3437,6 @@ async function loadEducation() {
   } catch (error) {
     state.educationContents = [];
     list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오지 못했어요</strong><p>잠시 후 다시 시도해 주세요.</p></article>`;
-    window.educationCarouselView?.refresh();
   }
 }
 async function loadConnections() {
@@ -4260,76 +3446,6 @@ async function loadConnections() {
     list.innerHTML = result.items.length ? result.items.map(renderTogetherMember).join("") : renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
   } catch (error) {
     list.innerHTML = renderTogetherEmpty("가족·친구 목록을 불러오지 못했어요.", "잠시 후 함께하기 탭을 다시 확인해 주세요.");
-  }
-}
-
-function invitationStatusLabel(status) {
-  return { pending: "수락 대기", accepted: "수락 완료", expired: "기간 만료", revoked: "취소됨" }[status] || status || "상태 확인 중";
-}
-
-function formatInvitationExpiry(value) {
-  if (!value) return "만료일 확인 필요";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "만료일 확인 필요";
-  return `${date.getMonth() + 1}/${date.getDate()}까지`;
-}
-
-function setInviteDisclosure(panelId, { forceOpen = false, moveFocus = true } = {}) {
-  const target = document.getElementById(panelId);
-  if (!target) return;
-  const shouldOpen = forceOpen || target.hidden;
-  $$("[data-invite-disclosure]").forEach((button) => {
-    const selected = shouldOpen && button.getAttribute("aria-controls") === panelId;
-    button.setAttribute("aria-expanded", String(selected));
-    button.classList.toggle("active", selected);
-  });
-  $$(".forest-invite-detail").forEach((panel) => {
-    panel.hidden = !(shouldOpen && panel.id === panelId);
-  });
-  if (shouldOpen && moveFocus) target.focus({ preventScroll: true });
-}
-
-function closeInviteDisclosure(panelId) {
-  const panel = document.getElementById(panelId);
-  const opener = $(`[data-invite-disclosure][aria-controls="${panelId}"]`);
-  if (panel) panel.hidden = true;
-  if (opener) {
-    opener.setAttribute("aria-expanded", "false");
-    opener.classList.remove("active");
-    opener.focus();
-  }
-}
-
-function renderReceivedInvitations() {
-  const list = $("#received-invitation-list");
-  if (!list) return;
-  const received = Array.isArray(state.invitations?.received) ? state.invitations.received : [];
-  if (!received.length) {
-    list.innerHTML = renderTogetherEmpty("아직 받은 초대가 없습니다.", "새 초대를 받으면 이곳에 표시됩니다.");
-    return;
-  }
-  list.innerHTML = received.map((item) => {
-    const pending = item.status === "pending";
-    return `<article class="received-invitation-item ${pending ? "is-pending" : ""}">
-      <div><strong>${escapeHtml(relationLabel(item.relation_type))} 초대</strong><p>${escapeHtml(formatInvitationExpiry(item.expires_at))} · ${escapeHtml(invitationStatusLabel(item.status))}</p></div>
-      <span class="member-status">${escapeHtml(invitationStatusLabel(item.status))}</span>
-    </article>`;
-  }).join("");
-}
-
-async function loadInvitations() {
-  const list = $("#received-invitation-list");
-  if (!list) return;
-  list.innerHTML = renderTogetherEmpty("초대 목록을 불러오고 있어요", "잠시만 기다려 주세요.");
-  try {
-    const result = isLocalPreview() ? { sent: [], received: [] } : await api("/invitations");
-    state.invitations = {
-      sent: Array.isArray(result?.sent) ? result.sent : [],
-      received: Array.isArray(result?.received) ? result.received : [],
-    };
-    renderReceivedInvitations();
-  } catch (error) {
-    list.innerHTML = `<article class="together-empty"><strong>받은 초대를 불러오지 못했어요.</strong><p>${escapeHtml(error.message || "잠시 후 다시 시도해 주세요.")}</p><button class="secondary retry-invitations" type="button">다시 불러오기</button></article>`;
   }
 }
 
@@ -4366,9 +3482,6 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   $("#open-health-management").setAttribute("aria-expanded", "false");
   state.activeWorkspace = name;
   const heroCopy = workspaceHeroCopy[name] || workspaceHeroCopy.home;
-  const heroContent = $("#dashboard-hero-copy");
-  if (heroContent) heroContent.hidden = name === "tools";
-  $(".dashboard-hero")?.classList.toggle("is-tools", name === "tools");
   $("#dashboard-eyebrow").textContent = heroCopy.eyebrow;
   $("#dashboard-title").textContent = heroCopy.title;
   $("#dashboard-together-mascot").hidden = name !== "together";
@@ -4388,8 +3501,6 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (name === "together") syncForestOverview();
-  if (name === "tools") window.lifestyleMapView?.refresh();
-  if (name === "challenge") renderDailyRecordList();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -4418,16 +3529,21 @@ window.addEventListener("challenge-v2-updated", compactChallengeV2);
 function syncForestOverview() {
   const recordedNode = $("#forest-recorded-members");
   if (!recordedNode) return;
-  recordedNode.textContent = "확인 중";
+  let forestState = null;
+  try {
+    forestState = JSON.parse(localStorage.getItem("gandang-carrot-forest-demo-v1") || "null");
+  } catch {
+    forestState = null;
+  }
+  const members = Array.isArray(forestState?.members) && forestState.members.length ? forestState.members : null;
+  const recordedCount = members ? members.filter((member) => Number(member.completed) > 0).length : 1;
+  recordedNode.textContent = `${recordedCount}명`;
 }
 async function loadSharedGroups() {
   const list = $("#shared-group-list");
   if (!list) return;
   try {
     const result = await api("/shared-challenge-groups");
-    const recordedCount = (result.items || []).flatMap(group => group.members || [])
-      .filter(member => member.status === "active" && Number(member.completed_days || 0) > 0).length;
-    if ($("#forest-recorded-members")) $("#forest-recorded-members").textContent = `${recordedCount}명`;
     list.innerHTML = result.items.length ? result.items.map((group) => {
       const me = group.members.find((member) => member.is_me);
       const partner = group.members.find((member) => !member.is_me && member.status === "active");
@@ -4444,65 +3560,6 @@ async function loadSharedGroups() {
   } catch (error) {
     list.innerHTML = renderTogetherEmpty("공동 챌린지를 불러오지 못했어요.", "잠시 후 함께하기 탭을 다시 확인해 주세요.");
   }
-}
-
-function closeForestEntryDialog() {
-  $("#forest-entry-dialog")?.close();
-  $("#open-forest-game")?.focus();
-}
-
-function renderForestEntryGroups(groups) {
-  const list = $("#forest-entry-list");
-  const enter = $("#enter-forest-game");
-  const eligible = groups.filter(group => group.status === "active"
-    && group.members?.some(member => member.is_me && member.status === "active"));
-  enter.disabled = true;
-  if (!eligible.length) {
-    list.innerHTML = `<article class="together-empty"><strong>입장할 수 있는 공동 챌린지가 없어요</strong><p>함께하기에서 공동 챌린지를 만들거나 받은 초대를 수락한 뒤 다시 시도해 주세요.</p></article>`;
-    return;
-  }
-  list.innerHTML = eligible.map(group => `<label class="forest-entry-option">
-    <input type="radio" name="forest-entry-group" value="${Number(group.group_id)}">
-    <span><strong>${escapeHtml(group.title)}</strong><small>${escapeHtml(group.common_goal || "함께 실천하는 공동 챌린지")} · 참여자 ${group.members.length}명</small></span>
-  </label>`).join("");
-}
-
-async function loadForestEntryGroups() {
-  const list = $("#forest-entry-list");
-  const errorNode = $("#forest-entry-error");
-  list.innerHTML = "<p>참여 중인 그룹을 확인하고 있어요.</p>";
-  errorNode.hidden = true;
-  $("#enter-forest-game").disabled = true;
-  try {
-    const result = await api("/shared-challenge-groups");
-    renderForestEntryGroups(Array.isArray(result?.items) ? result.items : []);
-  } catch (error) {
-    list.innerHTML = "";
-    errorNode.textContent = error.message || "그룹을 불러오지 못했어요. 다시 시도해 주세요.";
-    errorNode.hidden = false;
-    errorNode.focus();
-  }
-}
-
-function openForestEntryDialog() {
-  if (!state.token) {
-    showStep(2);
-    showAuthMode("login", { context: "login" });
-    return;
-  }
-  $("#forest-entry-dialog").showModal();
-  void loadForestEntryGroups();
-}
-
-function storeForestSession(groupId) {
-  sessionStorage.setItem(FOREST_SESSION_STORAGE_KEY, JSON.stringify({
-    version: 1,
-    token: state.token,
-    userId: Number(state.userProfile?.id || state.userProfile?.user_id || 0) || null,
-    groupId,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + FOREST_SESSION_MAX_AGE_MS,
-  }));
 }
 async function loadNotifications() {
   const toggle = $("#notification-toggle");
@@ -4526,7 +3583,20 @@ async function refreshDashboard() {
   $("#dashboard-notice").textContent = summary.disclaimer || "결과와 수행률은 진단이나 치료 효과를 의미하지 않습니다.";
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${Number(progress.recent_7_days?.completed || 0)}개`;
-  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadInvitations(), loadSharedGroups(), loadHealthCheckupHistory()]);
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadHealthCheckupHistory()]);
+}
+
+function setInviteMode(mode) {
+  $$("[data-invite-mode]").forEach((button) => {
+    const selected = button.dataset.inviteMode === mode;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-expanded", String(selected));
+  });
+  $$("[data-invite-panel]").forEach((panel) => {
+    const selected = panel.dataset.invitePanel === mode;
+    panel.hidden = !selected;
+    panel.classList.toggle("active", selected);
+  });
 }
 
 function configureEnvironmentControls() {
@@ -4537,45 +3607,32 @@ function configureEnvironmentControls() {
   const codeNode = $("#forest-invite-code");
   const codeNote = $("#invite-code-note");
   const copyButton = $("#copy-invite-code");
-  const incomingToken = new URLSearchParams(window.location.search).get("invite_token");
-  if (incomingToken && $("#invitation-token")) {
-    $("#invitation-token").value = incomingToken;
-    setInviteDisclosure("received-invite-panel", { forceOpen: true, moveFocus: false });
-  }
   if (!codeNode || !codeNote || !copyButton) return;
 
-  codeNode.textContent = "초대 코드를 먼저 만들어 주세요";
-  codeNode.dataset.copyValue = "";
-  codeNote.textContent = "이메일을 입력해 코드를 만들면 여기에 표시됩니다.";
-  copyButton.disabled = true;
-  copyButton.textContent = "복사";
+  const isDemo = isDemoEnvironment();
+  codeNode.textContent = isDemo ? "DEMO-CODE" : "초대 코드 발급 준비 중";
+  codeNode.dataset.copyValue = isDemo ? "DEMO-CODE" : "";
+  codeNote.textContent = isDemo
+    ? "로컬 화면 확인용 코드입니다. 실제 초대에는 사용할 수 없어요."
+    : "실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요.";
+  copyButton.disabled = !isDemo;
+  copyButton.textContent = isDemo ? "복사" : "준비 중";
 }
 
-function renderInviteCodeResult(result = {}) {
+function renderInviteEmailResult(result = {}) {
   const box = $("#invite-result");
-  const codeNode = $("#forest-invite-code");
-  const codeNote = $("#invite-code-note");
-  const copyButton = $("#copy-invite-code");
-  const inviteCode = typeof result.token === "string" ? result.token.trim() : "";
-  setInviteDisclosure("create-invite-panel", { forceOpen: true, moveFocus: false });
-  if (!codeNode || !codeNote || !copyButton || !inviteCode) {
-    if (box) {
-      box.textContent = "초대 코드를 발급받지 못했습니다. 잠시 후 다시 시도해 주세요.";
-      box.hidden = false;
-    }
-    return;
-  }
-  codeNode.textContent = inviteCode;
-  codeNode.dataset.copyValue = inviteCode;
-  copyButton.disabled = false;
-  copyButton.textContent = "복사";
-  const expiry = formatInvitationExpiry(result.expires_at);
-  codeNote.textContent = `초대받을 분에게 이 코드를 전달해 주세요. ${expiry} 사용할 수 있어요.`;
-  if (box) {
-    box.replaceChildren();
-    box.hidden = true;
-  }
-  codeNode.focus?.();
+  if (!box) return;
+  const content = document.createElement("div");
+  const title = document.createElement("strong");
+  const token = document.createElement("p");
+  const notice = document.createElement("small");
+  title.textContent = "초대 이메일을 보낼 준비가 되었습니다";
+  token.className = "invite-code";
+  token.textContent = result.token || "초대 요청 접수 완료";
+  notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요.";
+  content.append(title, token, notice);
+  box.replaceChildren(content);
+  box.hidden = false;
 }
 
 function setReportPeriod(period) {
@@ -4583,7 +3640,6 @@ function setReportPeriod(period) {
     const selected = button.dataset.reportPeriod === period;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-selected", String(selected));
-    button.setAttribute("tabindex", selected ? "0" : "-1");
   });
   $$("[data-report-panel]").forEach((panel) => {
     const selected = panel.dataset.reportPanel === period;
@@ -4593,8 +3649,6 @@ function setReportPeriod(period) {
   const pdfPeriod = $(`input[name="report-pdf-period"][value="${period}"]`);
   if (pdfPeriod) pdfPeriod.checked = true;
   updateReportPdfAvailability();
-  if (period === "week" && state.lifestyleReportStatus === "error") loadWeeklyReport();
-  if (period === "four-week" || period === "all") loadReportPeriod(period);
 }
 
 function reportPdfUnavailableReason(period) {
@@ -4635,25 +3689,6 @@ function selectedReportPdfPeriod() {
   return $('input[name="report-pdf-period"]:checked')?.value || "week";
 }
 
-function updateReportPdfButtonLabel() {
-  const options = $("#report-pdf-options");
-  const button = $("#download-report");
-  if (!options || !button || options.hidden) return;
-  const period = selectedReportPdfPeriod();
-  button.textContent = `${reportPdfPeriodLabels[period] || "선택한 기간"} PDF로 받기`;
-}
-
-function closeReportPdfOptions({ returnFocus = false } = {}) {
-  const options = $("#report-pdf-options");
-  const button = $("#download-report");
-  if (!options || !button || options.hidden) return;
-  options.hidden = true;
-  button.setAttribute("aria-expanded", "false");
-  button.textContent = "PDF로 받기";
-  updateReportPdfAvailability();
-  if (returnFocus) button.focus();
-}
-
 function revealReportPdfOptions() {
   const options = $("#report-pdf-options");
   const button = $("#download-report");
@@ -4661,7 +3696,7 @@ function revealReportPdfOptions() {
   if (!options.hidden) return true;
   options.hidden = false;
   button.setAttribute("aria-expanded", "true");
-  updateReportPdfButtonLabel();
+  button.textContent = "선택한 기간 PDF 받기";
   updateReportPdfAvailability();
   $('input[name="report-pdf-period"]:checked')?.focus();
   return false;
@@ -4782,7 +3817,7 @@ function moveLandingTo(target) {
   const from = window.scrollY;
   const to = Math.max(0, from + target.getBoundingClientRect().top - $('.topbar').getBoundingClientRect().height);
   const start = performance.now();
-  const duration = 200;
+  const duration = 50;
   document.documentElement.classList.add('landing-transitioning');
   landingWheelUntil = start + duration + 180;
   function frame(now) {
@@ -4895,28 +3930,6 @@ $(".forest-shortcut")?.addEventListener("click", (event) => {
   showStep(2);
   showAuthMode("login", { context: "login" });
 });
-$("#open-forest-game")?.addEventListener("click", (event) => {
-  event.preventDefault();
-  openForestEntryDialog();
-});
-$("#close-forest-entry")?.addEventListener("click", closeForestEntryDialog);
-$("#retry-forest-groups")?.addEventListener("click", () => void loadForestEntryGroups());
-$("#forest-entry-list")?.addEventListener("change", (event) => {
-  if (event.target.name === "forest-entry-group") $("#enter-forest-game").disabled = false;
-});
-$("#enter-forest-game")?.addEventListener("click", () => {
-  const groupId = Number($("input[name='forest-entry-group']:checked")?.value);
-  if (!Number.isInteger(groupId) || groupId <= 0) return;
-  try {
-    storeForestSession(groupId);
-    window.location.assign("/forest");
-  } catch {
-    const errorNode = $("#forest-entry-error");
-    errorNode.textContent = "보안 세션을 만들지 못했어요. 브라우저 저장소 설정을 확인한 뒤 다시 시도해 주세요.";
-    errorNode.hidden = false;
-    errorNode.focus();
-  }
-});
 $$("[data-top-workspace]").forEach((button) => button.addEventListener("click", () => {
   if (!state.token) {
     showStep(2);
@@ -4934,8 +3947,7 @@ $$("[data-top-step]").forEach((button) => button.addEventListener("click", async
   }
   const targetStep = Number(button.dataset.topStep);
   if (targetStep === 7) {
-    try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
-    return;
+    try { await loadChallenges(); } catch (error) { showMessage(error.message); }
   }
   showStep(targetStep);
 }));
@@ -4945,12 +3957,10 @@ $$("[data-onboarding-health]").forEach((button) => button.addEventListener("clic
     showAuthMode("login", { context: "login" });
     return;
   }
-  if (!isLocalPreview() && !requireActiveHealthConsent("건강정보 입력")) return;
   if (state.capabilities.currentHealth || state.step >= 4) showStep(4);
   else showStep(3);
 }));
 $("#profile-edit")?.addEventListener("click", openProfileEditor);
-$("#open-privacy-settings")?.addEventListener("click", () => openHealthConsentSettings());
 document.addEventListener("click", (event) => {
   if (!event.target.closest("#header-my-page")) $("#header-my-page").open = false;
 });
@@ -5031,33 +4041,7 @@ $$('.inner-step-tabs [data-health-tab]').forEach((button) => button.addEventList
   showHealthInputPanel(button.dataset.healthTab);
 }));
 $$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
-$$("[data-report-period]").forEach((button, index, tabs) => {
-  button.addEventListener("click", () => setReportPeriod(button.dataset.reportPeriod));
-  button.addEventListener("keydown", (event) => {
-    let nextIndex = null;
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
-    if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabs.length) % tabs.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = tabs.length - 1;
-    if (nextIndex === null) return;
-    event.preventDefault();
-    tabs[nextIndex].click();
-    tabs[nextIndex].focus();
-  });
-});
-$("#weekly-report")?.addEventListener("click", (event) => {
-  if (event.target.closest(".retry-weekly-report")) {
-    loadWeeklyReport();
-    return;
-  }
-  const retry = event.target.closest(".retry-period-report");
-  if (retry) {
-    loadReportPeriod(retry.dataset.period, { force: true });
-    return;
-  }
-  const more = event.target.closest(".report-load-more");
-  if (more) loadMoreReportCycles(more.dataset.cursor);
-});
+$$("[data-report-period]").forEach((button) => button.addEventListener("click", () => setReportPeriod(button.dataset.reportPeriod)));
 $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("keydown", (event) => {
   let nextIndex = null;
   if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
@@ -5078,6 +4062,21 @@ $("#brand-home").addEventListener("click", (event) => {
     window.history.replaceState({}, "", "/");
   }
   showStep(1, { recordHistory: false });
+});
+$$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
+$("#open-lifestyle-map")?.addEventListener("click", () => {
+  const panel = $("#lifestyle-map-detail");
+  panel.hidden = false;
+  $("#open-lifestyle-map").setAttribute("aria-expanded", "true");
+  syncLifestyleAvatar();
+  updateLifestyleMap(state.mapTopic || "rhythm");
+  panel.focus();
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("#close-lifestyle-map")?.addEventListener("click", () => {
+  $("#lifestyle-map-detail").hidden = true;
+  $("#open-lifestyle-map").setAttribute("aria-expanded", "false");
+  $("#open-lifestyle-map").focus();
 });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
@@ -5235,10 +4234,9 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
     showHealthInputPanel("metrics");
     if (state.returningDestination === "challenges") {
       state.returningDestination = null;
-      await openChallengeTab();
-      showMessage(hasCurrentChallengeCycle()
-        ? "이용 가능 확인을 완료했습니다. 이번 주 챌린지를 확인해 주세요."
-        : "이용 가능 확인을 완료했습니다. 이어서 챌린지를 선택해 주세요.", "success");
+      await loadChallenges();
+      showStep(7);
+      showMessage("이용 가능 확인을 완료했습니다. 이어서 챌린지를 선택해 주세요.", "success");
       return;
     }
     state.returningDestination = null;
@@ -5340,10 +4338,7 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
   state.signupGuidanceField = null;
-  if (state.eligibilityGuidanceStep === 7) {
-    await openChallengeTab();
-    return;
-  }
+  if (state.eligibilityGuidanceStep === 7) await loadChallenges();
   if (state.eligibilityGuidanceStep === 4) showHealthInputPanel("metrics");
   showStep(state.eligibilityGuidanceStep);
   if (state.eligibilityGuidanceWorkspace) showWorkspace(state.eligibilityGuidanceWorkspace, { moveFocus: true });
@@ -5365,7 +4360,8 @@ $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
   state.modelOutOfRange = true;
-  await openChallengeTab();
+  await loadChallenges();
+  showStep(7);
   showMessage("예측 없이 일반 생활습관 챌린지를 확인합니다.", "success");
 });
 $("#to-lifestyle-input").addEventListener("click", () => {
@@ -5394,7 +4390,6 @@ $("#health-form").addEventListener("input", () => persistHealthDraft({ markDirty
 $("#health-form").addEventListener("change", () => persistHealthDraft({ markDirty: true }));
 $("#health-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!requireActiveHealthConsent("건강정보 저장")) return;
   const submit = event.submitter;
   const invalidFields = collectInvalidHealthFields();
   if (invalidFields.length) {
@@ -5481,15 +4476,6 @@ $("#health-form").addEventListener("submit", async (event) => {
 $("#retry-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-partial-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-challenges").addEventListener("click", loadChallenges);
-$("#challenge-v3-refresh").addEventListener("click", () => {
-  if (challengeV3.busy) return;
-  challengeV3.rotation = (challengeV3.rotation + 1) % 1000001;
-  void loadChallenges();
-});
-["#challenge-v3-focus", "#challenge-v3-difficulty"].forEach((selector) => $(selector).addEventListener("change", () => {
-  challengeV3.rotation = 0;
-  void loadChallenges();
-}));
 $$("[data-demo-status]").forEach((button) => button.addEventListener("click", () => {
   renderPredictionStatus(button.dataset.demoStatus);
   showStep(5);
@@ -5519,7 +4505,7 @@ $("#to-challenges").addEventListener("click", async () => {
     guidance.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
-  try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+  try { await loadChallenges(); showStep(7); } catch (error) { showMessage(error.message); }
 });
 $("#medical-to-challenges").addEventListener("click", async (event) => {
   if (!canContinueAfterMedicalGuidance() || $("#medical-guidance-detail").hidden) return;
@@ -5527,7 +4513,8 @@ $("#medical-to-challenges").addEventListener("click", async (event) => {
   button.disabled = true;
   try {
     // Keep the server's follow-up acknowledgement gate in loadChallenges/start.
-    await openChallengeTab();
+    await loadChallenges();
+    showStep(7);
   } catch (error) { showMessage(error.message); }
   finally { button.disabled = false; }
 });
@@ -5629,27 +4616,21 @@ $("#walking-level-picker").addEventListener("change", (event) => {
 });
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!requireActiveHealthConsent("새 챌린지 시작")) return;
-  if (challengeV3.busy || state.challengeListStatus !== "ready" || !challengeV3.active) return;
-  const token = state.token;
   if (!$("#challenge-follow-up").hidden) {
     $("#challenge-follow-up").focus({ preventScroll: true });
     showMessage("이전 의료기관 안내를 먼저 확인해 주세요.");
     return;
   }
   const ids = [...state.selectedChallengeIds];
-  if (challengeV3.active && challengeV3.owner !== state.token) return showMessage("로그인한 계정의 후보를 다시 불러와 주세요.");
-  if (challengeV3.active && ids.length !== 3) return showMessage("음료·식단·운동 각 1개가 필요합니다.");
   const customSelected = state.customChallengeSelected;
   if (!ids.length && !customSelected) return showMessage("챌린지를 하나 이상 선택해 주세요.");
   state.walkingLevel = selectedRadioValue("walking-level") || "starter";
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "챌린지 시작 중…");
   try {
     if (isLocalPreview()) {
-      const cycle = createLocalDemoCycle(ids, customSelected ? state.customChallenge : null);
-      renderCycle(cycle);
+      renderCycle(createLocalDemoCycle(ids, customSelected ? state.customChallenge : null));
       renderLocalDemoDashboard();
-      await openChallengeTab({ selectionCompleted: true });
+      showStep(8);
       return;
     }
     if (customSelected) {
@@ -5657,15 +4638,10 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
-      start_date: challengeDay(), challenge_ids: ids, prediction_id: state.predictionId,
-      ...(challengeV3.active ? { catalog_version: "evidence-v3", focus: challengeV3.focus, difficulty: challengeV3.difficulty } : {}),
+      start_date: new Date().toISOString().slice(0, 10), challenge_ids: ids, prediction_id: state.predictionId,
     }) });
-    if (state.token !== token) return;
-    renderCycle(cycle);
-    await openChallengeTab({ selectionCompleted: true });
-    void refreshDashboard().catch(() => {});
+    renderCycle(cycle); await refreshDashboard(); showStep(8);
   } catch (error) {
-    if (state.token !== token) return;
     const hasActiveCycle = error.status === 409 && (
       error.code === "ACTIVE_CHALLENGE_CYCLE_EXISTS"
       || error.message.includes("진행 중인 4주 챌린지")
@@ -5676,11 +4652,11 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     }
     try {
       const currentCycle = await api("/challenge-cycles/current");
-      if (state.token !== token) return;
       renderCycle(currentCycle);
-      await openChallengeTab();
-      void refreshDashboard().catch(() => {});
-      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요.", "success");
+      await refreshDashboard();
+      showWorkspace("home", { moveFocus: false });
+      showStep(8);
+      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요. 오늘의 실천을 이어서 기록해 주세요.", "success");
     } catch (currentCycleError) {
       showMessage(currentCycleError.message || error.message);
     }
@@ -5702,8 +4678,7 @@ $("#acknowledge-challenge-follow-up").addEventListener("click", async (event) =>
       code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "UNDER_MINIMUM_SERVICE_AGE"
     ));
     $("#challenge-follow-up").hidden = true;
-    state.challengeStartSafetyBlocked = stillBlocked;
-    updateChallengeStartState();
+    $("#start-challenge").disabled = stillBlocked;
     showMessage(stillBlocked
       ? "안내를 확인했습니다. 현재 안전 확인 결과에서는 챌린지를 시작할 수 없습니다."
       : "의료기관 안내 확인을 완료했습니다. 이제 챌린지를 시작할 수 있습니다.", "success");
@@ -5714,14 +4689,7 @@ $("#acknowledge-challenge-follow-up").addEventListener("click", async (event) =>
     button.textContent = "안내 확인 완료";
   }
 });
-$("#daily-log-list").addEventListener("click", async (event) => {
-  const selectButton = event.target.closest(".daily-record-select");
-  if (selectButton) {
-    const releaseBusy = setButtonBusy(selectButton, "챌린지 불러오는 중…");
-    try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
-    finally { releaseBusy(); }
-    return;
-  }
+$("#daily-log-list").addEventListener("click", (event) => {
   if (event.target.closest(".daily-record-retry")) {
     void loadDailyRecords();
     return;
@@ -5735,66 +4703,32 @@ $("#daily-log-list").addEventListener("click", async (event) => {
   else openSimpleRecordModal(item);
 });
 $("#confirm-simple-record").addEventListener("click", async (event) => {
-  if (state.recordTarget?.completed) {
-    closeRecordModal();
-    return;
-  }
-  const target = state.recordTarget;
-  const token = state.token;
-  const cycle = state.cycle;
-  const isCurrent = () => state.recordTarget === target && state.token === token && state.cycle === cycle;
   const releaseBusy = setButtonBusy(event.currentTarget, "기록 저장 중…");
   try {
-    await completeDailyRecord(target, "self_report");
-    if (!isCurrent()) return;
+    const target = state.recordTarget;
     $("#record-simple-visual").classList.add("completed");
     await sleep(450);
-    if (isCurrent()) closeRecordModal();
-  } catch (error) { if (isCurrent()) showMessage(error.message); }
+    closeRecordModal();
+    await completeDailyRecord(target, "self_report");
+  } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
-});
-$("#undo-daily-record").addEventListener("click", async (event) => {
-  const target = state.recordTarget;
-  if (!target?.completed || target.undoPending) return;
-  const token = state.token;
-  const cycle = state.cycle;
-  const isCurrent = () => state.token === token && state.cycle === cycle && state.recordTarget === target;
-  $("#record-action-error").hidden = true;
-  const releaseBusy = setButtonBusy(event.currentTarget, "기록 취소 중…");
-  try {
-    const undone = await undoDailyRecord(target);
-    if (undone && isCurrent()) closeRecordModal();
-  } catch (error) {
-    if (!isCurrent()) return;
-    $("#record-action-error").textContent = error.message || "기록을 취소하지 못했어요. 다시 시도해 주세요.";
-    $("#record-action-error").hidden = false;
-  } finally { if (!state.recordTarget || isCurrent()) releaseBusy(); }
 });
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
 $("#confirm-photo-record").addEventListener("click", () => {
-  if (state.recordTarget?.item?.catalog_version === "evidence-v3") { void submitV3Photo(); return; }
   state.photoAttempt = 0;
   simulatePhotoAnalysis();
 });
-$("#start-photo-check").addEventListener("click", () => {
-  if (state.recordTarget?.item?.catalog_version === "evidence-v3") $("#v3-photo-file").click();
-  else $("#confirm-photo-record").click();
-});
-$("#retake-photo-record").addEventListener("click", () => {
-  if (state.recordTarget?.item?.catalog_version === "evidence-v3") showPhotoRecordState("photo-state-upload");
-  else simulatePhotoAnalysis();
-});
+$("#start-photo-check").addEventListener("click", () => $("#confirm-photo-record").click());
+$("#retake-photo-record").addEventListener("click", simulatePhotoAnalysis);
 $$(".record-fallback").forEach((button) => button.addEventListener("click", () => {
-  if (state.recordTarget?.item?.catalog_version === "evidence-v3") return;
   state.photoCompletedByFallback = true;
   $("#photo-success-title").textContent = "간편 체크로 완료됐어요!";
   showPhotoRecordState("photo-state-success");
 }));
 $("#close-photo-success").addEventListener("click", async (event) => {
-  if (state.recordTarget?.item?.catalog_version === "evidence-v3") { closeRecordModal(); return; }
   const releaseBusy = setButtonBusy(event.currentTarget, "기록 저장 중…");
   try {
     const target = state.recordTarget;
@@ -5814,7 +4748,7 @@ $("#daily-log-form")?.addEventListener("submit", async (event) => {
       showMessage("오늘 기록을 화면 확인용으로 저장했습니다.", "success");
       return;
     }
-    const today = challengeDay();
+    const today = new Date().toISOString().slice(0, 10);
     await Promise.all($$("input[name='daily']").map((input) => api(`/user-challenges/${input.value}/logs/${today}`, {
       method: "PUT", body: JSON.stringify({ is_completed: input.checked, source: "self_report", note: null }),
     })));
@@ -5831,7 +4765,7 @@ $("#barrier-form").addEventListener("submit", async (event) => {
       return;
     }
     const result = await api(`/user-challenges/${$("#barrier-challenge").value}/barriers`, { method: "POST", body: JSON.stringify({
-      log_date: challengeDay(), reason_code: $("#barrier-reason").value,
+      log_date: new Date().toISOString().slice(0, 10), reason_code: $("#barrier-reason").value,
     }) });
     $("#barrier-suggestion").textContent = result.suggestion;
     await loadWeeklyReport();
@@ -5842,18 +4776,6 @@ $("#education-list").addEventListener("click", (event) => {
   if (button) openEducationFlow(button.dataset.id);
 });
 $("#close-education-flow")?.addEventListener("click", closeEducationFlow);
-$("#education-learning-flow").addEventListener("close", () => {
-  $("#education-learning-flow").hidden = true;
-  document.body.classList.remove("education-modal-open");
-  state.activeEducationId = null;
-  window.educationCarouselView?.close(true);
-});
-$("#education-learning-flow").addEventListener("click", event => {
-  const flow = event.currentTarget;
-  if (event.target !== flow) return;
-  const rect = flow.getBoundingClientRect();
-  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeEducationFlow();
-});
 $("#start-education-quiz")?.addEventListener("click", renderEducationQuizQuestion);
 $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -5919,46 +4841,16 @@ $("#education-feedback-action")?.addEventListener("click", (event) => {
 });
 $("#invite-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 코드 만드는 중…");
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 이메일 보내는 중…");
   try {
     const result = await api("/invitations", { method: "POST", body: JSON.stringify({
       invitee_email: $("#invite-email").value, relation_type: "family",
     }) });
-    renderInviteCodeResult(result);
+    renderInviteEmailResult(result);
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
-$("#accept-invitation-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const tokenInput = $("#invitation-token");
-  const token = tokenInput.value.trim();
-  if (!tokenInput.checkValidity()) {
-    tokenInput.reportValidity();
-    return;
-  }
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 수락 중…");
-  try {
-    await api("/invitations/accept", { method: "POST", body: JSON.stringify({ token }) });
-    tokenInput.value = "";
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("invite_token")) {
-      url.searchParams.delete("invite_token");
-      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-    }
-    await Promise.all([loadInvitations(), loadConnections()]);
-    showMessage("초대를 수락했습니다. 함께하는 가족·친구 목록에서 확인해 주세요.", "success");
-  } catch (error) { showMessage(error.message || "초대를 수락하지 못했습니다."); }
-  finally { releaseBusy(); }
-});
-$("#received-invitation-list")?.addEventListener("click", (event) => {
-  if (event.target.closest(".retry-invitations")) loadInvitations();
-});
-$$("[data-invite-disclosure]").forEach((button) => button.addEventListener("click", () => {
-  setInviteDisclosure(button.getAttribute("aria-controls"));
-}));
-$$("[data-invite-close]").forEach((button) => button.addEventListener("click", () => {
-  closeInviteDisclosure(button.dataset.inviteClose);
-}));
+$$("[data-invite-mode]").forEach((button) => button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode)));
 $("#copy-invite-code")?.addEventListener("click", async () => {
   const code = $("#forest-invite-code")?.dataset.copyValue || "";
   if (!code) {
@@ -6018,10 +4910,8 @@ async function resumeAuthenticatedAccount() {
     syncLifestyleAvatar();
     const consents = await api("/consents");
     if (!Array.isArray(consents?.items)) throw new Error("동의 정보를 확인하지 못했습니다.");
-    const consentStatus = syncHealthConsentState(consents);
-    const hasHealthConsentHistory = healthDataConsentItems(consents).length > 0;
     const profileSaved = Boolean(profile.birthday && ["FEMALE", "MALE"].includes(profile.gender));
-    if (!profileSaved || consentStatus === "missing" || !hasHealthConsentHistory) {
+    if (!profileSaved || !hasHealthDataConsent(consents)) {
       showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token,
         birthday: profile.birthday, gender: profile.gender, profileSaved,
         healthAgreed: hasHealthDataConsent(consents), consentSaved: hasHealthDataConsent(consents),
@@ -6038,9 +4928,6 @@ async function resumeAuthenticatedAccount() {
       if (eligibilityError.status !== 404) throw eligibilityError;
     }
     syncReturningEligibilityState(latestEligibility);
-    // Deliberately withdrawn users may keep using their account and general pages,
-    // but an older eligibility result must not reopen health, prediction, or cycle writes.
-    syncHealthConsentState(consents);
     const healthHistory = await api("/health-checkups");
     state.healthCheckupHistory = Array.isArray(healthHistory?.items) ? healthHistory.items : [];
     renderHealthCheckupHistory();
@@ -6052,22 +4939,13 @@ async function resumeAuthenticatedAccount() {
       state.healthCheckupResult = latestHealthCheckup;
       rememberCurrentScreeningInputId(latestHealthCheckup);
     }
-    if (state.healthConsentStatus !== "withdrawn" && resumeInterruptedHealthFlow(latestHealthCheckup)) return;
-    clearCurrentChallengeCycle();
+    if (resumeInterruptedHealthFlow(latestHealthCheckup)) return;
     try {
       const cycle = await api("/challenge-cycles/current");
       renderCycle(cycle);
       await refreshDashboard();
     } catch (cycleError) {
       if (cycleError.status !== 404 && !cycleError.message.includes("진행 중인 챌린지가 없습니다")) throw cycleError;
-      clearCurrentChallengeCycle();
-    }
-    if (state.healthConsentStatus === "withdrawn") {
-      state.visitedSteps.add(8);
-      showWorkspace("home", { moveFocus: false });
-      showStep(8);
-      showMessage("건강정보 동의가 철회된 상태입니다. 일반 페이지는 이용할 수 있고, 새 건강정보·분석·챌린지는 다시 동의한 뒤 이용할 수 있어요.", "success");
-      return;
     }
     if (!latestHealthCheckup) {
       if (state.requiresEligibility) beginReturningEligibility("health");
@@ -6092,9 +4970,6 @@ $("#login-form").addEventListener("submit", async (event) => {
   if (form.getAttribute("aria-busy") === "true") return;
   const releaseBusy = setFormBusy(form, event.submitter, "로그인 중…");
   try {
-    state.cycle = null;
-    state.dailyCompleted = new Set();
-    state.dailyRecordFailures = new Set();
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#login-email").value, password: $("#login-password").value }) });
     if (!login.access_token) throw new Error("로그인 정보를 받지 못했습니다.");
     state.token = login.access_token;
@@ -6124,7 +4999,8 @@ $("#return-challenges")?.addEventListener("click", async () => {
     showStoredEligibilityGuidance();
     return;
   }
-  await openChallengeTab();
+  await loadChallenges();
+  showStep(7);
 });
 $("#return-health")?.addEventListener("click", () => {
   if (state.requiresEligibility) {
@@ -6295,109 +5171,6 @@ $("#notification-toggle")?.addEventListener("click", async () => {
 $("#profile-notification-settings")?.addEventListener("click", () => {
   showMessage("웹 알림 설정은 이후 설정 화면에서 제공할 예정입니다.", "success");
 });
-$("#account-logout")?.addEventListener("click", async (event) => {
-  const releaseBusy = setButtonBusy(event.currentTarget, "로그아웃 중…");
-  try {
-    await api("/auth/logout", { method: "POST" });
-    clearAuthenticatedClientState();
-    showMessage("로그아웃했습니다.", "success");
-  } catch (error) {
-    if (error.status === 401) {
-      clearAuthenticatedClientState();
-      showMessage("로그인 시간이 만료되어 로그인 화면으로 이동했습니다.", "success");
-    } else showMessage(error.message || "로그아웃하지 못했습니다. 다시 시도해 주세요.");
-  } finally { releaseBusy(); }
-});
-$("#open-account-delete")?.addEventListener("click", () => {
-  $(".profile-menu")?.removeAttribute("open");
-  $("#header-my-page")?.removeAttribute("open");
-  $("#account-delete-confirm").value = "";
-  $("#confirm-account-delete").disabled = true;
-  $("#account-delete-error").hidden = true;
-  $("#account-delete-dialog").showModal();
-  $("#account-delete-confirm").focus();
-});
-function closeHealthConsentSettings() {
-  $("#consent-settings-dialog")?.close();
-  $("#header-my-page-toggle")?.focus();
-}
-$("#close-consent-settings")?.addEventListener("click", closeHealthConsentSettings);
-$("#cancel-consent-settings")?.addEventListener("click", closeHealthConsentSettings);
-$("#withdraw-health-consent")?.addEventListener("click", async (event) => {
-  const consentId = Number(state.healthConsent?.consent_id);
-  const errorNode = $("#consent-settings-error");
-  if (!Number.isInteger(consentId)) {
-    errorNode.textContent = "철회할 동의 기록을 찾지 못했어요. 상태를 다시 불러와 주세요.";
-    errorNode.hidden = false;
-    return;
-  }
-  if (!window.confirm("동의를 철회하면 진행 중인 챌린지가 종료되고, 새 건강정보 저장·분석·챌린지 시작이 제한됩니다. 철회할까요?")) return;
-  const releaseBusy = setButtonBusy(event.currentTarget, "철회 처리 중…");
-  errorNode.hidden = true;
-  try {
-    await api(`/consents/${consentId}/withdraw`, { method: "PATCH" });
-    await refreshHealthConsentState();
-    state.cycle = null;
-    state.analysisRun = null;
-    state.selectedChallengeIds.clear();
-    showMessage("건강정보 동의를 철회했어요. 계정과 일반 페이지는 계속 이용할 수 있어요.", "success");
-  } catch (error) {
-    errorNode.textContent = error.message || "동의를 철회하지 못했어요. 다시 시도해 주세요.";
-    errorNode.hidden = false;
-    errorNode.focus();
-  } finally { releaseBusy(); renderHealthConsentSettings(); }
-});
-$("#renew-health-consent")?.addEventListener("click", async (event) => {
-  const errorNode = $("#consent-settings-error");
-  const releaseBusy = setButtonBusy(event.currentTarget, "동의 저장 중…");
-  errorNode.hidden = true;
-  try {
-    await api("/consents", { method: "POST", body: JSON.stringify({ consent_item: "health_data", version: "1.0", is_agreed: true }) });
-    await refreshHealthConsentState();
-    let latestEligibility = null;
-    try { latestEligibility = await api("/eligibility-checks/latest"); } catch (error) { if (error.status !== 404) throw error; }
-    syncReturningEligibilityState(latestEligibility);
-    state.healthConsentStatus = "active";
-    renderHealthConsentSettings();
-    showMessage("건강정보 수집·이용에 다시 동의했어요.", "success");
-  } catch (error) {
-    errorNode.textContent = error.message || "동의를 저장하지 못했어요. 다시 시도해 주세요.";
-    errorNode.hidden = false;
-    errorNode.focus();
-  } finally { releaseBusy(); renderHealthConsentSettings(); }
-});
-function closeAccountDeleteDialog() {
-  $("#account-delete-dialog")?.close();
-}
-$("#close-account-delete")?.addEventListener("click", closeAccountDeleteDialog);
-$("#cancel-account-delete")?.addEventListener("click", closeAccountDeleteDialog);
-$("#account-delete-confirm")?.addEventListener("input", (event) => {
-  $("#confirm-account-delete").disabled = event.currentTarget.value.trim() !== "탈퇴";
-});
-$("#account-delete-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const confirmInput = $("#account-delete-confirm");
-  const errorNode = $("#account-delete-error");
-  if (confirmInput.value.trim() !== "탈퇴") {
-    errorNode.textContent = "확인을 위해 ‘탈퇴’를 정확히 입력해 주세요.";
-    errorNode.hidden = false;
-    confirmInput.focus();
-    return;
-  }
-  const submitButton = $("#confirm-account-delete");
-  const releaseBusy = setButtonBusy(submitButton, "탈퇴 처리 중…");
-  try {
-    await api("/users/me", { method: "DELETE" });
-    try { await api("/auth/logout", { method: "POST" }); } catch { /* account is already inactive */ }
-    closeAccountDeleteDialog();
-    clearAuthenticatedClientState({ keepEmail: false });
-    showMessage("회원탈퇴가 처리되었습니다.", "success");
-  } catch (error) {
-    errorNode.textContent = error.message || "회원탈퇴를 처리하지 못했습니다. 다시 시도해 주세요.";
-    errorNode.hidden = false;
-    errorNode.focus();
-  } finally { releaseBusy(); }
-});
 $("#download-report").addEventListener("click", async (event) => {
   if (!revealReportPdfOptions()) return;
   const releaseBusy = setButtonBusy(event.currentTarget, "PDF 만드는 중…");
@@ -6409,17 +5182,7 @@ $("#download-report").addEventListener("click", async (event) => {
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
-$$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("change", () => {
-  updateReportPdfButtonLabel();
-  updateReportPdfAvailability();
-}));
-document.addEventListener("click", (event) => {
-  const control = $(".report-pdf-control");
-  if (control && !control.contains(event.target)) closeReportPdfOptions();
-});
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeReportPdfOptions({ returnFocus: true });
-});
+$$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("change", updateReportPdfAvailability));
 $("#restart")?.addEventListener("click", () => window.location.reload());
 
 function resumeFromForest() {
@@ -6449,7 +5212,7 @@ function resumeReturningPreview() {
   state.returningUser = true;
   state.checkupId = "local-demo-checkup";
   $("#eligibility-birth-date").value = "1960-05-12";
-  $("#gender").value = "FEMALE";
+  $("#gender").value = "female";
   syncLifestyleAvatar();
   syncReturningEligibilityState({
     age: getAgeFromBirth($("#eligibility-birth-date").value),
@@ -6516,20 +5279,7 @@ function resumeEmergencyQuestionnairePreview() {
   showStep(3, { recordHistory: false });
 }
 
-window.lifestyleMapView = window.LifestyleMap.mount($("#lifestyle-map-detail"), {
-  getData: lifestyleMapSnapshot, mountCarousel: window.EducationCarousel.mount,
-});
-window.educationCarouselView = window.EducationCarousel.mount($("#education-carousel"), { onOpen: openEducationFlow });
-$("#daily-log-list").addEventListener("click", event => {
-  const link = event.target.closest("[data-lifestyle-topic]");
-  if (!link) return;
-  showWorkspace("tools");
-  updateLifestyleMap(link.dataset.lifestyleTopic);
-});
-
 configureEnvironmentControls();
-const invitationTokenFromUrl = new URLSearchParams(window.location.search).get("invite_token");
-if (invitationTokenFromUrl && $("#invitation-token")) $("#invitation-token").value = invitationTokenFromUrl;
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 $$('input[name="current-drinker"]').forEach((input) => input.addEventListener("change", syncAlcoholFrequencyDetails));
 syncExerciseDetails();
