@@ -106,6 +106,7 @@ function ageMouse(scene) {
   scene.ratActor.setPosition(420, 350);
   scene.ratDespawnAt = 13000;
   scene.updateRat(13001, 16);
+  scene.updateRat(scene.ratNextSpawnAt, 16);
   return scene.mouseCrowd[0];
 }
 
@@ -151,14 +152,44 @@ test('keyboard and pet attacks can catch old mice while the newest encounter is 
 test('crowd capacity postpones spawning without deleting uncaught mice', () => {
   const { scene } = setup();
   const mouse = ageMouse(scene);
-  scene.mouseCrowd = Array.from({ length: 7 }, (_, index) => ({ ...mouse, actor: actor(), eventId: index + 30 }));
+  scene.mouseCrowd = Array.from({ length: 8 }, (_, index) => ({ ...mouse, actor: actor(), eventId: index + 30 }));
   const id = scene.ratEventId;
-  scene.ratDespawnAt = 20000;
+  scene.ratDespawnAt = Infinity;
+  scene.nextMouseSpawnAt = 20000;
   scene.updateRat(20001, 16);
   assert.equal(scene.ratEventId, id);
-  assert.equal(scene.mouseCrowd.length, 7);
+  assert.equal(scene.mouseCrowd.length, 8);
   assert.ok(scene.mouseCrowd.every(item => !item.actor.destroyed));
-  assert.ok(scene.ratDespawnAt > 20001);
+  assert.equal(scene.nextMouseSpawnAt, 80001);
+});
+
+test('mice spawn every minute and warn once after eighteen seconds while rabbits recur', () => {
+  const { scene, events } = setup();
+  scene.add.container = (x, y) => Object.assign(actor(x, y), { add() {} });
+  scene.add.sprite = () => actor();
+  scene.ratActive = false;
+  scene.updateRat(1000, 16);
+  assert.equal(scene.nextMouseSpawnAt, 61000);
+  scene.updateRat(scene.ratNextSpawnAt, 16);
+  assert.equal(scene.ratSpecies, 'rabbit');
+  scene.updateRat(61000, 16);
+  assert.equal(scene.ratSpecies, 'mouse');
+  assert.equal(scene.ratDespawnAt, 79000);
+  assert.equal(scene.nextMouseSpawnAt, 121000);
+  scene.updateRat(78999, 16);
+  assert.equal(events.filter(e => e.type === 'forest-mouse-warning').length, 0);
+  scene.updateRat(79000, 16);
+  const mouse = scene.mouseCrowd[0];
+  const position = [mouse.actor.x, mouse.actor.y];
+  assert.equal(events.filter(e => e.type === 'forest-mouse-warning').length, 1);
+  scene.updateRat(81000, 16);
+  assert.equal(scene.ratSpecies, 'rabbit');
+  scene.updateMouseCrowd(82000);
+  assert.deepEqual([mouse.actor.x, mouse.actor.y], position);
+  scene.updateRat(121000, 16);
+  assert.equal(scene.ratSpecies, 'mouse');
+  scene.catchCrowdMouse(mouse);
+  assert.equal(events.filter(e => e.type === 'forest-mouse-warning').at(-1).detail.count, 0);
 });
 
 test('encounter creation keeps the monster body and marker without allocating a ground shadow', () => {
@@ -373,7 +404,7 @@ test('encounters announce their variant and rabbits receive a bounded roaming li
   const { scene, events } = setup();
   scene.spawnRat(1000);
   assert.equal(scene.ratSpecies, 'rabbit');
-  assert.equal(scene.ratDespawnAt, 16000);
+  assert.equal(scene.ratDespawnAt, 11000);
   assert.equal(events[0].type, 'forest-rat-appeared');
   assert.equal(events[0].detail.variant, 'bunbun');
   assert.equal(events[0].detail.variantLabel, 'Bunbun');
@@ -391,11 +422,12 @@ test('ignored mice accumulate while an expired rabbit is replaced by the other r
   scene.ratDespawnAt = 1200;
   scene.updateRat(1201, 40);
   assert.equal(scene.mouseCrowd.length, 1);
-  assert.equal(scene.ratActive, true);
+  assert.equal(scene.ratActive, false);
   assert.equal(scene.ratSpecies, 'mouse');
 
   scene.mouseCrowd.length = 0;
   scene.setRatSpecies('rabbit', 'bunbun', 2000);
+  scene.ratActive = true;
   scene.ratDespawnAt = 2100;
   scene.updateRat(2101, 40);
   assert.equal(scene.ratActive, false);

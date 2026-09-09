@@ -1940,6 +1940,11 @@
   }
 
   function renderCanvas() {
+    document.querySelectorAll('[data-action="sit"]').forEach(button => {
+      button.setAttribute("aria-pressed", String(state.avatar.sitting));
+      button.setAttribute("aria-label", `${state.avatar.sitting ? "일어서기" : "앉기"}, 단축키 X`);
+      button.querySelector("span").textContent = state.avatar.sitting ? "일어서기 (X)" : "앉기 (X)";
+    });
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
@@ -3482,6 +3487,7 @@
     playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
     await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
+    document.getElementById("phaser-world")?.focus();
   }
 
   async function sitAtPlacedObject(index) {
@@ -3626,6 +3632,10 @@
     const message = rabbit ? "토끼가 당근 1개를 놓고 갔습니다." : "쥐를 잡았습니다.";
     await persist(message);
     showCatchNotice(message);
+  });
+  window.addEventListener("forest-mouse-warning", (event) => {
+    const warning = document.getElementById("mouse-warning");
+    if (warning) warning.hidden = !(event.detail?.count > 0);
   });
   window.addEventListener("forest-placement-confirm", confirmPlacement);
 

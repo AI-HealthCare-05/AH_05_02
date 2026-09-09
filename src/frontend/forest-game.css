@@ -530,3 +530,6 @@ body{display:flex;flex-direction:column;height:100dvh}
 .right-hud [data-challenge-v2] [data-custom-preferences]{display:grid;gap:8px;min-width:0;padding-top:9px;border-top:1px solid var(--line)}
 .right-hud [data-challenge-v2] [data-custom-preferences][hidden]{display:none}
 .right-hud [data-challenge-v2] [data-custom-preferences]>label{min-width:0;margin:0}
+/* Persistent warning for mice that have stopped to watch the carrots. */
+.mouse-warning { position:absolute; z-index:12; top:62px; left:50%; transform:translateX(-50%); margin:0; padding:10px 16px; border:1px solid #8A4B08; border-radius:12px; background:#FFF4DF; color:#8A4B08; font-weight:700; white-space:nowrap; pointer-events:none; }
+.mouse-warning[hidden] { display:none; }

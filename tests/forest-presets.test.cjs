@@ -9,6 +9,45 @@ function setup() {
   vm.runInContext(code.slice(code.indexOf('  const OUTFIT_DEFAULT_VERSION'), code.indexOf('  function defaultState()')), context);
   return context;
 }
+
+test('all six real presets render the held seated frame and return to idle', async () => {
+  const c = setup(), target = { outfitHistory: [], avatar: {} };
+  c.ensureGenderDefaultOutfits(target);
+  const manifest = JSON.parse(readFileSync(path.join(__dirname, '../src/frontend/assets/lpc-pack/manifest.json'), 'utf8'));
+  const window = { dispatchEvent() {} };
+  class Image {
+    addEventListener(event, callback) { if (event === 'load') this.loaded = callback; }
+    set src(value) { this.url = value; this.loaded(); }
+  }
+  vm.runInNewContext(readFileSync(path.join(__dirname, '../src/frontend/lpc-avatar-engine.js'), 'utf8'), {
+    window, Image, fetch: async () => ({ ok: true, json: async () => manifest }),
+    requestAnimationFrame: callback => callback(), CustomEvent: class {}, console,
+  });
+  await window.LpcAvatarEngine.ready();
+  for (const look of target.outfitHistory.slice(0, 6)) {
+    const avatar = { gender: look.gender, cosmetics: look.cosmetics, sitting: true, direction: 'down' };
+    await window.LpcAvatarEngine.prepare([avatar]);
+    const calls = [];
+    const ctx = { save() {}, restore() {}, drawImage(...args) { calls.push(args); } };
+    window.LpcAvatarEngine.draw(ctx, avatar, {}, { width: 192, height: 192 });
+    assert.ok(calls.length > 3, look.label);
+    const seated = calls.map(call => call.slice(1));
+    const native = calls.every(call => call[1] === 128 && call[2] === (manifest.animationRows.sit + manifest.directionRows.down) * 64);
+    if (!native) {
+      assert.equal(calls.length % 2, 0);
+      const row = calls[0][2];
+      for (let i = 0; i < calls.length; i += 2) {
+        assert.equal(calls[i][2], row, `${look.label}: every layer uses the same source pose`);
+        assert.equal(calls[i][6], 36, 'torso lowers by twelve source pixels');
+        assert.equal(calls[i + 1][6] + calls[i + 1][8], 192, 'feet stay planted');
+      }
+    }
+    calls.length = 0;
+    avatar.sitting = false;
+    window.LpcAvatarEngine.draw(ctx, avatar);
+    assert.notDeepEqual(calls.map(call => call.slice(1)), seated, `${look.label}: standing again`);
+  }
+});
 test('six stable presets include a female mage, elf archer and muscular inventor', () => {
   const c = setup(), target = { outfitHistory: [], avatar: { name: 'unchanged' } };
   c.ensureGenderDefaultOutfits(target);

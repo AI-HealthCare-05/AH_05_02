@@ -253,6 +253,7 @@
     const direction = ["up", "left", "down", "right"].includes(options.direction || avatar.direction)
       ? (options.direction || avatar.direction) : "down";
     const animation = resolvedAnimation(avatar, options);
+    const seatedFallback = avatar.sitting && !options.pose && animation !== "sit";
     const cycles = animationCycles[animation] || animationCycles.idle;
     const frameIndex = (avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose
       ? cycles[cycles.length - 1]
@@ -286,7 +287,9 @@
           .find((candidate) => supported.includes(candidate));
       if (!layerAnimation) return;
       const layerCycle = animationCycles[layerAnimation] || animationCycles.idle;
-      const requestedFrame = ["idle", "sit", "emote", "combat_idle"].includes(requestedAnimation)
+      const requestedFrame = seatedFallback ? 0 : requestedAnimation === "sit"
+        ? layerCycle[layerCycle.length - 1]
+        : ["idle", "emote", "combat_idle"].includes(requestedAnimation)
         ? layerCycle[Math.min(1, layerCycle.length - 1)]
         : layerCycle[cyclePosition(options, layerCycle.length)];
       const adaptedTool = options.pose === "harvest" && layer.category === "tool"
@@ -310,6 +313,20 @@
       const destinationY = target.y - (destinationHeight - target.height) / 2 + offset[1] * target.height / FRAME;
       context.save();
       context.filter = colorFilters[layer.color] || "none";
+      if (seatedFallback) {
+        // Some official outfits have no seated sheet. Apply the same planted-
+        // foot crouch to every layer, keeping the outfit and body aligned.
+        const torso = layerFrameSize * 42 / 64;
+        const leg = layerFrameSize - torso;
+        const drop = destinationHeight * 12 / 64;
+        const upperHeight = destinationHeight * 42 / 64;
+        context.drawImage(image, layerFrame * layerFrameSize, (layerRowBase + layerDirectionRow) * layerFrameSize,
+          layerFrameSize, torso, destinationX, destinationY + drop, destinationWidth, upperHeight);
+        context.drawImage(image, layerFrame * layerFrameSize, (layerRowBase + layerDirectionRow) * layerFrameSize + torso,
+          layerFrameSize, leg, destinationX, destinationY + drop + upperHeight, destinationWidth, destinationHeight - drop - upperHeight);
+        context.restore();
+        return;
+      }
       context.drawImage(
         image,
         layerFrame * layerFrameSize,

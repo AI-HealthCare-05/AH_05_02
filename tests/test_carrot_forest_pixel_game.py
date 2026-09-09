@@ -454,7 +454,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v178-1";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v182-1";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -788,10 +788,10 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert "숲 조작 패널" not in html
     assert 'data-action="chat"' not in html
     assert 'data-action="dance"' not in html
-    for action in ("jump", "run", "interact", "ride", "attack"):
+    for action in ("jump", "run", "interact", "sit", "attack"):
         assert f'data-action="{action}"' in html
     assert '<button class="arcade-action action-jump"' in html
-    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "탈것 (E)"):
+    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "앉기 (X)"):
         assert f"<span>{label}</span>" in html
     assert 'data-action="attack" aria-label="공격, 단축키 Z"' in html
     assert '<span>공격 (Z)</span>' in html
@@ -872,7 +872,7 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
     game_script = (ROOT / "src/frontend/forest-game.js").read_text(encoding="utf-8")
     engine_script = (ROOT / "src/frontend/lpc-avatar-engine.js").read_text(encoding="utf-8")
 
-    assert 'data-action="sit"' not in html
+    assert 'data-action="sit"' in html
     assert 'const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"])' in game_script
     assert "async function sitAtPlacedObject" in game_script
     assert "state.avatar.sitting = !state.avatar.sitting" in game_script
@@ -1229,10 +1229,13 @@ process.stdout.write(JSON.stringify({
     individual_assets = inventory["assets"]
     assert len(individual_assets) == 24
     assert len({asset["url"] for asset in individual_assets}) == 24
-    assert sum("/furniture-v153/" in asset["url"] for asset in individual_assets) == 24
+    restored = {"lantern", "mailbox", "scarecrow", "carrot_crate", "wheelbarrow"}
+    assert sum("/furniture-v153/" in asset["url"] for asset in individual_assets) == 19
     for asset in individual_assets:
         url = asset["url"]
-        assert url == f'/static/assets/furniture-v153/{asset["code"]}.png?v=20260907-1'
+        expected = (f'/static/assets/carrot-forest-storage-atlas-v3.png?v=20260909-{asset["code"]}'
+                    if asset["code"] in restored else f'/static/assets/furniture-v153/{asset["code"]}.png?v=20260907-1')
+        assert url == expected
         assert asset["key"] == f'furniture-{asset["code"]}'
         path = frontend / url.partition("?")[0].removeprefix("/static/")
         assert path.is_file(), f"Missing independent furniture asset: {path.name}"
@@ -1255,7 +1258,7 @@ process.stdout.write(JSON.stringify({
     assert "ForestObjects.createLegacyStorageAtlas(storageSource)" in phaser
     assert 'ForestFire.install(this, { flameAtlasKey: "campfire-flame-atlas" })' in phaser
     assert html.index("forest-objects.js") < html.index("forest-phaser.js")
-    assert "forest-objects.js?v=20260908-4" in worker
+    assert "forest-objects.js?v=20260909-3" in worker
     assert "canvas[data-storage-object]" in game
     assert 'background-position:${backgroundPosition}' not in game
     assert "ForestFire.burningTile" in game and "ForestFire.offTile" in game
