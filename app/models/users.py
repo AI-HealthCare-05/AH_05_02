@@ -17,6 +17,8 @@ class User(models.Model):
     birthday = fields.DateField(null=True)
     height_cm = fields.FloatField(null=True)
     phone_number = fields.CharField(max_length=11, null=True)
+    terms_agreed = fields.BooleanField(default=False)
+    terms_agreed_at = fields.DatetimeField(null=True)
     is_active = fields.BooleanField(default=True)
     is_admin = fields.BooleanField(default=False)
     last_login = fields.DatetimeField(null=True)
