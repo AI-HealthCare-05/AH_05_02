@@ -2595,6 +2595,71 @@ function forecastSignalLabel(level) {
   return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
 }
 
+function selectTwoYearForecastPoint(prediction = {}, fallbackLevel = null) {
+  const points = Array.isArray(prediction?.age_risk_forecast?.points)
+    ? prediction.age_risk_forecast.points
+    : [];
+  const point = points.find((item) => (
+    Number(item?.years_from_now) === 2
+    || /^\s*(?:약\s*)?2\s*년/.test(String(item?.display_label || item?.horizon_label || ""))
+  ));
+  const level = normalizeForecastSignal(point?.signal_level || point?.risk_category || fallbackLevel);
+  if (!level) return null;
+  return {
+    label: String(point?.display_label || point?.horizon_label || "약 2년 후").trim(),
+    level,
+  };
+}
+
+function renderTwoYearRiskForecast(prediction = {}, options = {}) {
+  const chart = $("#age-risk-chart");
+  const pointContainer = $("#age-risk-chart-points");
+  const stateBox = $("#forecast-state");
+  const statusBadge = $("#forecast-status-badge");
+  if (!chart || !pointContainer || !stateBox || !statusBadge) return;
+  const point = options.canDisplayRisk
+    ? selectTwoYearForecastPoint(prediction, options.fallbackLevel)
+    : null;
+  const hasPoint = Boolean(point);
+  chart.hidden = !hasPoint;
+  stateBox.hidden = hasPoint;
+  pointContainer.replaceChildren();
+  if (!hasPoint) {
+    stateBox.dataset.state = options.failed ? "unavailable" : "loading";
+    $("#forecast-state-title").textContent = options.failed
+      ? "미래 신규 발병 위험 분석을 완료하지 못했습니다"
+      : "2년 위험 전망 결과를 준비하고 있어요";
+    $("#forecast-state-message").textContent = options.failed
+      ? "실패한 분석만 다시 시도하면 이어서 확인할 수 있어요."
+      : "공개 가능한 결과가 도착하면 그래프에 표시합니다.";
+    statusBadge.textContent = options.failed ? "분석 실패" : "결과 준비 중";
+    statusBadge.dataset.status = options.failed ? "failed" : "pending";
+    chart.setAttribute("aria-label", options.failed
+      ? "약 2년 뒤 위험 신호 전망 그래프: 분석 실패"
+      : "약 2년 뒤 위험 신호 전망 그래프: 결과 준비 중");
+    return;
+  }
+  const item = document.createElement("div");
+  item.className = "age-risk-point";
+  const value = document.createElement("strong");
+  value.textContent = forecastSignalLabel(point.level);
+  const track = document.createElement("span");
+  track.className = "age-risk-signal-track";
+  track.dataset.level = point.level;
+  track.setAttribute("aria-hidden", "true");
+  const marker = document.createElement("img");
+  marker.src = `/static/assets/hyeoldangi-face-${point.level}.png`;
+  marker.alt = "";
+  track.append(marker);
+  const label = document.createElement("small");
+  label.textContent = point.label;
+  item.append(value, track, label);
+  pointContainer.append(item);
+  statusBadge.textContent = options.preview ? "화면 확인용 예시" : "승인된 결과";
+  statusBadge.dataset.status = options.preview ? "preview" : "approved";
+  chart.setAttribute("aria-label", `약 2년 뒤 당뇨병 위험 신호 전망. ${point.label} ${forecastSignalLabel(point.level)}`);
+}
+
 
 
 function renderPrediction(prediction, factors) {
@@ -2639,15 +2704,11 @@ function renderPrediction(prediction, factors) {
     ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
     : "현재 공개할 수 있는 예측 결과가 없습니다";
   $("#future-risk-category").textContent = futureRiskLabel;
-  const futureHorizon = $("#future-risk-horizon");
-  const futureHorizonSummary = $("#future-risk-horizon-summary");
-  if (futureHorizon) {
-    futureHorizon.dataset.state = canDisplayRisk ? normalizeRiskKey(displayPrediction) : "unavailable";
-    futureHorizon.setAttribute("aria-label", `내일이 약 2년 위험 그림: ${futureRiskLabel}`);
-  }
-  if (futureHorizonSummary) futureHorizonSummary.textContent = canDisplayRisk
-    ? `내일이 모델은 약 2년 안에 새로 나타날 수 있는 위험 신호를 ${forecastSignalLabel(normalizeRiskKey(displayPrediction))}으로 분류했어요.`
-    : "내일이 모델의 2년 위험 그림은 공개 가능한 결과가 있을 때만 위험 단계를 표시해요.";
+  renderTwoYearRiskForecast(prediction, {
+    canDisplayRisk,
+    fallbackLevel: normalizeRiskKey(displayPrediction),
+    preview: Boolean(developmentPreviewRisk),
+  });
   updateResultConfirmation();
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
@@ -2771,11 +2832,7 @@ async function runPrediction({ retryFailed = false } = {}) {
     renderPrediction(future?.prediction || { display_allowed: false }, run.factors);
     if (future?.status === "failed") {
       $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
-      const futureHorizon = $("#future-risk-horizon");
-      const futureHorizonSummary = $("#future-risk-horizon-summary");
-      if (futureHorizon?.setAttribute) futureHorizon.setAttribute("aria-label", "내일이 약 2년 위험 그림: 분석 실패");
-      if (futureHorizon?.dataset) futureHorizon.dataset.state = "unavailable";
-      if (futureHorizonSummary) futureHorizonSummary.textContent = "내일이 결과는 실패한 분석만 다시 시도하면 이어서 확인할 수 있어요.";
+      renderTwoYearRiskForecast({}, { failed: true });
     }
     if (state.currentScreeningPrediction) {
       renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });

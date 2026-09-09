@@ -493,17 +493,22 @@
           </div>
         </section>
         <div id="future-prediction-result">
-        <section class="current-health-result" aria-labelledby="future-onset-title">
-          <p class="eyebrow">미래 신규 발병 위험</p>
-          <h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3>
-          <strong id="future-risk-category">결과 준비 중</strong>
-          <div class="future-risk-horizon" id="future-risk-horizon" data-state="unavailable" role="img" aria-label="내일이 약 2년 위험 그림: 결과 준비 중">
-            <span class="future-risk-horizon-point is-now"><b>현재</b></span>
-            <span class="future-risk-horizon-line" aria-hidden="true"></span>
-            <span class="future-risk-horizon-point is-future"><b>약 2년 후</b></span>
+        <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="future-onset-title">
+          <div class="risk-forecast-heading">
+            <div><p class="eyebrow">미래 신규 발병 위험</p><h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3></div>
+            <span class="forecast-status-badge" id="forecast-status-badge" data-status="pending">결과 준비 중</span>
           </div>
-          <p class="future-risk-horizon-summary" id="future-risk-horizon-summary">내일이 모델의 2년 위험 그림은 공개 가능한 결과가 있을 때만 위험 단계를 표시해요.</p>
-          <p>현재 위험 신호와 별도로 계산한 예측입니다. 진단이나 확정 발병확률이 아닙니다.</p>
+          <strong class="future-risk-category" id="future-risk-category">결과 준비 중</strong>
+          <p class="risk-forecast-description">현재 위험 신호와 별도로 약 2년 뒤의 신규 발병 위험 신호를 확인합니다.</p>
+          <div class="forecast-state" id="forecast-state" role="status" aria-live="polite" data-state="loading">
+            <strong id="forecast-state-title">2년 위험 전망 결과를 불러오고 있어요</strong>
+            <p id="forecast-state-message">공개 가능한 결과가 도착하면 그래프에 표시합니다.</p>
+          </div>
+          <div class="age-risk-chart age-risk-chart-single" id="age-risk-chart" role="img" aria-label="약 2년 뒤 당뇨병 위험 신호 전망 그래프" hidden>
+            <div class="age-risk-chart-scale" aria-hidden="true"><span>높음</span><span>주의</span><span>낮음</span></div>
+            <div class="age-risk-chart-points" id="age-risk-chart-points"></div>
+          </div>
+          <p class="risk-forecast-description">진단이나 확정 발병확률이 아니며, 생활습관 시나리오는 표시하지 않습니다.</p>
         </section>
         </div>
         <aside class="notice safety result-safety-card" role="note"><span aria-hidden="true">안내</span><div><strong>안전 안내</strong><p>이 결과는 진단이나 확정 발병확률이 아닙니다.</p><p>건강관리를 돕기 위한 선별 정보이며, 증상이 있거나 결과가 걱정된다면 의료기관에서 검사를 받아보세요.</p></div></aside>
