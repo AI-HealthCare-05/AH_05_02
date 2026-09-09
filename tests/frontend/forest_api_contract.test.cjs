@@ -26,9 +26,14 @@ test('API adapter covers the server-owned forest and game actions', () => {
   assert.match(game, /Promise\.all\(\[\s*this\.catalog\(\), this\.wallet\(\), this\.shopItems\(\), this\.inventory\(\), this\.avatar\(\)/);
 });
 
-test('game-domain localStorage is no longer a persistence source', () => {
-  assert.doesNotMatch(game, /localStorage\.setItem\(STORAGE_KEY/);
-  assert.doesNotMatch(game, /localStorage\.getItem\(STORAGE_KEY/);
+test('localStorage persistence is isolated to explicitly requested local demo mode', () => {
+  const demoAdapter = game.slice(game.indexOf('class DemoForestAdapter'), game.indexOf('class ApiForestAdapter'));
+  const apiAdapter = game.slice(game.indexOf('class ApiForestAdapter'), game.indexOf('function storedForestSession'));
+  assert.match(demoAdapter, /localStorage\.setItem\(STORAGE_KEY/);
+  assert.match(demoAdapter, /localStorage\.getItem\(STORAGE_KEY/);
+  assert.doesNotMatch(apiAdapter, /localStorage/);
+  assert.match(game, /initialParams\.get\("demo"\) === "1"/);
+  assert.match(game, /explicitDemoMode \? new DemoForestAdapter\(\)/);
   assert.doesNotMatch(phaser, /gandang-carrot-forest-demo-v1/);
   assert.doesNotMatch(app, /localStorage\.getItem\("gandang-carrot-forest-demo-v1"/);
 });
