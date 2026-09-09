@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,13 +11,22 @@ from app.apis.v1 import v1_routers
 from app.core import config
 from app.core.db.databases import initialize_tortoise
 from app.core.redis import close_redis, redis_client
+from app.middleware.challenge_upload_limit import ChallengeUploadLimit
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if not config.DEMO_MODE:
         await redis_client.ping()
-    yield
+    from app.services.challenge_v2_retention import retention_loop
+
+    retention = asyncio.create_task(retention_loop())
+    try:
+        yield
+    finally:
+        retention.cancel()
+        with suppress(asyncio.CancelledError):
+            await retention
     if not config.DEMO_MODE:
         await close_redis()
 
@@ -28,6 +38,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 initialize_tortoise(app)
+app.add_middleware(ChallengeUploadLimit)
 
 app.include_router(v1_routers)
 
@@ -44,6 +55,15 @@ async def home() -> FileResponse:
 @app.get("/forest", include_in_schema=False)
 async def carrot_forest() -> FileResponse:
     response = FileResponse(FRONTEND_DIR / "forest.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/service", include_in_schema=False)
+async def suin_service() -> FileResponse:
+    """Namespaced September 7 frontend; shares the forest's host-only session."""
+    response = FileResponse(FRONTEND_DIR / "suin" / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
