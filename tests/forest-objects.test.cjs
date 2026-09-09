@@ -219,14 +219,16 @@ function individualImages(api) {
   }));
 }
 
-test('individual manifest names one independent PNG for each storage and animated object', () => {
+test('manifest restores five complete safe cells and retains other furniture sources', () => {
   const { api } = setup();
   assert.equal(api.INDIVIDUAL_ASSETS.length, 24);
   assert.equal(new Set(api.INDIVIDUAL_ASSETS.map(asset => asset.url)).size, 24);
-  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v153/')).length, 24);
+  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v153/')).length, 19);
   for (const asset of api.INDIVIDUAL_ASSETS) {
     assert.equal(asset.key, `furniture-${asset.code}`);
-    assert.equal(asset.url, `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
+    assert.equal(asset.url, api.RESTORED_CODES.includes(asset.code)
+      ? `/static/assets/carrot-forest-storage-atlas-v3.png?v=20260909-${asset.code}`
+      : `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
   }
 });
 
@@ -378,6 +380,25 @@ test('ordinary furniture uses the pre-carrot-house atlas while campfire keeps it
   const restored = api.createStorageAtlas(source);
   assert.equal(restored.calls[13][0], legacy, 'bench is copied from the old furniture atlas');
   assert.notEqual(restored.calls[14][0], legacy, 'campfire remains the approved current illustration');
+});
+
+test('five repaired objects retain complete silhouettes with centered padded bounds in the live atlas', () => {
+  const { api } = setup(), images = individualImages(api);
+  const safe = readRgbaPng(path.join(__dirname, '../src/frontend/assets/carrot-forest-storage-atlas-v3.png'));
+  for (const code of api.RESTORED_CODES) images[code] = safe;
+  const result = api.createStorageAtlasFromImages(images, source);
+  for (const code of api.RESTORED_CODES) {
+    const index = api.STORAGE_INDEX[code], tile = result.calls[index][0];
+    const bounds = api.alphaBounds(tile.pixels, 256, 256, 12);
+    assert.ok(bounds, code);
+    assert.ok(bounds.x >= 10 && bounds.y >= 10, `${code}: complete top and left padding`);
+    assert.ok(bounds.x + bounds.width <= 246 && bounds.y + bounds.height <= 246, `${code}: complete bottom/right padding`);
+    assert.ok(Math.abs(bounds.x + bounds.width / 2 - 128) <= 3, `${code}: centered silhouette`);
+    const small = tile.calls[0][0], fitted = small.calls[0][0], isolated = fitted.calls[0][0];
+    assert.equal(isolated.calls[0][0], safe);
+    assert.deepEqual(isolated.calls[0].slice(1, 5), [index % 5 * 256, Math.floor(index / 5) * 256, 256, 256]);
+    assert.ok(bounds.height > 170, `${code}: restore a full-size object instead of hiding cropped edges`);
+  }
 });
 
 test('async art boot blocks legacy flashes and registers nothing until every required PNG is ready', async () => {

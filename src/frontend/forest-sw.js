@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v180-1";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v181-1";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
@@ -12,7 +12,7 @@ const CORE_SHELL = [
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
   "/static/lpc-avatar-engine.js?v=20260908-2",
-  "/static/forest-objects.js?v=20260908-4",
+  "/static/forest-objects.js?v=20260909-3",
   "/static/forest-fire.js?v=20260907-3",
   "/static/forest-animals.js?v=20260908-5",
   "/static/forest-pets.js?v=20260908-6",
@@ -30,7 +30,8 @@ const CORE_SHELL = [
   "/static/icons/forest-icon-512.png",
 ];
 const MEDIA_ASSETS = [
-  ...["tent", "light_tent", "picnic_table", "bbq_table", "chair_green", "chair_red", "picnic_blanket", "pond", "lantern", "fence", "flower_cart", "flower_pot", "mushroom", "bench", "campfire", "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow", "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"].map(code => `/static/assets/furniture-v153/${code}.png?v=20260907-1`),
+  ...["tent", "light_tent", "picnic_table", "bbq_table", "chair_green", "chair_red", "picnic_blanket", "pond", "fence", "flower_cart", "flower_pot", "mushroom", "bench", "campfire", "watering_can", "duck_float", "animated_fountain", "firefly_lantern", "garden_pinwheel"].map(code => `/static/assets/furniture-v153/${code}.png?v=20260907-1`),
+  ...["lantern", "mailbox", "scarecrow", "carrot_crate", "wheelbarrow"].map(code => `/static/assets/carrot-forest-storage-atlas-v3.png?v=20260909-${code}`),
   "/static/assets/animals/lpc-cow-eat.png",
   "/static/assets/animals/lpc-cow-walk.png",
   "/static/assets/animals/lpc-rabbit.png",

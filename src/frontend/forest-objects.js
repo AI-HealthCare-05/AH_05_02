@@ -12,6 +12,7 @@
     "mailbox", "scarecrow", "carrot_crate", "watering_can", "wheelbarrow",
   ]);
   const STORAGE_INDEX = Object.freeze(Object.fromEntries(STORAGE_CODES.map((code, index) => [code, index])));
+  const RESTORED_CODES = Object.freeze(["lantern", "mailbox", "scarecrow", "carrot_crate", "wheelbarrow"]);
 
   // The v4 PNG already contains neighbouring artwork INSIDE six logical cells.
   // These local [x, y, width, height] windows remove those fragments. They are
@@ -56,7 +57,9 @@
     // Restore the complete pre-carrot-house furniture set. Campfire and
     // fountain already used these exact protected originals; cow and
     // riverduck are loaded from their dedicated manifests elsewhere.
-    url: `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
+    url: RESTORED_CODES.includes(code)
+      ? `/static/assets/carrot-forest-storage-atlas-v3.png?v=20260909-${code}`
+      : `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
     kind: Object.hasOwn(STORAGE_INDEX, code) ? "storage" : "animated",
   })));
   const individualAtlasCache = new WeakMap(), hybridStorageCache = new WeakMap(), alphaBoundsCache = new WeakMap(), individualImageSources = new WeakMap();
@@ -146,7 +149,7 @@
       const image = images[code];
       // Normalize in a dedicated tile first. No draw can ever read pixels from
       // another object's source PNG or spill visible artwork into its neighbor.
-      const tile = createIndividualTile(image, tileSize);
+      const tile = createFurnitureTile(image, code, tileSize);
       const copies = kind === "storage" ? 1 : 4;
       for (let frame = 0; frame < copies; frame++) {
         const column = kind === "storage" ? index % columns : frame;
@@ -156,6 +159,30 @@
     });
     cached[kind] = { sourceKey, canvas };
     return canvas;
+  }
+
+  function createFurnitureTile(image, code, tileSize = STORAGE_TILE_SIZE) {
+    const size = imageDimensions(image);
+    if (!RESTORED_CODES.includes(code) || size?.width !== 1280 || size?.height !== 1024) return createIndividualTile(image, tileSize);
+    // The older safe-cell source contains the complete hat, post and handles.
+    // Isolate before measuring alpha so neighbouring furniture never affects fit.
+    const index = STORAGE_INDEX[code];
+    const isolated = document.createElement("canvas");
+    isolated.width = isolated.height = 256;
+    isolated.getContext("2d").drawImage(image, (index % 5) * 256, Math.floor(index / 5) * 256, 256, 256, 0, 0, 256, 256);
+    const fitted = createIndividualTile(isolated, tileSize);
+    // Match the field's pixel cadence without recolouring the original palette.
+    const pixels = document.createElement("canvas");
+    pixels.width = pixels.height = tileSize / 2;
+    const sample = pixels.getContext("2d");
+    sample.imageSmoothingEnabled = false;
+    sample.drawImage(fitted, 0, 0, tileSize, tileSize, 0, 0, pixels.width, pixels.height);
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = tileSize;
+    const context = tile.getContext("2d");
+    context.imageSmoothingEnabled = false;
+    context.drawImage(pixels, 0, 0, pixels.width, pixels.height, 0, 0, tileSize, tileSize);
+    return tile;
   }
 
   function createStorageAtlasFromImages(images, legacySource = null) {
@@ -171,9 +198,9 @@
     STORAGE_CODES.forEach((code, index) => {
       const x = (index % STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
       const y = Math.floor(index / STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
-      if (code === "campfire") {
+      if (code === "campfire" || RESTORED_CODES.includes(code)) {
         // The current animated campfire is intentionally retained.
-        context.drawImage(createIndividualTile(images[code]), x, y);
+        context.drawImage(createFurnitureTile(images[code], code), 0, 0, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE, x, y, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE);
       } else {
         // Every ordinary furniture item comes from the pre-carrot-house v4
         // atlas, not from the later individually generated illustration pack.
@@ -296,7 +323,7 @@
 
   window.ForestObjects = Object.freeze({
     STORAGE_TILE_SIZE, STORAGE_COLUMNS, STORAGE_ROWS, STORAGE_CODES, STORAGE_INDEX,
-    SOURCE_RECTS, createStorageAtlas, drawStorageItem,
+    SOURCE_RECTS, RESTORED_CODES, createStorageAtlas, drawStorageItem,
     ANIMATED_TILE_SIZE, ANIMATED_CODES, ANIMATED_ROWS, ANIMATED_FRAME_RECTS,
     animatedFrameLayout, createAnimatedAtlas, drawAnimatedItem,
     INDIVIDUAL_ASSETS, alphaBounds, individualFrameLayout, createIndividualTile,

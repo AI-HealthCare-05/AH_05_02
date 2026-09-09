@@ -23,9 +23,9 @@ test('offline shell versions match every HTML script, stylesheet, and restored f
   const objects = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-objects.js'), 'utf8'), objects);
   const manifest = Array.from(objects.window.ForestObjects.INDIVIDUAL_ASSETS, asset => asset.url).sort();
-  const cachedFurniture = Array.from(context.media).filter(url => /\/furniture-v\d+\//.test(url)).sort();
+  const cachedFurniture = Array.from(context.media).filter(url => /\/furniture-v\d+\/|storage-atlas-v3\.png\?v=20260909-/.test(url)).sort();
   assert.deepEqual(cachedFurniture, manifest);
-  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v153/')).length, 24);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v153/')).length, 19);
   assert.equal(cachedFurniture.some(url => url.includes('/furniture-v156/')), false);
   const animals = require('../src/frontend/forest-animals.js');
   assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-rabbits/')).sort(),
