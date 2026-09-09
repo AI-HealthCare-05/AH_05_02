@@ -17,6 +17,7 @@ async def user_me_info(
     return UserInfoResponse.model_validate(user)
 
 
+@user_router.patch("/me", response_model=UserInfoResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
 @user_router.patch("/me/profile", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
 async def update_user_me_info(
     update_data: UserUpdateRequest,

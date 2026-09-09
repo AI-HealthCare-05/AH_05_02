@@ -182,15 +182,10 @@ class ForestService:
         if not accessory["default"] and not await self.repo.has_item(user.id, request.accessory_code):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="아직 획득하지 않은 액세서리입니다.")
         avatar = await self.repo.avatar(user)
-        if request.display_name != avatar.display_name and await self.repo.nickname_taken(
-            request.display_name, user.id
-        ):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 사용 중인 닉네임입니다.")
-        avatar.display_name = request.display_name
         avatar.hair_code = request.hair_code
         avatar.outfit_code = request.outfit_code
         avatar.accessory_code = request.accessory_code
-        await avatar.save(update_fields=["display_name", "hair_code", "outfit_code", "accessory_code", "updated_at"])
+        await avatar.save(update_fields=["hair_code", "outfit_code", "accessory_code", "updated_at"])
         wallet = await self.game_repo.wallet(user.id)
         return self._avatar_payload(avatar, wallet.carrot_balance)
 
