@@ -25,6 +25,7 @@ assert.ok(['127.0.0.1', 'localhost'].includes(new URL(base).hostname));
       await page.goto(base, { waitUntil: 'domcontentloaded' });
       if (['underage', 'consent'].includes(scenario)) {
         await page.locator('#sidebar-signup').click();
+        await page.locator('#signup-nickname').fill('안전집주인');
         await page.locator('#email').fill('safety-fixture@example.com');
         await page.locator('#password').fill('LocalQa123!');
         await page.locator('#signup-birth-date').fill(scenario === 'underage' ? '2020-01-01' : '1966-04-12');

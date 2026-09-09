@@ -59,7 +59,7 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "응급상황 사전 문진표" in html
-    assert "1. 지금 긴급한 증상이 있나요?" in html
+    assert "지금 긴급한 증상이 있나요?" in html
     assert 'id="open-emergency-questionnaire"' in html
     assert 'role="dialog" aria-modal="true"' in html
     assert "문진 결과 적용하기" in html
@@ -136,7 +136,7 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "prediction.feature_schema_version" not in script
     assert 'id="risk-forecast-panel"' in html
     assert 'id="age-risk-chart" role="img"' in html
-    assert "현재 위험 신호와 별도로 약 2년 뒤" in html
+    assert "앞으로 약 2년 동안 조심할 위험 신호예요" in html
 
 
 def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
@@ -180,10 +180,12 @@ def test_together_shares_only_challenge_completion_status() -> None:
 
 def test_service_and_model_age_are_separately_explained() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "만 14~18세는 생활습관 챌린지" in html
-    assert "만 19~44세는 현재 건강 신호" in html
-    assert "만 45세 이상은 미래 발병 위험" in html
+    assert 'id="eligibility-age-band-check"' in html
+    assert "만 14~18세는 예측 없이 생활습관 챌린지" in script
+    assert "만 19~44세는 현재 건강 신호" in script
+    assert "미래 발병 위험 모델은 만 45세 이상에게 적용" in script
 
 
 def test_health_form_keeps_current_backend_smoking_field_and_rf25_field() -> None:
@@ -212,15 +214,15 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'days.value = "0"' in script
     assert 'minutes.value = "0"' in script
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
-    assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
+    assert html.index('id="current-drinker-title"') < html.index('id="smoking-status-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
     assert "필수" not in lifestyle
     assert (
-        lifestyle.index('id="smoking-status-title"')
+        lifestyle.index('id="current-drinker-title"')
+        < lifestyle.index('id="smoking-status-title"')
         < lifestyle.index('for="self-health"')
-        < lifestyle.index('for="meal-count"')
-        < lifestyle.index('id="current-drinker-title"')
         < lifestyle.index('id="regular-exercise-title"')
+        < lifestyle.index('for="meal-count"')
     )
     assert "days.disabled = !isRegularExercise" in script
     assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
@@ -333,7 +335,8 @@ def test_signup_and_existing_login_use_separate_forms() -> None:
     assert 'id="login-form" class="login-form" hidden' in html
     assert 'id="login-email" type="email"' in html
     assert 'id="login-password" type="password"' in html
-    assert "생년월일과 성별은 가입할 때 저장한 정보를 불러옵니다." in html
+    assert "생년월일·성별이 맞나요?" in html
+    assert 'id="signup-nickname"' in html
     assert '$("#login-form").addEventListener("submit"' in script
     assert 'email: $("#login-email").value, password: $("#login-password").value' in script
     assert '$("#login-existing")' not in script

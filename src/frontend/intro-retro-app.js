@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), dailyRecordFailures: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -361,7 +361,6 @@ function getRiskCategoryLabel(prediction) {
 
 function showEligibilityGuidance(reasonCodes) {
   state.eligibilityReturnFocus = document.activeElement;
-  $("#eligibility-guidance").dataset.variant = "";
   const priority = [
     "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
@@ -675,8 +674,10 @@ function showStep(step, { recordHistory = true } = {}) {
     }
     else {
       updateResultConfirmation();
+      updateLifestyleSummary();
     }
   }
+  if (state.step === 7) updateLifestyleSummary();
   const activeScreen = $(`.screen[data-step="${state.step}"]`);
   const activeHeading = activeScreen?.querySelector("h1, h2, h3");
   if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
@@ -721,25 +722,17 @@ function goBack() {
 }
 
 function showHealthInputPanel(panel) {
-  const targetPanel = panel;
-  const panelMap = {
-    metrics: "health-metrics-panel",
-    vitals: "health-vitals-panel",
-    drinking: "lifestyle-input-panel",
-    habits: "health-habits-panel",
-    activity: "health-activity-panel",
-    family: "detail-health-panel",
-    nutrition: "health-nutrition-panel",
-    socioeconomic: "health-socioeconomic-panel",
-    review: "health-review-panel",
-  };
-  Object.values(panelMap).forEach((id) => {
-    const element = document.getElementById(id);
-    if (element) element.hidden = panelMap[targetPanel] !== id;
-  });
+  const isMetrics = panel === "metrics";
+  const isLifestyle = panel === "lifestyle";
+  const isDetails = panel === "details";
+  const isReview = panel === "review";
+  $("#health-metrics-panel").hidden = !isMetrics;
+  $("#lifestyle-input-panel").hidden = !isLifestyle;
+  $("#detail-health-panel").hidden = !isDetails;
+  $("#health-review-panel").hidden = !isReview;
   $$(".inner-step-tabs [data-health-tab]").forEach((element) => {
-    element.classList.toggle("active", element.dataset.healthTab === targetPanel);
-    element.setAttribute("aria-pressed", String(element.dataset.healthTab === targetPanel));
+    element.classList.toggle("active", element.dataset.healthTab === panel);
+    element.setAttribute("aria-pressed", String(element.dataset.healthTab === panel));
   });
   if (state.healthDraftDirty) persistHealthDraft();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -868,20 +861,6 @@ function unlockReturningUserRoutes() {
   showStep(7, { recordHistory: false });
 }
 
-function syncSignupHouseName(value = $("#signup-nickname")?.value) {
-  const name = String(value || "").trim();
-  const preview = $("#signup-house-name");
-  if (preview) preview.textContent = name || "○○";
-}
-
-function clampDateYearInput(input) {
-  if (!input?.value) return;
-  const parts = input.value.split("-");
-  if (parts[0]?.length > 4) {
-    input.value = [parts[0].slice(0, 4), ...parts.slice(1)].join("-");
-  }
-}
-
 function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   if (mode === "signup" && state.accountRecovery && state.token === state.accountRecovery.token) {
     showAccountRecovery(state.accountRecovery, "이미 가입한 계정의 남은 설정을 완료해 주세요.");
@@ -897,10 +876,9 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $("#signup-form").hidden = isLogin;
   $("#login-form").hidden = !isLogin;
   $("#auth-title-eyebrow").textContent = isLogin
-    ? context === "mypage" ? "마이페이지 로그인" : "당근의 숲에 도착했어요"
-    : "당근의 숲에 도착했어요";
-  $("#signup-title").textContent = isLogin ? "우리집 들어가기" : "새로운 집주인을 등록해요";
-  syncSignupHouseName();
+    ? context === "mypage" ? "마이페이지 로그인" : "기존 회원 로그인"
+    : "가입 및 건강정보 동의";
+  $("#signup-title").textContent = isLogin ? "기존 계정으로 로그인해 주세요" : "계정과 동의 정보를 입력해 주세요";
   if (isLogin) {
     $("#flow-context").textContent = context === "mypage" ? "마이페이지" : "계정 이용";
     $("#progress-bar").style.width = "0";
@@ -915,7 +893,7 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $$("[data-auth-entry]").forEach((element) => {
     element.classList.toggle("active", element.dataset.authEntry === (isLogin ? "login" : "signup"));
   });
-  if (moveFocus) (isLogin ? $("#login-email") : $("#signup-nickname")).focus();
+  if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
 }
 
 function openProfileEditor() {
@@ -941,7 +919,6 @@ function showSignupEligibilityGuidance(reasonCode, birthDate, gender) {
   $("#gender").value = gender;
   resetEligibilityAnswers();
   syncLifestyleAvatar();
-  if (typeof updateEligibilityAgeCheck === "function") updateEligibilityAgeCheck();
   state.visitedSteps.add(3);
   showStep(3);
   showEligibilityGuidance([reasonCode]);
@@ -1034,13 +1011,11 @@ function showAccountRecovery(recovery, message) {
   $("#account-recovery-form").hidden = false;
   $("#signup-title").textContent = "계정 설정을 이어서 완료해 주세요";
   $("#auth-title-eyebrow").textContent = "가입 후 설정";
-  $("#recovery-name").value = recovery.name || state.userProfile?.name || "";
   $("#recovery-birthday").value = recovery.birthday || "";
   $("#recovery-gender").value = recovery.gender || "";
   $("#recovery-health-consent").checked = recovery.healthAgreed === true;
   const needsLogin = !state.token;
   const verifyOnly = recovery.verifyOnly === true;
-  $("#recovery-name").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-birthday").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-gender").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-health-consent").disabled = needsLogin || verifyOnly;
@@ -1058,17 +1033,16 @@ async function saveAccountSetup(recovery) {
     if (state.token !== recovery.token) throw Object.assign(new Error("계정이 변경되어 이전 요청을 중단했습니다."), { code: "SESSION_CHANGED" });
   };
   if (!recovery.healthAgreed) throw new Error("건강정보 수집·이용에 동의해야 다음 단계로 진행할 수 있습니다.");
-  const name = String(recovery.name || "").trim();
   const age = getAgeFromBirth(recovery.birthday);
-  if (name.length < 2 || name.length > 20 || !Number.isFinite(age) || age < 14 || !["FEMALE", "MALE"].includes(recovery.gender)) {
-    throw new Error("닉네임·생년월일·성별을 확인해 주세요. 닉네임은 2~20자이며, 만 14세 미만은 가입할 수 없습니다.");
+  if (!Number.isFinite(age) || age < 14 || !["FEMALE", "MALE"].includes(recovery.gender)) {
+    throw new Error("생년월일과 성별을 확인해 주세요. 만 14세 미만은 가입할 수 없습니다.");
   }
   if (!recovery.profileSaved) {
     recovery.stage = "profile";
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ name, birthday: recovery.birthday, gender: recovery.gender }) });
+    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ birthday: recovery.birthday, gender: recovery.gender }) });
     checkSession();
     recovery.profileSaved = true;
-    state.userProfile = { ...(state.userProfile || {}), name, birthday: recovery.birthday, gender: recovery.gender };
+    state.userProfile = { ...(state.userProfile || {}), birthday: recovery.birthday, gender: recovery.gender };
   }
   recovery.stage = "consent";
   // A failed response may still have committed. Read before retrying this append-only write.
@@ -1087,7 +1061,6 @@ async function saveAccountSetup(recovery) {
   state.healthConsentStatus = "active";
   $("#eligibility-birth-date").value = recovery.birthday;
   $("#gender").value = recovery.gender;
-  if (typeof updateEligibilityAgeCheck === "function") updateEligibilityAgeCheck();
   state.accountRecovery = null;
   $("#account-recovery-form").hidden = true;
   resetEligibilityAnswers();
@@ -1112,7 +1085,7 @@ function healthSubmitLabel() {
   if (state.currentHealthOnly) return "저장하고 현재 건강 신호 확인";
   if (state.returningUser && shouldRunPredictionAfterHealthEdit()) return "저장하고 다시 분석하기";
   if (state.returningUser) return "건강정보 저장하기";
-  return "분석하기";
+  return "이 내용으로 분석하기";
 }
 
 function openReturningUserHealthEdit() {
@@ -1295,7 +1268,6 @@ function clearAuthenticatedClientState({ keepEmail = true } = {}) {
   state.prediction = null;
   state.cycle = null;
   state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
   state.invitations = { sent: [], received: [] };
   state.reportPeriods = {};
   state.reportPeriodStatus = { week: "idle", "four-week": "idle", all: "idle" };
@@ -1351,7 +1323,7 @@ function resumeInterruptedHealthFlow(latestHealthCheckup) {
     state.visitedSteps.add(4);
     $("#submit-analysis").textContent = healthSubmitLabel();
     showStep(4);
-    showHealthInputPanel(["metrics", "vitals", "drinking", "habits", "activity", "family", "nutrition", "socioeconomic", "review"].includes(restored.panel) ? restored.panel : "metrics");
+    showHealthInputPanel(["metrics", "lifestyle", "details", "review"].includes(restored.panel) ? restored.panel : "metrics");
     showMessage("로그인 전에 저장하지 못한 건강정보를 복원했습니다. 내용을 확인한 뒤 다시 저장해 주세요.", "success");
     return true;
   }
@@ -1438,8 +1410,6 @@ function detailHealthPayload() {
 function detailHealthReviewRows() {
   const details = detailHealthPayload();
   return [
-    ["고혈압 가족력", selectLabel("hypertension-family-history")],
-    ["당뇨병 가족력", selectLabel("diabetes-family-history")],
     ["하루 섭취 열량", details.energy_kcal == null ? "모름" : `${details.energy_kcal} kcal`],
     ["하루 단백질", details.protein_g == null ? "모름" : `${details.protein_g} g`],
     ["하루 지방", details.fat_g == null ? "모름" : `${details.fat_g} g`],
@@ -1450,6 +1420,8 @@ function detailHealthReviewRows() {
     ["최종 학력", selectLabel("education-level")],
     ["개인 소득 분위", selectLabel("income-quartile")],
     ["가구 소득 분위", selectLabel("household-income-quartile")],
+    ["고혈압 가족력", selectLabel("hypertension-family-history")],
+    ["당뇨병 가족력", selectLabel("diabetes-family-history")],
   ];
 }
 
@@ -1522,74 +1494,6 @@ function currentAgeLabel() {
   const birth = $("#eligibility-birth-date").value;
   const age = getAgeFromBirth(birth);
   return Number.isFinite(age) ? `만 ${age}세` : "-";
-}
-
-function ageBandLabel(age) {
-  if (!Number.isFinite(age)) return "";
-  if (age < 10) return "10대 미만";
-  if (age >= 100) return "100세 이상";
-  return `${Math.floor(age / 10) * 10}대`;
-}
-
-function expectedAgeBandValue(age) {
-  if (!Number.isFinite(age)) return "";
-  if (age < 10) return "under-10";
-  if (age >= 80) return "80";
-  return String(Math.floor(age / 10) * 10);
-}
-
-function updateEligibilityAgeCheck() {
-  const target = $("#eligibility-age-check");
-  if (!target) return;
-  target.textContent = "";
-  target.hidden = true;
-  target.dataset.state = "empty";
-}
-
-function showAgeBandMismatchDialog() {
-  state.eligibilityReturnFocus = $("#eligibility-age-band-check");
-  state.signupGuidanceField = null;
-  state.eligibilityGuidanceReason = "AGE_BAND_MISMATCH";
-  state.eligibilityGuidanceStep = null;
-  state.eligibilityGuidanceWorkspace = null;
-  state.eligibilityGuidanceSecondaryStep = null;
-  const guidance = $("#eligibility-guidance");
-  guidance.dataset.variant = "age-band-mismatch";
-  $("#eligibility-guidance-code").textContent = "";
-  $("#eligibility-guidance-title").textContent = "생년월일 기준과 선택한 나이대가 다릅니다";
-  $("#eligibility-guidance-message").innerHTML = "생년월일 또는 나이대 선택을<br>다시 확인해주세요.";
-  $("#eligibility-guidance-reason-title").textContent = "확인한 내용";
-  $("#eligibility-guidance-reason").textContent = "입력한 생년월일로 계산한 나이대와 선택한 나이대가 일치하지 않습니다.";
-  $("#eligibility-guidance-action").textContent = "생년월일 또는 나이대 선택을 다시 확인해주세요.";
-  $("#eligibility-guidance-primary").hidden = true;
-  $("#urgent-guidance-actions").hidden = true;
-  $("#same-day-guidance-actions").hidden = true;
-  const secondary = $("#eligibility-guidance-secondary");
-  if (secondary) secondary.hidden = true;
-  guidance.hidden = false;
-  guidance.focus({ preventScroll: true });
-}
-
-function validateEligibilityAgeBand() {
-  const birth = $("#eligibility-birth-date")?.value;
-  const selected = $("#eligibility-age-band-check")?.value || "";
-  const age = getAgeFromBirth(birth);
-  updateEligibilityAgeCheck();
-  if (!birth || !Number.isFinite(age)) {
-    showMessage("생년월일을 입력해 주세요.");
-    $("#eligibility-birth-date")?.focus();
-    return false;
-  }
-  if (!selected) {
-    showMessage("생년월일을 다시 확인할 수 있도록 나이대를 선택해 주세요.");
-    $("#eligibility-age-band-check")?.focus();
-    return false;
-  }
-  if (selected !== expectedAgeBandValue(age)) {
-    showAgeBandMismatchDialog();
-    return false;
-  }
-  return true;
 }
 
 function getAgeFromBirth(birth) {
@@ -1717,34 +1621,34 @@ function renderHealthReview() {
   const selfHealthLabel = $("#self-health").selectedOptions[0]?.textContent || "-";
   const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const detailHealth = detailHealthPayload();
-  $("#health-review-title").textContent = "분석 전에 입력한 내용을 한 번 더 확인해 주세요";
+  $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
+  $("#health-review-panel .lead").textContent = state.currentHealthOnly
+    ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
+    : "정보가 정확해야 당뇨병 위험 신호 확인을 요청할 수 있습니다. 수정이 필요하면 각 카드의 수정 버튼을 눌러 주세요.";
   $("#submit-analysis").textContent = healthSubmitLabel();
-  const eligibilityReview = $("#review-eligibility");
-  if (eligibilityReview) {
-    eligibilityReview.innerHTML = dlRows([
-      ["생년월일", $("#eligibility-birth-date").value || "-"],
-      ["현재 만 나이", currentAgeLabel()],
-      ["당뇨병 진단 여부", $("#diagnosed-diabetes-yes").checked ? "진단받음" : "진단받지 않음"],
-      ["응급상황 사전 문진", emergencyScreeningSummary()],
-    ]);
-  }
+  $("#review-eligibility").innerHTML = dlRows([
+    ["생년월일", $("#eligibility-birth-date").value || "-"],
+    ["현재 만 나이", currentAgeLabel()],
+    ["당뇨병 진단 여부", $("#diagnosed-diabetes-yes").checked ? "진단받음" : "진단받지 않음"],
+    ["응급상황 사전 문진", emergencyScreeningSummary()],
+  ]);
   $("#review-health").innerHTML = dlRows([
-    ["키", `${$("#height").value} cm`],
-    ["몸무게", `${$("#weight").value} kg`],
-    ["허리둘레", $("#waist").value ? `${$("#waist").value} cm` : "입력 안 함"],
     ["공복혈당", $("#fasting-glucose").value ? `${$("#fasting-glucose").value} mg/dL` : "입력 안 함"],
     ["수축기 혈압", $("#systolic").value ? `${$("#systolic").value} mmHg` : "입력 안 함"],
     ["이완기 혈압", $("#diastolic").value ? `${$("#diastolic").value} mmHg` : "입력 안 함"],
+    ["키", `${$("#height").value} cm`],
+    ["몸무게", `${$("#weight").value} kg`],
+    ["허리둘레", $("#waist").value ? `${$("#waist").value} cm` : "입력 안 함"],
   ]);
   $("#review-lifestyle").innerHTML = dlRows([
+    ["흡연 상태", smokingStatusLabel(selectedRadioValue("smoking-status"))],
     ["현재 음주", boolLabel(selectedRadioValue("current-drinker"))],
     ["음주 빈도", selectedRadioValue("current-drinker") === "false" ? "최근 1년간 마시지 않음" : selectLabel("alcohol-frequency")],
-    ["흡연 상태", smokingStatusLabel(selectedRadioValue("smoking-status"))],
-    ["주관적 건강상태", selfHealthLabel],
     ["규칙적인 운동", boolLabel(selectedRadioValue("regular-exercise"))],
     ["최근 1주 걷기 일수", detailHealth.walking_days == null ? "모름" : `${detailHealth.walking_days}일`],
     ["주당 운동 일수", `${isRegularExercise ? $("#exercise-days").value : 0}일`],
     ["한 번 운동할 때 시간", `${isRegularExercise ? $("#exercise-minutes").value : 0}분`],
+    ["주관적 건강상태", selfHealthLabel],
     ["어제 식사 횟수", `${$("#meal-count").value}회`],
   ]);
   $("#review-detail-health").innerHTML = dlRows(detailHealthReviewRows());
@@ -1774,16 +1678,7 @@ function focusHealthField(id) {
   const field = document.getElementById(id);
   if (!field) return;
   const panel = field.closest(".health-input-panel")?.id;
-  showHealthInputPanel({
-    "health-metrics-panel": "metrics",
-    "health-vitals-panel": "vitals",
-    "lifestyle-input-panel": "drinking",
-    "health-habits-panel": "habits",
-    "health-activity-panel": "activity",
-    "detail-health-panel": "family",
-    "health-nutrition-panel": "nutrition",
-    "health-socioeconomic-panel": "socioeconomic",
-  }[panel] || "metrics");
+  showHealthInputPanel({ "health-metrics-panel": "metrics", "lifestyle-input-panel": "lifestyle", "detail-health-panel": "details" }[panel] || "metrics");
   field.focus();
 }
 
@@ -1832,7 +1727,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 중",
       icon: "◌",
       mascot: "/static/assets/hyeoldangi-analyzing.png",
-      message: "진행률 숫자는 위험 확률로 오해될 수 있어\n표시하지 않습니다.",
+      message: "진행률 숫자는 위험 확률로 오해될 수 있어 표시하지 않습니다.",
       policy: "이 결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1842,7 +1737,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "결과 준비 완료",
       icon: "✓",
       mascot: "/static/assets/hyeoldangi-complete.png",
-      message: "결과 화면에서 위험 범주와\n다음 행동을 확인해 주세요.",
+      message: "결과 화면에서 위험 범주와 다음 행동을 확인해 주세요.",
       policy: "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1852,7 +1747,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 실패",
       icon: "×",
       mascot: "/static/assets/hyeoldangi-guide.png",
-      message: "분석을 완료하지 못했습니다.\n다시 시도해 주세요.",
+      message: "가짜 결과를 표시하지 않으며, 다시 시도할 수 있습니다.",
       policy: "반복해서 실패하면 잠시 후 다시 시도하거나 입력정보를 확인해 주세요.",
       showRetry: true,
     },
@@ -1884,7 +1779,7 @@ function renderPredictionStatus(status, options = {}) {
   $("#result-explain").textContent = options.message || config.message;
   $("#job-status").textContent = options.lead || config.message;
   $("#probability-policy").querySelector("p").textContent = config.policy;
-  $("#analysis-failure").hidden = true;
+  $("#analysis-failure").hidden = status !== "failed";
   if (!$("#analysis-failure").hidden) {
     $("#analysis-failure-title").textContent = failureGuidance?.failureTitle || (errorCode === "TIMEOUT"
       ? "분석 시간이 초과되었습니다"
@@ -2000,7 +1895,7 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
     $("#result-confirmation-eyebrow").textContent = "현재 건강 신호";
     $("#factors-title").textContent = "현재 건강정보를 확인해 주세요";
     $("#result-confirmation-lead").innerHTML = "<p>입력한 건강정보를 저장하고 현재 건강 신호 결과를 확인합니다.</p>";
-    $("#to-challenges").textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : "오늘의 실천 시작하기";
+    $("#to-challenges").textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : "다음: 생활습관 챌린지 보기";
   }
 
   const signal = getCurrentHealthSignal(checkup);
@@ -2030,9 +1925,10 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
 function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "결과 확인";
-  $("#factors-title").textContent = "오늘, 미래의 신호 결과를 확인해요";
-  $("#result-confirmation-lead").innerHTML = "<p><strong>오늘의 신호</strong> 지금 건강정보에서 확인된 신호예요.</p><p><strong>미래의 신호</strong> 앞으로 약 2년 동안 조심할 위험 신호예요.</p>";
-  $("#current-health-result").hidden = true;
+  $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
+  $("#result-confirmation-lead").innerHTML = "<p>현재 위험 신호 선별은 지금 확인이 필요한 신호를, 미래 신규 발병 위험은 앞으로의 위험 신호를 살펴봅니다.</p><p>두 결과는 서로 다른 기준으로 계산되므로 점수를 직접 비교하거나 합산하지 않습니다.</p>";
+  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: false });
+  else $("#current-health-result").hidden = true;
 }
 
 function updateResultConfirmation(prediction = state.currentScreeningPrediction || {}, approvedOverride = null) {
@@ -2048,13 +1944,13 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
   const content = {
     low: {
       label: "낮음",
-      next: "오늘의 실천 시작하기",
+      next: "다음: 챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-low.png",
       mascotAlt: "좋은 습관을 이어가자고 응원하는 간당간당 캐릭터 혈당이",
     },
     caution: {
       label: "주의",
-      next: "오늘의 실천 시작하기",
+      next: "다음: 챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-caution.png",
       mascotAlt: "확인할 요인을 살펴보자고 안내하는 간당간당 캐릭터 혈당이",
     },
@@ -2066,7 +1962,7 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
     },
     pending: {
       label: "결과 준비 중",
-      next: "오늘의 실천 시작하기",
+      next: "다음: 챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-low.png",
       mascotAlt: "결과를 기다리며 응원하는 간당간당 캐릭터 혈당이",
     },
@@ -2080,6 +1976,11 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
       ? "현재 위험 신호 결과 준비 중"
       : `현재 위험 신호 ${content.label}`,
   );
+  const riskMascot = $("#risk-hyeoldangi");
+  if (riskMascot) {
+    riskMascot.src = content.mascot;
+    riskMascot.alt = content.mascotAlt;
+  }
   $("#medical-guidance-detail").hidden = true;
   const challengeButton = $("#to-challenges");
   if (challengeButton) challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next;
@@ -2547,7 +2448,42 @@ function setForecastRiskPreview(risk) {
   });
 }
 
+function updateLifestyleSummary() {
+  const mealCount = $("#meal-count").value;
+  const smokingStatus = selectedRadioValue("smoking-status");
+  const drinker = boolLabel(selectedRadioValue("current-drinker"));
+  const exercise = boolLabel(selectedRadioValue("regular-exercise"));
+  if (!$("#summary-meals")) return;
+  $("#summary-meals").textContent = mealCount
+    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요.`
+    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요.";
+  $("#summary-meals-action").textContent = mealCount
+    ? "규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요."
+    : "다음 입력 때 식사 리듬을 함께 점검해요.";
+  $("#summary-activity").textContent = exercise === "예"
+    ? "규칙적인 운동을 하고 있다고 기록했어요."
+    : "규칙적인 운동을 하지 않는다고 기록했어요.";
+  $("#summary-activity-action").textContent = exercise === "예"
+    ? "지금의 활동 습관을 무리 없이 유지해 보세요."
+    : "짧은 걷기처럼 부담 낮은 활동부터 시작할 수 있어요.";
+  $("#summary-metabolic").textContent = smokingStatus === "current" || drinker === "예"
+    ? "흡연·음주와 관련된 생활습관 기록이 있어요."
+    : smokingStatus === "former"
+    ? "과거 흡연 이력이 기록되어 있어요."
+    : "입력한 생활습관과 신체·검진 정보를 확인했어요.";
+  $("#summary-metabolic-action").textContent = smokingStatus === "current" || drinker === "예"
+    ? "현재 기록을 바탕으로 바꾸기 쉬운 생활습관부터 점검해요."
+    : "이 정보는 위험 판정이 아니라 생활습관 점검을 위한 참고 신호예요.";
+  $("#summary-checkup").textContent = normalizeRiskKey() === "high"
+    ? "현재 위험 신호가 높음으로 확인되었어요."
+    : "현재 위험 신호와 관계없이 정기적인 확인이 필요해요.";
+  $("#summary-checkup-action").textContent = normalizeRiskKey() === "high"
+    ? "챌린지보다 검사·의료기관 상담 안내를 먼저 확인해 주세요."
+    : "정기 검진과 생활습관 기록을 이어가 주세요.";
+}
+
 function syncLifestyleAvatar() {
+  updateLifestyleSummary();
   window.lifestyleMapView?.refresh();
 }
 
@@ -2658,71 +2594,6 @@ function forecastSignalLabel(level) {
   return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
 }
 
-function selectTwoYearForecastPoint(prediction = {}, fallbackLevel = null) {
-  const points = Array.isArray(prediction?.age_risk_forecast?.points)
-    ? prediction.age_risk_forecast.points
-    : [];
-  const point = points.find((item) => (
-    Number(item?.years_from_now) === 2
-    || /^\s*(?:약\s*)?2\s*년/.test(String(item?.display_label || item?.horizon_label || ""))
-  ));
-  const level = normalizeForecastSignal(point?.signal_level || point?.risk_category || fallbackLevel);
-  if (!level) return null;
-  return {
-    label: String(point?.display_label || point?.horizon_label || "약 2년 후").trim(),
-    level,
-  };
-}
-
-function renderTwoYearRiskForecast(prediction = {}, options = {}) {
-  const chart = $("#age-risk-chart");
-  const pointContainer = $("#age-risk-chart-points");
-  const stateBox = $("#forecast-state");
-  const statusBadge = $("#forecast-status-badge");
-  if (!chart || !pointContainer || !stateBox || !statusBadge) return;
-  const point = options.canDisplayRisk
-    ? selectTwoYearForecastPoint(prediction, options.fallbackLevel)
-    : null;
-  const hasPoint = Boolean(point);
-  chart.hidden = !hasPoint;
-  stateBox.hidden = hasPoint;
-  pointContainer.replaceChildren();
-  if (!hasPoint) {
-    stateBox.dataset.state = options.failed ? "unavailable" : "loading";
-    $("#forecast-state-title").textContent = options.failed
-      ? "미래 신규 발병 위험 분석을 완료하지 못했습니다"
-      : "2년 위험 전망 결과를 준비하고 있어요";
-    $("#forecast-state-message").textContent = options.failed
-      ? "실패한 분석만 다시 시도하면 이어서 확인할 수 있어요."
-      : "공개 가능한 결과가 도착하면 그래프에 표시합니다.";
-    statusBadge.textContent = options.failed ? "분석 실패" : "결과 준비 중";
-    statusBadge.dataset.status = options.failed ? "failed" : "pending";
-    chart.setAttribute("aria-label", options.failed
-      ? "약 2년 뒤 위험 신호 전망 그래프: 분석 실패"
-      : "약 2년 뒤 위험 신호 전망 그래프: 결과 준비 중");
-    return;
-  }
-  const item = document.createElement("div");
-  item.className = "age-risk-point";
-  const value = document.createElement("strong");
-  value.textContent = forecastSignalLabel(point.level);
-  const track = document.createElement("span");
-  track.className = "age-risk-signal-track";
-  track.dataset.level = point.level;
-  track.setAttribute("aria-hidden", "true");
-  const marker = document.createElement("img");
-  marker.src = `/static/assets/hyeoldangi-face-${point.level}.png`;
-  marker.alt = "";
-  track.append(marker);
-  const label = document.createElement("small");
-  label.textContent = point.label;
-  item.append(value, track, label);
-  pointContainer.append(item);
-  statusBadge.textContent = options.preview ? "화면 확인용 예시" : "승인된 결과";
-  statusBadge.dataset.status = options.preview ? "preview" : "approved";
-  chart.setAttribute("aria-label", `약 2년 뒤 당뇨병 위험 신호 전망. ${point.label} ${forecastSignalLabel(point.level)}`);
-}
-
 
 
 function renderPrediction(prediction, factors) {
@@ -2760,19 +2631,14 @@ function renderPrediction(prediction, factors) {
   $("#risk-confirm-card").hidden = false;
   $("#risk-preview-controls").hidden = !isDemoEnvironment();
   $("#result-unavailable").hidden = canDisplayRisk;
-  $("#development-preview-notice").hidden = true;
+  $("#development-preview-notice").hidden = !developmentPreviewRisk;
   $("#medical-guidance-detail").hidden = true;
   // A future-model result must never populate the current-screening traffic light.
-  const futureRiskLabel = canDisplayRisk
+  $("#future-risk-category").textContent = canDisplayRisk
     ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
     : "현재 공개할 수 있는 예측 결과가 없습니다";
-  $("#future-risk-category").textContent = futureRiskLabel;
-  renderTwoYearRiskForecast(prediction, {
-    canDisplayRisk,
-    fallbackLevel: normalizeRiskKey(displayPrediction),
-    preview: Boolean(developmentPreviewRisk),
-  });
   updateResultConfirmation();
+  updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
 }
@@ -2892,10 +2758,7 @@ async function runPrediction({ retryFailed = false } = {}) {
       if (!isCurrent()) return;
     }
     renderPrediction(future?.prediction || { display_allowed: false }, run.factors);
-    if (future?.status === "failed") {
-      $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
-      renderTwoYearRiskForecast({}, { failed: true });
-    }
+    if (future?.status === "failed") $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
     if (state.currentScreeningPrediction) {
       renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
     }
@@ -3089,26 +2952,11 @@ function hasCurrentChallengeCycle(cycle = state.cycle) {
     && !["completed", "cancelled"].includes(cycle?.status);
 }
 
-function isServerChallengeId(id) {
-  const value = Number(id);
-  return Number.isInteger(value) && value > 0 && String(id).trim() === String(value);
-}
-
-function clearCurrentChallengeCycle() {
-  state.cycle = null;
-  state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
-  state.dailyRecordsStatus = "ready";
-  const barrierSelect = $("#barrier-challenge");
-  if (barrierSelect) barrierSelect.innerHTML = "";
-  renderDailyRecordList();
-  renderTodayTaskStatus();
-}
-
 function showChallengeSelectionView() {
   $("#challenge-form").hidden = false;
   $("#challenge-safety-copy").hidden = false;
-  $("#challenge-title").textContent = "오늘의 실천을 골라요";
+  $("#challenge-lifestyle-summary").hidden = false;
+  $("#challenge-title").textContent = "오늘부터 실천할 수 있는 생활습관을 골라보세요";
 }
 
 async function openChallengeTab({ selectionCompleted = false } = {}) {
@@ -3124,7 +2972,7 @@ async function openChallengeTab({ selectionCompleted = false } = {}) {
       if (state.token !== token) return;
       if (error.status !== 404 && !error.message.includes("진행 중인 챌린지가 없습니다")) throw error;
       cycle = null;
-      clearCurrentChallengeCycle();
+      state.cycle = null;
     }
   }
   if (hasCurrentChallengeCycle(cycle)) {
@@ -3136,9 +2984,9 @@ async function openChallengeTab({ selectionCompleted = false } = {}) {
     return;
   }
   showChallengeSelectionView();
-  showStep(7);
   await loadChallenges();
   if (state.token !== token) return;
+  showStep(7);
 }
 
 function customChallengeSlot() {
@@ -3397,25 +3245,18 @@ function updateChallengeStartState() {
   reason.dataset.state = blocked ? "blocked" : "ready";
 }
 function renderCycle(cycle) {
-  const userChallenges = Array.isArray(cycle?.user_challenges) ? cycle.user_challenges : [];
-  state.cycle = { ...cycle, user_challenges: userChallenges };
+  state.cycle = cycle;
   state.dailyCompleted = new Set();
-  state.dailyRecordFailures = new Set();
   state.dailyRecordsStatus = isLocalPreview() ? "ready" : "loading";
   $("#dashboard-cycle").textContent = `${cycle.cycle_number}회차 · 4주`;
   renderDailyRecordList();
   renderTodayTaskStatus();
-  $("#barrier-challenge").innerHTML = userChallenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
+  $("#barrier-challenge").innerHTML = cycle.user_challenges.map((item) => `<option value="${item.user_challenge_id}">${item.title}</option>`).join("");
 }
 
 async function loadDailyRecords() {
   const cycle = state.cycle;
   if (!hasCurrentChallengeCycle(cycle) || isLocalPreview()) return;
-  const challenges = cycle.user_challenges || [];
-  if (challenges.some((item) => !isServerChallengeId(item.user_challenge_id))) {
-    clearCurrentChallengeCycle();
-    return;
-  }
   const token = state.token;
   const request = (state.dailyRecordsRequest || 0) + 1;
   state.dailyRecordsRequest = request;
@@ -3425,30 +3266,15 @@ async function loadDailyRecords() {
   renderDailyRecordList();
   renderTodayTaskStatus();
   try {
-    const responses = await Promise.allSettled(challenges.map(async (item) => {
+    const results = await Promise.all(cycle.user_challenges.map(async (item) => {
       const result = await api(`/user-challenges/${item.user_challenge_id}/logs?start_date=${today}&end_date=${today}`);
       if (!Array.isArray(result.items)) throw new Error("Invalid daily record response");
       return result.items.some((log) => log.log_date === today && log.is_completed === true)
         ? String(item.user_challenge_id) : null;
     }));
     if (!isCurrent()) return;
-    const completed = [];
-    const failures = [];
-    responses.forEach((response, index) => {
-      const id = String(challenges[index].user_challenge_id);
-      if (response.status === "fulfilled") {
-        if (response.value !== null) completed.push(response.value);
-      } else {
-        failures.push(id);
-      }
-    });
-    if (failures.length === responses.length) {
-      state.dailyRecordsStatus = "error";
-    } else {
-      state.dailyCompleted = new Set(completed);
-      state.dailyRecordFailures = new Set(failures);
-      state.dailyRecordsStatus = "ready";
-    }
+    state.dailyCompleted = new Set(results.filter((id) => id !== null));
+    state.dailyRecordsStatus = "ready";
   } catch {
     if (!isCurrent()) return;
     // A failed read is not evidence that the user has no completed records.
@@ -3482,18 +3308,16 @@ function renderDailyRecordList() {
     const id = String(item.user_challenge_id);
     const type = challengeRecordType(item);
     const done = state.dailyCompleted.has(id);
-    const failed = state.dailyRecordFailures?.has(id);
     const presentation = type === "simple" ? simpleRecordPresentation(item) : null;
     const icon = habitRecordIcon(type === "photo" ? "photo" : presentation.kind);
     const v3 = item.catalog_version === "evidence-v3";
     const recordHint = v3 ? `${item.daily_goal} · ${item.verification_scope}`
       : type === "photo" ? "식사 사진을 올리거나 간편 체크로 기록해요." : "사진 없이 간편 체크로 바로 기록해요.";
-    return `<button class="daily-record-card daily-record-open ${done ? "done" : ""} ${failed ? "record-load-failed" : ""}" type="button" data-user-challenge-id="${escapeHtml(id)}" data-record-type="${type}" aria-label="${escapeHtml(item.title)} · ${done ? "오늘 기록 확인" : "기록하기"}" aria-haspopup="dialog">
+    return `<button class="daily-record-card daily-record-open ${done ? "done" : ""}" type="button" data-user-challenge-id="${escapeHtml(id)}" data-record-type="${type}" aria-label="${escapeHtml(item.title)} · ${done ? "오늘 기록 확인" : "기록하기"}" aria-haspopup="dialog">
       <span class="daily-record-icon" aria-hidden="true"><b>${done ? "✓" : icon}</b></span>
       <span class="daily-record-copy">
         <strong>${escapeHtml(item.title)}</strong>
-        <small>${failed ? "이 항목의 기록 상태를 확인하지 못했어요." : done ? "오늘 실천을 기록했어요." : escapeHtml(recordHint)}</small>
-        ${failed ? '<em class="record-type-badge record-error-badge">상태 확인 필요</em>' : ""}
+        <small>${done ? "오늘 실천을 기록했어요." : escapeHtml(recordHint)}</small>
         ${done ? '<em class="record-type-badge">오늘 기록 완료</em>' : ""}
       </span>
     </button>`;
@@ -3524,14 +3348,6 @@ function renderTodayTaskStatus() {
   const action = $("#today-record-action");
   if (!title || !description || !action) return;
   const challenges = hasCurrentChallengeCycle() ? state.cycle.user_challenges : [];
-  const selectAction = $("#today-select-challenge");
-  if (selectAction) selectAction.hidden = challenges.length > 0;
-  if (!challenges.length) {
-    title.textContent = "아직 선택한 챌린지가 없어요";
-    description.textContent = "분석을 마쳤다면 실천할 챌린지를 선택해 주세요. 선택한 뒤 오늘 기록을 시작할 수 있어요.";
-    action.textContent = "오늘 기록하기";
-    return;
-  }
   if (challenges.length && ["loading", "error"].includes(state.dailyRecordsStatus)) {
     title.textContent = state.dailyRecordsStatus === "error" ? "오늘 기록을 다시 확인해 주세요" : "오늘 기록을 확인하고 있어요";
     description.textContent = "저장된 기록을 불러온 뒤 완료 상태를 표시합니다.";
@@ -4516,7 +4332,6 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   if (name === "together") syncForestOverview();
   if (name === "tools") window.lifestyleMapView?.refresh();
   if (name === "challenge") renderDailyRecordList();
-  if (name === "home") renderTodayTaskStatus();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -4586,36 +4401,23 @@ function renderForestEntryGroups(groups) {
   enter.disabled = true;
   if (!eligible.length) {
     list.innerHTML = `<article class="together-empty"><strong>입장할 수 있는 공동 챌린지가 없어요</strong><p>함께하기에서 공동 챌린지를 만들거나 받은 초대를 수락한 뒤 다시 시도해 주세요.</p></article>`;
-    return eligible;
+    return;
   }
   list.innerHTML = eligible.map(group => `<label class="forest-entry-option">
     <input type="radio" name="forest-entry-group" value="${Number(group.group_id)}">
     <span><strong>${escapeHtml(group.title)}</strong><small>${escapeHtml(group.common_goal || "함께 실천하는 공동 챌린지")} · 참여자 ${group.members.length}명</small></span>
   </label>`).join("");
-  return eligible;
 }
 
-function enterPersonalForest() {
-  window.location.assign("/forest?demo=1");
-}
-
-async function loadForestEntryGroups({ autoPersonal = false } = {}) {
+async function loadForestEntryGroups() {
   const list = $("#forest-entry-list");
   const errorNode = $("#forest-entry-error");
-  if (autoPersonal && isLocalPreview() && hasCurrentChallengeCycle()) {
-    enterPersonalForest();
-    return;
-  }
   list.innerHTML = "<p>참여 중인 그룹을 확인하고 있어요.</p>";
   errorNode.hidden = true;
   $("#enter-forest-game").disabled = true;
   try {
     const result = await api("/shared-challenge-groups");
-    const eligible = renderForestEntryGroups(Array.isArray(result?.items) ? result.items : []);
-    if (autoPersonal && !eligible.length && hasCurrentChallengeCycle()) {
-      closeForestEntryDialog();
-      enterPersonalForest();
-    }
+    renderForestEntryGroups(Array.isArray(result?.items) ? result.items : []);
   } catch (error) {
     list.innerHTML = "";
     errorNode.textContent = error.message || "그룹을 불러오지 못했어요. 다시 시도해 주세요.";
@@ -4631,7 +4433,7 @@ function openForestEntryDialog() {
     return;
   }
   $("#forest-entry-dialog").showModal();
-  void loadForestEntryGroups({ autoPersonal: true });
+  void loadForestEntryGroups();
 }
 
 function storeForestSession(groupId) {
@@ -4852,17 +4654,17 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  showStep(2);
-  showAuthMode("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
-  if (state.token) { showStep(8); showWorkspace('together'); }
-  else { showStep(2); showAuthMode('signup'); }
+  window.location.href = state.token
+    ? "/?resume=together&workspace=together&cache=retro-entry-20260909"
+    : "/?auth=signup&cache=retro-entry-20260909";
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
-const landingSlides = [$('.landing-first'), ...$$('.service-story > section')];
-const landingLabels = ['시작', '서비스 소개', '건강정보', '위험 신호', '챌린지', '리포트', '당근의 숲', '함께 시작'];
+const landingSlides = [$('.landing-first'), ...$$('.service-story > section, .story-step-flow > section')];
+const landingLabels = ['시작', '혈당이와 함께', '건강정보', '위험 신호', '챌린지', '리포트', '당근의 숲', '함께 시작'];
 // Map the callout to the clipboard inside the contained character artwork.
 function updateStoryZoomConnector() {
   const scene = $('.story-input-visual');
@@ -4889,11 +4691,27 @@ storyZoomObserver.observe($('.story-input-visual'));
 storyZoomObserver.observe($('.story-record-preview'));
 $('.story-input-visual img').addEventListener('load', updateStoryZoomConnector);
 let landingIndex = 0;
+function landingTop(node) {
+  if (node.classList.contains('story-flow-step')) {
+    return document.getElementById(`${node.id}-anchor`).getBoundingClientRect().bottom;
+  }
+  return node.getBoundingClientRect().top;
+}
 function updateLandingPosition() {
   if (!document.body.classList.contains('intro-mode')) return;
   const headerHeight = $('.topbar').getBoundingClientRect().height;
   landingIndex = landingSlides.reduce((best, node, index) =>
-    Math.abs(node.getBoundingClientRect().top - headerHeight) < Math.abs(landingSlides[best].getBoundingClientRect().top - headerHeight) ? index : best, 0);
+    Math.abs(landingTop(node) - headerHeight) < Math.abs(landingTop(landingSlides[best]) - headerHeight) ? index : best, 0);
+  const retro = $('.retro-intro');
+  if (retro && retro.getBoundingClientRect().bottom > innerHeight * .5 && retro.getBoundingClientRect().top <= headerHeight) landingIndex = 0;
+  const orbitScene = document.querySelector('#story-orbit');
+  if (orbitScene && orbitScene.getBoundingClientRect().top <= headerHeight && orbitScene.getBoundingClientRect().bottom > innerHeight * .5) landingIndex = landingSlides.indexOf(orbitScene);
+  const flow = document.querySelector('.story-step-flow');
+  if (flow && flow.getBoundingClientRect().top <= 130 && flow.getBoundingClientRect().bottom > innerHeight * .5) {
+    landingSlides.forEach((slide, index) => {
+      if (slide.classList.contains('story-flow-step') && landingTop(slide) <= 150) landingIndex = index;
+    });
+  }
   $('#landing-position').textContent = landingLabels[landingIndex];
   $('#landing-position').setAttribute('aria-label', `${landingLabels[landingIndex]}, 이동할 소개 선택`);
   $$('#landing-picker button').forEach((button, index) => {
@@ -4909,27 +4727,39 @@ new ResizeObserver(() => {
 let landingScrollFrame = 0;
 let landingMotionFrame = 0;
 let landingWheelUntil = 0;
+let endingWheelLocked = false;
+let endingWheelLastAt = 0;
 function cancelLandingMotion() {
   cancelAnimationFrame(landingMotionFrame);
   landingMotionFrame = 0;
   landingWheelUntil = 0;
+  endingWheelLocked = false;
+  guideFolderWheelLocked = false;
+  folderWheelLocked = false;
   document.documentElement.classList.remove('landing-transitioning');
 }
 function moveLandingTo(target) {
   cancelLandingMotion();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) { target.scrollIntoView({ behavior: 'instant', block: 'start' }); return; }
   const from = window.scrollY;
-  const to = Math.max(0, from + target.getBoundingClientRect().top - $('.topbar').getBoundingClientRect().height);
+  const isRetro = !!document.querySelector('.retro-intro');
+  const destination = () => {
+    const header = $('.topbar').getBoundingClientRect();
+    const topOffset = isRetro ? (target.classList.contains('landing-first') || target.id === 'story-orbit' ? 0 : Math.ceil(header.bottom + 28)) : header.height;
+    return Math.max(0, window.scrollY + landingTop(target) - topOffset);
+  };
+  const to = destination();
+  if (reduced) { window.scrollTo({ top: to, behavior: 'instant' }); return; }
   const start = performance.now();
-  const duration = 200;
+  const duration = document.querySelector('.retro-intro') ? Math.min(1100, 650 + Math.abs(to - from) * .12) : 200;
   document.documentElement.classList.add('landing-transitioning');
   landingWheelUntil = start + duration + 180;
   function frame(now) {
     if (!document.body.classList.contains('intro-mode')) { cancelLandingMotion(); return; }
     const t = Math.min(1, (now - start) / duration);
     const eased = t * t * t * (t * (6 * t - 15) + 10);
-    window.scrollTo({ top: from + (to - from) * eased, behavior: 'instant' });
+    // Re-measure while the wide opening header collapses, especially on narrow screens.
+    window.scrollTo({ top: from + ((isRetro ? destination() : to) - from) * eased, behavior: 'instant' });
     if (t < 1) landingMotionFrame = requestAnimationFrame(frame);
     else {
       landingMotionFrame = 0;
@@ -4939,7 +4769,137 @@ function moveLandingTo(target) {
   }
   landingMotionFrame = requestAnimationFrame(frame);
 }
+const folderStepIds = ['story-health', 'story-results', 'story-challenge', 'story-report'];
+let guideFolderWheelLocked = false;
+let guideFolderWheelLastAt = 0;
+let folderWheelLocked = false;
+let folderWheelLastAt = 0;
+function isLandingWheelIgnored(event) {
+  return event.ctrlKey
+    || event.metaKey
+    || Math.abs(event.deltaX) > Math.abs(event.deltaY)
+    || !event.deltaY
+    || event.target.closest('input,select,textarea,[role="dialog"],.topbar,.landing-picker');
+}
+function handleGuideToFirstFolderWheel(event) {
+  if (!document.body.classList.contains('intro-mode') || !document.querySelector('.retro-intro') || !matchMedia('(min-width:761px) and (min-height:681px)').matches) return false;
+  if (isLandingWheelIgnored(event) || event.deltaY <= 0) return false;
+  const orbit = document.getElementById('story-orbit');
+  const health = document.getElementById('story-health');
+  const flow = document.querySelector('.story-step-flow');
+  if (!orbit || !health || !flow) return false;
+  const safeTop = Math.ceil($('.topbar').getBoundingClientRect().bottom + 28);
+  const orbitRect = orbit.getBoundingClientRect();
+  const flowRect = flow.getBoundingClientRect();
+  const handoffReveal = parseFloat(getComputedStyle(orbit).getPropertyValue('--handoff-reveal')) || 0;
+  const handoffTurn = parseFloat(getComputedStyle(orbit).getPropertyValue('--handoff-turn')) || 0;
+  const firstFolderDistance = landingTop(health) - safeTop;
+  const guideIsReady = orbitRect.top <= safeTop + 12
+    && orbitRect.bottom > innerHeight * .32
+    && flowRect.top > safeTop + 24
+    && firstFolderDistance > 20
+    && firstFolderDistance < innerHeight * 1.28
+    && (handoffReveal > .68 || handoffTurn > .62);
+  if (!guideIsReady) return false;
+  const now = performance.now();
+  const continuedGesture = now - guideFolderWheelLastAt < 280;
+  guideFolderWheelLastAt = now;
+  if (guideFolderWheelLocked && (landingMotionFrame || continuedGesture)) {
+    event.preventDefault();
+    return true;
+  }
+  guideFolderWheelLocked = false;
+  event.preventDefault();
+  moveLandingTo(health);
+  guideFolderWheelLocked = true;
+  return true;
+}
+function currentFolderIndex(safeTop) {
+  let index = -1;
+  let distance = Infinity;
+  folderStepIds.forEach((id, candidateIndex) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    const top = landingTop(node);
+    const delta = Math.abs(top - safeTop);
+    if (delta < distance) {
+      distance = delta;
+      index = candidateIndex;
+    }
+    if (top <= safeTop + 6) index = candidateIndex;
+  });
+  return index;
+}
+function handleFolderWheel(event) {
+  if (!document.body.classList.contains('intro-mode') || !document.querySelector('.retro-intro') || !matchMedia('(min-width:761px) and (min-height:681px)').matches) return false;
+  if (isLandingWheelIgnored(event)) return false;
+  const flow = document.querySelector('.story-step-flow');
+  if (!flow) return false;
+  const safeTop = Math.ceil($('.topbar').getBoundingClientRect().bottom + 28);
+  const flowRect = flow.getBoundingClientRect();
+  const inFolderRange = flowRect.top <= innerHeight * .58 && flowRect.bottom >= safeTop + 120;
+  if (!inFolderRange) return false;
+  const now = performance.now();
+  const continuedGesture = now - folderWheelLastAt < 260;
+  folderWheelLastAt = now;
+  if (folderWheelLocked && (landingMotionFrame || continuedGesture)) {
+    event.preventDefault();
+    return true;
+  }
+  folderWheelLocked = false;
+  const direction = Math.sign(event.deltaY);
+  const currentIndex = currentFolderIndex(safeTop);
+  if (currentIndex < 0) return false;
+  const targetIndex = currentIndex + direction;
+  if (targetIndex < 0 || targetIndex >= folderStepIds.length) return false;
+  event.preventDefault();
+  moveLandingTo(document.getElementById(folderStepIds[targetIndex]));
+  folderWheelLocked = true;
+  return true;
+}
+function endingDestination(direction, reportTop, forestTop, closingTop, safeTop, viewportHeight) {
+  const tolerance = 3;
+  if (direction > 0) {
+    if (reportTop > safeTop + tolerance) return reportTop < viewportHeight * .9 ? 'story-report' : null;
+    if (forestTop > safeTop + tolerance) return 'story-forest';
+    if (closingTop > safeTop + tolerance) return 'closing';
+  } else {
+    if (closingTop <= safeTop + tolerance) return 'story-forest';
+    if (forestTop <= safeTop + tolerance) return 'story-report';
+    if (reportTop < safeTop - tolerance) return 'story-report';
+  }
+  return null;
+}
+function handleEndingWheel(event) {
+  if (!document.body.classList.contains('intro-mode') || !matchMedia('(min-width:761px) and (min-height:681px)').matches) return false;
+  if (isLandingWheelIgnored(event)) return false;
+  const now = performance.now();
+  const continuedGesture = now - endingWheelLastAt < 240;
+  endingWheelLastAt = now;
+  if (endingWheelLocked && (landingMotionFrame || continuedGesture)) {
+    event.preventDefault();
+    return true;
+  }
+  endingWheelLocked = false;
+  const report = document.querySelector('#story-report');
+  const forest = document.querySelector('#story-forest');
+  const closing = document.querySelector('.story-closing');
+  const target = endingDestination(Math.sign(event.deltaY), landingTop(report), landingTop(forest), landingTop(closing), Math.ceil($('.topbar').getBoundingClientRect().bottom + 28), innerHeight);
+  if (!target) return false;
+  event.preventDefault();
+  moveLandingTo(target === 'closing' ? closing : document.getElementById(target));
+  endingWheelLocked = true;
+  return true;
+}
 window.addEventListener('wheel', (event) => {
+  if (document.querySelector('.retro-intro')) {
+    if (handleGuideToFirstFolderWheel(event)) return;
+    if (handleFolderWheel(event)) return;
+    if (handleEndingWheel(event)) return;
+    // User input takes over immediately, including during pager navigation.
+    if (landingMotionFrame) cancelLandingMotion();
+    return;
+  }
   if (!document.body.classList.contains('intro-mode') || !matchMedia('(min-width: 761px)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || !event.deltaY || event.target.closest('input, select, textarea, [role="dialog"], .topbar, .landing-picker')) return;
   const now = performance.now();
@@ -5006,6 +4966,10 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
   $(selector).addEventListener('click', () => {
     closeLandingPicker();
     updateLandingPosition();
+    if (direction === 1 && landingIndex === 0 && $('.retro-intro')) {
+      $('.retro-intro').dispatchEvent(new Event('retro-advance'));
+      return;
+    }
     const target = landingSlides[Math.max(0, Math.min(landingSlides.length - 1, landingIndex + direction))];
     moveLandingTo(target);
   });
@@ -5013,21 +4977,11 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
-$("#login-signup-back")?.addEventListener("click", () => {
-  showStep(2);
-  showAuthMode("signup");
-});
-$("#signup-nickname")?.addEventListener("input", (event) => syncSignupHouseName(event.currentTarget.value));
-$("#signup-birth-date")?.addEventListener("input", (event) => clampDateYearInput(event.currentTarget));
-$("#signup-birth-date")?.addEventListener("change", (event) => clampDateYearInput(event.currentTarget));
-$("#signup-login-shortcut")?.addEventListener("click", () => showAuthMode("login", { context: "login" }));
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("login", { context: "login" });
+  window.location.href = "/?auth=login&cache=retro-entry-20260909";
 });
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
@@ -5153,7 +5107,6 @@ $("#profile-editor-form")?.addEventListener("submit", async (event) => {
     $("#eligibility-birth-date").value = birthday;
     $("#gender").value = gender;
     syncLifestyleAvatar();
-    updateEligibilityAgeCheck();
     closeProfileEditor();
     showMessage("생년월일과 성별을 수정했습니다. 다음 분석부터 변경된 정보를 사용합니다.", "success");
   } catch (error) {
@@ -5164,7 +5117,7 @@ $("#profile-editor-form")?.addEventListener("submit", async (event) => {
   }
 });
 $$('.inner-step-tabs [data-health-tab]').forEach((button) => button.addEventListener("click", () => {
-  if (button.dataset.healthTab !== "metrics") {
+  if (["lifestyle", "details", "review"].includes(button.dataset.healthTab)) {
     const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic"), $("#fasting-glucose")].filter(Boolean);
     const invalid = fields.filter((input) => !input.checkValidity());
     if (invalid.length) {
@@ -5252,7 +5205,6 @@ $("#signup-form").addEventListener("submit", async (event) => {
   const gender = $("#signup-gender").value;
   let recovery = null;
   try {
-    const name = $("#signup-nickname").value.trim();
     const email = $("#email").value;
     const password = $("#password").value;
     const signupAge = getAgeFromBirth(birthDate);
@@ -5274,10 +5226,9 @@ $("#signup-form").addEventListener("submit", async (event) => {
     state.userProfile = {
       ...(state.userProfile || {}),
       id: signup?.user_id ?? signup?.id ?? state.userProfile?.id,
-      name,
       email: signup?.email || email.trim(),
     };
-    recovery = { name, email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
+    recovery = { email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
     state.accountRecovery = recovery;
     state.token = null;
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
@@ -5317,7 +5268,6 @@ $("#account-recovery-form").addEventListener("submit", async (event) => {
       await resumeAuthenticatedAccount();
       return;
     }
-    recovery.name = $("#recovery-name").value.trim();
     recovery.birthday = $("#recovery-birthday").value;
     recovery.gender = $("#recovery-gender").value;
     recovery.healthAgreed = $("#recovery-health-consent").checked;
@@ -5361,7 +5311,6 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
     showMessage("당뇨병 진단 여부를 선택해 주세요.");
     return;
   }
-  if (!validateEligibilityAgeBand()) return;
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
   try {
     if (!isLocalPreview()) {
@@ -5521,33 +5470,19 @@ $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   await openChallengeTab();
   showMessage("예측 없이 일반 생활습관 챌린지를 확인합니다.", "success");
 });
-$("#to-lifestyle-input")?.addEventListener("click", () => {
+$("#to-lifestyle-input").addEventListener("click", () => {
   const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic"), $("#fasting-glucose")].filter(Boolean);
   const invalid = fields.filter((input) => !input.checkValidity());
   if (invalid.length) {
     invalid[0].reportValidity();
     return;
   }
-  showHealthInputPanel("drinking");
+  showHealthInputPanel("lifestyle");
 });
-$$("[data-next-health-panel]").forEach((button) => button.addEventListener("click", () => {
-  const targetPanel = button.dataset.nextHealthPanel;
-  if (!targetPanel) return;
-  if (targetPanel !== "metrics") {
-    const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic"), $("#fasting-glucose")].filter(Boolean);
-    const invalid = fields.filter((input) => !input.checkValidity());
-    if (invalid.length) {
-      invalid[0].reportValidity();
-      return;
-    }
-  }
-  showHealthInputPanel(targetPanel);
-}));
-$("#back-to-health-input")?.addEventListener("click", () => showHealthInputPanel("metrics"));
-$("#to-detail-input")?.addEventListener("click", () => showHealthInputPanel("family"));
-$("#back-to-lifestyle-input")?.addEventListener("click", () => showHealthInputPanel("activity"));
-$("#review-back-to-lifestyle")?.addEventListener("click", () => showHealthInputPanel("activity"));
-$("#review-edit-all")?.addEventListener("click", () => showHealthInputPanel("metrics"));
+$("#back-to-health-input").addEventListener("click", () => showHealthInputPanel("metrics"));
+$("#to-detail-input").addEventListener("click", () => showHealthInputPanel("details"));
+$("#back-to-lifestyle-input").addEventListener("click", () => showHealthInputPanel("lifestyle"));
+$("#review-back-to-lifestyle")?.addEventListener("click", () => showHealthInputPanel("lifestyle"));
 $$(".review-edit").forEach((button) => button.addEventListener("click", () => {
   if (button.dataset.editStep) return showStep(Number(button.dataset.editStep));
   showHealthInputPanel(button.dataset.editPanel);
@@ -5666,22 +5601,27 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
 $("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
-
+$("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".lifestyle-summary-toggle");
+  if (!toggle) return;
+  const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
+  $$(".lifestyle-summary-toggle").forEach((button) => {
+    const panel = $(`#${button.getAttribute("aria-controls")}`);
+    const expanded = button === toggle && shouldOpen;
+    button.setAttribute("aria-expanded", String(expanded));
+    if (panel) panel.hidden = !expanded;
+  });
+});
 $("#to-challenges").addEventListener("click", async () => {
   if (requiresMedicalResultGuidance()) {
     const guidance = $("#medical-guidance-detail");
     $("#medical-challenge-next").hidden = !canContinueAfterMedicalGuidance();
     guidance.hidden = false;
-    document.body.classList.add("modal-open");
     guidance.focus({ preventScroll: true });
+    guidance.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
   try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
-});
-$("#close-medical-guidance")?.addEventListener("click", () => {
-  $("#medical-guidance-detail").hidden = true;
-  document.body.classList.remove("modal-open");
-  $("#to-challenges")?.focus();
 });
 $("#medical-to-challenges").addEventListener("click", async (event) => {
   if (!canContinueAfterMedicalGuidance() || $("#medical-guidance-detail").hidden) return;
@@ -5876,11 +5816,6 @@ $("#acknowledge-challenge-follow-up").addEventListener("click", async (event) =>
     button.textContent = "안내 확인 완료";
   }
 });
-$("#today-select-challenge").addEventListener("click", async (event) => {
-  const releaseBusy = setButtonBusy(event.currentTarget, "챌린지 불러오는 중…");
-  try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
-});
 $("#daily-log-list").addEventListener("click", async (event) => {
   const selectButton = event.target.closest(".daily-record-select");
   if (selectButton) {
@@ -5993,16 +5928,14 @@ $("#barrier-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     if (isLocalPreview()) {
-      $("#barrier-suggestion-text").textContent = "목표를 더 작게 나누고, 내일 다시 시작해 보세요.";
-      $("#barrier-suggestion").hidden = false;
+      $("#barrier-suggestion").textContent = "목표를 더 작게 나누고, 내일 다시 시작해 보세요.";
       showMessage("실천하지 못한 이유를 화면 확인용으로 저장했습니다.", "success");
       return;
     }
     const result = await api(`/user-challenges/${$("#barrier-challenge").value}/barriers`, { method: "POST", body: JSON.stringify({
       log_date: challengeDay(), reason_code: $("#barrier-reason").value,
     }) });
-    $("#barrier-suggestion-text").textContent = result.suggestion;
-    $("#barrier-suggestion").hidden = false;
+    $("#barrier-suggestion").textContent = result.suggestion;
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
@@ -6176,18 +6109,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest(".member-menu-wrap")) closeMemberMenus();
 });
 $("#gender").addEventListener("change", syncLifestyleAvatar);
-$("#eligibility-birth-date").addEventListener("change", () => {
-  syncLifestyleAvatar();
-  updateEligibilityAgeCheck();
-});
-$("#eligibility-birth-date").addEventListener("input", updateEligibilityAgeCheck);
-$("#eligibility-age-band-check")?.addEventListener("change", (event) => {
-  event.stopPropagation();
-  updateEligibilityAgeCheck();
-  const age = getAgeFromBirth($("#eligibility-birth-date")?.value);
-  const selected = $("#eligibility-age-band-check")?.value || "";
-  if (selected && Number.isFinite(age) && selected !== expectedAgeBandValue(age)) showAgeBandMismatchDialog();
-});
+$("#eligibility-birth-date").addEventListener("change", syncLifestyleAvatar);
 [$("#height"), $("#weight")].forEach((input) => input.addEventListener("input", syncLifestyleAvatar));
 async function resumeAuthenticatedAccount() {
   try {
@@ -6196,7 +6118,6 @@ async function resumeAuthenticatedAccount() {
     if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
     if (profile.gender) $("#gender").value = profile.gender;
     syncLifestyleAvatar();
-    updateEligibilityAgeCheck();
     const consents = await api("/consents");
     if (!Array.isArray(consents?.items)) throw new Error("동의 정보를 확인하지 못했습니다.");
     const consentStatus = syncHealthConsentState(consents);
@@ -6234,14 +6155,12 @@ async function resumeAuthenticatedAccount() {
       rememberCurrentScreeningInputId(latestHealthCheckup);
     }
     if (state.healthConsentStatus !== "withdrawn" && resumeInterruptedHealthFlow(latestHealthCheckup)) return;
-    clearCurrentChallengeCycle();
     try {
       const cycle = await api("/challenge-cycles/current");
       renderCycle(cycle);
       await refreshDashboard();
     } catch (cycleError) {
       if (cycleError.status !== 404 && !cycleError.message.includes("진행 중인 챌린지가 없습니다")) throw cycleError;
-      clearCurrentChallengeCycle();
     }
     if (state.healthConsentStatus === "withdrawn") {
       state.visitedSteps.add(8);
@@ -6273,9 +6192,6 @@ $("#login-form").addEventListener("submit", async (event) => {
   if (form.getAttribute("aria-busy") === "true") return;
   const releaseBusy = setFormBusy(form, event.submitter, "로그인 중…");
   try {
-    state.cycle = null;
-    state.dailyCompleted = new Set();
-    state.dailyRecordFailures = new Set();
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email: $("#login-email").value, password: $("#login-password").value }) });
     if (!login.access_token) throw new Error("로그인 정보를 받지 못했습니다.");
     state.token = login.access_token;
@@ -6349,50 +6265,20 @@ $("#shared-group-list")?.addEventListener("click", async (event) => {
     await loadSharedGroups();
   } catch (error) { showMessage(error.message); }
 });
-function wearableNumberOrNull(selector) {
-  const value = $(selector)?.value;
-  if (value === null || value === undefined || value === "") return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
-async function ensureWearableConnection() {
-  if (state.wearableConnectionId) return state.wearableConnectionId;
-  const connection = await api("/wearables/connections", {
-    method: "POST",
-    body: JSON.stringify({ provider: "development_mock", scopes: ["activity", "sleep", "heart_rate"] }),
-  });
-  state.wearableConnectionId = connection.connection_id;
-  return state.wearableConnectionId;
-}
-
-$("#connect-watch")?.addEventListener("click", async (event) => {
+$("#connect-watch")?.addEventListener("click", () => {
   const box = $("#wearable-result");
   box.hidden = false;
-  box.textContent = "웨어러블 샘플 연결을 만드는 중이에요.";
-  const releaseBusy = setButtonBusy(event.currentTarget, "연결 중…");
-  try {
-    await ensureWearableConnection();
-    box.textContent = "샘플 연결이 준비됐어요. 오늘 요약값을 입력해 저장할 수 있습니다.";
-  } catch (error) {
-    box.textContent = error.message || "웨어러블 연결을 만들지 못했어요. 잠시 후 다시 시도해 주세요.";
-  } finally {
-    releaseBusy();
-  }
+  box.textContent = "워치 연결 기능을 준비하고 있어요.";
 });
 $("#wearable-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "워치 기록 저장 중…");
   try {
-    const connectionId = await ensureWearableConnection();
-    const dailySummary = {
-      summary_date: new Date().toISOString().slice(0, 10),
-      steps: wearableNumberOrNull("#wearable-steps"),
-      active_minutes: wearableNumberOrNull("#wearable-active"),
-      sleep_minutes: wearableNumberOrNull("#wearable-sleep"),
-      resting_heart_rate: wearableNumberOrNull("#wearable-resting-hr"),
-    };
-    const result = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: connectionId, items: [dailySummary] }) });
+    if (!state.wearableConnectionId) {
+      const connection = await api("/wearables/connections", { method: "POST", body: JSON.stringify({ provider: "development_mock", scopes: ["activity"] }) });
+      state.wearableConnectionId = connection.connection_id;
+    }
+    const result = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: state.wearableConnectionId, items: [{ summary_date: new Date().toISOString().slice(0, 10), steps: Number($("#wearable-steps").value), active_minutes: Number($("#wearable-active").value) }] }) });
     const box = $("#wearable-result"); box.hidden = false; box.textContent = `${result.imported_count}일 기록을 가져왔습니다. 자동 챌린지 기록 ${result.auto_logged_challenges.length}건`;
     await refreshDashboard();
   } catch (error) { showMessage(error.message); }
@@ -6662,7 +6548,6 @@ function resumeReturningPreview() {
   $("#eligibility-birth-date").value = "1960-05-12";
   $("#gender").value = "FEMALE";
   syncLifestyleAvatar();
-  updateEligibilityAgeCheck();
   syncReturningEligibilityState({
     age: getAgeFromBirth($("#eligibility-birth-date").value),
     service_eligible: true,
@@ -6684,24 +6569,6 @@ function resumeReturningPreview() {
   renderCycle(state.cycle);
   renderLocalDemoDashboard();
   unlockReturningUserRoutes();
-}
-
-function resumeSignupHousePreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (!String(params.get("preview") || "").startsWith("signup-house")) return;
-  if (!isDemoEnvironment()) return;
-
-  showStep(2, { recordHistory: false });
-  showAuthMode("signup", { moveFocus: false });
-}
-
-function resumeAuthRequest() {
-  const params = new URLSearchParams(window.location.search);
-  const authMode = params.get("auth");
-  if (!["login", "signup"].includes(authMode)) return;
-
-  showStep(2, { recordHistory: false });
-  showAuthMode(authMode, { moveFocus: false, context: authMode });
 }
 
 function renderMvpResultPreview() {
@@ -6743,138 +6610,7 @@ function resumeEmergencyQuestionnairePreview() {
   $("#gender").value = "FEMALE";
   $("#diagnosed-diabetes-no").checked = true;
   syncEmergencyQuestionnaire();
-  updateEligibilityAgeCheck();
   showStep(3, { recordHistory: false });
-}
-
-function resumeEligibilityForestPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "eligibility-forest") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.userProfile = { name: "수인", birthday: "1996-09-09", gender: "FEMALE" };
-  $("#eligibility-birth-date").value = state.userProfile.birthday;
-  $("#gender").value = state.userProfile.gender;
-  $("#eligibility-age-band-check").value = expectedAgeBandValue(getAgeFromBirth(state.userProfile.birthday));
-  clearQuestionnaireAnswers("urgent-warning");
-  clearQuestionnaireAnswers("diabetes-diagnosis");
-  updateEligibilityAgeCheck();
-  state.navigationHistory = [1, 2, 3];
-  [1, 2, 3].forEach((step) => state.visitedSteps.add(step));
-  showStep(3, { recordHistory: false });
-}
-
-function resumeHealthRoomPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "health-room") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.healthConsentStatus = "active";
-  state.healthDraftDirty = false;
-  state.navigationHistory = [1, 2, 3, 4];
-  [1, 2, 3, 4].forEach((step) => state.visitedSteps.add(step));
-  const previewPanel = ["metrics", "vitals", "drinking", "habits", "activity", "family", "nutrition", "socioeconomic", "review"].includes(params.get("panel")) ? params.get("panel") : "metrics";
-  showHealthInputPanel(previewPanel);
-  if (previewPanel === "review") renderHealthReview();
-  showStep(4, { recordHistory: false });
-}
-
-function resumeChallengeForestPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "challenge-forest") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.healthConsentStatus = "active";
-  state.navigationHistory = [1, 4, 5, 6, 7];
-  [1, 4, 5, 6, 7].forEach((step) => state.visitedSteps.add(step));
-  showChallengeSelectionView();
-  showStep(7, { recordHistory: false });
-  void loadChallenges();
-}
-
-function resumeChallengeRecordPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "challenge-record") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.returningUser = true;
-  state.healthConsentStatus = "active";
-  state.cycle = createLocalDemoCycle([101, 102, 103]);
-  state.navigationHistory = [1, 7, 8];
-  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
-  renderCycle(state.cycle);
-  renderLocalDemoDashboard();
-  showStep(8, { recordHistory: false });
-  showWorkspace("challenge", { moveFocus: false });
-  void loadDailyRecords();
-}
-
-function resumeReportForestPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "report-forest") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.returningUser = true;
-  state.healthConsentStatus = "active";
-  state.cycle = createLocalDemoCycle([101, 102, 103]);
-  state.navigationHistory = [1, 7, 8];
-  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
-  renderCycle(state.cycle);
-  renderLocalDemoDashboard();
-  showStep(8, { recordHistory: false });
-  showWorkspace("report", { moveFocus: false });
-}
-
-function resumeDashboardHomePreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "dashboard-home") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.returningUser = true;
-  state.healthConsentStatus = "active";
-  state.cycle = createLocalDemoCycle([101, 102, 103]);
-  state.navigationHistory = [1, 8];
-  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
-  renderCycle(state.cycle);
-  renderLocalDemoDashboard();
-  showStep(8, { recordHistory: false });
-  showWorkspace("home", { moveFocus: false });
-}
-
-function resumeHealthToolsPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "health-tools") return;
-  if (!isDemoEnvironment()) return;
-
-  state.token = "local-demo-token";
-  state.returningUser = true;
-  state.healthConsentStatus = "active";
-  state.cycle = createLocalDemoCycle([101, 102, 103]);
-  state.navigationHistory = [1, 8];
-  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
-  renderCycle(state.cycle);
-  renderLocalDemoDashboard();
-  showStep(8, { recordHistory: false });
-  showWorkspace("tools", { moveFocus: false });
-}
-
-function resumeAnalysisStatusPreview() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("preview") !== "analysis-status") return;
-  if (!isDemoEnvironment()) return;
-
-  const status = ["queued", "running", "succeeded", "failed"].includes(params.get("status")) ? params.get("status") : "running";
-  state.token = "local-demo-token";
-  state.navigationHistory = [1, 4, 5];
-  [1, 4, 5].forEach((step) => state.visitedSteps.add(step));
-  renderPredictionStatus(status);
-  showStep(5, { recordHistory: false });
 }
 
 window.lifestyleMapView = window.LifestyleMap.mount($("#lifestyle-map-detail"), {
@@ -6898,17 +6634,7 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
-resumeAuthRequest();
 resumeFromForest();
 resumeReturningPreview();
-resumeSignupHousePreview();
 resumeForecastPreview();
 resumeEmergencyQuestionnairePreview();
-resumeEligibilityForestPreview();
-resumeHealthRoomPreview();
-resumeChallengeForestPreview();
-resumeChallengeRecordPreview();
-resumeReportForestPreview();
-resumeDashboardHomePreview();
-resumeHealthToolsPreview();
-resumeAnalysisStatusPreview();
