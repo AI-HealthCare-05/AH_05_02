@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -12,8 +12,10 @@ from app.dtos.wellness import (
     FoodAnalysisRequest,
     NotificationPreferenceRequest,
     OcrDraftRequest,
+    OcrHealthApplyRequest,
     RagQuestionRequest,
     WearableConnectionRequest,
+    WearableHealthCandidateApplyRequest,
     WearableImportRequest,
 )
 from app.models.users import User
@@ -76,6 +78,18 @@ async def import_wearable(request: WearableImportRequest, user: Annotated[User, 
     return envelope(await WellnessService().import_wearable(user, request))
 
 
+@wellness_router.post("/wearables/file-previews")
+async def preview_wearable_file(
+    provider: Annotated[str, Form()],
+    file: Annotated[UploadFile, File()],
+    user: Annotated[User, Depends(get_request_user)],
+):
+    _ = user
+    raw = await file.read(20 * 1024 * 1024 + 1)
+    await file.close()
+    return envelope(WellnessService.preview_wearable_file(provider, raw))
+
+
 @wellness_router.get("/wearables/daily-summaries")
 async def wearable_summaries(
     user: Annotated[User, Depends(get_request_user)],
@@ -85,6 +99,26 @@ async def wearable_summaries(
     end = end_date or date.today()
     start = start_date or end - timedelta(days=6)
     return envelope(await WellnessService().wearable_summaries(user, start, end))
+
+
+@wellness_router.get("/wearables/health-candidates")
+async def wearable_health_candidates(
+    user: Annotated[User, Depends(get_request_user)],
+    start_date: date | None = None,
+    end_date: date | None = None,
+):
+    end = end_date or date.today()
+    start = start_date or end - timedelta(days=6)
+    return envelope(await WellnessService().wearable_health_candidates(user, start, end))
+
+
+@wellness_router.patch("/wearables/health-candidates/{checkup_id}")
+async def apply_wearable_health_candidates(
+    checkup_id: int,
+    request: WearableHealthCandidateApplyRequest,
+    user: Annotated[User, Depends(get_request_user)],
+):
+    return envelope(await WellnessService().apply_wearable_health_candidates(user, checkup_id, request))
 
 
 @wellness_router.post("/health-education/questions")
@@ -122,6 +156,16 @@ async def create_ocr_draft(request: OcrDraftRequest, user: Annotated[User, Depen
 @wellness_router.post("/ocr-drafts/{draft_id}/confirm")
 async def confirm_ocr_draft(draft_id: int, user: Annotated[User, Depends(get_request_user)]):
     return envelope(await WellnessService().confirm_ocr(user, draft_id))
+
+
+@wellness_router.patch("/ocr-drafts/{draft_id}/health-checkups/{checkup_id}")
+async def apply_ocr_to_health_checkup(
+    draft_id: int,
+    checkup_id: int,
+    request: OcrHealthApplyRequest,
+    user: Annotated[User, Depends(get_request_user)],
+):
+    return envelope(await WellnessService().apply_ocr_to_health_checkup(user, draft_id, checkup_id, request))
 
 
 @wellness_router.get("/notification-preferences")
