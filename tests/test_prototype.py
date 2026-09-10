@@ -59,7 +59,7 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "응급상황 사전 문진표" in html
-    assert "1. 지금 긴급한 증상이 있나요?" in html
+    assert "지금 긴급한 증상이 있나요?" in html
     assert 'id="open-emergency-questionnaire"' in html
     assert 'role="dialog" aria-modal="true"' in html
     assert "문진 결과 적용하기" in html
@@ -136,7 +136,7 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert "prediction.feature_schema_version" not in script
     assert 'id="risk-forecast-panel"' in html
     assert 'id="age-risk-chart" role="img"' in html
-    assert "현재 위험 신호와 별도로 약 2년 뒤" in html
+    assert "앞으로 약 2년 동안 조심할 위험 신호예요" in html
 
 
 def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
@@ -151,7 +151,7 @@ def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
     assert "function selectTwoYearForecastPoint" in script
     assert "prediction?.age_risk_forecast?.points" in script
     assert "Number(item?.years_from_now) === 2" in script
-    assert "생활습관 시나리오는 표시하지 않습니다." in html
+    assert "생활습관 시나리오는 표시하지 않습니다." not in html
     assert "/research/models/" not in script
     assert "isPublicRiskDisplayAllowed" in script
 
@@ -180,10 +180,12 @@ def test_together_shares_only_challenge_completion_status() -> None:
 
 def test_service_and_model_age_are_separately_explained() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "만 14~18세는 생활습관 챌린지" in html
-    assert "만 19~44세는 현재 건강 신호" in html
-    assert "만 45세 이상은 미래 발병 위험" in html
+    assert 'id="eligibility-age-band-check"' in html
+    assert "만 14~18세는 예측 없이 생활습관 챌린지" in script
+    assert "만 19~44세는 현재 건강 신호" in script
+    assert "미래 발병 위험 모델은 만 45세 이상에게 적용" in script
 
 
 def test_health_form_keeps_current_backend_smoking_field_and_rf25_field() -> None:
@@ -212,15 +214,15 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'days.value = "0"' in script
     assert 'minutes.value = "0"' in script
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
-    assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
+    assert html.index('id="current-drinker-title"') < html.index('id="smoking-status-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
     assert "필수" not in lifestyle
     assert (
-        lifestyle.index('id="smoking-status-title"')
+        lifestyle.index('id="current-drinker-title"')
+        < lifestyle.index('id="smoking-status-title"')
         < lifestyle.index('for="self-health"')
-        < lifestyle.index('for="meal-count"')
-        < lifestyle.index('id="current-drinker-title"')
         < lifestyle.index('id="regular-exercise-title"')
+        < lifestyle.index('for="meal-count"')
     )
     assert "days.disabled = !isRegularExercise" in script
     assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
@@ -238,7 +240,7 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
         "초대 코드 만들기",
         "워치 연결하기",
         "근거 자료에서 찾기",
-        "검진표 사진 올리기",
+        "결과통보서 업로드",
         "PDF로 받기",
     ):
         assert label in html
@@ -333,7 +335,8 @@ def test_signup_and_existing_login_use_separate_forms() -> None:
     assert 'id="login-form" class="login-form" hidden' in html
     assert 'id="login-email" type="email"' in html
     assert 'id="login-password" type="password"' in html
-    assert "생년월일과 성별은 가입할 때 저장한 정보를 불러옵니다." in html
+    assert "생년월일·성별이 맞나요?" in html
+    assert 'id="signup-nickname"' in html
     assert '$("#login-form").addEventListener("submit"' in script
     assert 'email: $("#login-email").value, password: $("#login-password").value' in script
     assert '$("#login-existing")' not in script
@@ -522,8 +525,8 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "오늘 기록 저장 중…",
         "초대 코드 만드는 중…",
         "초대 수락 중…",
-        "워치 기록 저장 중…",
-        "PDF 만드는 중…",
+        "워치 기록 확인 중…",
+        "PDF 화면 여는 중…",
     ):
         assert busy_label in script
     assert script.count("finally { releaseBusy(); }") >= 8
@@ -588,13 +591,15 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
     assert "지난 4주" in html
     assert "전체" in html
-    assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
-    assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
+    assert "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다" in script
+    assert "지난 4주·전체는 현재 화면 PDF 저장을 사용해 주세요" in script
     assert "const items = Array.isArray(report.challenge_details) ? report.challenge_details : []" in script
     assert "enrichWeeklyReportDetails" in script
     assert "renderWeeklyChallengeProgress(detailedReport.challenge_details || [], detailedReport)" in script
     assert "주간 기록을 확인할 수 없어요" in script
-    assert "건강교육을 불러오지 못했어요" in script
+    assert "setLocalEducationPreviewContents" in script
+    assert "건강교육을 불러오고 있어요" not in script
+    assert "건강교육을 불러오지 못했어요" not in script
     assert "답 확인 중…" in script
     assert "정답입니다. 교육 콘텐츠를 완료했습니다." not in script
     assert "다시 확인해 볼까요? · 정답:" in script

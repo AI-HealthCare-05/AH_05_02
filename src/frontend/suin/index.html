@@ -6,7 +6,7 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/suin/styles.css?v=20260907-guest-header-right-v1">
+  <link rel="stylesheet" href="/static/suin/styles.css?v=20260910-auth-density-v1">
   <link rel="stylesheet" href="/static/suin/design-tokens.css?v=20260908-1">
   <script src="/static/suin/app.js?v=20260907-account-name-v2" defer></script>
 </head>
@@ -109,7 +109,7 @@
         </div>
         <form id="signup-form" class="two-column">
           <div class="form-row"><label for="email">이메일</label><input id="email" type="email" placeholder="name@example.com" autocomplete="email" required></div>
-          <div class="form-row"><label for="password">비밀번호</label><div class="password-control password-control-icon"><input id="password" type="password" minlength="8" autocomplete="new-password" aria-describedby="password-help" required><button class="secondary password-toggle password-toggle-icon" type="button" data-password-target="password" aria-controls="password" aria-pressed="false" aria-label="비밀번호 보기" title="비밀번호 보기"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3 3 18 18M10.6 5.1 12 5c6.5 0 10 7 10 7a20 20 0 0 1-3 3.8M6.2 6.2A21 21 0 0 0 2 12s3.5 7 10 7a11 11 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div><small id="password-help">8자 이상, 영문 대문자·소문자·숫자·특수문자를 각각 포함해 주세요.</small></div>
+          <div class="form-row"><label for="password">비밀번호</label><div class="password-control password-control-icon"><input id="password" type="password" minlength="8" autocomplete="new-password" aria-describedby="password-help" required><button class="secondary password-toggle password-toggle-icon" type="button" data-password-target="password" aria-controls="password" aria-pressed="false" aria-label="비밀번호 보기" title="비밀번호 보기"><svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m3 3 18 18M10.6 5.1 12 5c6.5 0 10 7 10 7a20 20 0 0 1-3 3.8M6.2 6.2A21 21 0 0 0 2 12s3.5 7 10 7a11 11 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div><small id="password-help">8자 이상, 영문 대소문자·숫자·특수문자를 각각 포함해 주세요.</small></div>
           <div class="form-row"><label for="signup-birth-date">생년월일</label><input id="signup-birth-date" type="date" autocomplete="bday" required></div>
           <div class="form-row"><label for="signup-gender">성별</label><select id="signup-gender" required><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
           <div class="consent-list full" aria-label="동의 항목">
@@ -465,9 +465,10 @@
         </section>
         <div id="result-unavailable" class="notice safety" role="status" hidden><span>!</span><div><strong>현재 공개할 수 있는 예측 결과가 없습니다</strong><p>승인된 정책이 적용되기 전에는 위험 범주·확률·위험요인을 임의로 표시하지 않습니다.</p></div></div>
         <div id="development-preview-notice" class="notice safety" role="status" hidden><span>개발</span><div><strong>개발 확인용 결과 화면입니다</strong><p>로컬 데모에서 화면 연결을 확인하기 위한 위험 범주이며, 운영 승인 결과가 아닙니다. 숫자 점수·확률·위험요인은 표시하지 않습니다.</p></div></div>
-        <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
+        <div class="result-signal-grid" id="result-signal-grid">
+        <section class="current-risk-signal-card result-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
           <div class="current-risk-signal-heading">
-            <div><p class="eyebrow">현재 위험 신호 선별</p><h3 id="risk-confirm-title">현재 위험 신호 선별 결과</h3></div>
+            <div><p class="eyebrow">오늘의 신호</p><h3 id="risk-confirm-title">지금 건강정보에서 확인된 신호예요</h3></div>
             <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
           </div>
           <div class="risk-preview-controls" id="risk-preview-controls" aria-label="현재 위험 신호 화면 확인" hidden>
@@ -476,21 +477,45 @@
             <button type="button" data-risk-preview="caution">주의 보기</button>
             <button type="button" data-risk-preview="high">높음 보기</button>
           </div>
-          <div class="current-risk-signal-body">
-            <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="현재 위험 신호 결과 준비 중">
-              <span class="traffic-signal high"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-high.png?v=20260902-high-face-v2" alt=""></i><b>높음</b></span>
-              <span class="traffic-signal caution"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-caution.png" alt=""></i><b>주의</b></span>
-              <span class="traffic-signal low"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-low.png" alt=""></i><b>낮음</b></span>
+          <div class="current-signal-content">
+            <div class="current-risk-signal-body">
+              <div class="risk-traffic-light" id="risk-traffic-light" role="img" aria-label="현재 위험 신호 결과 준비 중">
+                <span class="traffic-signal high"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-high.png?v=20260902-high-face-v2" alt=""></i><b>높음</b></span>
+                <span class="traffic-signal caution"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-caution.png" alt=""></i><b>주의</b></span>
+                <span class="traffic-signal low"><i aria-hidden="true"><img src="/static/suin/assets/hyeoldangi-face-low.png" alt=""></i><b>낮음</b></span>
+              </div>
+            </div>
+            <article class="xai-factor-card result-xai-card current-xai-slot" aria-labelledby="current-factor-title">
+              <div class="result-xai-waiting">
+                <h3 id="current-factor-title">현재 건강 신호 XAI 연결 대기</h3>
+                <ul class="factor-list" id="current-factor-list">
+                  <li><strong>설명 결과 연결 대기</strong><p>현재 건강 신호 XAI 계약이 오면 주요 영향 신호를 표시합니다.</p></li>
+                </ul>
+              </div>
+            </article>
+          </div>
+        </section>
+        <div id="future-prediction-result" class="result-signal-card">
+        <section class="risk-forecast-panel" id="risk-forecast-panel" aria-labelledby="future-onset-title">
+          <div class="risk-forecast-heading">
+            <div><p class="eyebrow">미래의 신호</p><h3 id="future-onset-title">앞으로 약 2년 동안 조심할 위험 신호예요</h3></div>
+            <span class="forecast-status-badge" id="forecast-status-badge" data-status="pending">결과 준비 중</span>
+          </div>
+          <strong class="future-risk-category" id="future-risk-category">결과 준비 중</strong>
+          <div class="age-risk-chart age-risk-chart-single" id="age-risk-chart" role="img" aria-label="약 2년 뒤 당뇨병 위험 신호 전망 그래프">
+            <div class="age-risk-chart-scale" aria-hidden="true"><span>높음</span><span>주의</span><span>낮음</span></div>
+            <div class="age-risk-chart-points" id="age-risk-chart-points"><div class="age-risk-point caution"><span><img src="/static/suin/assets/hyeoldangi-face-caution.png" alt=""></span><strong>주의</strong><small>약 2년 후</small></div></div>
+          </div>
+          <div class="forecast-score-placeholder result-xai-card" id="forecast-score-placeholder">
+            <div class="result-xai-waiting">
+              <h3 id="future-factor-title">미래 위험 XAI 연결 대기</h3>
+              <ul class="factor-list" id="factor-list">
+                <li><strong>설명 결과 연결 대기</strong><p>검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.</p></li>
+              </ul>
             </div>
           </div>
         </section>
-        <div id="future-prediction-result">
-        <section class="current-health-result" aria-labelledby="future-onset-title">
-          <p class="eyebrow">미래 신규 발병 위험</p>
-          <h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3>
-          <strong id="future-risk-category">결과 준비 중</strong>
-          <p>현재 위험 신호와 별도로 계산한 예측입니다. 진단이나 확정 발병확률이 아닙니다.</p>
-        </section>
+        </div>
         </div>
         <aside class="notice safety result-safety-card" role="note"><span aria-hidden="true">안내</span><div><strong>안전 안내</strong><p>이 결과는 진단이나 확정 발병확률이 아닙니다.</p><p>건강관리를 돕기 위한 선별 정보이며, 증상이 있거나 결과가 걱정된다면 의료기관에서 검사를 받아보세요.</p></div></aside>
         <aside id="medical-guidance-detail" class="notice safety medical-guidance-alert" aria-labelledby="medical-guidance-title" tabindex="-1" hidden><span aria-hidden="true">!</span><div><strong id="medical-guidance-title">검사·의료기관 상담을 먼저 확인해 주세요</strong><p>높은 위험 신호는 진단 결과가 아닙니다. 의료진의 검사와 상담을 우선 권합니다.</p>
@@ -732,7 +757,10 @@
           <section class="dashboard-section" aria-labelledby="education-title">
             <h3 id="education-title">4주 건강교육·퀴즈</h3>
             <div id="education-list" class="challenge-grid" aria-live="polite">
-              <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
+              <article class="education-overview-card" data-content-id="preview-1"><strong>1주차 · 위험 선별 결과 이해하기</strong><p>교육·퀴즈 카드 준비 완료</p></article>
+              <article class="education-overview-card" data-content-id="preview-2"><strong>2주차 · 일상에서 활동 늘리기</strong><p>교육·퀴즈 카드 준비 완료</p></article>
+              <article class="education-overview-card" data-content-id="preview-3"><strong>3주차 · 식사 습관 기록하기</strong><p>교육·퀴즈 카드 준비 완료</p></article>
+              <article class="education-overview-card" data-content-id="preview-4"><strong>4주차 · 중단해도 다시 시작하기</strong><p>교육·퀴즈 카드 준비 완료</p></article>
             </div>
             <section class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
               <div class="education-flow-heading">
@@ -792,7 +820,7 @@
             </section>
           </div>
           <div class="report-pdf-card" id="report-pdf-card">
-            <div class="report-pdf-copy"><strong>리포트를 저장하고 싶으신가요?</strong><p>현재는 주간 PDF만 제공됩니다. 지난 4주·전체는 연결 준비 중입니다.</p><p id="report-pdf-status" role="status">주간 리포트는 최근 최대 7일의 생활습관 기록 요약입니다.</p></div>
+            <div class="report-pdf-copy"><strong>리포트를 저장하고 싶으신가요?</strong><p>현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 열어요.</p><p id="report-pdf-status" role="status">PDF 저장 화면에서 대상 기간과 내용을 한 번 더 확인해 주세요.</p></div>
             <fieldset class="report-pdf-options" id="report-pdf-options" aria-labelledby="report-pdf-period-title" hidden>
               <legend id="report-pdf-period-title">PDF에 담을 기간 선택</legend>
               <div class="report-pdf-periods">
@@ -911,7 +939,11 @@
                     <p>연결하면 걸음 수와 활동 시간이 자동으로 기록돼요.</p>
                   </div>
                 </div>
+              </div>
+              <div class="health-tool-actions">
                 <button class="secondary health-tool-inline-action" id="connect-watch" type="button">워치 연결하기</button>
+                <button class="secondary" type="button">Apple 샘플 체험</button>
+                <button class="secondary" type="button">Android 샘플 체험</button>
               </div>
               <details class="manual-input-details">
                 <summary>워치가 없다면, 직접 입력할게요</summary>
@@ -926,21 +958,24 @@
           </section>
 
           <section class="health-tool-section" aria-labelledby="ocr-upload-title">
-            <h3 id="ocr-upload-title">건강정보 다시 입력하기</h3>
+            <h3 id="ocr-upload-title" class="sr-only">건강정보 다시 입력하기</h3>
             <div class="health-tool-card">
               <div class="health-tool-status-row">
                 <div class="health-tool-row">
                   <img class="health-tool-mascot" src="/static/suin/assets/hyeoldangi-health-input.png" alt="건강정보 재입력을 안내하는 혈당이">
                   <div>
-                    <strong>검진표로 혈압 기록</strong>
+                    <strong>검진표로 건강정보를 가져와요</strong>
                     <p>검진표 사진을 올리면 수치를 자동으로 읽어와요. 결과는 저장 전에 확인할 수 있어요.</p>
                   </div>
                 </div>
                 <input id="checkup-image-input" class="sr-only" type="file" accept="image/*" capture="environment">
+              </div>
+              <div class="health-tool-actions health-tool-actions-ocr">
                 <button class="secondary health-tool-inline-action upload-checkup-button" id="upload-checkup-image" type="button">
                   <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
-                  <strong>검진표 사진 올리기</strong>
+                  <strong>결과통보서 업로드</strong>
                 </button>
+                <button class="secondary health-tool-inline-action" type="button">2025 합성 예시 보기</button>
               </div>
               <div id="ocr-upload-result" class="notice compact" hidden></div>
               <form id="ocr-confirm-form" class="ocr-confirm-form" hidden>

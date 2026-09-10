@@ -51,8 +51,6 @@ def test_wearable_and_checkup_demo_controls_are_enabled_in_main_mvp() -> None:
     assert 'id="upload-checkup-image" type="button" disabled' not in html
     assert 'id="wearable-coming-soon"' not in html
     assert 'id="checkup-coming-soon"' not in html
-
-
 def test_wearable_file_preview_returns_normalized_items_without_identity() -> None:
     raw = (FIXTURES / "android_health_connect_sample.json").read_bytes()
     result = WellnessService.preview_wearable_file("android_health_connect", raw)

@@ -16,6 +16,7 @@ const base = 'http://127.0.0.1:8022';
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     assert.equal((await page.request.get(`${base}/api/health`)).status(), 200);
     await page.locator('#sidebar-signup').click();
+    await page.locator('#signup-nickname').fill('실계정집주인');
     await page.locator('#email').fill(email);
     await page.locator('#password').fill(password);
     await page.locator('#signup-birth-date').fill('1966-04-12');
