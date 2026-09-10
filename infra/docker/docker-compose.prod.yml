@@ -58,6 +58,7 @@ services:
     volumes:
       - static_volume:/app/templates
       - media_volume:/app/media
+      - ${MODEL_ARTIFACTS_PATH:-/opt/ah05/models/artifacts}:/app/models/artifacts:ro
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -82,6 +83,8 @@ services:
     env_file: .env
     restart: unless-stopped
     mem_limit: 4G
+    volumes:
+      - ${MODEL_ARTIFACTS_PATH:-/opt/ah05/models/artifacts}:/app/models/artifacts:ro
     networks:
       - ws
     depends_on:
@@ -100,7 +103,7 @@ services:
 
   ai-worker-current:
     container_name: ai-worker-current
-    image: ${DOCKER_USER}/${DOCKER_REPOSITORY}:ai-current-${AI_CURRENT_WORKER_VERSION}
+    image: ${DOCKER_USER}/${DOCKER_REPOSITORY}:ai-${AI_WORKER_VERSION}
     env_file: .env
     environment:
       REDIS_STREAM: ${CURRENT_SCREENING_REDIS_STREAM:-ai:jobs:current-screening}
@@ -110,6 +113,8 @@ services:
       CURRENT_SCREENING_MANIFEST_URI: /app/models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json
     restart: unless-stopped
     mem_limit: 4G
+    volumes:
+      - ${MODEL_ARTIFACTS_PATH:-/opt/ah05/models/artifacts}:/app/models/artifacts:ro
     networks:
       - ws
     depends_on:
@@ -130,6 +135,7 @@ services:
   nginx:
     container_name: nginx
     image: nginx:1.29-alpine
+    restart: unless-stopped
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       - static_volume:/vol/web/static
@@ -142,7 +148,8 @@ services:
     networks:
       - ws
     depends_on:
-      - fastapi
+      fastapi:
+        condition: service_healthy
 
   # 6. certbot: SSL 인증서 발급담당
   certbot:
