@@ -97,8 +97,8 @@ def test_frontend_requests_both_models_and_labels_them_separately() -> None:
     assert '...(state.capabilities.currentHealth ? ["diabetes_current_screening"] : [])' in script
     assert '...(!state.currentHealthOnly ? ["diabetes_incidence"] : [])' in script
     assert "requestPredictionModel(modelKey)" in script
-    assert 'id="risk-confirm-title">현재 위험 신호 선별 결과' in html
-    assert 'id="future-onset-title">앞으로의 위험 신호 선별 결과' in html
+    assert 'id="risk-confirm-title">지금 건강정보에서 확인된 신호예요' in html
+    assert 'id="future-onset-title">앞으로 약 2년 동안 조심할 위험 신호예요' in html
     assert 'id="future-risk-category"' in html
     for internal_name in ("오늘이", "내일이", "모레노"):
         assert internal_name not in html

@@ -60,6 +60,7 @@ function displayContext(today) {
     rememberModelOutputMetadata: () => {}, requiresMedicalResultGuidance: () => false,
     renderPredictionStatus: () => {}, showFuturePredictionResult: () => {},
     renderAgeRiskForecast: () => {}, renderTwoYearRiskForecast: () => {}, updateLifestyleSummary: () => {},
+    renderXaiExplanationLists: () => {},
     forecastSignalLabel: key => key, escapeHtml: text => text,
   });
   return context;
