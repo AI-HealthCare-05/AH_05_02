@@ -46,6 +46,16 @@ GET /api/v1/wearables/health-candidates?start_date=2026-09-01&end_date=2026-09-0
 
 `exercise_days_per_week`, `exercise_minutes`, `regular_exercise`는 입력 후보이며 사용자가 확인해야 한다.
 
+프론트에서는 다음 순서로 동작한다.
+
+1. Apple XML 또는 Android Health Connect JSON 업로드
+2. `POST /api/v1/wearables/file-previews`에서 원본을 저장하지 않고 일일 요약 미리보기
+3. 사용자가 `이 정보로 갱신` 선택
+4. 일일 요약 저장 후 `PATCH /api/v1/wearables/health-candidates/{checkup_id}`로 운동 관련 건강정보만 부분 갱신
+5. 활성 `activity_check` 챌린지가 있으면 조건을 충족한 날짜를 자동 기록
+
+업로드 없이 확인할 수 있도록 건강도구 화면에 `Apple 샘플 체험`, `Android 샘플 체험` 버튼도 제공한다.
+
 ### 2025 건강검진 결과 추출 예시
 
 공식 빈 서식: `docs/reference/forms/2025_general_health_checkup_result_form.pdf`
@@ -60,6 +70,12 @@ GET /api/v1/wearables/health-candidates?start_date=2026-09-01&end_date=2026-09-0
 ```
 
 위 요청을 `POST /api/v1/ocr-drafts`에 보내면 확인 전 초안만 반환한다. 이름과 주민등록번호는 추출·저장하지 않는다.
+확인한 신장·체중·허리둘레·혈압만
+`PATCH /api/v1/ocr-drafts/{draft_id}/health-checkups/{checkup_id}`로 기존 건강정보에 부분 반영한다. 혈액검사 수치는
+현재 건강정보 DB 계약에 포함되지 않으므로 추출 결과에서 참고만 하고 자동 저장하지 않는다.
+
+건강도구 화면의 `2025 합성 예시 보기` 버튼으로 업로드 없이 전체 확인 흐름을 시연할 수 있다. 실제 MVP 파일 업로드는
+OCR 처리된 UTF-8 텍스트(`.txt`)를 지원하며, 사진·스캔 PDF OCR 엔진 연결은 후속 범위다.
 
 ## 판정 원칙
 
