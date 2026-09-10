@@ -151,7 +151,7 @@ def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
     assert "function selectTwoYearForecastPoint" in script
     assert "prediction?.age_risk_forecast?.points" in script
     assert "Number(item?.years_from_now) === 2" in script
-    assert "생활습관 시나리오는 표시하지 않습니다." in html
+    assert "생활습관 시나리오는 표시하지 않습니다." not in html
     assert "/research/models/" not in script
     assert "isPublicRiskDisplayAllowed" in script
 
@@ -240,7 +240,7 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
         "초대 코드 만들기",
         "워치 연결하기",
         "근거 자료에서 찾기",
-        "검진표 사진 올리기",
+        "결과통보서 업로드",
         "PDF로 받기",
     ):
         assert label in html
@@ -525,8 +525,8 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "오늘 기록 저장 중…",
         "초대 코드 만드는 중…",
         "초대 수락 중…",
-        "워치 기록 저장 중…",
-        "PDF 만드는 중…",
+        "워치 기록 확인 중…",
+        "PDF 화면 여는 중…",
     ):
         assert busy_label in script
     assert script.count("finally { releaseBusy(); }") >= 8
@@ -591,13 +591,15 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
     assert "지난 4주" in html
     assert "전체" in html
-    assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
-    assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
+    assert "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다" in script
+    assert "지난 4주·전체는 현재 화면 PDF 저장을 사용해 주세요" in script
     assert "const items = Array.isArray(report.challenge_details) ? report.challenge_details : []" in script
     assert "enrichWeeklyReportDetails" in script
     assert "renderWeeklyChallengeProgress(detailedReport.challenge_details || [], detailedReport)" in script
     assert "주간 기록을 확인할 수 없어요" in script
-    assert "건강교육을 불러오지 못했어요" in script
+    assert "setLocalEducationPreviewContents" in script
+    assert "건강교육을 불러오고 있어요" not in script
+    assert "건강교육을 불러오지 못했어요" not in script
     assert "답 확인 중…" in script
     assert "정답입니다. 교육 콘텐츠를 완료했습니다." not in script
     assert "다시 확인해 볼까요? · 정답:" in script
@@ -670,4 +672,7 @@ def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.model_key == "diabetes_incidence"
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
     assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
-    assert ACTIVE_MODEL.threshold_is_approved is False
+    assert ACTIVE_MODEL.threshold_is_approved is (
+        ACTIVE_MODEL.promotion_status == "approved"
+        and ACTIVE_MODEL.threshold_version not in {"", "unapproved"}
+    )
