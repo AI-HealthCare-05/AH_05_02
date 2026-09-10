@@ -32,13 +32,8 @@ def _add_record(bucket: dict[str, Any], record: dict[str, Any]) -> None:
             bucket["heart_rates"].append(float(value))
 
 
-def parse_health_connect_export(path: str | Path) -> list[CanonicalDailySummary]:
-    """Parse the synthetic/portable Health Connect JSON shape used by the MVP.
-
-    The parser keeps only daily aggregates and discards record IDs, app package
-    names and device metadata before returning data to the service layer.
-    """
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+def parse_health_connect_payload(payload: dict[str, Any]) -> list[CanonicalDailySummary]:
+    """Reduce a Health Connect JSON object to privacy-safe daily values."""
     grouped: dict[date, dict[str, Any]] = defaultdict(
         lambda: {"steps": None, "active_minutes": None, "sleep_minutes": None, "heart_rates": [], "quality": []}
     )
@@ -71,3 +66,9 @@ def parse_health_connect_export(path: str | Path) -> list[CanonicalDailySummary]
             )
         )
     return result
+
+
+def parse_health_connect_export(path: str | Path) -> list[CanonicalDailySummary]:
+    """Parse the synthetic/portable Health Connect JSON shape used by the MVP."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return parse_health_connect_payload(payload)

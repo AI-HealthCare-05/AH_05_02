@@ -34,6 +34,12 @@ class WearableImportRequest(BaseModel):
     items: list[WearableDailyItem] = Field(min_length=1, max_length=31)
 
 
+class WearableHealthCandidateApplyRequest(BaseModel):
+    exercise_days_per_week: float = Field(ge=0, le=7)
+    exercise_minutes: float = Field(ge=0, le=720)
+    regular_exercise: bool
+
+
 class RagQuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=500)
 
@@ -55,6 +61,22 @@ class OcrDraftRequest(BaseModel):
     def require_extracted_fields_or_text(self) -> OcrDraftRequest:
         if not self.extracted_fields and not self.ocr_text:
             raise ValueError("추출 필드 또는 OCR 텍스트가 필요합니다.")
+        return self
+
+
+class OcrHealthApplyRequest(BaseModel):
+    height_cm: float | None = Field(default=None, ge=120, le=220)
+    weight_kg: float | None = Field(default=None, ge=25, le=250)
+    waist_cm: float | None = Field(default=None, ge=45, le=180)
+    systolic_bp: int | None = Field(default=None, ge=70, le=250)
+    diastolic_bp: int | None = Field(default=None, ge=40, le=150)
+
+    @model_validator(mode="after")
+    def validate_update(self) -> OcrHealthApplyRequest:
+        if all(value is None for value in self.model_dump().values()):
+            raise ValueError("갱신할 건강정보를 하나 이상 확인해 주세요.")
+        if self.systolic_bp is not None and self.diastolic_bp is not None and self.systolic_bp <= self.diastolic_bp:
+            raise ValueError("수축기 혈압은 이완기 혈압보다 커야 합니다.")
         return self
 
 

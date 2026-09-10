@@ -9,14 +9,18 @@ from app.dtos.wellness import (
     FoodAnalysisRequest,
     NotificationPreferenceRequest,
     OcrDraftRequest,
+    OcrHealthApplyRequest,
     WearableConnectionRequest,
+    WearableHealthCandidateApplyRequest,
     WearableImportRequest,
 )
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
 from src.ocr.health_checkup_2025 import extract_health_checkup_fields
-from src.wearables.common import build_health_candidates, exercise_verification_candidate
+from src.wearables.android_health import parse_health_connect_payload
+from src.wearables.apple_health import build_daily_summaries, flag_duplicates, iter_normalized_records
+from src.wearables.common import build_health_candidates, exercise_verification_candidate, from_apple_daily_summary
 
 ALLOWED_OCR_FIELDS = {
     "checkup_date",
@@ -137,6 +141,46 @@ class WellnessService:
             "notice": "걸음 수만으로 식후 걷기 여부를 추정하지 않습니다. 명확히 대응되는 활동 확인 챌린지만 자동 기록합니다.",
         }
 
+    @staticmethod
+    def preview_wearable_file(provider: str, raw: bytes) -> dict[str, object]:
+        if len(raw) > 20 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="파일은 20MB 이하로 올려 주세요."
+            )
+        try:
+            if provider == "apple_health_export":
+                from io import BytesIO
+
+                records = flag_duplicates(iter_normalized_records(BytesIO(raw), user_pseudo_id="upload-preview"))
+                summaries = [from_apple_daily_summary(item) for item in build_daily_summaries(records)]
+            elif provider == "android_health_connect":
+                import json
+
+                summaries = parse_health_connect_payload(json.loads(raw.decode("utf-8")))
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="지원하지 않는 데이터 종류입니다."
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="웨어러블 파일 형식을 확인할 수 없습니다. 내보내기 원본 형식을 확인해 주세요.",
+            ) from exc
+        items = [item.as_api_item() for item in summaries[-31:]]
+        if not items:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="가져올 활동 기록을 찾지 못했습니다."
+            )
+        return {
+            "provider": provider,
+            "items": items,
+            "detected_days": len(items),
+            "requires_user_confirmation": True,
+            "notice": "원본 파일은 저장하지 않았습니다. 표시된 일일 요약을 확인한 뒤 적용해 주세요.",
+        }
+
     async def wearable_summaries(self, user: User, start: date, end: date) -> dict[str, object]:
         if end < start or (end - start).days > 31:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="조회 기간은 최대 31일입니다.")
@@ -164,6 +208,32 @@ class WellnessService:
             )
         items = await self.repo.daily_summaries(user.id, start, end)
         return build_health_candidates(items)
+
+    async def apply_wearable_health_candidates(
+        self, user: User, checkup_id: int, request: WearableHealthCandidateApplyRequest
+    ) -> dict[str, object]:
+        if await self.health_repo.active_consent(user.id) is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="건강정보 처리 동의가 필요합니다.")
+        checkup = await self.health_repo.get_checkup(checkup_id, user.id)
+        if checkup is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="갱신할 건강정보 기록을 찾을 수 없습니다."
+            )
+        checkup.exercise_days_per_week = request.exercise_days_per_week
+        checkup.exercise_minutes = request.exercise_minutes
+        checkup.regular_exercise = request.regular_exercise
+        await checkup.save(
+            update_fields=["exercise_days_per_week", "exercise_minutes", "regular_exercise", "updated_at"]
+        )
+        return {
+            "checkup_id": checkup.id,
+            "updated_fields": {
+                "exercise_days_per_week": checkup.exercise_days_per_week,
+                "exercise_minutes": checkup.exercise_minutes,
+                "regular_exercise": checkup.regular_exercise,
+            },
+            "message": "건강정보가 갱신되었습니다.",
+        }
 
     async def food_analysis(self, user: User, request: FoodAnalysisRequest) -> dict[str, object]:
         normalized = request.image_name.casefold()
@@ -230,6 +300,41 @@ class WellnessService:
             "status": item.status,
             "extracted_fields": item.extracted_fields,
             "next_action": "건강정보 입력 화면에서 값을 다시 확인한 뒤 제출하세요.",
+        }
+
+    async def apply_ocr_to_health_checkup(
+        self, user: User, draft_id: int, checkup_id: int, request: OcrHealthApplyRequest
+    ) -> dict[str, object]:
+        if await self.health_repo.active_consent(user.id) is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="건강정보 처리 동의가 필요합니다.")
+        item = await self.repo.ocr_draft(draft_id, user.id)
+        checkup = await self.health_repo.get_checkup(checkup_id, user.id)
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OCR 초안을 찾을 수 없습니다.")
+        if checkup is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="갱신할 건강정보 기록을 찾을 수 없습니다."
+            )
+        requested = request.model_dump(exclude_none=True)
+        allowed = {key: value for key, value in requested.items() if key in item.extracted_fields}
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="OCR 초안에서 확인된 갱신 항목이 없습니다."
+            )
+        for key, value in allowed.items():
+            setattr(checkup, key, value)
+        if "height_cm" in allowed or "weight_kg" in allowed:
+            checkup.bmi = round(checkup.weight_kg / ((checkup.height_cm / 100) ** 2), 1)
+            allowed["bmi"] = checkup.bmi
+        await checkup.save(update_fields=[*allowed, "updated_at"])
+        item.status = "applied_to_health_checkup"
+        item.confirmed_at = datetime.now(UTC)
+        await item.save(update_fields=["status", "confirmed_at"])
+        return {
+            "draft_id": item.id,
+            "checkup_id": checkup.id,
+            "updated_fields": allowed,
+            "message": "건강정보가 갱신되었습니다.",
         }
 
     async def notification_preferences(self, user: User) -> dict[str, object]:
