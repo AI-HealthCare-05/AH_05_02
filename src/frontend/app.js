@@ -284,14 +284,13 @@ const eligibilityGuidance = {
     primaryStep: null,
   },
   DIAGNOSED_DIABETES: {
-    code: "D01", title: "이미 당뇨병을 진단받은 사용자는 예측 대상이 아닙니다",
-    message: "이미 당뇨병을 진단받은 사용자에게는 신규 발병 위험 예측을 제공하지 않습니다.",
+    code: "D01", title: "검사·상담 안내를 확인해 주세요",
+    message: "진단받은 분은 담당 의료진의 안내를 우선하며 가까운 의료기관 정보를 확인할 수 있습니다.",
     reasonTitle: "진단 여부 확인",
     reason: "의료진에게 당뇨병을 진단받은 적이 있다고 답했습니다.",
-    action: "담당 의료진의 치료 지침을 우선하고 일반 건강정보를 확인하세요.",
-    primaryLabel: "일반 건강정보 보기",
-    primaryStep: 8,
-    primaryWorkspace: "tools",
+    action: "아래에서 가까운 의료기관의 주소와 전화번호를 확인해 주세요.",
+    primaryLabel: "의료기관 정보 보기",
+    primaryStep: null,
   },
   UNDER_MINIMUM_SERVICE_AGE: {
     code: "E02", title: "만 14세 미만은 서비스를 이용할 수 없습니다",
@@ -313,10 +312,10 @@ const eligibilityGuidance = {
   },
   MODEL_AGE_OUT_OF_RANGE: {
     code: "A19", title: "현재 건강 신호를 확인할 수 있어요",
-    message: "만 19~44세는 현재 건강 신호와 생활습관 챌린지를 이용합니다.",
+    message: "현재 당뇨 신호 확인과 건강 챌린지를 이용하실 수 있습니다!",
     reasonTitle: "연령별 이용 범위",
-    reason: "미래 발병 위험 모델은 만 45세 이상에게 적용되며, 현재 연령에서는 현재 건강 신호를 확인합니다.",
-    action: "건강정보를 입력해 현재 건강 신호를 확인한 뒤 생활습관 챌린지로 이어갈 수 있어요.",
+    reason: "입력한 생년월일 기준으로 만 19~44세에 해당합니다.",
+    action: "건강정보를 입력해 현재 당뇨 신호를 확인하고 건강 챌린지로 이어가세요.",
     primaryLabel: "현재 건강 신호 확인하기",
     primaryStep: 4,
   },
@@ -391,9 +390,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
   const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
   const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  const isDiagnosed = reason === "DIAGNOSED_DIABETES";
   $("#urgent-guidance-actions").hidden = !isUrgent;
   $("#same-day-guidance-actions").hidden = !isSameDay;
-  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
+  $("#diagnosed-guidance-actions").hidden = !isDiagnosed;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay || isDiagnosed;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -1569,6 +1570,7 @@ function showAgeBandMismatchDialog() {
   $("#eligibility-guidance-primary").hidden = true;
   $("#urgent-guidance-actions").hidden = true;
   $("#same-day-guidance-actions").hidden = true;
+  $("#diagnosed-guidance-actions").hidden = true;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) secondary.hidden = true;
   guidance.hidden = false;
@@ -5628,6 +5630,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
     }
     state.returningDestination = null;
     showStep(4);
+    showMessage("현재 당뇨 신호 확인과 미래 발병 예측, 건강 챌린지를 이용하실 수 있습니다!", "success");
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
@@ -5737,15 +5740,22 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
 });
-$("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
-$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
-$("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
-$("#find-same-day-medical")?.addEventListener("click", () => {
-  showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
-});
-$("#find-phone-consultation")?.addEventListener("click", () => {
-  showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
-});
+async function openEligibilityMedicalFacilities({ requestLocation = true } = {}) {
+  $("#eligibility-guidance").hidden = true;
+  const resultScreen = document.querySelector('.screen[data-step="6"]');
+  resultScreen?.classList.add("medical-guidance-only");
+  showStep(6);
+  const guidance = $("#medical-guidance-detail");
+  guidance.hidden = false;
+  document.body.classList.add("modal-open");
+  guidance.focus({ preventScroll: true });
+  if (requestLocation) await findNearbyMedicalFacilities();
+}
+
+$("#find-same-day-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-phone-consultation")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities());
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
@@ -5912,6 +5922,7 @@ $("#to-challenges").addEventListener("click", async () => {
 });
 $("#close-medical-guidance")?.addEventListener("click", () => {
   $("#medical-guidance-detail").hidden = true;
+  document.querySelector('.screen[data-step="6"]')?.classList.remove("medical-guidance-only");
   document.body.classList.remove("modal-open");
   $("#to-challenges")?.focus();
 });

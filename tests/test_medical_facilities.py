@@ -49,7 +49,6 @@ def test_address_search_is_available_when_browser_location_fails() -> None:
     assert 'autocomplete="off"' in html
     assert 'input.value = ""' in script
     assert '$("#facility-address-form").hidden = false' in script
-    assert '$("#emergency-address-form").hidden = false' in script
 
 
 def test_new_or_failed_search_clears_old_map_and_uses_search_reference_label() -> None:
@@ -65,15 +64,15 @@ def test_new_or_failed_search_clears_old_map_and_uses_search_reference_label() -
     assert 'href="tel:119"' in html
 
 
-def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:
+def test_urgent_guidance_is_119_only_in_frontend() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'id="emergency-facility-search"' in html
-    assert 'id="find-nearby-emergency"' in html
+    assert 'id="emergency-facility-search"' not in html
+    assert 'id="find-nearby-emergency"' not in html
+    assert 'href="tel:119"' in html
     assert 'const isUrgent = reason === "URGENT_MEDICAL_ATTENTION"' in script
     assert '$("#urgent-guidance-actions").hidden = !isUrgent' in script
-    assert "api(`/emergency-facilities/nearby?${params.toString()}`)" in script
 
 
 @pytest.mark.asyncio

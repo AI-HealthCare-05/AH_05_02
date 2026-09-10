@@ -18,22 +18,21 @@ def test_facility_buttons_call_real_nearby_endpoints() -> None:
     html, script = _frontend_sources()
 
     assert 'id="find-nearby-medical-facilities"' in html
-    assert 'id="find-nearby-emergency"' in html
+    assert 'id="find-same-day-medical"' in html
+    assert 'id="find-diagnosed-medical"' in html
     assert "api(`/medical-facilities/nearby?${params.toString()}`)" in script
-    assert "api(`/emergency-facilities/nearby?${params.toString()}`)" in script
+    assert 'openEligibilityMedicalFacilities' in script
 
 
 def test_location_failure_offers_address_search_without_fixed_fallback() -> None:
     html, script = _frontend_sources()
 
     assert 'id="facility-address-form"' in html
-    assert 'id="emergency-address-form"' in html
     assert "coordinatesForAddress" in script
     assert "geocoder.addressSearch" in script
     assert "DEFAULT_FACILITY_LOCATION" not in script
     assert "기본 위치" not in script
     assert '$("#facility-address-form").hidden = false' in script
-    assert '$("#emergency-address-form").hidden = false' in script
 
 
 def test_location_statuses_distinguish_denied_timeout_and_unavailable() -> None:
@@ -43,21 +42,30 @@ def test_location_statuses_distinguish_denied_timeout_and_unavailable() -> None:
     assert 'if (error?.code === 3) return "timeout"' in script
     assert 'return "unavailable"' in script
     assert "setMedicalFacilityStatus(geolocationFailureState(error), title, message)" in script
-    assert "setEmergencyFacilityStatus(geolocationFailureState(error), title" in script
 
 
 def test_new_or_failed_search_clears_previous_results_and_map() -> None:
     html, script = _frontend_sources()
 
     assert 'id="medical-facility-map"' in html
-    assert 'id="emergency-facility-map"' in html
     assert "function resetFacilitySearchUi(target)" in script
     assert 'results.innerHTML = ""' in script
     assert "clearFacilityMapMarkers(target)" in script
     assert "map.hidden = true" in script
     assert script.count('resetFacilitySearchUi("medical")') >= 4
-    assert script.count('resetFacilitySearchUi("emergency")') >= 6
-    assert script.count('referenceLabel: "검색 기준 위치"') == 2
+    assert script.count('referenceLabel: "검색 기준 위치"') >= 1
+
+
+def test_urgent_branch_is_119_only_and_same_day_uses_medical_search() -> None:
+    html, script = _frontend_sources()
+
+    assert 'href="tel:119"' in html
+    assert 'id="find-nearby-emergency"' not in html
+    assert 'id="emergency-facility-search"' not in html
+    assert 'id="find-same-day-medical"' in html
+    assert 'id="find-diagnosed-medical"' in html
+    assert '전화 문의 가능한 기관 보기' in html
+    assert '$("#find-same-day-medical")?.addEventListener' in script
 
 
 def test_existing_frontend_contracts_remain_visible() -> None:

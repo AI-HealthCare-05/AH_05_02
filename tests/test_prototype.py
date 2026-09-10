@@ -74,17 +74,10 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "선택한 증상이 없습니다." not in html
     assert "심한 가슴 통증, 숨쉬기 매우 어려움, 의식이 흐려지는 등의 증상을 확인해 주세요." not in html
     assert "119에 전화하기" in html
-    assert "현재 위치 확인하기" in html
-    assert "주변 응급실 보기" in html
-    assert 'id="emergency-facility-search"' in html
-    assert 'id="emergency-address-form"' in html
-    assert 'id="emergency-address"' in html
-    assert 'id="emergency-facility-map"' in html
-    assert "api(`/emergency-facilities/nearby?" in script
-    assert "renderEmergencyFacilities" in script
-    assert "국립중앙의료원 응급의료기관 정보" in script
+    assert "주변 응급실 보기" not in html
+    assert 'id="emergency-facility-search"' not in html
     assert "가까운 의료기관 찾기" in html
-    assert "전화 상담 가능한 기관 보기" in html
+    assert "전화 문의 가능한 기관 보기" in html
     assert "의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요." in html
     assert "SAME_DAY_MEDICAL_ATTENTION" in script
     assert "has_urgent_warning_sign: false" in script
@@ -184,8 +177,8 @@ def test_service_and_model_age_are_separately_explained() -> None:
 
     assert 'id="eligibility-age-band-check"' in html
     assert "만 14~18세는 예측 없이 생활습관 챌린지" in script
-    assert "만 19~44세는 현재 건강 신호" in script
-    assert "미래 발병 위험 모델은 만 45세 이상에게 적용" in script
+    assert "현재 당뇨 신호 확인과 건강 챌린지를 이용하실 수 있습니다!" in script
+    assert "현재 당뇨 신호 확인과 미래 발병 예측, 건강 챌린지를 이용하실 수 있습니다!" in script
 
 
 def test_health_form_keeps_current_backend_smoking_field_and_rf25_field() -> None:
