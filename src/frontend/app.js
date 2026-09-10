@@ -6810,6 +6810,15 @@ async function createOcrPreview(documentName, ocrText) {
   return api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: documentName, ocr_text: ocrText }) });
 }
 
+async function createOcrImagePreview(file) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", provider: "development_mock", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  return api("/ocr-drafts/from-image", { method: "POST", body: formData });
+}
+
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
 $("#load-checkup-sample")?.addEventListener("click", async () => {
   const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
@@ -6821,7 +6830,7 @@ $("#checkup-image-input")?.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
-    showOcrPreview(await createOcrPreview(file.name, await file.text()), file.name);
+    showOcrPreview(await createOcrImagePreview(file), file.name);
   } catch (error) { showMessage(error.message); }
   finally { event.target.value = ""; }
 });
