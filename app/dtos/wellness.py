@@ -44,6 +44,10 @@ class RagQuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=500)
 
 
+class QuizAnswerRequest(BaseModel):
+    answer: str = Field(min_length=1, max_length=100)
+
+
 class FoodAnalysisRequest(BaseModel):
     image_name: str = Field(min_length=1, max_length=200)
 
