@@ -93,6 +93,7 @@ foreach ($entry in $existingValues.GetEnumerator()) {
 
 $prodValues = [ordered]@{
     ENV = "prod"
+    DEMO_MODE = "false"
     DOCKER_USER = "CHANGE_ME"
     DOCKER_REPOSITORY = "ah-05-02"
     APP_VERSION = "v0.1.0"
@@ -107,6 +108,17 @@ $prodValues = [ordered]@{
     DB_ROOT_PASSWORD = New-ProjectSecret -ByteCount 30
     DB_NAME = "ah05_healthcare"
     REDIS_PORT = "6379"
+    REDIS_HOST = "redis"
+    CURRENT_SCREENING_REDIS_STREAM = "ai:jobs:current-screening"
+    DB_GENERATE_SCHEMAS = "false"
+    PREDICTION_PROVIDER = "artifact"
+    PREDICTION_TIMEOUT_SECONDS = "60"
+    MODEL_ARTIFACTS_PATH = "/opt/ah05/models/artifacts"
+    MODEL_URI = "/app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
+    MODEL_MANIFEST_URI = "/app/models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
+    CURRENT_SCREENING_MODEL_URI = "/app/models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
+    CURRENT_SCREENING_MANIFEST_URI = "/app/models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
+    AWS_REGION = "ap-northeast-2"
 }
 
 Write-EnvValues -Path $localEnv -Values $localValues

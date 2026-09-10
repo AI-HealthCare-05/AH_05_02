@@ -22,7 +22,6 @@ COPY ./ai_worker ./ai_worker
 COPY ./app ./app
 COPY ./src/ml ./src/ml
 COPY ./models/registry ./models/registry
-COPY ./models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib ./models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib
 
 # 5. 해당 이미지를 활용하여 도커컨테이너 실행시 실행되는 명령어입니다.
 # 아래 커맨드를 수정한 뒤에 사용합니다.
