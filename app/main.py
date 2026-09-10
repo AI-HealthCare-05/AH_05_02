@@ -42,6 +42,22 @@ app.add_middleware(ChallengeUploadLimit)
 
 app.include_router(v1_routers)
 
+# report-v1.4-draft §3 API 공통 조건: 민감 응답(리포트류)은 Cache-Control: private, no-store를
+# 권장한다. 라우터 안에서 개별적으로 response.headers를 설정하면 200 응답에는 적용되지만, 그
+# 라우트가 HTTPException을 던지는 에러 응답(404/422/401 등)은 FastAPI가 별도의 응답 객체를 새로
+# 만들어 처리하므로 헤더가 유실된다. 이 미들웨어는 응답이 성공이든 예외에서 나온 것이든 상관없이
+# 해당 경로 전부에 헤더를 강제로 붙여서 그 사각지대를 없앤다.
+_SENSITIVE_REPORT_PATH_PREFIXES = ("/api/v1/reports", "/api/v1/weekly-reports")
+
+
+@app.middleware("http")
+async def _no_store_for_sensitive_reports(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(_SENSITIVE_REPORT_PATH_PREFIXES):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "src" / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")

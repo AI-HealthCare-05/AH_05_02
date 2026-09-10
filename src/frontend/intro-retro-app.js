@@ -426,8 +426,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
-  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
+  if (!/[A-Z]/.test(value) || !/[a-z]/.test(value)) issues.push("영문 대소문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -4084,6 +4083,12 @@ function localEducationContents() {
   };
 }
 
+function setLocalEducationPreviewContents() {
+  const contents = localEducationContents();
+  state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
+  return contents;
+}
+
 function inferredEducationAnswer(question = "") {
   return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
 }
@@ -4102,9 +4107,7 @@ function educationQuestions(item) {
 function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
-    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
-    window.educationCarouselView?.refresh();
-    return;
+    setLocalEducationPreviewContents();
   }
   const educationArt = [
     ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
@@ -4182,17 +4185,18 @@ function closeEducationFlow() {
 }
 
 async function loadEducation() {
-  const list = $("#education-list");
-  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
-  window.educationCarouselView?.refresh();
+  const fallbackContents = setLocalEducationPreviewContents();
+  renderEducationList();
   try {
-    const contents = isLocalPreview() ? localEducationContents() : await api("/education-contents");
-    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
+    const contents = isLocalPreview() ? fallbackContents : await api("/education-contents");
+    const items = Array.isArray(contents.items) ? contents.items : [];
+    if (items.length) {
+      state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
+    }
     renderEducationList();
   } catch (error) {
-    state.educationContents = [];
-    list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오지 못했어요</strong><p>잠시 후 다시 시도해 주세요.</p></article>`;
-    window.educationCarouselView?.refresh();
+    setLocalEducationPreviewContents();
+    renderEducationList();
   }
 }
 async function loadConnections() {
@@ -4540,25 +4544,34 @@ function setReportPeriod(period) {
 }
 
 function reportPdfUnavailableReason(period) {
-  if (period !== "week") return "지난 4주·전체 PDF는 연결 준비 중입니다. 다른 기간의 파일을 대신 내려받지 않습니다. 이번 주를 선택해 주세요.";
-  if (!state.token || isLocalPreview()) return "실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.";
   return "";
 }
 
 function updateReportPdfAvailability() {
   const reason = reportPdfUnavailableReason(selectedReportPdfPeriod());
-  $("#report-pdf-status").textContent = reason || "현재 서버의 주간 리포트는 최근 최대 7일의 생활습관 기록 요약입니다. 화면에 표시된 집계 기간을 확인해 주세요.";
+  $("#report-pdf-status").textContent = reason || "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다.";
   // The first click can always reveal period choices; only an actual download is blocked.
   $("#download-report").disabled = !$("#report-pdf-options").hidden && Boolean(reason);
 }
 
 async function fetchWeeklyReportPdf(period) {
-  const reason = reportPdfUnavailableReason(period);
-  if (reason) throw new Error(reason);
+  if (period !== "week") throw new Error("지난 4주·전체는 현재 화면 PDF 저장을 사용해 주세요.");
+  if (!state.token || isLocalPreview()) throw new Error("실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.");
   const response = await fetch("/api/v1/weekly-reports/current/pdf", { headers: { Authorization: `Bearer ${state.token}` } });
   if (!response.ok) throw new Error(response.status === 401 ? "로그인이 만료되었습니다. 다시 로그인한 뒤 PDF를 받아 주세요." : "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
   if (!response.headers.get("content-type")?.includes("application/pdf")) throw new Error("올바른 PDF 응답을 받지 못했습니다. 다시 시도해 주세요.");
   return response.blob();
+}
+
+async function prepareReportPrint(period) {
+  setReportPeriod(period);
+  if (period === "week" && state.lifestyleReportStatus === "idle") await loadWeeklyReport();
+  if ((period === "four-week" || period === "all") && state.reportPeriodStatus[period] !== "ready") await loadReportPeriod(period);
+  document.body.dataset.printReportPeriod = period;
+  document.documentElement.dataset.printReportPeriod = period;
+  document.title = `간당간당_${reportPdfPeriodLabels[period] || "리포트"}_리포트`;
+  window.print();
+  return period;
 }
 
 const reportPdfPeriodLabels = {
@@ -6497,16 +6510,16 @@ $("#account-delete-form")?.addEventListener("submit", async (event) => {
 });
 $("#download-report").addEventListener("click", async (event) => {
   if (!revealReportPdfOptions()) return;
-  const releaseBusy = setButtonBusy(event.currentTarget, "PDF 만드는 중…");
+  const releaseBusy = setButtonBusy(event.currentTarget, "PDF 화면 여는 중…");
   try {
     const period = selectedReportPdfPeriod();
-    const url = URL.createObjectURL(await fetchWeeklyReportPdf(period));
-    const link = document.createElement("a"); link.href = url; link.download = reportPdfFileNames[period] || "간당간당_리포트.pdf"; link.click(); URL.revokeObjectURL(url);
-    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} PDF를 저장했습니다.`, "success");
+    await prepareReportPrint(period);
+    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} 리포트 PDF 저장 화면을 열었습니다.`, "success");
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
 $$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("change", () => {
+  setReportPeriod(input.value);
   updateReportPdfButtonLabel();
   updateReportPdfAvailability();
 }));

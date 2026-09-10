@@ -14,7 +14,7 @@ from app.dtos.health import (
 )
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
-from app.services.challenge_proofs import verify_photo
+from app.services.challenge_proofs import challenge_today, verify_photo
 from app.services.challenges import ChallengeService, challenge_payload
 
 challenge_router = APIRouter(tags=["Challenges"])
@@ -93,6 +93,32 @@ async def update_challenge_cycle_status(
     service = ChallengeService()
     cycle = await service.stop_cycle(user, cycle_id, request.reason)
     return envelope(await service.cycle_payload(cycle, user.id))
+
+
+@challenge_router.get("/challenge-rewards/daily/{reward_date}")
+async def daily_challenge_reward_status(
+    reward_date: date,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await ChallengeService().daily_reward_status(user, reward_date))
+
+
+@challenge_router.get("/challenge-rewards/daily")
+async def today_challenge_reward_status(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    return envelope(await ChallengeService().daily_reward_status(user, challenge_today()))
+
+
+@challenge_router.post("/challenge-rewards/daily/{reward_date}")
+async def claim_daily_challenge_reward(
+    reward_date: date,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await ChallengeService().claim_daily_reward(user, reward_date))
+
+
+@challenge_router.post("/challenge-rewards/daily")
+async def claim_today_challenge_reward(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    return envelope(await ChallengeService().claim_daily_reward(user, challenge_today()))
 
 
 @challenge_router.put("/user-challenges/{user_challenge_id}/logs/{log_date}")
