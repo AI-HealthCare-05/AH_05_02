@@ -151,7 +151,7 @@ def test_mvp_keeps_two_year_forecast_and_excludes_research_scenarios() -> None:
     assert "function selectTwoYearForecastPoint" in script
     assert "prediction?.age_risk_forecast?.points" in script
     assert "Number(item?.years_from_now) === 2" in script
-    assert "생활습관 시나리오는 표시하지 않습니다." in html
+    assert "생활습관 시나리오는 표시하지 않습니다." not in html
     assert "/research/models/" not in script
     assert "isPublicRiskDisplayAllowed" in script
 
