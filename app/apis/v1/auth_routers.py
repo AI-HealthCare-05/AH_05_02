@@ -130,9 +130,7 @@ async def confirm_password_reset(
     request: PasswordResetConfirmRequest,
     auth_service: Annotated[AuthService, Depends(AuthService)],
 ) -> Response:
-    await auth_service.reset_password(
-        request.token, request.new_password, request.new_password_confirmation
-    )
+    await auth_service.reset_password(request.token, request.new_password, request.new_password_confirmation)
     response = Response(content=None, status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie(key="refresh_token", domain=config.COOKIE_DOMAIN or None)
     return response

@@ -116,11 +116,16 @@ class AuthService:
 
     async def change_password(self, user: User, current_password: str, new_password: str, confirmation: str) -> None:
         if new_password != confirmation:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="새 비밀번호가 일치하지 않습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="새 비밀번호가 일치하지 않습니다."
+            )
         if not verify_password(current_password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="현재 비밀번호가 올바르지 않습니다.")
         if verify_password(new_password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="현재 비밀번호와 다른 비밀번호를 입력해 주세요.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="현재 비밀번호와 다른 비밀번호를 입력해 주세요.",
+            )
         user.hashed_password = hash_password(new_password)
         user.auth_version += 1
         await user.save(update_fields=["hashed_password", "auth_version", "updated_at"])
@@ -146,13 +151,20 @@ class AuthService:
 
     async def reset_password(self, raw_token: str, new_password: str, confirmation: str) -> None:
         if new_password != confirmation:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="새 비밀번호가 일치하지 않습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="새 비밀번호가 일치하지 않습니다."
+            )
         item = await PasswordResetToken.get_or_none(token_hash=self._key_hash(raw_token)).select_related("user")
         now = datetime.now(UTC)
         if not item or item.used_at or item.expires_at <= now:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="재설정 링크가 만료되었거나 이미 사용되었습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="재설정 링크가 만료되었거나 이미 사용되었습니다."
+            )
         if verify_password(new_password, item.user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="현재 비밀번호와 다른 비밀번호를 입력해 주세요.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="현재 비밀번호와 다른 비밀번호를 입력해 주세요.",
+            )
         item.user.hashed_password = hash_password(new_password)
         item.user.auth_version += 1
         item.used_at = now
