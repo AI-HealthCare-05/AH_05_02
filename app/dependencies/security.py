@@ -15,6 +15,6 @@ async def get_request_user(credential: Annotated[HTTPAuthorizationCredentials, D
     verified = JwtService().verify_jwt(token=token, token_type="access")
     user_id = verified.payload["user_id"]
     user = await UserRepository().get_user(user_id)
-    if not user:
+    if not user or verified.payload.get("auth_version", 0) != user.auth_version:
         raise HTTPException(detail="Authenticate Failed.", status_code=status.HTTP_401_UNAUTHORIZED)
     return user
