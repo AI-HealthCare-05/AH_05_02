@@ -120,6 +120,13 @@ class Config(BaseSettings):
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 
     COOKIE_DOMAIN: str = "localhost"
+    FRONTEND_BASE_URL: str = "http://localhost:8001"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
 
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

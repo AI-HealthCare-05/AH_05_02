@@ -31,3 +31,26 @@ class LoginResponse(BaseModel):
 
 
 class TokenRefreshResponse(LoginResponse): ...
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: Annotated[str, Field(min_length=8)]
+    new_password: Annotated[str, Field(min_length=8), AfterValidator(validate_password)]
+    new_password_confirmation: str
+
+    @field_validator("new_password_confirmation")
+    @classmethod
+    def confirmation_is_present(cls, value: str) -> str:
+        if not value:
+            raise ValueError("새 비밀번호 확인을 입력해 주세요.")
+        return value
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    new_password: Annotated[str, Field(min_length=8), AfterValidator(validate_password)]
+    new_password_confirmation: str
