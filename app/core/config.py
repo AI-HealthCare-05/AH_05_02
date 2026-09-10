@@ -111,6 +111,12 @@ class Config(BaseSettings):
     NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 
+    # 건강검진 결과통보서 이미지 OCR. 원본 이미지는 저장하지 않고 추출 초안만 사용자 확인 대상으로 둡니다.
+    CLOVA_OCR_URL: str = ""
+    CLOVA_OCR_SECRET: str = ""
+    CLOVA_OCR_TIMEOUT_SECONDS: int = 20
+    CLOVA_OCR_MAX_BYTES: int = 10 * 1024 * 1024
+
     COOKIE_DOMAIN: str = "localhost"
 
     JWT_ALGORITHM: str = "HS256"

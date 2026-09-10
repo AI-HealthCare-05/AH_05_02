@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -19,6 +19,7 @@ from app.dtos.wellness import (
     WearableImportRequest,
 )
 from app.models.users import User
+from app.ocr.clova import ClovaOcrError
 from app.services.engagement import EngagementService
 from app.services.wellness import WellnessService
 from src.quiz.generator import generate_quizzes
@@ -151,6 +152,25 @@ async def confirm_food(
 @wellness_router.post("/ocr-drafts", status_code=status.HTTP_201_CREATED)
 async def create_ocr_draft(request: OcrDraftRequest, user: Annotated[User, Depends(get_request_user)]):
     return envelope(await WellnessService().ocr_draft(user, request))
+
+
+@wellness_router.post("/ocr-drafts/from-image", status_code=status.HTTP_201_CREATED)
+async def create_ocr_draft_from_image(
+    file: Annotated[UploadFile, File()],
+    user: Annotated[User, Depends(get_request_user)],
+):
+    raw = await file.read()
+    await file.close()
+    try:
+        result = await WellnessService().ocr_draft_from_image(
+            user,
+            document_name=file.filename or "health-checkup-image",
+            content_type=file.content_type,
+            content=raw,
+        )
+    except ClovaOcrError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    return envelope(result)
 
 
 @wellness_router.post("/ocr-drafts/{draft_id}/confirm")

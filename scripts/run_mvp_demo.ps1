@@ -9,5 +9,7 @@ $env:DEMO_MODE = "true"
 $env:DB_GENERATE_SCHEMAS = "true"
 $env:DATABASE_URL = "sqlite://storage/gandang_mvp.sqlite3"
 $env:SECRET_KEY = "local-demo-only-change-before-deployment"
+$env:PREDICTION_PROVIDER = "development"
+$env:S2_MODEL_RUNTIME_ENABLED = "false"
 
 & ".venv\Scripts\uvicorn.exe" app.main:app --host 127.0.0.1 --port 8000

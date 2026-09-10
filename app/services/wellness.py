@@ -15,6 +15,7 @@ from app.dtos.wellness import (
     WearableImportRequest,
 )
 from app.models.users import User
+from app.ocr.clova import ClovaOcrProvider
 from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
 from src.ocr.health_checkup_2025 import extract_health_checkup_fields
@@ -268,7 +269,9 @@ class WellnessService:
         await item.save(update_fields=["confirmed_category", "status", "confirmed_at"])
         return {"analysis_id": item.id, "status": item.status, "confirmed_category": item.confirmed_category}
 
-    async def ocr_draft(self, user: User, request: OcrDraftRequest) -> dict[str, object]:
+    async def ocr_draft(
+        self, user: User, request: OcrDraftRequest, *, provider: str = "development_mock"
+    ) -> dict[str, object]:
         extracted = dict(request.extracted_fields)
         if request.ocr_text:
             extracted.update(extract_health_checkup_fields(request.ocr_text))
@@ -277,6 +280,7 @@ class WellnessService:
             user_id=user.id,
             document_name=request.document_name,
             extracted_fields=filtered,
+            provider=provider,
         )
         return {
             "draft_id": item.id,
@@ -287,6 +291,20 @@ class WellnessService:
             "requires_user_confirmation": True,
             "notice": "OCR 초안은 건강검진 기록에 자동 저장되지 않습니다. 원문과 대조해 확인해야 합니다.",
         }
+
+    async def ocr_draft_from_image(
+        self, user: User, *, document_name: str, content_type: str | None, content: bytes
+    ) -> dict[str, object]:
+        text = await ClovaOcrProvider().extract_text(
+            file_name=document_name,
+            content_type=content_type,
+            content=content,
+        )
+        return await self.ocr_draft(
+            user,
+            OcrDraftRequest(document_name=document_name, ocr_text=text),
+            provider="clova_ocr",
+        )
 
     async def confirm_ocr(self, user: User, draft_id: int) -> dict[str, object]:
         item = await self.repo.ocr_draft(draft_id, user.id)
