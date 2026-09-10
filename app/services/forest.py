@@ -181,6 +181,11 @@ class ForestService:
             )
         if not accessory["default"] and not await self.repo.has_item(user.id, request.accessory_code):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="아직 획득하지 않은 액세서리입니다.")
+        # `request.display_name` is a deprecated, unused field (see ForestAvatarUpdateRequest):
+        # the avatar's display name is derived from the account name and is never
+        # independently settable through this endpoint. `self.repo.avatar(user)` already
+        # resolves and self-heals it to the current account name (or the generic
+        # placeholder for a nameless account), so only cosmetics are saved here.
         avatar = await self.repo.avatar(user)
         avatar.hair_code = request.hair_code
         avatar.outfit_code = request.outfit_code

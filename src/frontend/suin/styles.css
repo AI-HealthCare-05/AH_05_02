@@ -23,6 +23,8 @@
 .compact-upload strong{font-size:18px}
 .health-tool-status-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px}
 .health-tool-status-row .health-tool-row{align-items:center;margin-bottom:0}
+.health-tool-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px}
+.health-tool-actions .health-tool-inline-action,.health-tool-actions .secondary,.health-tool-actions .primary{flex:0 0 auto}
 .health-tool-inline-action{display:inline-flex;align-items:center;justify-content:center;gap:9px;width:auto;min-width:170px;min-height:54px;padding:12px 18px;white-space:nowrap}
 .upload-checkup-button span,.upload-checkup-button span svg{display:block;width:25px;height:25px}
 .upload-checkup-button strong{font-size:17px}
@@ -1617,6 +1619,131 @@ body.dialog-open{overflow:hidden}
 #guest-flow-panel #sidebar-signup:hover{background:var(--green-dark);border-color:var(--green-dark)}
 #guest-flow-panel #sidebar-signup[aria-current="page"]{text-decoration:underline;text-underline-offset:4px}
 
+/* Desktop density pass: keep signup usable at the browser's real 100% zoom. */
+@media(min-width:801px){
+  body:not(.intro-mode){
+    font-size:18px;
+  }
+
+  body:not(.intro-mode) .topbar{
+    min-height:74px;
+  }
+
+  body:not(.intro-mode) .app-shell{
+    padding-top:18px;
+    padding-bottom:30px;
+  }
+
+  body:not(.intro-mode) .content{
+    min-height:calc(100vh - 122px);
+  }
+
+  .screen[data-step="2"]{
+    width:min(1080px,100%);
+    max-width:1080px;
+  }
+
+  .screen[data-step="2"] .screen-title-with-mascot{
+    gap:14px;
+    margin-bottom:12px;
+  }
+
+  .screen[data-step="2"] .screen-title-with-mascot>img{
+    flex-basis:72px;
+    width:72px;
+    height:72px;
+  }
+
+  .screen[data-step="2"] .screen-title-with-mascot h2{
+    font-size:34px;
+    line-height:1.18;
+  }
+
+  #signup-form{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0 18px;
+  }
+
+  #signup-form .form-row{
+    gap:6px;
+    margin:9px 0;
+  }
+
+  #signup-form .form-row input,
+  #signup-form .form-row select{
+    min-height:46px;
+    padding:9px 12px;
+    border-radius:10px;
+  }
+
+  #signup-form .password-control-icon input{
+    padding-right:54px;
+  }
+
+  #signup-form .password-control .password-toggle-icon{
+    right:5px;
+    width:42px;
+    height:42px;
+    min-height:42px;
+  }
+
+  #signup-form .password-toggle-icon svg{
+    width:24px;
+    height:24px;
+  }
+
+  #signup-form .form-row>small{
+    font-size:14px;
+    line-height:1.45;
+  }
+
+  #signup-form .consent-list{
+    gap:8px;
+    margin:10px 0 4px;
+  }
+
+  #signup-form .consent-card{
+    min-height:0;
+    padding:11px 14px;
+    border-radius:12px;
+  }
+
+  #signup-form .consent-card input{
+    width:20px;
+    height:20px;
+  }
+
+  #signup-form .consent-card span{
+    gap:3px 12px;
+  }
+
+  #signup-form .consent-card strong{
+    font-size:17px;
+    line-height:1.35;
+  }
+
+  #signup-form .consent-card small{
+    font-size:14px;
+    line-height:1.4;
+  }
+
+  #signup-form .consent-card em{
+    min-width:54px;
+    min-height:28px;
+    font-size:13px;
+  }
+
+  #signup-form .actions{
+    align-items:center;
+    margin-top:12px;
+  }
+
+  #signup-form .actions button{
+    min-height:48px;
+    padding:10px 18px;
+  }
+}
+
 /* Home shortcuts and account controls share one clear, responsive row. */
 .service-story{position:relative;z-index:1;background:#fff;color:#172b29}
 .story-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 32px;padding:24px;border-bottom:1px solid #e2ebe7;background:#fff}
@@ -1790,3 +1917,118 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .home-feature-card:focus-visible,.header-my-page>summary:focus-visible{outline:3px solid var(--green);outline-offset:4px}
 @media(max-width:1000px){.home-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.header-utilities{gap:6px}.header-my-page>summary,.header-utilities #font-toggle{font-size:14px;padding:8px}.home-feature-grid{grid-template-columns:1fr;gap:12px}.home-feature-card{min-height:150px;padding:20px}.home-feature-card strong{font-size:24px}.home-feature-card img{width:96px;height:106px}}
+
+/* 2026-09-10 result/XAI layout: today's signal and future signal share the same two-column rhythm. */
+.result-room-screen>#result-signal-grid{
+  width:min(1480px,100%);
+  margin:0 auto;
+}
+.result-signal-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:34px;
+  align-items:start;
+}
+.result-signal-grid .current-risk-signal-card,
+.result-signal-grid .risk-forecast-panel{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:28px;
+  height:100%;
+  min-height:520px;
+  margin:0;
+  padding:34px 38px;
+  border:2px solid #c8d9d2;
+  border-radius:20px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 16px 34px rgba(20,33,61,.08);
+}
+.current-signal-content,
+.risk-forecast-panel{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+.current-signal-content{
+  display:grid;
+  gap:28px;
+  align-items:stretch;
+  min-height:330px;
+}
+.current-signal-content .current-risk-signal-body,
+.current-signal-content .current-xai-slot,
+.risk-forecast-panel .age-risk-chart,
+.risk-forecast-panel .forecast-score-placeholder{
+  width:100%;
+  min-height:330px;
+}
+.current-signal-content .current-risk-signal-body{
+  display:grid;
+  place-items:center;
+  padding:28px;
+  border:2px solid #c8d9d2;
+  border-radius:22px;
+  background:rgba(255,250,240,.94);
+}
+.current-signal-content .current-xai-slot,
+.risk-forecast-panel .forecast-score-placeholder{
+  display:grid;
+  place-items:center;
+  padding:28px;
+  border:3px dashed #b88950 !important;
+  border-radius:22px;
+  background:rgba(255,250,240,.78) !important;
+  color:#6b4424;
+  text-align:center;
+  box-shadow:none !important;
+}
+.result-xai-waiting{
+  display:grid;
+  place-items:center;
+  align-content:center;
+  min-height:260px;
+  text-align:center;
+}
+.result-xai-waiting h3{
+  margin:0;
+  color:#121b36;
+  font-size:clamp(26px,2.3vw,34px);
+  line-height:1.25;
+}
+.result-xai-waiting .factor-list li{
+  display:none;
+}
+.risk-forecast-panel .risk-forecast-heading{
+  grid-column:1/-1;
+}
+.risk-forecast-panel .future-risk-category{
+  display:none;
+}
+.risk-forecast-panel .age-risk-chart{
+  grid-column:1;
+  margin:0;
+  align-self:stretch;
+}
+.risk-forecast-panel .forecast-score-placeholder{
+  grid-column:2;
+}
+@media(max-width:1000px){
+  .current-signal-content,
+  .risk-forecast-panel{
+    grid-template-columns:1fr !important;
+  }
+  .risk-forecast-panel .forecast-score-placeholder{
+    grid-column:1;
+  }
+}
+
+/* Screen-PDF flow: print only the currently selected report panel. */
+@page{size:A4;margin:12mm}
+@media print{
+  html,body{width:auto!important;min-height:0!important;background:#fff!important;color:#111827!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body *{visibility:hidden!important}
+  #workspace-panel-report,#workspace-panel-report *{visibility:visible!important}
+  .topbar,.step-panel,.workspace-nav,.report-pdf-card,.message,footer{display:none!important}
+  .app-shell,.content,.screen[data-step="8"],#workspace-panel-report{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important;box-shadow:none!important;overflow:visible!important}
+  #workspace-panel-report [data-report-panel]:not(.active){display:none!important}
+  #workspace-panel-report .report-period-tabs{display:none!important}
+  #workspace-panel-report :is(.report-hero-card,.report-detail-card,.report-insight-card,.report-empty){break-inside:avoid;page-break-inside:avoid;box-shadow:none!important}
+}
