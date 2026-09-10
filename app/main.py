@@ -46,6 +46,7 @@ async def _no_store_for_sensitive_reports(request, call_next):
         response.headers["Cache-Control"] = "private, no-store"
     return response
 
+
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "src" / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")

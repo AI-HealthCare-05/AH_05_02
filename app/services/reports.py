@@ -158,9 +158,7 @@ async def _week_anchor_cycle(health_repo: HealthRepository, user_id: int) -> Cha
 
 
 async def _first_started_cycle(user_id: int, as_of: date) -> ChallengeCycle | None:
-    return (
-        await ChallengeCycle.filter(user_id=user_id, start_date__lte=as_of).order_by("start_date", "id").first()
-    )
+    return await ChallengeCycle.filter(user_id=user_id, start_date__lte=as_of).order_by("start_date", "id").first()
 
 
 def _week_bounds(anchor_start: date, as_of: date) -> tuple[date, date]:
@@ -555,7 +553,13 @@ async def _cycles_page(user_id: int, cursor: int | None, limit: int) -> tuple[li
     for cycle in cycles:
         user_challenges = await HealthRepository().list_user_challenges(cycle.id, user_id)
         period = PeriodBounds(
-            "all", cycle.start_date, cycle.end_date, cycle.start_date, min(cycle.end_date, today_kst()), True, today_kst()
+            "all",
+            cycle.start_date,
+            cycle.end_date,
+            cycle.start_date,
+            min(cycle.end_date, today_kst()),
+            True,
+            today_kst(),
         )
         for uc in user_challenges:
             uc._cycle = cycle  # type: ignore[attr-defined]
@@ -638,21 +642,31 @@ class ReportService:
         # `four-week` keeps barriers as an independent card, `all` shows none of these.
         selected_uc_ids = await self._selected_ids_for_barriers(user.id, bounds)
         barriers = (
-            await _barriers(user.id, bounds, selected_uc_ids) if period in ("week", "four-week") else {"total_count": 0, "items": []}
+            await _barriers(user.id, bounds, selected_uc_ids)
+            if period in ("week", "four-week")
+            else {"total_count": 0, "items": []}
         )
         highlights = _highlights(challenges) if period == "week" else []
-        needs_support = _needs_support(challenges, highlights[0]["challenge_code"] if highlights else None) if period == "week" else None
+        needs_support = (
+            _needs_support(challenges, highlights[0]["challenge_code"] if highlights else None)
+            if period == "week"
+            else None
+        )
         next_adjustment = None
         if period == "week" and barriers["items"]:
             top_reason = barriers["items"][0]["reason_code"]
             code, message = BARRIER_SUGGESTIONS.get(top_reason, ("restart_tomorrow", "현재 목표를 이어가세요."))
             next_adjustment = {"code": code, "message": message}
 
-        next_action = self._next_action(report_status, counts) if period == "week" else {
-            "code": "view_guidance",
-            "label": "자세히 보기",
-            "message": "습관별 현황을 확인해 보세요.",
-        }
+        next_action = (
+            self._next_action(report_status, counts)
+            if period == "week"
+            else {
+                "code": "view_guidance",
+                "label": "자세히 보기",
+                "message": "습관별 현황을 확인해 보세요.",
+            }
+        )
 
         trend = {"unit": None, "buckets": []}
         if period == "four-week" and anchor is not None:
@@ -712,7 +726,11 @@ class ReportService:
             except ValueError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail={"error_code": "INVALID_CURSOR", "message": "cursor 값이 올바르지 않습니다.", "retryable": False},
+                    detail={
+                        "error_code": "INVALID_CURSOR",
+                        "message": "cursor 값이 올바르지 않습니다.",
+                        "retryable": False,
+                    },
                 ) from exc
         items, next_cursor = await _cycles_page(user.id, cursor_id, limit)
         return {"items": items, "next_cursor": next_cursor}
