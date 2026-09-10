@@ -2,7 +2,6 @@ from fastapi import APIRouter
 
 from app.apis.v1.auth_routers import auth_router
 from app.apis.v1.challenge_routers import challenge_router
-from app.apis.v1.challenge_v2_routers import challenge_v2_router
 from app.apis.v1.dashboard_routers import dashboard_router
 from app.apis.v1.engagement_routers import engagement_router
 from app.apis.v1.facility_routers import facility_router
@@ -11,7 +10,6 @@ from app.apis.v1.forest_routers import forest_router
 from app.apis.v1.game_routers import game_router
 from app.apis.v1.health_routers import health_router
 from app.apis.v1.prediction_routers import prediction_router
-from app.apis.v1.reports_routers import reports_router
 from app.apis.v1.research_model_routers import research_model_router
 from app.apis.v1.user_routers import user_router
 from app.apis.v1.wellness_routers import wellness_router
@@ -23,12 +21,10 @@ v1_routers.include_router(health_router)
 v1_routers.include_router(prediction_router)
 v1_routers.include_router(research_model_router)
 v1_routers.include_router(challenge_router)
-v1_routers.include_router(challenge_v2_router)
 v1_routers.include_router(dashboard_router)
 v1_routers.include_router(feedback_router)
 v1_routers.include_router(facility_router)
 v1_routers.include_router(engagement_router)
-v1_routers.include_router(reports_router)
 v1_routers.include_router(wellness_router)
 v1_routers.include_router(game_router)
 v1_routers.include_router(forest_router)

@@ -30,13 +30,6 @@ def job_cache_key(job_id: str) -> str:
     return f"ai:jobs:{job_id}"
 
 
-def job_stream(task_type: str) -> str:
-    """Route model tasks to runtimes with compatible serialized-model dependencies."""
-    if task_type == CURRENT_SCREENING_MODEL_KEY:
-        return config.CURRENT_SCREENING_REDIS_STREAM
-    return config.REDIS_STREAM
-
-
 async def publish_job_event(job_id: str, event: dict[str, object]) -> None:
     await redis_client.publish(job_channel(job_id), json.dumps(event, ensure_ascii=False, default=str))
 
@@ -65,7 +58,7 @@ async def create_ai_job(request: AIJobCreateRequest) -> PredictionJob:
             mapping={"status": "queued", "task_type": request.task_type, "created_at": created_at},
         )
         await redis_client.expire(job_cache_key(job_id), config.REDIS_JOB_TTL_SECONDS)
-        await redis_client.xadd(job_stream(request.task_type), message)
+        await redis_client.xadd(config.REDIS_STREAM, message)
         await publish_job_event(job_id, {"job_id": job_id, "status": "queued", "created_at": created_at})
     except Exception as exc:
         job.status = "failed"
@@ -175,7 +168,7 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
             mapping={"status": "queued", "task_type": "diabetes_incidence", "created_at": now.isoformat()},
         )
         await redis_client.expire(job_cache_key(job_id), config.REDIS_JOB_TTL_SECONDS)
-        await redis_client.xadd(job_stream("diabetes_incidence"), message)
+        await redis_client.xadd(config.REDIS_STREAM, message)
         await publish_job_event(job_id, {"job_id": job_id, "status": "queued", "created_at": now.isoformat()})
     except Exception as exc:
         job.status = "failed"
@@ -193,9 +186,14 @@ async def _create_current_screening_job(
     eligibility: EligibilityCheck,
 ) -> PredictionJob:
     """Queue the KNHANES current-signal model independently from KLoSA incidence."""
-    # v0.6.1 accepts the KNHANES 22-field boundary. Model-internal derived
-    # fields are deliberately not supplied by the API.
-    inference_payload = HealthService.current_screening_payload(checkup)
+    # PR #36 shared7 intentionally reuses the validated common API input and
+    # selects its seven model variables inside the model boundary. Do not map
+    # missing values to zero or send model-internal derived features.
+    inference_payload = HealthService.inference_payload(
+        user,
+        checkup,
+        previously_diagnosed_diabetes=eligibility.has_diabetes_diagnosis,
+    )
     job_id = str(uuid4())
     now = datetime.now(UTC)
     job = await PredictionJob.create(
@@ -249,7 +247,7 @@ async def _create_current_screening_job(
             mapping={"status": "queued", "task_type": CURRENT_SCREENING_MODEL_KEY, "created_at": now.isoformat()},
         )
         await redis_client.expire(job_cache_key(job_id), config.REDIS_JOB_TTL_SECONDS)
-        await redis_client.xadd(job_stream(CURRENT_SCREENING_MODEL_KEY), message)
+        await redis_client.xadd(config.REDIS_STREAM, message)
         await publish_job_event(job_id, {"job_id": job_id, "status": "queued", "created_at": now.isoformat()})
     except Exception as exc:
         job.status = "failed"
@@ -304,7 +302,6 @@ async def _complete_demo_prediction(
         health_checkup_id=job.health_checkup_id,
         input_as_of_date=as_of_date,
         model_key=ACTIVE_MODEL.model_key,
-        task_type="binary_incidence_risk_screening",
         outcome_definition=ACTIVE_MODEL.outcome_definition,
         result_status="development_only",
         risk_category=None,
@@ -317,7 +314,6 @@ async def _complete_demo_prediction(
         calibration_version=result.calibration_version,
         model_artifact_digest=result.model_artifact_digest,
         threshold_version=result.threshold_version,
-        threshold_scope="future_incidence_2y",
         decision_threshold=None,
         class_probabilities=None,
         output_status="uncalibrated_research_probability_only",
@@ -350,7 +346,6 @@ async def _complete_demo_current_screening(job: PredictionJob, as_of_date: date)
         health_checkup_id=job.health_checkup_id,
         input_as_of_date=as_of_date,
         model_key=CURRENT_SCREENING_MODEL.model_key,
-        task_type="current_cross_sectional_screening",
         outcome_definition=CURRENT_SCREENING_MODEL.outcome_definition,
         result_status="development_only",
         risk_category=None,
@@ -363,7 +358,6 @@ async def _complete_demo_current_screening(job: PredictionJob, as_of_date: date)
         calibration_version=CURRENT_SCREENING_MODEL.calibration_version,
         model_artifact_digest=CURRENT_SCREENING_MODEL.model_artifact_digest,
         threshold_version=CURRENT_SCREENING_MODEL.threshold_version,
-        threshold_scope="current_cross_sectional_screening",
         decision_threshold=None,
         class_probabilities=None,
         output_status="screening_model_wiring_only",

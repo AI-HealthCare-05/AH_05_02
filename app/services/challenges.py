@@ -12,51 +12,7 @@ from app.models.users import User
 from app.repositories.game_repository import GameRepository
 from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
-from app.services.challenge_catalog import (
-    CATALOG_VERSION,
-    CHALLENGE_V3_CATALOG,
-    metadata_for,
-    recommend_codes,
-    recommendation_policy,
-)
-from app.services.challenge_proofs import challenge_today
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
-
-# frequency/target_count: see docs/frontend/REPORT_CHALLENGE_FREQUENCY_MAPPING_20260908.md
-# for the per-challenge classification rationale (report-v1.4-draft §5.1). A challenge with
-# no "frequency" key here is left unconfirmed (None) — its daily_goal text never states an
-# unambiguous day/week cadence, so the lifestyle report must not guess one.
-_DAILY_TARGET_1 = {
-    "regular_meals_log",
-    "activity_check",
-    "two_minute_activity_break",
-    "reduce_processed_food",
-    "daily_meal_review",
-    "smoke_free_today",
-}
-_WEEKLY_TARGETS = {
-    "weekly_weight_log": 1,
-    "strength_twice_weekly": 2,
-    "balance_flex_twice_weekly": 2,
-    "weekly_habit_review": 1,
-    "walk_three_days_weekly": 3,
-    "unsweetened_drink_five_days": 5,
-    "vegetables_five_days": 5,
-    "whole_grain_three_times": 3,
-    "weekly_weight_trend": 1,
-}
-
-
-def _report_frequency(code: str) -> dict[str, object]:
-    metadata = metadata_for(code)
-    if metadata.get("goal", {}).get("period") == "day":
-        return {"frequency": "daily", "target_count": 1}
-    if code in _DAILY_TARGET_1:
-        return {"frequency": "daily", "target_count": 1}
-    if code in _WEEKLY_TARGETS:
-        return {"frequency": "weekly", "target_count": _WEEKLY_TARGETS[code]}
-    return {"frequency": None, "target_count": None}
-
 
 CHALLENGE_CATALOG = (
     {
@@ -362,7 +318,6 @@ def challenge_payload(item: Challenge) -> dict[str, object]:
         "description": item.description,
         "safety": item.safety_copy,
         "source": {"title": item.source_title, "url": item.source_url},
-        **metadata_for(item.code),
     }
 
 
@@ -371,40 +326,17 @@ class ChallengeService:
         self.repo = HealthRepository()
         self.wellness_repo = WellnessRepository()
 
-    async def ensure_catalog(self, catalog_version: str | None = None) -> list[Challenge]:
-        catalog = CHALLENGE_V3_CATALOG if catalog_version == CATALOG_VERSION else CHALLENGE_CATALOG
-        # Versioned codes are immutable: never rewrite the obligations of old cycles.
-        existing = await self.repo.challenge_map()
-        existing_by_code = {item.code: item for item in existing.values()}
-        for values in catalog:
-            defaults = {**values, **_report_frequency(values["code"]), "is_active": True}
-            if values["code"] not in existing_by_code:
-                await Challenge.get_or_create(defaults=defaults, code=values["code"])
-            else:
-                challenge = existing_by_code[values["code"]]
-                if challenge.frequency != defaults["frequency"] or challenge.target_count != defaults["target_count"]:
-                    challenge.frequency = defaults["frequency"]  # type: ignore[assignment]
-                    challenge.target_count = defaults["target_count"]  # type: ignore[assignment]
-                    await challenge.save(update_fields=["frequency", "target_count"])
-        wanted = {item["code"] for item in catalog}
-        return [item for item in (await self.repo.challenge_map()).values() if item.code in wanted]
+    async def ensure_catalog(self) -> list[Challenge]:
+        for values in CHALLENGE_CATALOG:
+            await Challenge.update_or_create(defaults={**values, "is_active": True}, code=values["code"])
+        return list((await self.repo.challenge_map()).values())
 
-    async def recommendations(
-        self,
-        user: User,
-        prediction_id: int | None,
-        catalog_version: str | None = None,
-        focus: str = "balanced",
-        difficulty: str = "easy",
-        rotation: int = 0,
-    ) -> dict[str, object]:
+    async def recommendations(self, user: User, prediction_id: int | None) -> dict[str, object]:
         if prediction_id is not None:
             prediction = await self.repo.get_prediction(prediction_id, user.id)
             if prediction is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
         open_action = await self.repo.open_follow_up(user.id)
-        if catalog_version == CATALOG_VERSION:
-            return await self._v3_recommendations(focus, difficulty, rotation, open_action is not None)
         items = await self.ensure_catalog()
         checkup = await self.repo.latest_checkup(user.id)
         reasons: dict[str, str] = {}
@@ -416,7 +348,9 @@ class ChallengeService:
                     "최근 입력에서 규칙적인 운동을 하지 않는 것으로 확인되어 우선 제안합니다."
                 )
                 reasons["two_minute_activity_break"] = "작게 시작할 수 있는 활동 목표로 제안합니다."
-            # Meal count alone does not establish an irregular or unhealthy pattern.
+            if checkup.meal_count_yesterday != 3:
+                priority_codes.append("regular_meals_log")
+                reasons["regular_meals_log"] = "최근 식사 횟수를 바탕으로 식사 패턴 확인을 제안합니다."
             if checkup.bmi >= 25:
                 priority_codes.append("weekly_weight_log")
                 reasons["weekly_weight_log"] = "체중 변화가 아닌 생활습관 기록을 위해 주 1회 기록을 제안합니다."
@@ -436,44 +370,6 @@ class ChallengeService:
             "medical_guidance_required_first": open_action is not None,
             "notice": "치료가 아닌 일반 건강 실천입니다. 몸 상태와 의료진 지침을 우선하세요.",
         }
-
-    async def _v3_recommendations(self, focus, difficulty, rotation, needs_guidance):
-        policy = recommendation_policy(focus, difficulty, rotation)
-        codes = recommend_codes(focus, difficulty, rotation)
-        review_available = config.FOOD_VISION_PROVIDER == "openai" and bool(config.OPENAI_API_KEY)
-        if not review_available and metadata_for(codes[1])["verification_type"] == 1:
-            codes[1] = codes[1].replace("vegetable", "wholegrain")
-        items = {item.code: item for item in await self.ensure_catalog(CATALOG_VERSION)}
-        return {
-            "items": [{**challenge_payload(items[code]), "recommendation_reason": policy["notice"]} for code in codes],
-            "policy": policy,
-            "catalog_version": CATALOG_VERSION,
-            "photo_review_available": review_available,
-            "recommendation_type": "source_backed_rule_based",
-            "personalized": False,
-            "preference_applied": True,
-            "medical_guidance_required_first": needs_guidance,
-            "notice": "검토된 자료의 실천 예시입니다. AI/RAG 생성이나 개인별 의료 처방이 아닙니다.",
-        }
-
-    def _validate_v3_selection(self, challenges, request):
-        selected = [metadata_for(item.code) for item in challenges.values()]
-        if not request.catalog_version and not any(selected):
-            return
-        if request.catalog_version != CATALOG_VERSION or len(selected) != 3 or not all(selected):
-            raise HTTPException(status_code=422, detail="새 챌린지는 음료·식단·운동 3개를 선택해 주세요.")
-        expected = recommendation_policy(request.focus, request.difficulty)["domain_levels"]
-        if {item["domain"] for item in selected} != set(expected):
-            raise HTTPException(status_code=422, detail="음료·식단·운동 각 1개가 필요합니다.")
-        for item in selected:
-            if item["domain"] != "hydration" and item["difficulty"] != expected[item["domain"]]:
-                raise HTTPException(status_code=422, detail="선호·난이도에 맞는 목록을 다시 받아 주세요.")
-            if item["verification_type"] == 1 and not (
-                config.FOOD_VISION_PROVIDER == "openai" and config.OPENAI_API_KEY
-            ):
-                raise HTTPException(
-                    status_code=503, detail="사진 검토가 아직 연결되지 않았습니다. 후보를 다시 선택해 주세요."
-                )
 
     async def create_cycle(self, user: User, request: ChallengeCycleCreateRequest) -> ChallengeCycle:
         if await self.repo.active_consent(user.id) is None:
@@ -498,12 +394,11 @@ class ChallengeService:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="선택할 수 없는 챌린지가 있습니다."
             )
-        self._validate_v3_selection(challenges, request)
         if request.prediction_id is not None and await self.repo.get_prediction(request.prediction_id, user.id) is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
         end_date = request.start_date + timedelta(days=27)
         cycle_number = await self.repo.count_cycles(user.id) + 1
-        cycle_status = "active" if request.start_date <= challenge_today() else "scheduled"
+        cycle_status = "active" if request.start_date <= date.today() else "scheduled"
         async with in_transaction():
             cycle = await ChallengeCycle.create(
                 user_id=user.id,
@@ -514,19 +409,7 @@ class ChallengeService:
                 status=cycle_status,
             )
             for challenge_id in request.challenge_ids:
-                challenge = challenges[challenge_id]
-                await UserChallenge.create(
-                    user_id=user.id,
-                    cycle_id=cycle.id,
-                    challenge_id=challenge_id,
-                    # Snapshot the goal definition as of selection time (report-v1.4-draft
-                    # §5.1) so a later catalog wording/frequency change never retroactively
-                    # changes what an already-selected cycle's report shows.
-                    frequency=challenge.frequency,
-                    target_count=challenge.target_count,
-                    title_snapshot=challenge.title,
-                    definition_version=challenge.definition_version,
-                )
+                await UserChallenge.create(user_id=user.id, cycle_id=cycle.id, challenge_id=challenge_id)
         return cycle
 
     async def upsert_log(
@@ -536,7 +419,7 @@ class ChallengeService:
         log_date: date,
         request: ChallengeLogUpsertRequest,
     ) -> object:
-        if log_date > challenge_today():
+        if log_date > date.today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 기록할 수 없습니다."
             )
@@ -548,12 +431,6 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="진행 중인 챌린지 사이클이 아닙니다.")
         if log_date < cycle.start_date or log_date > cycle.end_date:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="챌린지 기간 밖의 날짜입니다.")
-        challenge = await Challenge.get(id=user_challenge.challenge_id)
-        metadata = metadata_for(challenge.code)
-        if metadata:
-            await self._v3_health_permission(user)
-            if request.is_completed and metadata["verification_type"] != 3:
-                raise HTTPException(status_code=422, detail="이 챌린지는 사진 제출 절차로 완료해 주세요.")
         return await self.repo.upsert_log(
             user_challenge_id=user_challenge_id,
             user_id=user.id,
@@ -561,21 +438,12 @@ class ChallengeService:
             values=request.model_dump(),
         )
 
-    async def _v3_health_permission(self, user):
-        eligibility = await self.repo.latest_eligibility(user.id)
-        if await self.repo.active_consent(user.id) is None or eligibility is None:
-            raise HTTPException(status_code=403, detail="동의와 이용 대상 확인이 필요합니다.")
-        if eligibility.has_diabetes_diagnosis or eligibility.has_urgent_warning_sign:
-            raise HTTPException(status_code=403, detail="현재는 의료기관 안내를 먼저 확인해 주세요.")
-        if await self.repo.open_follow_up(user.id) is not None:
-            raise HTTPException(status_code=409, detail="의료기관 안내 확인이 먼저 필요합니다.")
-
     async def cycle_payload(self, cycle: ChallengeCycle, user_id: int) -> dict[str, object]:
         cycle = await self.refresh_cycle_status(cycle)
         user_challenges = await self.repo.list_user_challenges(cycle.id, user_id)
         challenge_map = await self.repo.challenge_map([item.challenge_id for item in user_challenges])
         logs = await self.repo.logs_for_cycle(cycle.id, user_id)
-        planned = len(user_challenges) * max(0, min((challenge_today() - cycle.start_date).days + 1, 28))
+        planned = len(user_challenges) * max(0, min((date.today() - cycle.start_date).days + 1, 28))
         completed = sum(1 for item in logs if item.is_completed)
         return {
             "cycle_id": cycle.id,
@@ -596,7 +464,7 @@ class ChallengeService:
         }
 
     async def refresh_cycle_status(self, cycle: ChallengeCycle) -> ChallengeCycle:
-        today = challenge_today()
+        today = date.today()
         next_status = cycle.status
         if cycle.status == "scheduled" and cycle.start_date <= today <= cycle.end_date:
             next_status = "active"
@@ -610,7 +478,7 @@ class ChallengeService:
     async def create_verification(
         self, user: User, user_challenge_id: int, request: ChallengeVerificationCreateRequest
     ) -> dict[str, object]:
-        if request.verification_date > challenge_today():
+        if request.verification_date > date.today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
             )
@@ -622,7 +490,6 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="진행 중인 챌린지 사이클이 아닙니다.")
         if request.verification_date < cycle.start_date or request.verification_date > cycle.end_date:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="챌린지 기간 밖의 날짜입니다.")
-        await self._reject_v3_legacy_verification(user_challenge.challenge_id)
         values = request.model_dump(exclude={"verification_date"})
         values["review_status"] = "accepted"
         async with in_transaction():
@@ -661,7 +528,7 @@ class ChallengeService:
         칼로리·영양소·치료 효과는 계산하지 않습니다(REQ-CV-001). 업로드된 원본 이미지 바이트는
         분석 직후 폐기하며 서버에 저장하지 않고, 판별 결과와 SHA-256 다이제스트만 남깁니다.
         """
-        if verification_date > challenge_today():
+        if verification_date > date.today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜는 인증할 수 없습니다."
             )
@@ -673,7 +540,6 @@ class ChallengeService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="진행 중인 챌린지 사이클이 아닙니다.")
         if verification_date < cycle.start_date or verification_date > cycle.end_date:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="챌린지 기간 밖의 날짜입니다.")
-        await self._reject_v3_legacy_verification(user_challenge.challenge_id)
 
         content_type = file.content_type or ""
         if not content_type.startswith("image/"):
@@ -768,13 +634,6 @@ class ChallengeService:
             ),
         }
 
-    async def _reject_v3_legacy_verification(self, challenge_id: int) -> None:
-        challenge = await Challenge.get(id=challenge_id)
-        if metadata_for(challenge.code):
-            raise HTTPException(
-                status_code=422, detail="새 챌린지는 지정된 사진 제출 또는 자가 체크 절차를 이용해 주세요."
-            )
-
     async def daily_reward_status(self, user: User, reward_date: date) -> dict[str, object]:
         cycle = await self.repo.cycle_for_date(user.id, reward_date)
         selected = await self.repo.list_user_challenges(cycle.id, user.id) if cycle else []
@@ -795,7 +654,7 @@ class ChallengeService:
         }
 
     async def claim_daily_reward(self, user: User, reward_date: date) -> dict[str, object]:
-        if reward_date > challenge_today():
+        if reward_date > date.today():
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="미래 날짜의 보상은 받을 수 없습니다."
             )

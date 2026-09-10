@@ -12,7 +12,6 @@ from app.models.model_registry import ModelRegistry
 from app.models.users import User
 from app.prediction.contracts import LIFETIME_RISK_MODEL_KEY
 from app.repositories.health_repository import HealthRepository
-from app.services import challenge_v2
 from app.services.challenges import ChallengeService
 from app.services.engagement import EngagementService
 
@@ -32,7 +31,6 @@ async def dashboard_summary(user: Annotated[User, Depends(get_request_user)]) ->
     return envelope(
         {
             "risk_cards": [] if risk_card is None else [risk_card],
-            "daily_challenge_v2": await challenge_v2.dashboard_snapshot(user),
             "current_cycle": cycle_data,
             "next_action": None
             if follow_up is None
@@ -53,7 +51,6 @@ async def dashboard_summary(user: Annotated[User, Depends(get_request_user)]) ->
 @dashboard_router.get("/dashboard/challenge-progress")
 async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     repo = HealthRepository()
-    v2_progress = await challenge_v2.progress_summary(user)
     cycle = await repo.active_cycle(user.id)
     today = date.today()
     shared_groups = (await EngagementService().list_shared_groups(user))["items"]
@@ -88,7 +85,6 @@ async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -
                 "cycle": None,
                 "recent_7_days": {"completed": 0, "planned": 0, "completion_rate": 0.0},
                 "four_weeks": None,
-                "challenge_v2": v2_progress,
                 "shared_goals": shared_goals,
                 "notice": "수행률은 질병의 호전이나 치료 효과를 의미하지 않습니다.",
             }
@@ -105,7 +101,6 @@ async def challenge_progress(user: Annotated[User, Depends(get_request_user)]) -
     return envelope(
         {
             "cycle_id": cycle.id,
-            "challenge_v2": v2_progress,
             "recent_7_days": {
                 "completed": recent_completed,
                 "planned": recent_planned,

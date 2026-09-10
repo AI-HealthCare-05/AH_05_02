@@ -32,8 +32,6 @@ async def create_barrier(
 
 @engagement_router.get("/weekly-reports/current")
 async def current_weekly_report(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
-    # §3 API 공통 조건(Cache-Control: private, no-store)은 app/main.py의
-    # `_no_store_for_sensitive_reports` 미들웨어가 일괄 적용한다.
     return envelope(await EngagementService().weekly_report(user))
 
 

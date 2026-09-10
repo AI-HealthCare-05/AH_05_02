@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import math
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -134,18 +133,10 @@ class OpenAIFoodVisionProvider:
         except httpx.HTTPError as exc:
             raise FoodVisionError("이미지 인식 provider에 연결할 수 없습니다.") from exc
 
+        body = response.json()
         try:
-            body = response.json()
             content = body["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError, ValueError) as exc:
-            raise FoodVisionError("이미지 인식 결과를 해석하지 못했습니다.") from exc
-        return self._parse_review(content)
-
-    def _parse_review(self, content: str) -> FoodVisionResult:
-        try:
             parsed = json.loads(content)
-            if not isinstance(parsed, dict):
-                raise ValueError("The image review must be a JSON object")
             category = parsed.get("predicted_category", "확인불가")
             if category not in _ALLOWED_CATEGORIES:
                 category = "확인불가"
@@ -153,24 +144,16 @@ class OpenAIFoodVisionProvider:
             confidence = parsed.get("vegetable_confidence")
             ratio = parsed.get("vegetable_ratio_percent")
             detected_items = parsed.get("detected_items") or []
-            if type(contains_vegetable) is not bool:
-                raise ValueError("contains_vegetable must be a JSON boolean")
-            if not (type(confidence) in (int, float) and 0 <= confidence <= 1 and math.isfinite(confidence)):
-                raise ValueError("vegetable_confidence must be a finite number between zero and one")
-            if ratio is not None and not (type(ratio) in (int, float) and 0 <= ratio <= 100 and math.isfinite(ratio)):
-                raise ValueError("vegetable_ratio_percent must be a finite number between zero and one hundred")
-            if not isinstance(detected_items, list) or not all(isinstance(item, str) for item in detected_items):
-                raise ValueError("detected_items must be a list of strings")
-        except (KeyError, IndexError, TypeError, ValueError) as exc:
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
             raise FoodVisionError("이미지 인식 결과를 해석하지 못했습니다.") from exc
 
         return FoodVisionResult(
             provider_kind=self.provider_kind,
             predicted_category=category,
-            contains_vegetable=contains_vegetable,
-            vegetable_confidence=float(confidence),
-            vegetable_ratio_percent=float(ratio) if ratio is not None else None,
-            detected_items=detected_items[:10],
+            contains_vegetable=bool(contains_vegetable) if contains_vegetable is not None else None,
+            vegetable_confidence=float(confidence) if isinstance(confidence, int | float) else None,
+            vegetable_ratio_percent=max(0.0, min(100.0, float(ratio))) if isinstance(ratio, int | float) else None,
+            detected_items=[str(item) for item in detected_items][:10],
         )
 
 

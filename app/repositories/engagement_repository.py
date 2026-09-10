@@ -22,38 +22,11 @@ class EngagementRepository:
     async def create_barrier(self, **values: Any) -> ChallengeBarrier:
         return await ChallengeBarrier.create(**values)
 
-    async def list_barriers(
-        self,
-        user_id: int,
-        start_date: date | None = None,
-        end_date: date | None = None,
-        user_challenge_ids: list[int] | None = None,
-    ) -> list[ChallengeBarrier]:
-        """Barriers for a user, optionally scoped to a date range and a set of selected
-        user_challenge_ids (report-v1.4-draft §2.4 work item F). Without both bounds this
-        keeps the old "everything since start_date" behaviour used by the legacy weekly
-        report. When a range is given, results are deduped to the latest-id row per
-        (user_challenge_id, log_date) so a corrected resubmission doesn't double-count.
-        """
+    async def list_barriers(self, user_id: int, start_date: date | None = None) -> list[ChallengeBarrier]:
         query = ChallengeBarrier.filter(user_id=user_id)
         if start_date is not None:
             query = query.filter(log_date__gte=start_date)
-        if end_date is not None:
-            query = query.filter(log_date__lte=end_date)
-        if user_challenge_ids is not None:
-            if not user_challenge_ids:
-                return []
-            query = query.filter(user_challenge_id__in=user_challenge_ids)
-        items = await query.order_by("-log_date", "-id")
-        if user_challenge_ids is None:
-            return items
-        latest_by_key: dict[tuple[int, date], ChallengeBarrier] = {}
-        for item in items:
-            key = (item.user_challenge_id, item.log_date)
-            existing = latest_by_key.get(key)
-            if existing is None or item.id > existing.id:
-                latest_by_key[key] = item
-        return sorted(latest_by_key.values(), key=lambda item: (item.log_date, item.id), reverse=True)
+        return await query.order_by("-log_date", "-id")
 
     async def content_catalog(self) -> list[EducationContent]:
         return await EducationContent.filter(is_active=True).order_by("week_number")

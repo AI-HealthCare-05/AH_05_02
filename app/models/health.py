@@ -54,8 +54,8 @@ class HealthCheckup(Model):
     waist_cm = fields.FloatField(null=True)
     systolic_bp = fields.IntField(null=True)
     diastolic_bp = fields.IntField(null=True)
-    self_rated_health = fields.CharField(max_length=20, null=True)
-    meal_count_yesterday = fields.IntField(null=True)
+    self_rated_health = fields.CharField(max_length=20)
+    meal_count_yesterday = fields.IntField()
     regular_exercise = fields.BooleanField()
     current_smoker = fields.BooleanField(null=True)
     smoking_status = fields.CharField(max_length=10, null=True)
@@ -94,7 +94,6 @@ class Prediction(Model):
     health_checkup_id = fields.BigIntField(db_index=True)
     input_as_of_date = fields.DateField()
     model_key = fields.CharField(max_length=100)
-    task_type = fields.CharField(max_length=50)
     outcome_definition = fields.CharField(max_length=120)
     result_status = fields.CharField(max_length=40)
     risk_category = fields.CharField(max_length=20, null=True)
@@ -107,7 +106,6 @@ class Prediction(Model):
     calibration_version = fields.CharField(max_length=100)
     model_artifact_digest = fields.CharField(max_length=128, null=True)
     threshold_version = fields.CharField(max_length=100)
-    threshold_scope = fields.CharField(max_length=100)
     decision_threshold = fields.FloatField(null=True)
     class_probabilities = fields.JSONField(null=True)
     output_status = fields.CharField(max_length=80, default="uncalibrated_research_probability_only")
@@ -121,6 +119,8 @@ class Prediction(Model):
     # 나이별 위험 전망(그래프)용 표시 데이터. scenarios/uncertainty는 REQ-PRED-012
     # 검증 전까지 비워둔다 — is_active 없는 시나리오를 인과관계처럼 노출하지 않기 위함.
     age_risk_forecast = fields.JSONField(null=True)
+    task_type = fields.CharField(max_length=80, null=True)
+    threshold_scope = fields.CharField(max_length=100, null=True)
     display_allowed = fields.BooleanField(default=False)
     operational_model_activated = fields.BooleanField(default=False)
     preview_only = fields.BooleanField(default=False)
@@ -187,17 +187,6 @@ class Challenge(Model):
     title = fields.CharField(max_length=100)
     category = fields.CharField(max_length=30)
     daily_goal = fields.CharField(max_length=50)
-    # Structured evaluation cadence for the lifestyle report (report-v1.4-draft).
-    # frequency is one of "daily" / "weekly" / None. None (reported to the API as
-    # "unconfirmed") means the catalog wording never states an unambiguous day/week
-    # cadence for this challenge, so the report must not guess a denominator for it —
-    # see docs/frontend/REPORT_CHALLENGE_FREQUENCY_MAPPING_20260908.md for the
-    # per-challenge classification rationale. target_count is the count implied by
-    # "weekly" (e.g. target_count=2 for "주 2회"); it is meaningless for "daily"
-    # (always evaluated once per day) and must stay None for None frequency.
-    frequency = fields.CharField(max_length=20, null=True)
-    target_count = fields.IntField(null=True)
-    definition_version = fields.CharField(max_length=20, default="v1")
     description = fields.TextField()
     safety_copy = fields.TextField()
     source_title = fields.CharField(max_length=200)
@@ -230,15 +219,6 @@ class UserChallenge(Model):
     user_id = fields.BigIntField(db_index=True)
     cycle_id = fields.BigIntField(db_index=True)
     challenge_id = fields.BigIntField(db_index=True)
-    # Snapshot of the Challenge's goal definition as of the moment this challenge was
-    # selected into this cycle (report-v1.4-draft §5.1). Selecting the same catalog
-    # challenge again later, or a future catalog wording change, must not retroactively
-    # alter what an already-selected cycle's report shows — so the report reads these
-    # snapshot columns, never the live `Challenge` row, once a selection exists.
-    frequency = fields.CharField(max_length=20, null=True)
-    target_count = fields.IntField(null=True)
-    title_snapshot = fields.CharField(max_length=100, null=True)
-    definition_version = fields.CharField(max_length=20, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:

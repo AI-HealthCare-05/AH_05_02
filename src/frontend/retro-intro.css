@@ -14,13 +14,13 @@ body.intro-mode:has(.retro-intro) .intro-screen { overflow: clip; background: #f
 body.intro-mode:has(.retro-intro) .intro-screen::before { content: none; }
 body.intro-mode .landing-first.retro-intro { display: block; position: relative; height: 255svh; min-height: 0; background: #faf6e3; }
 .retro-stage { position: sticky; top: 0; height: 100svh; overflow: hidden; background: #faf6e3; isolation: isolate; }
-.retro-computer { position: absolute; --retro-top-space: clamp(230px,18svh,320px); top: calc(var(--retro-top-space) - var(--retro-width) * .135); left: 50%; --retro-width: min(1280px,88vw,69svh); width: var(--retro-width); aspect-ratio: 1122/1402; transform: translateX(-50%) scale(var(--retro-scale,1)); transform-origin: 50% 42%; will-change: transform; }
+.retro-computer { position: absolute; --retro-top-space: clamp(150px,10svh,210px); top: calc(var(--retro-top-space) - var(--retro-width) * .135); left: 50%; --retro-width: min(1520px,100vw,128svh); width: var(--retro-width); aspect-ratio: 1122/1402; transform: translateX(-50%) scale(var(--retro-scale,1)); transform-origin: 50% 42%; will-change: transform; }
 .retro-computer-shell { width: 100%; height: 100%; display: block; object-fit: contain; mix-blend-mode: multiply; }
-.retro-display { position: absolute; top: 20.3%; left: 16.9%; width: 66.2%; height: 37.4%; display: grid; place-items: center; text-align: center; color: #212923; overflow: hidden; border-radius: 6%; container-type: inline-size; }
+.retro-display { position: absolute; top: 20.3%; left: 16.9%; width: 66.2%; height: 37.4%; display: grid; place-items: center; text-align: center; color: #212923; overflow: hidden; border-radius: 6%; }
 .retro-message { padding: 5%; opacity: var(--retro-copy,1); transform: translateY(calc(var(--retro-copy-shift,0) * 1px)); }
-.retro-eyebrow { font-size: clamp(13px,2.35cqw,20px); color: #4d6153; margin: 0 0 1.8cqw; font-weight: 600; }
-body.intro-mode .landing-first.retro-intro #intro-title { font-family: Georgia,'Noto Serif KR','Batang',serif; font-weight: 700; font-size: clamp(28px,6.1cqw,52px); letter-spacing: -.07em; line-height: 1.35; text-shadow: none; color: #1b211b; margin: 0 0 2.5cqw; max-width: none; white-space: normal; word-break: keep-all; }
-.retro-description { font-size: clamp(14px,2.35cqw,20px); line-height: 1.8; letter-spacing: -.035em; margin: 0; color: #4a5449; word-break: keep-all; }
+.retro-eyebrow { font-size: clamp(15px,1.65vw,25px); color: #4d6153; margin: 0 0 20px; font-weight: 600; }
+body.intro-mode .landing-first.retro-intro #intro-title { font-family: Georgia,'Noto Serif KR','Batang',serif; font-weight: 700; font-size: clamp(32px,4.3vw,65px); letter-spacing: -.07em; line-height: 1.35; text-shadow: none; color: #1b211b; margin: 0 0 24px; max-width: none; white-space: normal; word-break: keep-all; }
+.retro-description { font-size: clamp(15px,1.65vw,25px); line-height: 1.8; letter-spacing: -.035em; margin: 0; color: #4a5449; word-break: keep-all; }
 .retro-meet { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; opacity: var(--retro-meet,0); transform: scale(var(--retro-meet-scale,.88)); pointer-events: none; }
 .retro-meet img { width: 34%; height: 46%; object-fit: contain; mix-blend-mode: multiply; }
 .retro-meet p { font-family: Georgia,'Batang',serif; font-weight: 800; color: #17251c; letter-spacing: -.08em; font-size: clamp(37px,5vw,70px); line-height: 1.2; margin: 0; }.retro-meet p span { color: #176b5b; }.retro-meet small { font-size: clamp(11px,1.1vw,16px); color: #59604f; margin-top: 6px; }
@@ -130,11 +130,11 @@ body.intro-mode .service-story .orbit-description p { font-size: clamp(18px,1.7v
 }
 
 /* Separate the moving cards from the full-body mascot below them. */
-.orbit-visual { --orbit-card-height: clamp(180px,18vw,310px); }
-.orbit-belt { top: 27%; height: min(var(--orbit-card-height),30%); }
+.orbit-visual { --orbit-card-height: clamp(150px,15.5vw,260px); }
+.orbit-belt { top: 28%; height: min(var(--orbit-card-height),24%); }
 .orbit-track,.orbit-card-group,.orbit-card { height: 100%; }
-.orbit-mascot { top: calc(27% + min(var(--orbit-card-height),30%) + 24px); bottom: auto; height: calc(73% - min(var(--orbit-card-height),30%) - 24px); object-position: center top; }
-@media(max-width:760px) { .orbit-visual { --orbit-card-height: 150px; } }
+.orbit-mascot { top: calc(28% + min(var(--orbit-card-height),24%) + 24px); bottom: auto; height: calc(72% - min(var(--orbit-card-height),24%) - 24px); object-position: center top; }
+@media(max-width:760px) { .orbit-visual { --orbit-card-height: 122px; } }
 
 /* A scroll-driven handoff from Hyeoldangi to the three service folders. */
 body.intro-mode:has(.retro-intro) #story-orbit { min-height: 300svh; }
@@ -196,9 +196,9 @@ body.intro-mode:has(.retro-intro) .story-step-flow :is(#story-health,#story-resu
 .retro-message { position: absolute; inset: 0; padding: 0; }
 .retro-message .retro-type-text { clip-path: none; visibility: hidden; }
 .retro-message .retro-type-text>span { opacity: 0; visibility: visible; }
-.retro-message .retro-eyebrow { position: absolute; left: 4%; right: 4%; top: 50%; margin: 0; transform: translateY(calc(-50% - var(--intro-details,0)*110px)); font-family: Georgia,'Noto Serif KR','Batang',serif; font-size: clamp(22px,5.4cqw,46px); line-height: 1.4; color: #203e33; }
-body.intro-mode .landing-first.retro-intro #intro-title { position: absolute; left: 3%; right: 3%; top: 50%; margin: 0; transform: translateY(-30%); font-size: clamp(28px,6.1cqw,52px); }
-.retro-message .retro-description { position: absolute; left: 3%; right: 3%; top: calc(50% + 7.2cqw); font-size: clamp(14px,2.35cqw,20px); }
+.retro-message .retro-eyebrow { position: absolute; left: 4%; right: 4%; top: 50%; margin: 0; transform: translateY(calc(-50% - var(--intro-details,0)*110px)); font-family: Georgia,'Noto Serif KR','Batang',serif; font-size: clamp(28px,3.5vw,54px); line-height: 1.4; color: #203e33; }
+body.intro-mode .landing-first.retro-intro #intro-title { position: absolute; left: 3%; right: 3%; top: 50%; margin: 0; transform: translateY(-30%); font-size: clamp(30px,4.3vw,65px); }
+.retro-message .retro-description { position: absolute; left: 3%; right: 3%; top: calc(50% + 85px); font-size: clamp(15px,1.7vw,26px); }
 @media(max-width:760px) {
  .retro-message .retro-eyebrow { font-size: clamp(23px,5vw,38px); transform: translateY(calc(-50% - var(--intro-details,0)*70px)); }
  body.intro-mode .landing-first.retro-intro #intro-title { font-size: clamp(25px,6vw,43px); }
@@ -270,7 +270,7 @@ body.intro-mode:has(.retro-intro) .story-step-flow #story-challenge .story-habit
 
 /* Opening: one title, then two larger lines of explanation. */
 body.intro-mode .landing-first.retro-intro #intro-title { top: 38%; transform: translateY(-50%); }
-.retro-message .retro-description { top: 53%; font-size: clamp(14px,2.35cqw,20px); line-height: 1.8; margin: 0; }
+.retro-message .retro-description { top: 53%; font-size: clamp(20px,2.3vw,35px); line-height: 1.8; margin: 0; }
 
 /* The forest uses the same full-size CRT as the three-step guide. */
 body.intro-mode:has(.retro-intro) #story-forest { padding: 60px 20px 100px; gap: 0; height: auto; min-height: 100svh; }

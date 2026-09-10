@@ -26,8 +26,6 @@ models/**/*.joblib
 models/**/*.pkl
 models/**/*.pt
 models/**/*.onnx
-!models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib
-!models/artifacts/candidates/diabetes_current_screening/v061/model.joblib
 *.db
 *.sqlite
 *.sqlite3

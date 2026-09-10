@@ -17,13 +17,6 @@ async def user_me_info(
     return UserInfoResponse.model_validate(user)
 
 
-# Kept at two paths deliberately: "/me/profile" is the long-standing documented
-# contract (docs/API_SPEC.md, most existing callers -- gender/birthday/height edits),
-# while "/me" directly is what the carrot-forest profile-rename flow (the "suin"
-# frontend's profile editor, tests/test_forest_profile_name.py,
-# tests/test_carrot_forest_lite.py) calls to rename the account and sync the forest
-# avatar's display name in the same request. Both paths route to the same handler.
-@user_router.patch("/me", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
 @user_router.patch("/me/profile", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
 async def update_user_me_info(
     update_data: UserUpdateRequest,

@@ -1,7 +1,7 @@
 import pytest
 
 from ai_worker import handlers
-from ai_worker.handlers import _build_age_risk_forecast, run_task, run_task_with_timeout
+from ai_worker.handlers import run_task, run_task_with_timeout
 
 
 @pytest.mark.asyncio
@@ -35,24 +35,3 @@ async def test_worker_timeout_is_raised_for_status_mapping(monkeypatch: pytest.M
     monkeypatch.setattr(handlers, "run_task", slow_task)
     with pytest.raises(TimeoutError):
         await run_task_with_timeout("diabetes_incidence", {}, timeout_seconds=0.001)
-
-
-def test_age_risk_forecast_exposes_frontend_signal_level() -> None:
-    forecast = _build_age_risk_forecast(
-        [
-            {
-                "age": 61,
-                "years_from_now": 2,
-                "risk_score": 0.023,
-                "risk_category": "caution",
-            }
-        ]
-    )
-
-    assert forecast["points"] == [
-        {
-            "display_label": "2년 후 (61세)",
-            "display_percent": 2.3,
-            "signal_level": "caution",
-        }
-    ]

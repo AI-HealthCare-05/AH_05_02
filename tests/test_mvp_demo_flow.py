@@ -115,22 +115,6 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             )
             assert log.status_code == status.HTTP_200_OK
 
-            reward_status = await client.get(
-                f"/api/v1/challenge-rewards/daily/{date.today().isoformat()}",
-                headers=headers,
-            )
-            assert reward_status.status_code == status.HTTP_200_OK
-            assert reward_status.json()["data"]["eligible"] is True
-            reward = await client.post(
-                f"/api/v1/challenge-rewards/daily/{date.today().isoformat()}",
-                headers=headers,
-            )
-            assert reward.status_code == status.HTTP_200_OK
-            reward_data = reward.json()["data"]
-            assert reward_data["carrot_amount"] == 55
-            assert reward_data["claimed"] is True
-            assert reward_data["carrot_balance"] == 55
-
             dashboard = await client.get("/api/v1/dashboard/summary", headers=headers)
             assert dashboard.status_code == status.HTTP_200_OK
             weekly = await client.get("/api/v1/weekly-reports/current", headers=headers)

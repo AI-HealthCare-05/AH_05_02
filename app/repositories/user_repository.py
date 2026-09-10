@@ -29,8 +29,6 @@ class UserRepository:
         gender: Gender | None = None,
         birthday: date | None = None,
         *,
-        terms_agreed: bool = False,
-        terms_agreed_at: datetime | None = None,
         is_active: bool = True,
         is_admin: bool = False,
     ) -> User:
@@ -41,8 +39,6 @@ class UserRepository:
             phone_number=phone_number,
             gender=gender,
             birthday=birthday,
-            terms_agreed=terms_agreed,
-            terms_agreed_at=terms_agreed_at,
             is_active=is_active,
             is_admin=is_admin,
         )

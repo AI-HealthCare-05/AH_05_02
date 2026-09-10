@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.apis.responses import envelope, error_detail
+from app.apis.responses import envelope
 from app.core import config
 from app.dependencies.security import get_request_user
 from app.dtos.ai_jobs import prediction_job_response
@@ -95,32 +95,30 @@ async def enqueue_prediction_job(
     try:
         job = await create_prediction_job(user, request)
     except LookupError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("HEALTH_CHECKUP_NOT_FOUND", str(exc)),
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_detail(str(exc), "현재 상태에서는 예측 작업을 생성할 수 없습니다."),
+            detail={"error_code": str(exc), "message": "현재 상태에서는 예측 작업을 생성할 수 없습니다."},
         ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=error_detail(classify_ml_input_error(exc), "모델 입력 계약을 확인해 주세요."),
+            detail={
+                "error_code": classify_ml_input_error(exc),
+                "message": "모델 입력 계약을 확인해 주세요.",
+                "retryable": False,
+            },
         ) from exc
     except ModelNotReadyError as exc:
         # ModelNotReadyError는 RuntimeError의 서브클래스이므로 반드시 아래 일반
         # RuntimeError 처리보다 먼저 잡아야 한다.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=error_detail("MODEL_NOT_READY", str(exc)),
+            detail={"error_code": "MODEL_NOT_READY", "message": str(exc), "retryable": False},
         ) from exc
     except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=error_detail("QUEUE_UNAVAILABLE", str(exc), retryable=True),
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     data = prediction_job_response(job).model_dump()
     data["status_url"] = f"/api/v1/prediction-jobs/{job.job_id}"
     return envelope(data)
@@ -133,10 +131,7 @@ async def read_prediction_job(
 ) -> dict[str, object]:
     job = await get_prediction_job(job_id, user.id)
     if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("PREDICTION_JOB_NOT_FOUND", "예측 작업을 찾을 수 없습니다."),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 작업을 찾을 수 없습니다.")
     return envelope(prediction_job_response(job).model_dump())
 
 
@@ -164,6 +159,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "model_key": item.model_key,
         "prediction_type": "current_screening" if is_current_screening else "future_incidence",
         "task_type": getattr(item, "task_type", None),
+        "threshold_scope": getattr(item, "threshold_scope", None),
         "outcome_definition": item.outcome_definition,
         "result_status": item.result_status,
         "promotion_status": promotion_status,
@@ -190,7 +186,6 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "calibration_version": item.calibration_version,
         "model_artifact_digest": item.model_artifact_digest,
         "threshold_version": item.threshold_version,
-        "threshold_scope": getattr(item, "threshold_scope", None),
         "decision_threshold": item.decision_threshold if public_result_available else None,
         "output_status": item.output_status,
         "model_population": item.model_population,
@@ -211,10 +206,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
 async def latest_prediction(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     item = await HealthRepository().latest_prediction(user.id)
     if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("PREDICTION_NOT_FOUND", "예측 결과를 찾을 수 없습니다."),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
     return envelope(prediction_payload(item))
 
 
@@ -258,10 +250,7 @@ async def read_prediction(
 ) -> dict[str, object]:
     item = await HealthRepository().get_prediction(prediction_id, user.id)
     if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("PREDICTION_NOT_FOUND", "예측 결과를 찾을 수 없습니다."),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
     return envelope(prediction_payload(item))
 
 
@@ -304,10 +293,7 @@ async def read_risk_curve(
     repo = HealthRepository()
     item = await repo.get_prediction(prediction_id, user.id)
     if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("PREDICTION_NOT_FOUND", "예측 결과를 찾을 수 없습니다."),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
     if item.risk_curve_status != "available":
         return envelope(
             {
@@ -341,10 +327,7 @@ async def read_risk_factors(
 ) -> dict[str, object]:
     item = await HealthRepository().get_prediction(prediction_id, user.id)
     if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_detail("PREDICTION_NOT_FOUND", "예측 결과를 찾을 수 없습니다."),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
     return envelope(
         {
             "prediction_id": item.id,

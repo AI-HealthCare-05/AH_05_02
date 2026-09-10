@@ -1,6 +1,5 @@
 import asyncio
 from datetime import UTC, date, datetime
-from pathlib import Path
 from typing import Any
 
 from ai_worker.core import config
@@ -63,7 +62,6 @@ def _build_age_risk_forecast(curve_points: list[dict[str, Any]]) -> dict[str, An
                     else f"{point['age']}세"
                 ),
                 "display_percent": round(float(point["risk_score"]) * 100, 1),
-                "signal_level": point["risk_category"],
             }
             for point in curve_points
         ],
@@ -255,29 +253,19 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             predict_with_loaded_current_model,
         )
 
-        loaded = await asyncio.to_thread(
-            load_current_screening_model,
-            manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
-            model_path=Path(config.CURRENT_SCREENING_MODEL_URI),
-        )
+        loaded = await asyncio.to_thread(load_current_screening_model)
         output = await asyncio.to_thread(predict_with_loaded_current_model, loaded, model_input)
         operational = (
             loaded.manifest.get("operational_model_activated") is True
             and loaded.manifest.get("promotion_status") == "approved"
         )
         signal = bool(output["screening_signal_detected"])
-        preview_signal_level = "high" if signal else "low"
         return {
             "model_key": CURRENT_SCREENING_MODEL.model_key,
-            "task_type": output["task_type"],
             "outcome_definition": CURRENT_SCREENING_MODEL.outcome_definition,
             "internal_score": output["risk_score_internal"],
             "risk_category": ("high" if signal else "low") if operational else None,
             "screening_signal_detected": signal if operational else None,
-            "preview_signal_level": None if operational else preview_signal_level,
-            "preview_only": not operational,
-            "display_allowed": operational,
-            "operational_model_activated": operational,
             "model_version": output["model_version"],
             "feature_schema_version": output["feature_schema_version"],
             "input_schema_version": CURRENT_SCREENING_MODEL.input_schema_version,
@@ -286,7 +274,6 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             "calibration_version": CURRENT_SCREENING_MODEL.calibration_version,
             "model_artifact_digest": loaded.manifest.get("artifact_sha256"),
             "threshold_version": output["threshold_version"],
-            "threshold_scope": output["threshold_scope"],
             "decision_threshold": loaded.manifest.get("threshold") if operational else None,
             "promotion_status": "approved" if operational else "development_only",
             "output_status": "screening_not_diagnosis" if operational else "screening_model_pending_approval",

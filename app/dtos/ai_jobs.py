@@ -13,7 +13,7 @@ class AIJobCreateRequest(BaseModel):
 class AIJobResponse(BaseModel):
     job_id: str
     task_type: str
-    status: Literal["queued", "running", "succeeded", "failed"]
+    status: str
     result: dict[str, Any] | None = None
     error: str | None = None
     worker_name: str | None = None

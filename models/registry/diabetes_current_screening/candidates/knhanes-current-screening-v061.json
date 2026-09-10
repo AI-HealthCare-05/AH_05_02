@@ -15,31 +15,11 @@
   "features": [
     "age", "height_cm", "weight_kg", "waist_cm", "bmi", "walking_days",
     "energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg",
-    "sex", "region", "urban", "education", "income_quartile",
-    "household_income_quartile", "hypertension_family_history",
-    "diabetes_family_history", "current_smoker", "alcohol_frequency", "aerobic_activity"
-  ],
-  "external_input_features": [
-    "age", "height_cm", "weight_kg", "waist_cm", "bmi", "walking_days",
-    "energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg",
-    "sex", "region", "urban", "education", "income_quartile",
-    "household_income_quartile", "hypertension_family_history",
-    "diabetes_family_history", "current_smoker", "alcohol_frequency", "aerobic_activity"
-  ],
-  "internal_derived_features": [
-    "waist_height_ratio", "waist_was_estimated", "waist_expected_cm", "waist_minus_expected_cm"
-  ],
-  "expanded_feature_order_before_encoding": [
-    "age", "height_cm", "weight_kg", "waist_cm", "bmi", "walking_days",
-    "energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg",
     "waist_height_ratio", "waist_was_estimated", "waist_expected_cm", "waist_minus_expected_cm",
     "sex", "region", "urban", "education", "income_quartile",
     "household_income_quartile", "hypertension_family_history",
     "diabetes_family_history", "current_smoker", "alcohol_frequency", "aerobic_activity"
   ],
-  "external_input_count": 22,
-  "internal_derived_count": 4,
-  "threshold_scope": "current_cross_sectional_screening",
   "metrics": {
     "validation_recall": 0.9590361445783132,
     "test_recall": 0.9384615384615385,

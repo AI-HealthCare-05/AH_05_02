@@ -38,13 +38,13 @@ class HealthCheckupCreateRequest(BaseModel):
     waist_cm: float | None = Field(default=None, ge=45, le=180)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
-    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"] | None = None
-    meal_count_yesterday: int | None = Field(default=None, ge=0, le=10)
+    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
+    meal_count_yesterday: int = Field(ge=0, le=10)
     smoking_status: Literal["never", "former", "current"]
     regular_exercise: bool
     current_drinker: bool
-    exercise_days_per_week: float | None = Field(default=None, ge=0, le=7)
-    exercise_minutes: float | None = Field(default=None, ge=0, le=720)
+    exercise_days_per_week: float = Field(ge=0, le=7)
+    exercise_minutes: float = Field(ge=0, le=720)
     annual_household_income_10k_krw: float | None = Field(default=None, ge=0)
     health_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
     economic_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
@@ -71,8 +71,6 @@ class HealthCheckupCreateRequest(BaseModel):
         if not self.regular_exercise:
             self.exercise_days_per_week = 0
             self.exercise_minutes = 0
-        elif self.exercise_days_per_week is None or self.exercise_minutes is None:
-            raise ValueError("규칙적으로 운동한다면 주당 일수와 회당 시간을 입력해 주세요.")
         return self
 
 
@@ -99,9 +97,6 @@ class ChallengeCycleCreateRequest(BaseModel):
     start_date: date
     challenge_ids: list[int] = Field(min_length=1, max_length=3)
     prediction_id: int | None = Field(default=None, gt=0)
-    catalog_version: Literal["evidence-v3"] | None = None
-    focus: Literal["balanced", "diet", "activity"] = "balanced"
-    difficulty: Literal["easy", "moderate", "advanced"] = "easy"
 
     @model_validator(mode="after")
     def unique_challenges(self) -> ChallengeCycleCreateRequest:

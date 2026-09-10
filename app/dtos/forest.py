@@ -9,8 +9,7 @@ class ForestSpaceCreateRequest(BaseModel):
 
 
 class ForestAvatarUpdateRequest(BaseModel):
-    # Older clients may still send this field; only the main profile can rename a user.
-    display_name: str | None = Field(default=None, min_length=1, max_length=20, deprecated=True)
+    display_name: str = Field(min_length=1, max_length=20)
     hair_code: str = Field(min_length=1, max_length=40)
     outfit_code: str = Field(min_length=1, max_length=40)
     accessory_code: str = Field(min_length=1, max_length=40)

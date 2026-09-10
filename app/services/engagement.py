@@ -129,9 +129,7 @@ class EngagementService:
                     "completion_rate": round(completed / planned * 100, 1) if planned else 0.0,
                 }
             )
-        barriers = await self.repo.list_barriers(
-            user.id, start, today, user_challenge_ids=[item.id for item in selected]
-        )
+        barriers = await self.repo.list_barriers(user.id, start)
         common_reason = Counter(item.reason_code for item in barriers).most_common(1)
         suggested_code, suggestion = (
             BARRIER_SUGGESTIONS[common_reason[0][0]]

@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), dailyRecordFailures: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, wearablePreviewItems: [], notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, ocrExtractedFields: {}, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), dailyRecordFailures: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -427,7 +427,8 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value) || !/[a-z]/.test(value)) issues.push("영문 대소문자를 포함해 주세요.");
+  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
+  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -667,7 +668,7 @@ function showStep(step, { recordHistory = true } = {}) {
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (state.step === 6) {
-    $("#detail-save-notice").hidden = true;
+    $("#detail-save-notice").hidden = !state.currentScreeningInputSaveUnavailable;
     if (state.currentHealthOnly) {
       updateResultConfirmation();
       renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult);
@@ -1867,12 +1868,6 @@ function renderPredictionStatus(status, options = {}) {
   });
   const failureGuidance = predictionFailureGuidance[errorCode];
   if (status === "failed" && failureGuidance) Object.assign(config, failureGuidance);
-  if (status === "failed") Object.assign(config, {
-    stage: "분석 실패",
-    mascot: "/static/assets/hyeoldangi-guide.png",
-    message: "분석을 완료하지 못했습니다.\n다시 시도해 주세요.",
-    showRetry: true,
-  });
   const statusCard = $("#prediction-status-card");
   if (statusCard) {
     statusCard.dataset.status = status;
@@ -1886,7 +1881,7 @@ function renderPredictionStatus(status, options = {}) {
   if (statusSymbol) statusSymbol.textContent = config.icon;
   const mascot = $("#prediction-mascot");
   if (mascot && config.mascot) mascot.src = config.mascot;
-  $("#result-explain").textContent = status === "failed" ? config.message : (options.message || config.message);
+  $("#result-explain").textContent = options.message || config.message;
   $("#job-status").textContent = options.lead || config.message;
   $("#probability-policy").querySelector("p").textContent = config.policy;
   $("#analysis-failure").hidden = true;
@@ -2090,12 +2085,7 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
   if (challengeButton) challengeButton.textContent = requiresMedicalResultGuidance() ? "검사·상담 안내 보기" : content.next;
 }
 
-function hasClearedResultGuidanceForChallenge() {
-  return state.visitedSteps?.has?.(7) && canContinueAfterMedicalGuidance();
-}
-
 function requiresMedicalResultGuidance() {
-  if (hasClearedResultGuidanceForChallenge()) return false;
   return $("#risk-confirm-card")?.dataset.risk === "high"
     || (!state.currentHealthOnly && isPublicRiskDisplayAllowed(state.prediction || {}) && normalizeRiskKey(state.prediction) === "high");
 }
@@ -2690,12 +2680,9 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
   const stateBox = $("#forecast-state");
   const statusBadge = $("#forecast-status-badge");
   if (!chart || !pointContainer || !stateBox || !statusBadge) return;
-  const resolvedPoint = options.canDisplayRisk
+  const point = options.canDisplayRisk
     ? selectTwoYearForecastPoint(prediction, options.fallbackLevel)
     : null;
-  const point = resolvedPoint || (isDemoEnvironment() && !options.failed
-    ? { label: "약 2년 후", level: normalizeForecastSignal(options.fallbackLevel) || "caution" }
-    : null);
   const hasPoint = Boolean(point);
   chart.hidden = !hasPoint;
   stateBox.hidden = hasPoint;
@@ -2761,7 +2748,15 @@ function renderPrediction(prediction, factors) {
     : developmentPreviewRisk
       ? "개발 확인용 위험 범주만 표시합니다. 숫자 점수·확률·위험요인은 표시하지 않습니다."
     : "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
-  renderXaiExplanationLists(factors, { approved: hasApprovedExplanation });
+  const factorItems = Array.isArray(factors?.items) ? factors.items : [];
+  const factorList = $("#factor-list");
+  if (factorList) factorList.innerHTML = hasApprovedExplanation && factorItems.length
+    ? factorItems.map((item) => {
+      const factorName = item.display_name || item.factor_name || "확인된 요인";
+      const factorDescription = item.message || item.description || "검증된 설명만 표시합니다.";
+      return `<li><strong>${escapeHtml(factorName)}</strong><p>${escapeHtml(factorDescription)}</p></li>`;
+    }).join("")
+    : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   $("#risk-confirm-card").hidden = false;
   $("#risk-preview-controls").hidden = !isDemoEnvironment();
   $("#result-unavailable").hidden = canDisplayRisk;
@@ -2780,41 +2775,6 @@ function renderPrediction(prediction, factors) {
   updateResultConfirmation();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
-}
-
-function factorDirectionLabel(item = {}) {
-  const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "위험 증가 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "위험 감소 방향";
-  return "";
-}
-
-function factorModifiableLabel(item = {}) {
-  if (item.modifiable === true || item.is_modifiable === true || item.changeable === true) return "바꿀 수 있는 요인";
-  if (item.modifiable === false || item.is_modifiable === false || item.changeable === false) return "참고 요인";
-  return "";
-}
-
-function renderFactorItems(items = []) {
-  return items.map((item) => {
-    const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
-    const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
-    const meta = [factorDirectionLabel(item), factorModifiableLabel(item)].filter(Boolean).join(" · ");
-    return `<li><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></li>`;
-  }).join("");
-}
-
-function renderXaiExplanationLists(factors, { approved = false } = {}) {
-  const currentList = $("#current-factor-list");
-  const futureList = $("#factor-list");
-  if (currentList) {
-    currentList.innerHTML = `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>준혁님 응답 계약이 오면 오늘의 신호에 영향을 준 항목을 표시합니다.</p></li>`;
-  }
-  const factorItems = Array.isArray(factors?.items) ? factors.items : [];
-  if (!futureList) return;
-  futureList.innerHTML = approved && factorItems.length
-    ? renderFactorItems(factorItems)
-    : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
 }
 
 async function requestPredictionModel(modelKey) {
@@ -2848,9 +2808,13 @@ function analysisInputKey() {
 }
 
 function renderPartialAnalysisNotice(run) {
-  $("#partial-analysis-notice").hidden = true;
-  $("#partial-analysis-message").textContent = "";
-  $("#retry-partial-analysis").textContent = "실패한 분석만 다시 시도하기";
+  const labels = { diabetes_current_screening: "현재 위험 신호 선별", diabetes_incidence: "미래 신규 발병 위험" };
+  const failed = Object.entries(run.models).filter(([, result]) => result.status === "failed");
+  const messages = failed.map(([key, result]) => `${labels[key]}: 분석 실패 (${result.error.code || "REQUEST_FAILED"})`);
+  if (run.factorsError) messages.push("미래 결과의 설명 정보를 불러오지 못했습니다.");
+  $("#partial-analysis-notice").hidden = !messages.length;
+  $("#partial-analysis-message").textContent = messages.join(" / ");
+  $("#retry-partial-analysis").textContent = failed.length ? "실패한 분석만 다시 시도하기" : "설명 정보 다시 불러오기";
 }
 
 async function runPrediction({ retryFailed = false } = {}) {
@@ -2858,7 +2822,8 @@ async function runPrediction({ retryFailed = false } = {}) {
   const key = analysisInputKey();
   if (state.analysisRun?.busy && state.analysisRun.key === key) return;
   if (retryFailed && state.step === 6) {
-    $("#partial-analysis-notice").hidden = true;
+    $("#partial-analysis-message").textContent = "완료된 분석은 유지하고, 실패한 요청을 다시 확인하고 있습니다.";
+    $("#retry-partial-analysis").textContent = "다시 확인 중…";
   } else {
     $("#partial-analysis-notice").hidden = true;
   }
@@ -2945,7 +2910,15 @@ async function runPrediction({ retryFailed = false } = {}) {
       errorCode: isTimeout ? "TIMEOUT" : isModelNotReady ? "MODEL_NOT_READY" : error.code,
       message: failureGuidance?.message || error.message,
     });
-    $("#analysis-failure").hidden = true;
+    if (!isModelNotReady && !failureGuidance) {
+      $("#analysis-failure-title").textContent = isTimeout
+        ? "분석 시간이 초과되었습니다"
+        : "분석을 완료하지 못했습니다";
+      $("#analysis-failure-message").textContent = isTimeout
+        ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
+        : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
+      $("#analysis-failure").hidden = false;
+    }
     $("#retry-analysis").hidden = false;
   } finally {
     run.busy = false;
@@ -3735,52 +3708,6 @@ function updateDailyRecordSummary() {
   renderTodayTaskStatus();
   // Today's completion must not replace the server's multi-day report totals.
 }
-
-function dailyChallengeTargetCount() {
-  return Array.isArray(state.cycle?.user_challenges) ? state.cycle.user_challenges.length : 0;
-}
-
-function allDailyChallengesCompleted() {
-  const required = dailyChallengeTargetCount();
-  return required > 0 && state.dailyCompleted.size >= required;
-}
-
-function closeChallengeRewardDialog() {
-  const dialog = $("#challenge-reward-dialog");
-  if (dialog?.open) dialog.close();
-}
-
-function openChallengeRewardDialog(reward = {}) {
-  const amount = Number(reward.carrot_amount) || 55;
-  $("#challenge-reward-amount").textContent = `+${amount} 당근`;
-  $("#challenge-reward-copy").textContent = reward.already_claimed
-    ? "오늘 보상은 이미 받았어요. 숲에서 보유 당근을 확인할 수 있습니다."
-    : "오늘의 실천 보상이 지급됐어요. 당근의 숲에서 확인해 보세요.";
-  $("#challenge-reward-balance").textContent = Number.isFinite(Number(reward.carrot_balance))
-    ? `현재 보유 당근 ${Number(reward.carrot_balance)}개`
-    : "당근의 숲에서 보상을 확인할 수 있어요";
-  const dialog = $("#challenge-reward-dialog");
-  if (!dialog) return;
-  if (dialog.showModal) dialog.showModal();
-  else dialog.hidden = false;
-  $("#challenge-reward-title")?.focus?.();
-}
-
-async function maybeOpenDailyReward() {
-  if (!allDailyChallengesCompleted()) return;
-  const today = challengeDay();
-  if (isLocalPreview()) {
-    openChallengeRewardDialog({ carrot_amount: 55 });
-    return;
-  }
-  try {
-    openChallengeRewardDialog(await api(`/challenge-rewards/daily/${today}`, { method: "POST" }));
-  } catch (error) {
-    if (error.status === 409) return showMessage("오늘 챌린지를 모두 완료하면 보상을 받을 수 있어요.");
-    showMessage(error.message || "보상 화면을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
-  }
-}
-
 async function completeDailyRecord(target, source = "self_report") {
   if (!target?.id || target.completed || state.dailyCompleted.has(String(target.id))) return;
   const token = state.token;
@@ -3798,8 +3725,7 @@ async function completeDailyRecord(target, source = "self_report") {
   renderDailyRecordList();
   updateDailyRecordSummary();
   if (!isLocalPreview()) void loadWeeklyReport().catch(() => {});
-  if (allDailyChallengesCompleted()) await maybeOpenDailyReward();
-  else showMessage(target.item?.domain === "hydration" ? "음료 선택 실천을 기록했어요. 당근에 물을 주었습니다! (게임 응원 문구)" : "오늘 기록을 저장했습니다.", "success");
+  showMessage(target.item?.domain === "hydration" ? "음료 선택 실천을 기록했어요. 당근에 물을 주었습니다! (게임 응원 문구)" : "오늘 기록을 저장했습니다.", "success");
 }
 async function undoDailyRecord(target) {
   if (!target?.id || target.undoPending || !state.dailyCompleted.has(String(target.id))) return false;
@@ -4223,105 +4149,23 @@ function renderExtendedChallengeRows(challenges = []) {
   }).join("");
 }
 
-function clampReportDays(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, Math.min(7, number)) : 0;
-}
-
-function challengeSuccessDays(item = {}) {
-  const windows = Array.isArray(item.goal_windows) ? item.goal_windows : Array.isArray(item.daily_records) ? item.daily_records : [];
-  if (windows.length) {
-    return clampReportDays(windows.filter((entry) => {
-      const status = String(entry.status || "").toLowerCase();
-      return entry.is_completed === true || status === "completed" || status === "done";
-    }).length);
-  }
-  return clampReportDays(item.practiced_days ?? item.completed_days ?? item.completed ?? item.completed_count);
-}
-
-function fourWeekBarItem({ label, range, days = 0, pending = false }) {
-  const successDays = clampReportDays(days);
-  const height = pending ? 0 : Math.round((successDays / 7) * 100);
-  return `<li class="${pending ? "report-trend-pending" : ""}">
-    <div class="report-trend-meter" aria-hidden="true"><i style="height:${height}%"></i></div>
-    <strong>${escapeHtml(label)}</strong>
-    <b>${pending ? "생성 예정" : `${successDays}/7일`}</b>
-    <small>${escapeHtml(range || (pending ? "생성 예정" : "기간 확인 중"))}</small>
-  </li>`;
-}
-
-function weeklyReportForFourWeekFallback() {
-  const weekly = state.lifestyleReport?.data;
-  if (!weekly || weekly.status === "empty") return null;
-  const details = Array.isArray(weekly.challenge_details) ? weekly.challenge_details : [];
-  const completion = weekly.completion || {};
-  const successfulDaysFromDetails = details.reduce((max, item) => Math.max(max, challengeSuccessDays(item)), 0);
-  const completedFromDetails = successfulDaysFromDetails || details.reduce((sum, item) => sum + (Number(item.completed ?? item.completed_count) || 0), 0);
-  const plannedFromDetails = details.reduce((sum, item) => sum + (Number(item.planned ?? item.planned_count) || 0), 0);
-  const completed = clampReportDays(successfulDaysFromDetails || completion.practiced_days || completion.completed || completedFromDetails);
-  const planned = Math.min(7, Math.max(1, Number(completion.planned) || plannedFromDetails || 7));
-  const rate = Math.round((completed / 7) * 100);
-  return {
-    period: weekly.period || {},
-    completed,
-    planned,
-    rate,
-    challenges: details.map((item) => ({
-      title: item.title || item.challenge_title || "생활습관 챌린지",
-      frequency: "daily",
-      evaluated_completed_count: Number(item.completed ?? item.completed_count) || 0,
-      evaluated_target_count: Number(item.planned ?? item.planned_count) || 7,
-      completion_rate: Number.isFinite(Number(item.completion_rate))
-        ? Number(item.completion_rate)
-        : ((Number(item.planned ?? item.planned_count) || 0) > 0
-          ? Math.round(((Number(item.completed ?? item.completed_count) || 0) / Number(item.planned ?? item.planned_count)) * 100)
-          : null),
-    })),
-  };
-}
-
-function renderFourWeekFallbackFromWeekly(report = {}) {
-  const weekly = weeklyReportForFourWeekFallback();
-  if (!weekly) return false;
-  const completed = Number(weekly.completed) || 0;
-  const rate = Number.isFinite(Number(weekly.rate)) ? Number(weekly.rate) : null;
-  $("#report-four-week-period").textContent = reportRangeLabel(report.period, "이번 주부터 4주");
-  $("#report-four-week-status").textContent = "이번 주 먼저 표시";
-  $("#report-four-week-headline").textContent = "이번 주 기록부터 4주 흐름을 만들어가요";
-  setExtendedReportSummary("four-week", {
-    practiced_days: completed,
-    completed_count: completed,
-    completion_rate: rate,
-  }, "이번 주 저장 기록");
-  const trendRows = [
-    fourWeekBarItem({ label: "1주차 · 이번 주", range: reportRangeLabel(weekly.period, "이번 주"), days: completed }),
-    ...[2, 3, 4].map((week) => fourWeekBarItem({ label: `${week}주차`, pending: true })),
-  ].join("");
-  $("#report-four-week-content").innerHTML = `<article class="report-placeholder-card report-trend-card"><h4>4주차 실천 그래프</h4><p>이번 주에 체크한 기록을 먼저 보여주고, 남은 3주는 기록이 쌓이면 차례로 생성됩니다.</p><ol class="report-trend-list">${trendRows}</ol></article>
-    <article class="report-placeholder-card"><h4>이번 주 챌린지 기록</h4><div class="report-history-list">${renderExtendedChallengeRows(weekly.challenges)}</div></article>`;
-  return true;
-}
-
 function renderFourWeekReport(report) {
   $("#report-four-week-period").textContent = reportRangeLabel(report.period, "지난 4주");
   $("#report-four-week-status").textContent = report.period?.is_partial ? "진행 기록 포함" : "조회 완료";
   $("#report-four-week-headline").textContent = report.headline || "지난 4주의 흐름을 한눈에";
   $("#report-disclaimer").textContent = report.disclaimer || "기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.";
   if (report.status === "empty") {
-    if (renderFourWeekFallbackFromWeekly(report)) return;
     setExtendedReportSummary("four-week", report.summary || {}, "아직 기록 없음");
     $("#report-four-week-content").innerHTML = '<article class="report-empty report-period-unavailable"><strong>아직 지난 4주 기록이 없어요</strong><p>챌린지를 시작하고 실천을 기록하면 주별 흐름이 표시됩니다.</p></article>';
     return;
   }
   setExtendedReportSummary("four-week", report.summary, "지난 4주 저장 기록");
   const buckets = Array.isArray(report.trend?.buckets) ? report.trend.buckets : [];
-  if (!buckets.length && renderFourWeekFallbackFromWeekly(report)) return;
   const trendRows = buckets.length ? buckets.map((bucket, index) => {
-    return fourWeekBarItem({
-      label: `${index + 1}주차`,
-      range: reportRangeLabel(bucket, "기간 확인 중"),
-      days: bucket.practiced_days,
-    });
+    const participation = Number(bucket.participation_days || 0);
+    const practiced = Number(bucket.practiced_days || 0);
+    const width = participation > 0 ? Math.min(100, Math.round((practiced / participation) * 100)) : 0;
+    return `<li><div><strong>${index + 1}주차</strong><small>${escapeHtml(reportRangeLabel(bucket, "기간 확인 중"))}</small></div><div class="report-trend-meter"><i style="width:${width}%"></i></div><b>${practiced}/${participation}일</b></li>`;
   }).join("") : '<li class="report-muted-copy">주별 흐름이 아직 없습니다.</li>';
   $("#report-four-week-content").innerHTML = `<article class="report-placeholder-card report-trend-card"><h4>최근 4주의 실천 흐름</h4><p>달력상 기간이 아닌, 실제 챌린지 참여일과 실천일을 비교해요.</p><ol class="report-trend-list">${trendRows}</ol></article>
     <article class="report-placeholder-card"><h4>습관별로 돌아보기</h4><div class="report-history-list">${renderExtendedChallengeRows(report.challenges)}</div></article>`;
@@ -4424,59 +4268,8 @@ function localEducationContents() {
   };
 }
 
-function setLocalEducationPreviewContents() {
-  const contents = localEducationContents();
-  state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
-  return contents;
-}
-
 function inferredEducationAnswer(question = "") {
   return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
-}
-
-function quizTypeLabel(type = "") {
-  if (type === "ox") return "OX";
-  if (type === "fill_in_blank") return "빈칸";
-  return "퀴즈";
-}
-
-function quizOptions(question = {}) {
-  if (Array.isArray(question.options) && question.options.length) return question.options.slice(0, 4);
-  if (question.quiz_type === "ox") return ["참", "거짓"];
-  return ["네", "아니요"];
-}
-
-function mapHealthEducationQuizzes(payload = {}) {
-  const quizzes = (Array.isArray(payload.items) ? payload.items : [])
-    .filter((item) => item?.quiz_id && item?.question)
-    .slice(0, 12);
-  if (!quizzes.length) return { medical_notice: "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.", items: [] };
-  const weekTitles = ["위험 선별 결과 이해하기", "생활습관 근거 확인하기", "식사·활동 실천 점검하기", "다시 시작하는 건강 루틴"];
-  const groups = [[], [], [], []];
-  quizzes.forEach((quiz, index) => groups[index % groups.length].push(quiz));
-  return {
-    medical_notice: "승인된 건강자료 기반 퀴즈입니다. 일반 건강교육 정보이며 진단·처방을 대신하지 않습니다.",
-    items: groups.filter((items) => items.length).map((items, index) => {
-      const first = items[0];
-      const source = { title: first.source_title || "승인된 건강교육 자료", url: first.source_url || "" };
-      return {
-        content_id: `rag-week-${index + 1}`,
-        source_kind: "health_education_quizzes",
-        week_number: index + 1,
-        title: weekTitles[index] || `${index + 1}주차 건강교육`,
-        summary: `${source.title} 등 승인된 자료에서 생성된 ${items.length}개 문항을 확인합니다.`,
-        source,
-        quiz_questions: items.map((quiz) => ({
-          prompt: quiz.question,
-          quiz_type: quiz.quiz_type,
-          options: quiz.options,
-          explanation: `${quizTypeLabel(quiz.quiz_type)} 문항입니다. 근거 자료: ${quiz.source_title || source.title}`,
-          source_title: quiz.source_title,
-          source_url: quiz.source_url,
-        })),
-      };
-    }),
-  };
 }
 
 function educationQuestions(item) {
@@ -4485,9 +4278,7 @@ function educationQuestions(item) {
     : [{ prompt: item.quiz_question, correct_answer: inferredEducationAnswer(item.quiz_question), explanation: item.summary }];
   return questions.filter((question) => question?.prompt).slice(0, 3).map((question) => ({
     prompt: question.prompt,
-    quiz_type: question.quiz_type,
-    options: quizOptions(question),
-    correctAnswer: question.correct_answer || question.correctAnswer || (item.source_kind === "health_education_quizzes" ? null : inferredEducationAnswer(question.prompt)),
+    correctAnswer: question.correct_answer || question.correctAnswer || inferredEducationAnswer(question.prompt),
     explanation: question.explanation || item.summary,
   }));
 }
@@ -4495,7 +4286,9 @@ function educationQuestions(item) {
 function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
-    setLocalEducationPreviewContents();
+    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    window.educationCarouselView?.refresh();
+    return;
   }
   const educationArt = [
     ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
@@ -4561,9 +4354,6 @@ function renderEducationQuizQuestion() {
   form.hidden = false;
   form.reset();
   $("#education-quiz-question").textContent = question.prompt;
-  $(".education-answer-options", form).innerHTML = question.options.map((option) => `
-    <label><input type="radio" name="education-answer" value="${escapeHtml(option)}" required><span>${escapeHtml(option)}</span></label>
-  `).join("");
   $("#education-quiz-progress-text").textContent = `${state.educationQuizIndex + 1}/${questions.length} 문항`;
   $("#education-quiz-progress").max = questions.length;
   $("#education-quiz-progress").value = state.educationQuizIndex + 1;
@@ -4576,18 +4366,17 @@ function closeEducationFlow() {
 }
 
 async function loadEducation() {
-  const fallbackContents = setLocalEducationPreviewContents();
-  renderEducationList();
+  const list = $("#education-list");
+  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
+  window.educationCarouselView?.refresh();
   try {
-    const contents = isLocalPreview() ? fallbackContents : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
-    const items = Array.isArray(contents.items) ? contents.items : [];
-    if (items.length) {
-      state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
-    }
+    const contents = isLocalPreview() ? localEducationContents() : await api("/education-contents");
+    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
     renderEducationList();
   } catch (error) {
-    setLocalEducationPreviewContents();
-    renderEducationList();
+    state.educationContents = [];
+    list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오지 못했어요</strong><p>잠시 후 다시 시도해 주세요.</p></article>`;
+    window.educationCarouselView?.refresh();
   }
 }
 async function loadConnections() {
@@ -4949,34 +4738,25 @@ function setReportPeriod(period) {
 }
 
 function reportPdfUnavailableReason(period) {
+  if (period !== "week") return "지난 4주·전체 PDF는 연결 준비 중입니다. 다른 기간의 파일을 대신 내려받지 않습니다. 이번 주를 선택해 주세요.";
+  if (!state.token || isLocalPreview()) return "실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.";
   return "";
 }
 
 function updateReportPdfAvailability() {
   const reason = reportPdfUnavailableReason(selectedReportPdfPeriod());
-  $("#report-pdf-status").textContent = reason || "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다.";
+  $("#report-pdf-status").textContent = reason || "현재 서버의 주간 리포트는 최근 최대 7일의 생활습관 기록 요약입니다. 화면에 표시된 집계 기간을 확인해 주세요.";
   // The first click can always reveal period choices; only an actual download is blocked.
   $("#download-report").disabled = !$("#report-pdf-options").hidden && Boolean(reason);
 }
 
 async function fetchWeeklyReportPdf(period) {
-  if (period !== "week") throw new Error("지난 4주·전체는 현재 화면 PDF 저장을 사용해 주세요.");
-  if (!state.token || isLocalPreview()) throw new Error("실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.");
+  const reason = reportPdfUnavailableReason(period);
+  if (reason) throw new Error(reason);
   const response = await fetch("/api/v1/weekly-reports/current/pdf", { headers: { Authorization: `Bearer ${state.token}` } });
   if (!response.ok) throw new Error(response.status === 401 ? "로그인이 만료되었습니다. 다시 로그인한 뒤 PDF를 받아 주세요." : "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
   if (!response.headers.get("content-type")?.includes("application/pdf")) throw new Error("올바른 PDF 응답을 받지 못했습니다. 다시 시도해 주세요.");
   return response.blob();
-}
-
-async function prepareReportPrint(period) {
-  setReportPeriod(period);
-  if (period === "week" && state.lifestyleReportStatus === "idle") await loadWeeklyReport();
-  if ((period === "four-week" || period === "all") && state.reportPeriodStatus[period] !== "ready") await loadReportPeriod(period);
-  document.body.dataset.printReportPeriod = period;
-  document.documentElement.dataset.printReportPeriod = period;
-  document.title = `간당간당_${reportPdfPeriodLabels[period] || "리포트"}_리포트`;
-  window.print();
-  return period;
 }
 
 const reportPdfPeriodLabels = {
@@ -5271,12 +5051,6 @@ $("#close-forest-entry")?.addEventListener("click", closeForestEntryDialog);
 $("#retry-forest-groups")?.addEventListener("click", () => void loadForestEntryGroups());
 $("#forest-entry-list")?.addEventListener("change", (event) => {
   if (event.target.name === "forest-entry-group") $("#enter-forest-game").disabled = false;
-});
-$("#close-challenge-reward")?.addEventListener("click", closeChallengeRewardDialog);
-$("#stay-after-reward")?.addEventListener("click", closeChallengeRewardDialog);
-$("#go-forest-after-reward")?.addEventListener("click", () => {
-  closeChallengeRewardDialog();
-  openForestEntryDialog();
 });
 $("#enter-forest-game")?.addEventListener("click", () => {
   const groupId = Number($("input[name='forest-entry-group']:checked")?.value);
@@ -6260,20 +6034,18 @@ $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   const submitButton = event.submitter;
   const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
-    const usesHealthEducationQuizzes = item.source_kind === "health_education_quizzes";
-    const result = isLocalPreview() || usesHealthEducationQuizzes
+    const result = isLocalPreview()
       ? { is_correct: answer === question.correctAnswer }
       : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
-    const hasAnswerKey = Boolean(question.correctAnswer);
-    const isCorrect = hasAnswerKey ? Boolean(result.is_correct) : true;
+    const isCorrect = Boolean(result.is_correct);
     if (isCorrect) state.educationQuizCorrectCount += 1;
     $("#education-quiz-form").hidden = true;
     const feedback = $("#education-feedback-card");
     feedback.hidden = false;
-    feedback.dataset.result = hasAnswerKey ? (isCorrect ? "correct" : "incorrect") : "correct";
-    $("#education-feedback-title").textContent = hasAnswerKey
-      ? (isCorrect ? `정답입니다 · 정답: ${question.correctAnswer}` : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`)
-      : "답변을 확인했어요";
+    feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    $("#education-feedback-title").textContent = isCorrect
+      ? `정답입니다 · 정답: ${question.correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
     $("#education-feedback-explanation").textContent = question.explanation;
     $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
     const action = $("#education-feedback-action");
@@ -6584,125 +6356,45 @@ function wearableNumberOrNull(selector) {
   return Number.isFinite(number) ? number : null;
 }
 
-function setRadioValue(name, value) {
-  $$(`input[name="${name}"]`).forEach((input) => {
-    input.checked = input.value === String(value);
-  });
-}
-
-function wearableSampleItems(provider) {
-  const isoDate = (daysAgo) => {
-    const value = new Date();
-    value.setDate(value.getDate() - daysAgo);
-    return value.toISOString().slice(0, 10);
-  };
-  const values = provider === "apple_health_export"
-    ? [[8230, 42, 430, 62], [6140, 35, 455, 64], [9570, 48, 445, 61]]
-    : [[8150, 38, 460, 65], [7200, 36, 420, 66], [10320, 51, 450, 63]];
-  return values.map(([steps, active_minutes, sleep_minutes, resting_heart_rate], index) => ({
-    summary_date: isoDate(2 - index), steps, active_minutes, sleep_minutes, resting_heart_rate,
-  }));
-}
-
-function showWearablePreview(provider, items, label) {
-  if (state.wearableProvider !== provider) state.wearableConnectionId = null;
-  state.wearableProvider = provider;
-  state.wearablePreviewItems = items;
-  if ($("#wearable-provider")) $("#wearable-provider").value = provider;
-  $("#wearable-steps").value = items.at(-1)?.steps ?? "";
-  $("#wearable-active").value = items.at(-1)?.active_minutes ?? "";
-  $("#wearable-sleep").value = items.at(-1)?.sleep_minutes ?? "";
-  $("#wearable-resting-hr").value = items.at(-1)?.resting_heart_rate ?? "";
-  const totalSteps = items.reduce((sum, item) => sum + (item.steps || 0), 0);
-  const totalMinutes = items.reduce((sum, item) => sum + (item.active_minutes || 0), 0);
-  const box = $("#wearable-result");
-  box.hidden = false;
-  box.innerHTML = `<div><strong>${escapeHtml(label)}에서 ${items.length}일 기록을 찾았습니다.</strong><p>걸음 ${escapeHtml(totalSteps.toLocaleString())}보, 활동 ${escapeHtml(totalMinutes)}분을 확인해 주세요. 아직 건강정보에는 반영되지 않았습니다.</p></div>`;
-  $("#apply-wearable-preview").hidden = false;
-}
-
-async function ensureWearableConnection(provider = state.wearableProvider || "development_mock") {
+async function ensureWearableConnection() {
   if (state.wearableConnectionId) return state.wearableConnectionId;
   const connection = await api("/wearables/connections", {
     method: "POST",
-    body: JSON.stringify({ provider, scopes: ["activity", "sleep", "heart_rate"] }),
+    body: JSON.stringify({ provider: "development_mock", scopes: ["activity", "sleep", "heart_rate"] }),
   });
   state.wearableConnectionId = connection.connection_id;
   return state.wearableConnectionId;
 }
 
-$("#connect-watch")?.addEventListener("click", () => $("#wearable-file-input")?.click());
-$("#try-apple-wearable-sample")?.addEventListener("click", () => {
-  showWearablePreview("apple_health_export", wearableSampleItems("apple_health_export"), "Apple 시연 데이터");
-});
-$("#try-android-wearable-sample")?.addEventListener("click", () => {
-  showWearablePreview("android_health_connect", wearableSampleItems("android_health_connect"), "Android 시연 데이터");
-});
-$("#wearable-file-input")?.addEventListener("change", async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  const provider = file.name.toLowerCase().endsWith(".xml") ? "apple_health_export" : "android_health_connect";
-  const body = new FormData();
-  body.append("provider", provider);
-  body.append("file", file);
+$("#connect-watch")?.addEventListener("click", async (event) => {
+  const box = $("#wearable-result");
+  box.hidden = false;
+  box.textContent = "웨어러블 샘플 연결을 만드는 중이에요.";
+  const releaseBusy = setButtonBusy(event.currentTarget, "연결 중…");
   try {
-    const result = await api("/wearables/file-previews", { method: "POST", body });
-    showWearablePreview(provider, result.items, file.name);
-  } catch (error) { showMessage(error.message); }
-  finally { event.target.value = ""; }
-});
-
-async function applyWearablePreview() {
-  const items = state.wearablePreviewItems;
-  if (!items.length) return;
-  if (isLocalPreview()) {
-    const activityDays = items.filter((item) => (item.active_minutes || 0) >= 10 || (item.steps || 0) >= 1000);
-    const totalMinutes = activityDays.reduce((sum, item) => sum + (item.active_minutes || 0), 0);
-    const averageMinutes = activityDays.length ? Math.round(totalMinutes / activityDays.length) : 0;
-    setRadioValue("regular-exercise", activityDays.length >= 3 && totalMinutes >= 150);
-    $("#exercise-days").value = activityDays.length;
-    $("#exercise-minutes").value = averageMinutes;
-    syncExerciseDetails();
-    $("#wearable-result").innerHTML = `<div><strong>건강정보가 갱신되었습니다.</strong><p>운동 일수 주 ${activityDays.length}일, 회당 활동 시간 약 ${averageMinutes}분이 반영되었습니다.</p><p>운동 챌린지와 연동합니다.</p></div>`;
-    $("#apply-wearable-preview").hidden = true;
-    return;
+    await ensureWearableConnection();
+    box.textContent = "샘플 연결이 준비됐어요. 오늘 요약값을 입력해 저장할 수 있습니다.";
+  } catch (error) {
+    box.textContent = error.message || "웨어러블 연결을 만들지 못했어요. 잠시 후 다시 시도해 주세요.";
+  } finally {
+    releaseBusy();
   }
-  if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
-  const connectionId = await ensureWearableConnection(state.wearableProvider);
-  const imported = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: connectionId, items }) });
-  const dates = items.map((item) => item.summary_date).sort();
-  const candidates = await api(`/wearables/health-candidates?start_date=${encodeURIComponent(dates[0])}&end_date=${encodeURIComponent(dates.at(-1))}`);
-  const updated = await api(`/wearables/health-candidates/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(candidates.health_input_candidates) });
-  const fields = updated.updated_fields;
-  setRadioValue("regular-exercise", fields.regular_exercise);
-  $("#exercise-days").value = fields.exercise_days_per_week;
-  $("#exercise-minutes").value = fields.exercise_minutes;
-  syncExerciseDetails();
-  await loadHealthCheckupHistory();
-  const challengeCopy = imported.auto_logged_challenges.length
-    ? `운동 챌린지 ${imported.auto_logged_challenges.length}건과 연동했습니다.`
-    : "운동 인증 후보를 만들었습니다. 활성 운동 챌린지가 있으면 연동됩니다.";
-  $("#wearable-result").innerHTML = `<div><strong>${escapeHtml(updated.message)}</strong><p>운동 일수 주 ${escapeHtml(fields.exercise_days_per_week)}일, 회당 활동 시간 약 ${escapeHtml(fields.exercise_minutes)}분, 규칙적 운동 ${fields.regular_exercise ? "예" : "아니요"}가 반영되었습니다.</p><p>${escapeHtml(challengeCopy)}</p></div>`;
-  $("#apply-wearable-preview").hidden = true;
-}
-
-$("#apply-wearable-preview")?.addEventListener("click", async (event) => {
-  const releaseBusy = setButtonBusy(event.currentTarget, "건강정보 갱신 중…");
-  try { await applyWearablePreview(); } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
 });
-
 $("#wearable-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "워치 기록 확인 중…");
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "워치 기록 저장 중…");
   try {
-    showWearablePreview($("#wearable-provider")?.value || "apple_health_export", [{
+    const connectionId = await ensureWearableConnection();
+    const dailySummary = {
       summary_date: new Date().toISOString().slice(0, 10),
       steps: wearableNumberOrNull("#wearable-steps"),
       active_minutes: wearableNumberOrNull("#wearable-active"),
       sleep_minutes: wearableNumberOrNull("#wearable-sleep"),
       resting_heart_rate: wearableNumberOrNull("#wearable-resting-hr"),
-    }], "직접 입력한 기록");
+    };
+    const result = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: connectionId, items: [dailySummary] }) });
+    const box = $("#wearable-result"); box.hidden = false; box.textContent = `${result.imported_count}일 기록을 가져왔습니다. 자동 챌린지 기록 ${result.auto_logged_challenges.length}건`;
+    await refreshDashboard();
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
@@ -6748,75 +6440,27 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
     releaseBusy();
   }
 });
-function showOcrPreview(result, label) {
-  const fields = result.extracted_fields || {};
-  state.ocrDraftId = result.draft_id;
-  state.ocrExtractedFields = fields;
-  $("#ocr-file-name").textContent = label;
-  $("#ocr-height-confirm").value = fields.height_cm ?? "";
-  $("#ocr-weight-confirm").value = fields.weight_kg ?? "";
-  $("#ocr-waist-confirm").value = fields.waist_cm ?? "";
-  $("#ocr-systolic-confirm").value = fields.systolic_bp ?? "";
-  $("#ocr-diastolic-confirm").value = fields.diastolic_bp ?? "";
-  $("#ocr-confirm-form").hidden = false;
-  const box = $("#ocr-upload-result");
-  box.hidden = false;
-  const labels = [
-    ["신장", fields.height_cm, "cm"], ["체중", fields.weight_kg, "kg"], ["허리둘레", fields.waist_cm, "cm"],
-    ["혈압", fields.systolic_bp != null && fields.diastolic_bp != null ? `${fields.systolic_bp}/${fields.diastolic_bp}` : null, "mmHg"],
-    ["공복혈당", fields.fasting_glucose_mg_dl, "mg/dL"],
-  ].filter(([, value]) => value != null).map(([name, value, unit]) => `${name} ${value}${unit}`).join(", ");
-  box.innerHTML = `<div><strong>${escapeHtml(label)}에서 건강정보를 찾았습니다.</strong><p>${escapeHtml(labels)}. 확인하기 전에는 갱신되지 않습니다.</p></div>`;
-}
-
-async function createOcrPreview(documentName, ocrText) {
-  if (isLocalPreview()) {
-    return { draft_id: "local-ocr-demo", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
-  }
-  return api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: documentName, ocr_text: ocrText }) });
-}
-
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
-$("#load-checkup-sample")?.addEventListener("click", async () => {
-  const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
-  try {
-    showOcrPreview(await createOcrPreview("2025-general-health-checkup-synthetic.txt", sampleText), "2025 일반건강검진 합성 예시");
-  } catch (error) { showMessage(error.message); }
-});
-$("#checkup-image-input")?.addEventListener("change", async (event) => {
+$("#checkup-image-input")?.addEventListener("change", (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
-  try {
-    showOcrPreview(await createOcrPreview(file.name, await file.text()), file.name);
-  } catch (error) { showMessage(error.message); }
-  finally { event.target.value = ""; }
+  const box = $("#ocr-upload-result");
+  box.hidden = false;
+  box.innerHTML = "<div><strong>검진표를 선택했습니다.</strong><p>인식된 값이 맞는지 확인한 뒤 업데이트해 주세요.</p></div>";
+  $("#ocr-file-name").textContent = file.name;
+  $("#ocr-systolic-confirm").value = $("#systolic")?.value || "";
+  $("#ocr-diastolic-confirm").value = $("#diastolic")?.value || "";
+  $("#ocr-confirm-form").hidden = false;
 });
-$("#ocr-confirm-form")?.addEventListener("submit", async (event) => {
+$("#ocr-confirm-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "건강정보 갱신 중…");
-  const candidate = (id) => $(id).value === "" ? null : Number($(id).value);
-  const updates = {
-    height_cm: candidate("#ocr-height-confirm"), weight_kg: candidate("#ocr-weight-confirm"),
-    waist_cm: candidate("#ocr-waist-confirm"), systolic_bp: candidate("#ocr-systolic-confirm"),
-    diastolic_bp: candidate("#ocr-diastolic-confirm"),
-  };
-  try {
-    let result;
-    if (isLocalPreview()) {
-      result = { message: "건강정보가 갱신되었습니다.", updated_fields: Object.fromEntries(Object.entries(updates).filter(([, value]) => value != null)) };
-    } else {
-      if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
-      result = await api(`/ocr-drafts/${state.ocrDraftId}/health-checkups/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(updates) });
-      await loadHealthCheckupHistory();
-    }
-    const inputMap = { height_cm: "#height", weight_kg: "#weight", waist_cm: "#waist", systolic_bp: "#systolic", diastolic_bp: "#diastolic" };
-    Object.entries(result.updated_fields).forEach(([key, value]) => { if (inputMap[key]) $(inputMap[key]).value = value; });
-    const fieldLabels = { height_cm: "신장", weight_kg: "체중", waist_cm: "허리둘레", systolic_bp: "수축기 혈압", diastolic_bp: "이완기 혈압", bmi: "BMI" };
-    const changed = Object.keys(result.updated_fields).map((key) => fieldLabels[key] || key).join(", ");
-    $("#ocr-upload-result").innerHTML = `<div><strong>${escapeHtml(result.message)}</strong><p>갱신 항목: ${escapeHtml(changed)}</p></div>`;
-    $("#ocr-confirm-form").hidden = true;
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+  const systolic = Number($("#ocr-systolic-confirm").value);
+  const diastolic = Number($("#ocr-diastolic-confirm").value);
+  if (!Number.isFinite(systolic) || !Number.isFinite(diastolic)) return;
+  $("#systolic").value = String(systolic);
+  $("#diastolic").value = String(diastolic);
+  $("#ocr-upload-result").innerHTML = "<div><strong>혈압 값을 반영했습니다.</strong><p>다음 건강정보 제출 때 확인한 값이 저장됩니다.</p></div>";
+  $("#ocr-confirm-form").hidden = true;
 });
 $("#food-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -6967,16 +6611,16 @@ $("#account-delete-form")?.addEventListener("submit", async (event) => {
 });
 $("#download-report").addEventListener("click", async (event) => {
   if (!revealReportPdfOptions()) return;
-  const releaseBusy = setButtonBusy(event.currentTarget, "PDF 화면 여는 중…");
+  const releaseBusy = setButtonBusy(event.currentTarget, "PDF 만드는 중…");
   try {
     const period = selectedReportPdfPeriod();
-    await prepareReportPrint(period);
-    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} 리포트 PDF 저장 화면을 열었습니다.`, "success");
+    const url = URL.createObjectURL(await fetchWeeklyReportPdf(period));
+    const link = document.createElement("a"); link.href = url; link.download = reportPdfFileNames[period] || "간당간당_리포트.pdf"; link.click(); URL.revokeObjectURL(url);
+    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} PDF를 저장했습니다.`, "success");
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
 $$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("change", () => {
-  setReportPeriod(input.value);
   updateReportPdfButtonLabel();
   updateReportPdfAvailability();
 }));

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -12,16 +12,13 @@ from app.dtos.wellness import (
     FoodAnalysisRequest,
     NotificationPreferenceRequest,
     OcrDraftRequest,
-    OcrHealthApplyRequest,
     RagQuestionRequest,
     WearableConnectionRequest,
-    WearableHealthCandidateApplyRequest,
     WearableImportRequest,
 )
 from app.models.users import User
 from app.services.engagement import EngagementService
 from app.services.wellness import WellnessService
-from src.quiz.generator import generate_quizzes
 from src.rag.engine import answer_with_sources
 
 wellness_router = APIRouter(tags=["Wellness extensions"])
@@ -78,18 +75,6 @@ async def import_wearable(request: WearableImportRequest, user: Annotated[User, 
     return envelope(await WellnessService().import_wearable(user, request))
 
 
-@wellness_router.post("/wearables/file-previews")
-async def preview_wearable_file(
-    provider: Annotated[str, Form()],
-    file: Annotated[UploadFile, File()],
-    user: Annotated[User, Depends(get_request_user)],
-):
-    _ = user
-    raw = await file.read(20 * 1024 * 1024 + 1)
-    await file.close()
-    return envelope(WellnessService.preview_wearable_file(provider, raw))
-
-
 @wellness_router.get("/wearables/daily-summaries")
 async def wearable_summaries(
     user: Annotated[User, Depends(get_request_user)],
@@ -101,39 +86,12 @@ async def wearable_summaries(
     return envelope(await WellnessService().wearable_summaries(user, start, end))
 
 
-@wellness_router.get("/wearables/health-candidates")
-async def wearable_health_candidates(
-    user: Annotated[User, Depends(get_request_user)],
-    start_date: date | None = None,
-    end_date: date | None = None,
-):
-    end = end_date or date.today()
-    start = start_date or end - timedelta(days=6)
-    return envelope(await WellnessService().wearable_health_candidates(user, start, end))
-
-
-@wellness_router.patch("/wearables/health-candidates/{checkup_id}")
-async def apply_wearable_health_candidates(
-    checkup_id: int,
-    request: WearableHealthCandidateApplyRequest,
-    user: Annotated[User, Depends(get_request_user)],
-):
-    return envelope(await WellnessService().apply_wearable_health_candidates(user, checkup_id, request))
-
-
 @wellness_router.post("/health-education/questions")
 async def ask_health_education(request: RagQuestionRequest, user: Annotated[User, Depends(get_request_user)]):
     _ = user
     result = answer_with_sources(request.question)
     result["medical_notice"] = "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."
     return envelope(result)
-
-
-@wellness_router.get("/health-education/quizzes")
-async def list_health_education_quizzes(user: Annotated[User, Depends(get_request_user)]):
-    _ = user
-    items = [item.as_public_dict() for item in generate_quizzes()]
-    return envelope({"items": items})
 
 
 @wellness_router.post("/food-analyses", status_code=status.HTTP_201_CREATED)
@@ -156,16 +114,6 @@ async def create_ocr_draft(request: OcrDraftRequest, user: Annotated[User, Depen
 @wellness_router.post("/ocr-drafts/{draft_id}/confirm")
 async def confirm_ocr_draft(draft_id: int, user: Annotated[User, Depends(get_request_user)]):
     return envelope(await WellnessService().confirm_ocr(user, draft_id))
-
-
-@wellness_router.patch("/ocr-drafts/{draft_id}/health-checkups/{checkup_id}")
-async def apply_ocr_to_health_checkup(
-    draft_id: int,
-    checkup_id: int,
-    request: OcrHealthApplyRequest,
-    user: Annotated[User, Depends(get_request_user)],
-):
-    return envelope(await WellnessService().apply_ocr_to_health_checkup(user, draft_id, checkup_id, request))
 
 
 @wellness_router.get("/notification-preferences")
@@ -194,8 +142,6 @@ async def weekly_report_pdf(user: Annotated[User, Depends(get_request_user)]) ->
         f"기록 요약: {report.get('record_summary', report.get('message', '기록 없음'))}",
         "주의: 생활습관 기록은 질병 진단, 치료 효과 또는 위험 감소를 의미하지 않습니다.",
     ]
-    # §3 API 공통 조건(Cache-Control: private, no-store)은 app/main.py의
-    # `_no_store_for_sensitive_reports` 미들웨어가 이 응답과 인증 실패(401) 응답에도 일괄 적용한다.
     return Response(
         content=build_korean_pdf(lines),
         media_type="application/pdf",

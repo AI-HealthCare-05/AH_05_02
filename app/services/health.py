@@ -413,21 +413,17 @@ class HealthService:
             "fat_g": None,
             "carbohydrate_g": None,
             "sodium_mg": None,
-            "sex": {"male": 1, "female": 2}.get(checkup.sex),
+            "sex": checkup.sex,
             "region": None,
             "urban": None,
-            # The MVP stores descriptive education labels, not the KNHANES
-            # codebook value. Preserve this as unknown rather than guessing.
-            "education": None,
+            "education": checkup.education_level,
             "income_quartile": None,
             "household_income_quartile": None,
             "hypertension_family_history": None,
             "diabetes_family_history": None,
-            "current_smoker": int(checkup.current_smoker) if checkup.current_smoker is not None else None,
-            # A boolean current-drinker flag cannot recover the KNHANES
-            # frequency category, so the model receives an explicit unknown.
-            "alcohol_frequency": None,
-            "aerobic_activity": int(checkup.regular_exercise),
+            "current_smoker": checkup.current_smoker,
+            "alcohol_frequency": "current" if checkup.current_drinker else "none",
+            "aerobic_activity": checkup.regular_exercise,
         }
 
     @staticmethod

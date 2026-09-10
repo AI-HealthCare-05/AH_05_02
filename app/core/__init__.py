@@ -1,6 +1,6 @@
 import logging
 
-from app.core.config import Config, assert_production_secrets_are_configured
+from app.core.config import Config
 from app.core.logger import setup_logger
 
 
@@ -14,5 +14,4 @@ def get_logger() -> logging.Logger:
 
 
 config = get_config()
-assert_production_secrets_are_configured(config)
 default_logger = get_logger()

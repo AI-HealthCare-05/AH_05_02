@@ -55,38 +55,6 @@ test("newly analysed user reaches selection before slow recommendations complete
   await pending;
 });
 
-test("result screen only repeats medical guidance before the first challenge selection visit", () => {
-  const nodes = { "#risk-confirm-card": { dataset: { risk: "high" } } };
-  const $ = key => nodes[key] || null;
-  const state = {
-    visitedSteps: new Set([6]),
-    capabilities: { challenge: true },
-    eligibility: { reason_codes: [] },
-    medicalGuidanceRequired: false,
-  };
-  const ctx = load(["canContinueAfterMedicalGuidance", "hasClearedResultGuidanceForChallenge", "requiresMedicalResultGuidance"], {
-    $, state,
-  });
-  assert.equal(ctx.requiresMedicalResultGuidance(), true);
-  state.visitedSteps.add(7);
-  assert.equal(ctx.requiresMedicalResultGuidance(), false);
-});
-
-test("result screen keeps medical guidance when a safety exclusion still blocks challenges", () => {
-  const nodes = { "#risk-confirm-card": { dataset: { risk: "high" } } };
-  const $ = key => nodes[key] || null;
-  const state = {
-    visitedSteps: new Set([6, 7]),
-    capabilities: { challenge: true },
-    eligibility: { reason_codes: ["URGENT_MEDICAL_ATTENTION"] },
-    medicalGuidanceRequired: false,
-  };
-  const ctx = load(["canContinueAfterMedicalGuidance", "hasClearedResultGuidanceForChallenge", "requiresMedicalResultGuidance"], {
-    $, state,
-  });
-  assert.equal(ctx.requiresMedicalResultGuidance(), true);
-});
-
 test("cycle lookup failure is not treated as an empty cycle or allowed to replace it", async () => {
   const state = { token: "test-session", cycle: null };
   let selected = false;

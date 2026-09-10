@@ -11,15 +11,6 @@ function load(name, data = {}) {
   vm.runInContext(fn[0], context);
   return context[name];
 }
-function loadMany(names, data = {}) {
-  const context = vm.createContext(data);
-  for (const name of names) {
-    const fn = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
-    assert.ok(fn, name);
-    vm.runInContext(fn[0], context);
-  }
-  return context;
-}
 test('medical continuation requires challenge permission and preserves every safety exclusion', () => {
   const state = { capabilities: { challenge: true }, eligibility: { reason_codes: [] }, medicalGuidanceRequired: false };
   const allowed = load('canContinueAfterMedicalGuidance', { state });
@@ -74,24 +65,4 @@ test('missing snapshot endpoint is explicit and cannot reuse stale snapshot ID',
   await save();
   assert.equal(state.currentScreeningInputSaveUnavailable, true);
   assert.equal(state.currentScreeningInputId, null);
-});
-test('XAI explanation cards show only approved returned factors with safe labels', () => {
-  const nodes = {
-    '#current-factor-list': { innerHTML: '' },
-    '#factor-list': { innerHTML: '' },
-  };
-  const state = {};
-  const context = loadMany(['factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'renderXaiExplanationLists'], {
-    state,
-    $: selector => nodes[selector] || null,
-    escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),
-  });
-  const render = context.renderXaiExplanationLists;
-  render({ status: 'approved', shap_claimed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '꾸준한 활동 신호입니다.' }] }, { approved: true });
-  assert.match(nodes['#current-factor-list'].innerHTML, /현재 건강 신호 XAI 연결 대기/);
-  assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /위험 감소 방향 · 바꿀 수 있는 요인/);
-  render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
-  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /임의 표시 금지/);
-  assert.match(nodes['#factor-list'].innerHTML, /미래 위험 XAI 연결 대기/);
 });

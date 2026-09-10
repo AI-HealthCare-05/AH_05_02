@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS predictions (
     health_checkup_id BIGINT NOT NULL,
     input_as_of_date DATE NOT NULL,
     model_key VARCHAR(100) NOT NULL,
-    task_type VARCHAR(50) NOT NULL,
     outcome_definition VARCHAR(120) NOT NULL,
     result_status VARCHAR(40) NOT NULL,
     risk_category VARCHAR(20) NULL,
@@ -63,7 +62,6 @@ CREATE TABLE IF NOT EXISTS predictions (
     calibration_version VARCHAR(100) NOT NULL,
     model_artifact_digest VARCHAR(128) NULL,
     threshold_version VARCHAR(100) NOT NULL,
-    threshold_scope VARCHAR(100) NOT NULL,
     decision_threshold DOUBLE NULL,
     class_probabilities JSON NULL,
     output_status VARCHAR(80) NOT NULL DEFAULT 'uncalibrated_research_probability_only',
@@ -73,6 +71,8 @@ CREATE TABLE IF NOT EXISTS predictions (
     risk_curve_status VARCHAR(20) NOT NULL DEFAULT 'not_applicable',
     output_definition_version VARCHAR(100) NULL,
     age_risk_forecast JSON NULL,
+    task_type VARCHAR(80) NULL,
+    threshold_scope VARCHAR(100) NULL,
     display_allowed BOOL NOT NULL DEFAULT 0,
     operational_model_activated BOOL NOT NULL DEFAULT 0,
     preview_only BOOL NOT NULL DEFAULT 0,
@@ -113,11 +113,11 @@ CREATE TABLE IF NOT EXISTS follow_up_actions (
 """
 
 PREDICTION_COLUMNS = {
-    "task_type": "VARCHAR(50) NOT NULL DEFAULT 'binary_incidence_risk_screening'",
-    "threshold_scope": "VARCHAR(100) NOT NULL DEFAULT 'future_incidence_2y'",
     "risk_curve_status": "VARCHAR(20) NOT NULL DEFAULT 'not_applicable'",
     "output_definition_version": "VARCHAR(100) NULL",
     "age_risk_forecast": "JSON NULL",
+    "task_type": "VARCHAR(80) NULL",
+    "threshold_scope": "VARCHAR(100) NULL",
     "display_allowed": "BOOL NOT NULL DEFAULT 0",
     "operational_model_activated": "BOOL NOT NULL DEFAULT 0",
     "preview_only": "BOOL NOT NULL DEFAULT 0",
@@ -273,13 +273,14 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
             await cursor.execute(
                 """
                 INSERT INTO predictions (
-                    job_id, user_id, health_checkup_id, input_as_of_date, model_key, task_type, outcome_definition,
+                    job_id, user_id, health_checkup_id, input_as_of_date, model_key, outcome_definition,
                     result_status, risk_category, internal_score, model_version,
                     feature_schema_version, input_schema_version, preprocessing_version,
                     target_definition_version, calibration_version, model_artifact_digest,
-                    threshold_version, threshold_scope, decision_threshold, class_probabilities, output_status,
-                    model_population, explanation_status, disclaimer, age_risk_forecast,
-                    display_allowed, operational_model_activated, preview_only, preview_signal_level
+                    threshold_version, decision_threshold, class_probabilities, output_status,
+                    model_population, explanation_status, disclaimer, age_risk_forecast
+                    , task_type, threshold_scope, display_allowed, operational_model_activated,
+                    preview_only, preview_signal_level
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
@@ -288,7 +289,6 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     row[1],
                     row[2],
                     result["model_key"],
-                    result.get("task_type", "binary_incidence_risk_screening"),
                     result["outcome_definition"],
                     result_status,
                     risk_category,
@@ -301,7 +301,6 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result["calibration_version"],
                     result.get("model_artifact_digest"),
                     result["threshold_version"],
-                    result.get("threshold_scope", "future_incidence_2y"),
                     result.get("decision_threshold"),
                     None,
                     output_status,
@@ -309,6 +308,8 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                     result.get("explanation_status", "not_available"),
                     disclaimer,
                     json.dumps(age_risk_forecast, ensure_ascii=False) if age_risk_forecast is not None else None,
+                    result.get("task_type"),
+                    result.get("threshold_scope"),
                     result.get("display_allowed") is True,
                     result.get("operational_model_activated") is True,
                     result.get("preview_only") is True,
