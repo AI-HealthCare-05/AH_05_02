@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "rf_oof_feature_reduction_v001",
+  "owner": "양준혁",
+  "kind": "candidate",
+  "model_type": "RandomForestClassifier_nested_oof_feature_selection",
+  "problem": "diabetes_incidence_next_observation",
+  "dataset_path": "data/processed/official_v1/",
+  "dataset_version": "official_v1",
+  "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "model_version": "rf_oof_feature_reduction_v001-research-v1",
+  "threshold_version": "validation-recall-specificity-v1",
+  "entrypoint": "pipeline.py:run_experiment",
+  "primary_metric": "recall",
+  "minimum_specificity": 0.3,
+  "feature_schema_version": "klosa_stage3_nested_oof_selected_10_25_v1",
+  "safety": {
+    "participant_level_split": true,
+    "exclude_future_information": true,
+    "exclude_diagnosis_and_treatment_features": true,
+    "fit_preprocessing_on_train_only": true,
+    "select_threshold_on_validation_only": true,
+    "use_test_for_final_evaluation_only": true
+  },
+  "notes": "Train 내부 nested PID OOF permutation importance로 25·20·15·10개 변수 절차를 비교한다. Validation은 최종 임계값 선택, Test는 최종 보고에만 사용한다."
+}
