@@ -5,6 +5,8 @@ copy secrets, change database contents, or override model/approval settings.
 Run from the repository root using .venv/bin/python.
 """
 
+import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -37,8 +39,47 @@ def local_queue_environment() -> dict[str, str]:
         "REDIS_HOST": "127.0.0.1",
         "REDIS_PORT": "6380",
         "REDIS_DB": "0",
-        "REDIS_STREAM": "ai:jobs:local8022",
+        "REDIS_STREAM": "ai:jobs:local8022:pr41-future",
+        "CURRENT_SCREENING_REDIS_STREAM": "ai:jobs:local8022:pr41-current",
         "REDIS_CONSUMER_GROUP": "local8022-workers",
+    }
+
+
+def local_model_environment(root: Path) -> dict[str, str]:
+    """Keep the explicitly selected local shared7 model until v061 is provisioned.
+
+    No automatic model fallback: v061 must be selected explicitly and have its
+    verified artifact available before launch. Run v061 with its dedicated
+    worker image; it requires a different scikit-learn version from shared7.
+    """
+    runtime = os.environ.get("LOCAL_CURRENT_SCREENING_RUNTIME", "shared7")
+    if runtime not in {"shared7", "v061"}:
+        raise ValueError("LOCAL_CURRENT_SCREENING_RUNTIME must be shared7 or v061")
+    name = "knhanes-shared7-sk180-v1" if runtime == "shared7" else "knhanes-current-screening-v061"
+    manifest_path = root / f"models/registry/diabetes_current_screening/candidates/{name}.json"
+    manifest = json.loads(manifest_path.read_text())
+    artifact = root / manifest["artifact_local_path"]
+    if not artifact.is_file():
+        raise RuntimeError(f"Selected current screening model artifact is missing ({runtime})")
+    with artifact.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    if digest != manifest["artifact_sha256"]:
+        raise RuntimeError(f"Selected current screening artifact checksum does not match ({runtime})")
+    return {
+        "CURRENT_SCREENING_RUNTIME": runtime,
+        "CURRENT_SCREENING_MODEL_VERSION": manifest["model_version"],
+        "CURRENT_SCREENING_FEATURE_SCHEMA_VERSION": manifest["feature_schema_version"],
+        "CURRENT_SCREENING_INPUT_SCHEMA_VERSION": manifest.get(
+            "input_schema_version", "knhanes-current-diabetes-screening-api-v1"
+        ),
+        "CURRENT_SCREENING_THRESHOLD_VERSION": manifest["threshold_version"],
+        "CURRENT_SCREENING_DECISION_THRESHOLD": str(manifest["threshold"]),
+        "CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST": manifest["artifact_sha256"],
+        "CURRENT_SCREENING_MODEL_URI": str(root / manifest["artifact_local_path"]),
+        "CURRENT_SCREENING_MANIFEST_URI": str(manifest_path),
+        "CURRENT_SCREENING_PREPROCESSING_VERSION": "shared7-standard-api-frame-v1"
+        if runtime == "shared7"
+        else "knhanes-2016-2024-recall-v061",
     }
 
 
@@ -47,6 +88,7 @@ if __name__ == "__main__":
     os.chdir(root)
     os.environ.update(database_environment(root.parent / "AH_05_02" / ".env"))
     os.environ.update(local_queue_environment())
+    os.environ.update(local_model_environment(root))
     os.execv(
         root / ".venv/bin/python",
         [

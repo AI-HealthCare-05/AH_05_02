@@ -35,7 +35,22 @@ def test_current_result_and_medical_guidance_are_not_hidden_with_future_results(
             if element_id:
                 assert element_id not in self.parents, f"Duplicate HTML id: {element_id}"
                 self.parents[element_id] = [item[1] for item in self.stack]
-            if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
+            if tag not in {
+                "area",
+                "base",
+                "br",
+                "col",
+                "embed",
+                "hr",
+                "img",
+                "input",
+                "link",
+                "meta",
+                "param",
+                "source",
+                "track",
+                "wbr",
+            }:
                 self.stack.append((tag, element_id))
 
         def handle_endtag(self, tag):
@@ -48,4 +63,6 @@ def test_current_result_and_medical_guidance_are_not_hidden_with_future_results(
     for element_id in ["risk-confirm-card", "medical-guidance-detail"]:
         assert "future-prediction-result" not in parser.parents[element_id]
     assert "future-prediction-result" in parser.parents["future-onset-title"]
-    assert "risk-forecast-panel" not in parser.parents
+    assert "future-prediction-result" in parser.parents["risk-forecast-panel"]
+    for element_id in ["future-onset-title", "age-risk-chart"]:
+        assert "risk-forecast-panel" in parser.parents[element_id]

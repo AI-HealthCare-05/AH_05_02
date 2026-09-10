@@ -150,11 +150,14 @@ async def test_carrot_forest_lite_group_reward_avatar_and_object_flow() -> None:
             )
             assert duplicate.status_code == status.HTTP_409_CONFLICT
 
+            profile = await client.patch("/api/v1/users/me", headers=owner_headers, json={"name": "세준"})
+            assert profile.status_code == status.HTTP_200_OK
+
             avatar = await client.patch(
                 "/api/v1/forest/avatar",
                 headers=owner_headers,
                 json={
-                    "display_name": "세준",
+                    "display_name": "구형 별명",
                     "hair_code": "midnight_short",
                     "outfit_code": "garden_overall",
                     "accessory_code": reward_data["item_code"],

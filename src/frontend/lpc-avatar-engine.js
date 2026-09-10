@@ -32,6 +32,21 @@
     hurt: "깜짝 놀라기", combat_idle: "준비 자세",
   };
   const poseAnimationAliases = { fishing: "shoot", door: "thrust", dance: "emote" };
+  const adaptedThrustTools = new Set(["axe", "hammer", "pickaxe"]);
+  const thrustReach = [0, -1, -2, 2, 7, 7, 3, 0];
+  const wateringFrames = [0, 1, 4, 4, 4, 4, 5];
+
+  function actionDuration(avatar, pose) {
+    if (pose === "attack") return { bow: 1280, wand: 980, cane: 860, dagger: 680 }[avatar.cosmetics?.lpcWeapon] || 780;
+    if (pose === "harvest") return { axe: 1100, pickaxe: 1100, hammer: 1100, hoe: 1000, shovel: 1100, watering_can: 1400 }[avatar.cosmetics?.lpcTool] || 800;
+    return null;
+  }
+
+  function cyclePosition(options, length) {
+    return Number.isFinite(options.progress)
+      ? Math.min(length - 1, Math.floor(Math.max(0, options.progress) * length))
+      : Math.abs(Math.floor(Number(options.frame || 0))) % length;
+  }
   const wingMobilityIds = new Set(["feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"]);
 
   function usesWingMobility(avatar) {
@@ -116,10 +131,10 @@
       ["eyewear", cosmetics.lpcGlasses, "round", cosmetics.glassesColor || "brown"],
       ["hat", cosmetics.lpcHat, "leather_cap", cosmetics.hatColor || "brown"],
     ];
-    if (options.pose === "attack" && cosmetics.lpcWeapon !== "none") {
+    if (options.pose === "attack" && cosmetics.lpcWeapon && !["none", "wand"].includes(cosmetics.lpcWeapon)) {
       selections.push(["weapon", cosmetics.lpcWeapon, "arming_sword", "natural"]);
     }
-    if (["harvest", "fishing"].includes(options.pose) && cosmetics.lpcTool !== "none") {
+    if (options.pose === "harvest" && cosmetics.lpcTool && cosmetics.lpcTool !== "none") {
       selections.push(["tool", cosmetics.lpcTool, "axe", "natural"]);
     }
     if ((avatar.mounted || options.previewMobility) && cosmetics.vehicle !== "none") {
@@ -147,12 +162,13 @@
 
   function resolvedAnimation(avatar, options) {
     if (options.pose === "attack") {
-      const weapon = avatar.cosmetics?.lpcWeapon || "arming_sword";
+      const weapon = avatar.cosmetics?.lpcWeapon || "none";
       // 공식 LPC 완드 시트에는 slash 레이어만 있지만, 캐릭터 본체는 spellcast 행을
       // 완전하게 지원한다. 완드는 아래 drawActionProp에서 주문 자세에 맞춰 그린다.
+      if (weapon === "wand") return "spellcast";
+      if (weapon === "none") return "spellcast"; // Empty-hand gesture without magic props.
       const supported = item("weapon", weapon, "arming_sword")?.animations || [];
       const preferences = {
-        wand: ["spellcast", "slash", "thrust"],
         bow: ["shoot", "slash"],
         cane: ["thrust", "slash"],
         dagger: ["slash", "thrust", "halfslash"],
@@ -162,13 +178,7 @@
       return sharedAnimation(avatar, options, weaponAnimations) || weaponAnimations[0] || "slash";
     }
     if (options.pose === "harvest") {
-      const tool = avatar.cosmetics?.lpcTool || "axe";
-      const supported = item("tool", tool, "axe")?.animations || [];
-      const preferences = ["axe", "hammer", "pickaxe"].includes(tool)
-        ? ["slash", "thrust"]
-        : ["thrust", "slash"];
-      const toolAnimations = preferences.filter((animation) => supported.includes(animation));
-      return sharedAnimation(avatar, options, toolAnimations) || toolAnimations[0] || "thrust";
+      return "thrust";
     }
     const requestedPose = poseAnimationAliases[options.pose] || options.pose;
     if (requestedPose && animationCycles[requestedPose]) {
@@ -243,10 +253,11 @@
     const direction = ["up", "left", "down", "right"].includes(options.direction || avatar.direction)
       ? (options.direction || avatar.direction) : "down";
     const animation = resolvedAnimation(avatar, options);
+    const seatedFallback = avatar.sitting && !options.pose && animation !== "sit";
     const cycles = animationCycles[animation] || animationCycles.idle;
     const frameIndex = (avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose
       ? cycles[cycles.length - 1]
-      : cycles[Math.abs(Number(options.frame || 0)) % cycles.length];
+      : cycles[cyclePosition(options, cycles.length)];
     context.save();
     context.imageSmoothingEnabled = false;
     selectedLayers(avatar, options).forEach((layer) => {
@@ -276,10 +287,18 @@
           .find((candidate) => supported.includes(candidate));
       if (!layerAnimation) return;
       const layerCycle = animationCycles[layerAnimation] || animationCycles.idle;
-      const requestedFrame = ["idle", "sit", "emote", "combat_idle"].includes(requestedAnimation)
+      const requestedFrame = seatedFallback ? 0 : requestedAnimation === "sit"
+        ? layerCycle[layerCycle.length - 1]
+        : ["idle", "emote", "combat_idle"].includes(requestedAnimation)
         ? layerCycle[Math.min(1, layerCycle.length - 1)]
-        : layerCycle[Math.abs(Number(options.frame || 0)) % layerCycle.length];
-      const layerFrame = requestedFrame;
+        : layerCycle[cyclePosition(options, layerCycle.length)];
+      const adaptedTool = options.pose === "harvest" && layer.category === "tool"
+        && adaptedThrustTools.has(avatar.cosmetics?.lpcTool);
+      // These tools have no native thrust sheet. Reuse the official held-tool
+      // sprite and move it with the body's forward reach, never the overhead sheet.
+      if (adaptedTool && Number(layer.frameSize || FRAME) !== FRAME) return;
+      const watering = options.pose === "harvest" && avatar.cosmetics?.lpcTool === "watering_can" && layerAnimation === "thrust";
+      const layerFrame = adaptedTool ? 0 : watering ? wateringFrames[cyclePosition(options, wateringFrames.length)] : requestedFrame;
       const layerRowBase = manifest.animationRows[layerAnimation] ?? manifest.animationRows.idle;
       const layerDirectionRow = layerAnimation === "hurt" || layerAnimation === "climb"
         ? 0
@@ -288,10 +307,26 @@
       const destinationScale = layerFrameSize / FRAME;
       const destinationWidth = target.width * destinationScale;
       const destinationHeight = target.height * destinationScale;
-      const destinationX = target.x - (destinationWidth - target.width) / 2;
-      const destinationY = target.y - (destinationHeight - target.height) / 2;
+      const reach = adaptedTool ? thrustReach[cyclePosition(options, thrustReach.length)] : 0;
+      const offset = { up: [0, -reach], down: [0, reach], left: [-reach, 0], right: [reach, 0] }[direction];
+      const destinationX = target.x - (destinationWidth - target.width) / 2 + offset[0] * target.width / FRAME;
+      const destinationY = target.y - (destinationHeight - target.height) / 2 + offset[1] * target.height / FRAME;
       context.save();
       context.filter = colorFilters[layer.color] || "none";
+      if (seatedFallback) {
+        // Some official outfits have no seated sheet. Apply the same planted-
+        // foot crouch to every layer, keeping the outfit and body aligned.
+        const torso = layerFrameSize * 42 / 64;
+        const leg = layerFrameSize - torso;
+        const drop = destinationHeight * 12 / 64;
+        const upperHeight = destinationHeight * 42 / 64;
+        context.drawImage(image, layerFrame * layerFrameSize, (layerRowBase + layerDirectionRow) * layerFrameSize,
+          layerFrameSize, torso, destinationX, destinationY + drop, destinationWidth, upperHeight);
+        context.drawImage(image, layerFrame * layerFrameSize, (layerRowBase + layerDirectionRow) * layerFrameSize + torso,
+          layerFrameSize, leg, destinationX, destinationY + drop + upperHeight, destinationWidth, destinationHeight - drop - upperHeight);
+        context.restore();
+        return;
+      }
       context.drawImage(
         image,
         layerFrame * layerFrameSize,
@@ -315,12 +350,35 @@
     return manifest?.items.filter((record) => record.category === category) || [];
   }
 
+  async function prepare(avatars) {
+    if (!await readyPromise) throw new Error("공식 LPC 의상 목록을 불러오지 못했어요.");
+    const groups = avatars.map(avatar => {
+      const layers = selectedLayers(avatar);
+      const required = ["body", "head", "outfit", "bottom"];
+      if (avatar.cosmetics?.lpcShoes !== "none") required.push("shoes");
+      if (required.some(category => !layers.some(layer => layer.category === category && layer.file))) {
+        throw new Error("공식 의상의 몸·얼굴·상의·하의 레이어가 완전하지 않아요.");
+      }
+      return layers;
+    });
+    const files = [...new Set(groups.flatMap(layers => layers.map(layer => layer.file)).filter(Boolean))];
+    if (!files.length) throw new Error("촬영할 공식 의상 레이어가 없어요.");
+    files.forEach(ensureImage);
+    await Promise.all(files.map(file => pendingImages.get(file)).filter(Boolean));
+    // draw() deliberately permits progressive loading during normal gameplay;
+    // a keepsake must fail closed instead of recording partial/bare outfits.
+    if (files.some(file => !images.has(file))) throw new Error("일부 공식 의상 이미지를 불러오지 못했어요. 다시 촬영해 주세요.");
+    return true;
+  }
+
   window.LpcAvatarEngine = {
     ready: () => readyPromise,
+    prepare,
     isReady: () => Boolean(manifest),
     draw,
     catalog,
     poseLabels,
     colors: colorFilters,
+    actionDuration,
   };
 })();

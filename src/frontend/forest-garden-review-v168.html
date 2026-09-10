@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>당근밭 · 6주차 미리보기</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:16px;background:#f6f5e9;color:#24452a;font:14px/1.5 system-ui,sans-serif}main{max-width:1000px;margin:auto}h1{font-size:22px;margin:0 0 8px}a{color:#24664a}canvas{display:block;width:100%;height:auto;image-rendering:pixelated;border-radius:12px;margin:16px 0}p{margin:8px 0}
+  </style>
+  <script src="/static/forest-garden.js?v=20260908-1" defer></script>
+</head>
+<body><main>
+  <h1>6주 동안 가꾸는 당근밭</h1>
+  <p id="status" role="status">당근밭을 불러오는 중…</p>
+  <canvas id="garden" width="1536" height="1024" role="img" aria-label="6줄에 주차 팻말과 당근 5개씩, 열린 입구가 있는 당근밭"></canvas>
+  <a href="/forest?garden=v168">당근의 숲 열기</a>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const load = url => new Promise((resolve,reject) => {
+        const image = new Image(); image.onload = () => resolve(image); image.onerror = () => reject(new Error("이미지를 불러오지 못했습니다.")); image.src = url;
+      });
+      const status = document.getElementById("status");
+      try {
+        const garden = window.ForestGarden;
+        const [background,carrot] = await Promise.all([load(garden.assets.background.url),load(garden.assets.carrot.url)]);
+        const ctx = document.getElementById("garden").getContext("2d");
+        ctx.scale(2,2); ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(background,0,0,garden.layout.width,garden.layout.height);
+        const count = garden.draw(ctx,carrot);
+        status.textContent = `${garden.layout.weeks}주차 · 한 줄 ${garden.layout.carrotsPerWeek}개 · 총 ${count}개`;
+      } catch(error) { status.textContent = error.message; }
+    });
+  </script>
+</main></body>
+</html>

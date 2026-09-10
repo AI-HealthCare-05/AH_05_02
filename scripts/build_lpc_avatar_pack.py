@@ -287,6 +287,9 @@ def is_complete_garment(relative: str, category: str) -> bool:
             "_pockets.json",
             "_straps.json",
             "_contents_",
+            "vneck", "scoop", "cardigan", "polo", "laced", "/vest/",
+            "jacket_frock", "jacket_collared", "dress_bodice", "dress_sash",
+            "dress_slit", "kimono_oversize", "kimono_longsleeve", "clothes_robe",
         )
         if any(token in path for token in excluded):
             return False

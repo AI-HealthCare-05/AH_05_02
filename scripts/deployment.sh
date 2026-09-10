@@ -21,14 +21,16 @@ build_and_push () {
 
   if [[ "$name" == "FastAPI" ]]; then
     tag_base="app"
+  elif [[ "$name" == "Current Screening Worker" ]]; then
+    tag_base="ai-current"
   else
     tag_base="ai"
   fi
   echo "${COLOR_BLUE}${name} Docker Image Build Start.${COLOR_NC}"
-  docker build --platform linux/amd64 -t ${docker_user}/${docker_repo}:${tag_base}-${tag} -f ${dockerfile} ${context}
+  docker build --platform linux/amd64 -t "${docker_user}/${docker_repo}:${tag_base}-${tag}" -f "${dockerfile}" "${context}"
 
   echo "${COLOR_BLUE}${name} Docker Image Push Start.${COLOR_NC}"
-  docker push ${docker_user}/${docker_repo}:${tag_base}-${tag}
+  docker push "${docker_user}/${docker_repo}:${tag_base}-${tag}"
 
   echo "${COLOR_GREEN}${name} Done.${COLOR_NC}"
   echo ""
@@ -37,14 +39,15 @@ build_and_push () {
 # ---------- Docker login Prompt ----------
 echo "${COLOR_BLUE}도커 유저네임과 비밀번호(PAT)을 입력해주세요.${COLOR_NC}"
 read -p "username: " docker_user
-read -p "password: " docker_pw
+read -sp "password: " docker_pw
 echo ""
 
 
 # ---------- Docker Login ----------
 echo "${COLOR_BLUE}Docker login${COLOR_NC}"
-if ! docker login -u ${docker_user} -p ${docker_pw} ; then
+if ! printf '%s' "$docker_pw" | docker login -u "$docker_user" --password-stdin ; then
   echo "${COLOR_RED}도커 로그인에 실패했습니다. 도커 유저네임과 비밀번호를 확인해주세요.${COLOR_NC}"
+  exit 1
 fi
 echo "${COLOR_GREEN}도커 로그인 성공!${COLOR_NC}"
 echo ""
@@ -58,6 +61,7 @@ echo ""
 echo "${COLOR_BLUE}배포 전 빌드 & 푸시할 이미지를 선택하세요(복수선택 가능, 띄어쓰기로 구분)${COLOR_NC}"
 echo "1) fastapi"
 echo "2) ai_worker"
+echo "3) today current-screening worker"
 read -p "선택 (예: 1 2): " selections
 echo ""
 
@@ -78,6 +82,12 @@ for choice in $selections; do
       read -p "AI-worker 앱 버젼: " ai_version
       build_and_push ${docker_user} ${docker_repo} "AI Worker" ${ai_version} "ai_worker/Dockerfile" "."
       DEPLOY_SERVICES+=("ai-worker")
+      ;;
+    3)
+      echo "${COLOR_BLUE}오늘이 AI-worker 배포 버전을 입력하세요(ex. v0.6.1)${COLOR_NC}"
+      read -p "오늘이 AI-worker 버전: " ai_current_version
+      build_and_push "${docker_user}" "${docker_repo}" "Current Screening Worker" "${ai_current_version}" "ai_worker/Dockerfile.current-screening" "."
+      DEPLOY_SERVICES+=("ai-worker-current")
       ;;
     *)
       echo "${COLOR_RED}잘못된 선택입니다: $choice${COLOR_NC}"
@@ -133,12 +143,13 @@ ssh -i ~/.ssh/${ssh_key_file} ubuntu@${ec2_ip} \
   cd project
 
   echo "Docker login"
-  docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PAT"
+  printf '%s' "$DOCKER_PAT" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
   echo "Deploying services: $DEPLOY_SERVICES"
   docker compose up -d --pull always --no-deps $DEPLOY_SERVICES
 
-  docker image prune -af
+  # 태그된 이전 이미지는 롤백을 위해 보존하고 dangling 이미지만 정리합니다.
+  docker image prune -f
 EOF
 
 echo "✅ Deployment finished."

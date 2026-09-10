@@ -1,11 +1,13 @@
 # 만성질환 생활습관 챌린지 웹서비스 API 명세서
 
+> 2026-09-08 챌린지 V3 추가 계약: [3영역·선호·난이도 및 사진 인증 API](CHALLENGES_V3.md#6-api-계약). 신규 선택은 `catalog_version=evidence-v3`를 사용하며 기존 사이클과 PUT 로그 계약은 유지한다. 사진 제출 endpoint는 `multipart/form-data`를 사용한다. 아래 기존 기준선 전체가 갱신되었다는 뜻은 아니다.
+
 | 항목 | 내용 |
 |---|---|
-| 문서 버전 | v2.1 |
+| 문서 버전 | v2.2 |
 | 작성일 | 2026-08-19 |
-| 최종 갱신일 | 2026-08-28 |
-| 상태 | Sprint 2 구현 기준선 (당근의 숲 게임 API 반영) |
+| 최종 갱신일 | 2026-09-10 |
+| 상태 | Sprint 2 구현 기준선 (인증 보안·비밀번호 재설정 API 반영) |
 | API Base URL | `/api/v1` |
 | 인증 방식 | Bearer Access Token |
 | 데이터 형식 | `application/json`, `snake_case` |
@@ -43,6 +45,10 @@
 - 사용자는 본인의 건강정보·예측·챌린지 기록만 조회하거나 변경할 수 있다.
 - 다른 사용자의 자원에 접근하면 `404`를 반환하여 자원 존재 여부를 노출하지 않는다.
 - 비밀번호·토큰·이메일 원문·건강 수치는 애플리케이션 로그에 기록하지 않는다.
+- 비밀번호는 8자 이상이며 영문자(대·소문자 구분 없음), 숫자, 특수문자를 각각 1자 이상 포함해야 한다.
+- 로그인 실패는 계정과 IP별로 제한한다. 계정은 연속 5회 실패 시 5분, 다음 5회 실패 시 30분 동안 제한하며 로그인 성공 시 계정·IP 실패 상태를 초기화한다.
+- 존재하지 않는 이메일도 일반 로그인 실패와 같은 문구 및 비밀번호 검증 과정을 사용하여 계정 존재 여부와 처리 시간 차이를 노출하지 않는다.
+- 비밀번호 변경 또는 재설정이 완료되면 기존 Access Token과 Refresh Token을 모두 무효화한다.
 
 ### 2.2 시간·목록·멱등성
 
@@ -90,6 +96,7 @@
 | `404` | 자원 없음 또는 소유권 없음 |
 | `409` | 이메일·검진일·챌린지 기록 중복 |
 | `422` | 필드 형식·단위·범위 오류 |
+| `429` | 로그인·비밀번호 재설정 요청 횟수 초과. `Retry-After` 헤더와 `retry_after_seconds` 반환 |
 | `500` | 서버 내부 오류 |
 | `503` | DB·모델 서버 준비되지 않음 |
 | `504` | 작업 접수 전 동기식 게이트웨이·모델 준비 확인의 시간 초과. `202` 접수 후 시간초과에는 사용하지 않음 |
@@ -111,6 +118,9 @@
 | POST | `/auth/login` | 로그인 및 토큰 발급 | 불필요 | REQ-USER-002 |
 | POST | `/auth/refresh` | Access Token 재발급 | Refresh Token | REQ-USER-002 |
 | POST | `/auth/logout` | Refresh Token 폐기 | 필요 | REQ-USER-002 |
+| PATCH | `/auth/password` | 현재 비밀번호 확인 후 비밀번호 변경 | 필요 | REQ-USER-002 |
+| POST | `/auth/password-reset/request` | 비밀번호 재설정 요청 | 불필요 | REQ-USER-002 |
+| POST | `/auth/password-reset/confirm` | 일회용 토큰으로 비밀번호 재설정 | 불필요 | REQ-USER-002 |
 | GET | `/users/me` | 내 계정·프로필 조회 | 필요 | REQ-HEALTH-001 |
 | PATCH | `/users/me/profile` | 성별·생년월일·키 수정 | 필요 | REQ-HEALTH-001 |
 | DELETE | `/users/me` | 재인증 후 탈퇴 요청 | 필요 | REQ-USER-004 |
@@ -226,7 +236,87 @@
 }
 ```
 
-### 4.2 적합성 확인
+비밀번호는 8자 이상이며 영문자(대·소문자 구분 없음), 숫자, 특수문자를 각각 1자 이상 포함해야 한다. 예를 들어 `health123!`는 허용되며 대문자는 필수가 아니다.
+
+### 4.2 로그인 제한
+
+`POST /api/v1/auth/login`
+
+```json
+{
+  "email": "user@example.com",
+  "password": "health123!"
+}
+```
+
+인증 실패 시 이메일 존재 여부와 관계없이 `400`과 동일한 메시지를 반환한다.
+
+```json
+{
+  "detail": "이메일 또는 비밀번호가 올바르지 않습니다."
+}
+```
+
+계정별 연속 5회 실패 시 5분간 제한하고, 제한 해제 후 다시 연속 5회 실패하면 30분간 제한한다. 공유 네트워크 공격을 막기 위해 IP별 연속 30회 실패 시에도 15분간 제한한다. 제한 중에는 `429 Too Many Requests`, `Retry-After` 응답 헤더와 다음 본문을 반환한다.
+
+```json
+{
+  "detail": {
+    "message": "로그인을 여러 번 시도했습니다. 잠시 후 다시 시도해 주세요.",
+    "retry_after_seconds": 300
+  }
+}
+```
+
+로그인 성공 시 해당 계정과 IP의 실패 횟수 및 잠금 단계를 초기화한다.
+
+### 4.3 비밀번호 변경
+
+`PATCH /api/v1/auth/password`
+
+```json
+{
+  "current_password": "health123!",
+  "new_password": "health456!",
+  "new_password_confirmation": "health456!"
+}
+```
+
+현재 비밀번호가 맞고 새 비밀번호와 확인 값이 일치하면 `204 No Content`를 반환한다. 기존 비밀번호와 같은 값은 허용하지 않는다. 변경 즉시 사용자의 인증 버전을 증가시켜 기존 Access Token과 Refresh Token을 무효화하며, 다시 로그인해야 한다.
+
+### 4.4 비밀번호 재설정 요청·확정
+
+`POST /api/v1/auth/password-reset/request`
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+계정 존재 여부와 관계없이 `202 Accepted`와 같은 안내 문구를 반환한다.
+
+```json
+{
+  "message": "가입된 이메일이라면 비밀번호 재설정 안내를 보냈습니다."
+}
+```
+
+로컬·개발 환경에서는 이메일 발송 없이 응답에 `development_reset_token`이 추가될 수 있다. 운영 환경에서는 이 값을 절대 반환하지 않고 SMTP로 재설정 링크를 발송한다. 토큰 유효기간은 30분이며 새 요청이 생성되면 이전 미사용 토큰은 폐기한다. 이메일별 연속 5회 또는 IP별 연속 20회 요청 시 15분간 제한하며 `429`와 재시도 시간을 반환한다.
+
+`POST /api/v1/auth/password-reset/confirm`
+
+```json
+{
+  "token": "one-time-reset-token",
+  "new_password": "health456!",
+  "new_password_confirmation": "health456!"
+}
+```
+
+성공하면 `204 No Content`를 반환한다. 재설정 토큰은 한 번만 사용할 수 있고 만료되거나 이미 사용한 토큰은 거부한다. 기존 비밀번호와 같은 값은 허용하지 않으며, 완료 즉시 기존 Access Token과 Refresh Token을 무효화한다.
+
+### 4.5 적합성 확인
 
 `POST /api/v1/eligibility-checks`
 
@@ -260,7 +350,7 @@
 
 적합성 판정 API는 판정이 완료되면 `200`을 반환한다. 기진단·경고 증상·미동의·모델 검증 범위 밖이면 `model_eligible=false`, 표준 `reason_codes`, 적절한 `next_action`을 반환하고 이후 예측 작업 생성을 허용하지 않는다.
 
-### 4.3 건강검진 입력
+### 4.6 건강검진 입력
 
 `POST /api/v1/health-checkups`
 
@@ -313,7 +403,7 @@
 
 `201 Created` 응답은 생성된 `checkup_id`, 서버가 계산한 `bmi`, 적용된 `feature_schema_version`, `created_at`, `validation.status=valid`를 포함한다.
 
-### 4.4 비동기 예측 요청
+### 4.7 비동기 예측 요청
 
 `POST /api/v1/prediction-jobs`
 
@@ -386,7 +476,7 @@
 
 설명 방법과 원변수 메타데이터가 검토·승인되기 전에는 `risk_factors` 레코드를 생성하지 않는다.
 
-### 4.5 예측 결과
+### 4.8 예측 결과
 
 `GET /api/v1/predictions/901`
 
@@ -414,7 +504,7 @@
 `risk_category`가 존재할 때만 공개한다. 그 전에는 `모델 검증 중`으로 표시하며 내부 점수와
 위험 범주를 공개하지 않는다.
 
-### 4.6 4주 챌린지 시작
+### 4.9 4주 챌린지 시작
 
 `POST /api/v1/challenge-cycles`
 
@@ -443,7 +533,7 @@
 }
 ```
 
-### 4.7 일일 수행 기록
+### 4.10 일일 수행 기록
 
 `PUT /api/v1/user-challenges/301/logs/2026-08-17`
 
@@ -457,7 +547,7 @@
 
 미래 날짜는 `422`, 같은 날짜의 재요청은 새 레코드를 만들지 않고 기존 기록을 정정한다.
 
-### 4.8 대시보드 요약
+### 4.11 대시보드 요약
 
 `GET /api/v1/dashboard/summary`
 
@@ -491,7 +581,7 @@
 | 화면 | 요구사항 | API | DB |
 |---|---|---|---|
 | 서비스 소개 | NFR-SAFE-001 | 없음 | 없음 |
-| 회원가입·로그인 | REQ-USER-001~002 | `/auth/*` | `users` |
+| 회원가입·로그인·비밀번호 관리 | REQ-USER-001~002 | `/auth/*` | `users`, `auth_throttles`, `password_reset_tokens` |
 | 건강정보 동의 | REQ-USER-003 | `/consents` | `consents` |
 | 적합성·안전 확인 | REQ-USER-003~004 | `/eligibility-checks` | `eligibility_checks`, `user_profiles` |
 | 검진 결과 입력 | REQ-HEALTH-001~004 | `/health-checkups` | `health_checkups` |
@@ -527,12 +617,17 @@
 
 | 영역 | Method | Endpoint | 핵심 안전 기준 |
 |---|---|---|---|
-| 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 실제 제조사 OAuth 전에는 `development_mock` 또는 수동 파일 가져오기로 표시 |
+| 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 제조사 OAuth 대신 `apple_health_export`, `android_health_connect` 파일 정제 방식으로 표시 |
 | 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
+| 웨어러블 건강정보 후보 | GET | `/api/v1/wearables/health-candidates` | 확인된 최대 7일 기록으로 운동 빈도·시간 후보 생성, 자동 저장 금지 |
+| 웨어러블 파일 미리보기 | POST | `/api/v1/wearables/file-previews` | Apple XML·Android JSON을 원본 저장 없이 일일 요약으로 변환 |
+| 웨어러블 건강정보 적용 | PATCH | `/api/v1/wearables/health-candidates/{checkup_id}` | 사용자 확인 후 운동 여부·일수·시간만 부분 갱신 |
 | 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
+| 퀴즈 조회 | GET | `/api/v1/health-education/quizzes` | 승인 문서에서 규칙 기반(rule-based) 자동 생성, OX·빈칸 채우기 2종, 조회 응답에는 정답·해설 미포함(제출 API는 후속) |
 | 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
 | 채소 식사 사진 자동 인증 | POST | `/api/v1/user-challenges/{id}/meal-photo-verifications` | multipart 사진 업로드, 채소 포함 여부·시각적 비율(%)만 자동 판별해 챌린지 인증·기록, 칼로리·영양·치료 판정 금지, 원본 이미지 미저장(SHA-256 다이제스트만 보관) |
-| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 허용 필드만 반환, 건강검진 기록 자동 저장 금지 |
+| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 구조화 필드 또는 OCR 텍스트에서 허용 필드만 반환, 신원정보 제외·건강검진 기록 자동 저장 금지 |
+| OCR 건강정보 적용 | PATCH | `/api/v1/ocr-drafts/{draft_id}/health-checkups/{checkup_id}` | 사용자가 확인한 신체계측·혈압만 기존 건강정보에 부분 갱신 |
 | 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
 | 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
 | 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |

@@ -79,6 +79,7 @@ class Token:
     def for_user(cls, user: User) -> Self:
         token = cls()
         token["user_id"] = user.id
+        token["auth_version"] = user.auth_version
         return token
 
 

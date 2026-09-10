@@ -71,6 +71,7 @@ fs.mkdirSync(dir, { recursive: true });
         await login();
       } else {
         await page.locator('#sidebar-signup').click();
+        await page.locator('#signup-nickname').fill('복구집주인');
         await page.locator('#email').fill('recovery-qa@example.com');
         await page.locator('#password').fill('Example123!');
         await page.locator('#signup-birth-date').fill('1974-04-12');
@@ -100,6 +101,7 @@ fs.mkdirSync(dir, { recursive: true });
         await page.waitForFunction(() => !document.querySelector('#recovery-birthday').disabled);
       }
       if (!(await page.locator('#recovery-birthday').isDisabled())) {
+        await page.locator('#recovery-name').fill('복구집주인');
         await page.locator('#recovery-birthday').fill('1974-04-12');
         await page.locator('#recovery-gender').selectOption('FEMALE');
       }

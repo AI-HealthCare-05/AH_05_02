@@ -14,7 +14,7 @@ function harness() {
   const failures = new Set();
   let factorFailure = false;
   const context = vm.createContext({
-    state, $, isLocalPreview: () => false, predictionFailureGuidance: {},
+    state, $, isLocalPreview: () => false, requireActiveHealthConsent: () => true, predictionFailureGuidance: {},
     requestPredictionModel: async key => {
       calls.push(key);
       if (failures.has(key)) throw Object.assign(new Error('unavailable'), { code: 'MODEL_UNAVAILABLE' });
@@ -23,6 +23,7 @@ function harness() {
     api: async url => { calls.push(url); if (factorFailure) throw new Error('503'); return { items: [] }; },
     renderPredictionStatus: status => { state.status = status; },
     renderPrediction: prediction => { state.renderedFuture = prediction; },
+    renderTwoYearRiskForecast: () => {},
     renderCurrentHealthResult: prediction => { state.renderedCurrent = prediction; },
     openResultStepAfterSuccessfulAnalysis: async guard => { if (!guard || guard()) state.step = 6; },
   });
@@ -102,14 +103,22 @@ test('changed checkup invalidates cached success, even with retry requested', as
 });
 test('duplicate clicks do not start duplicate requests; stale session cannot commit', async () => {
   const h = harness();
-  let resolve;
+  const resolvers = {};
   let count = 0;
-  h.context.requestPredictionModel = () => { count++; return new Promise(done => { resolve = done; }); };
+  // 오늘이·내일이는 이제 병렬로 요청되므로(runPrediction의 Promise.all), 모델별로
+  // 독립된 resolve를 잡아둔다. count는 "한 번의 run() 호출"당 모델 수(2)만큼
+  // 올라가는 게 정상이고, 여기서 확인하려는 건 두 번째(중복) run() 호출이
+  // 추가 요청을 만들지 않는지다.
+  h.context.requestPredictionModel = key => {
+    count++;
+    return new Promise(done => { resolvers[key] = done; });
+  };
   const pending = h.run();
   await h.run();
-  assert.equal(count, 1);
+  assert.equal(count, 2);
   h.state.token = 'another-test-session';
-  resolve({ predictionId: 10, prediction: { model_key: CURRENT } });
+  resolvers[CURRENT]({ predictionId: 10, prediction: { model_key: CURRENT } });
+  resolvers[FUTURE]({ predictionId: 20, prediction: { model_key: FUTURE } });
   await pending;
   assert.equal(h.state.currentScreeningPrediction, undefined);
   assert.equal(h.state.step, 5);

@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,13 +11,22 @@ from app.apis.v1 import v1_routers
 from app.core import config
 from app.core.db.databases import initialize_tortoise
 from app.core.redis import close_redis, redis_client
+from app.middleware.challenge_upload_limit import ChallengeUploadLimit
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if not config.DEMO_MODE:
         await redis_client.ping()
-    yield
+    from app.services.challenge_v2_retention import retention_loop
+
+    retention = asyncio.create_task(retention_loop())
+    try:
+        yield
+    finally:
+        retention.cancel()
+        with suppress(asyncio.CancelledError):
+            await retention
     if not config.DEMO_MODE:
         await close_redis()
 
@@ -28,8 +38,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 initialize_tortoise(app)
+app.add_middleware(ChallengeUploadLimit)
 
 app.include_router(v1_routers)
+
+# report-v1.4-draft §3 API 공통 조건: 민감 응답(리포트류)은 Cache-Control: private, no-store를
+# 권장한다. 라우터 안에서 개별적으로 response.headers를 설정하면 200 응답에는 적용되지만, 그
+# 라우트가 HTTPException을 던지는 에러 응답(404/422/401 등)은 FastAPI가 별도의 응답 객체를 새로
+# 만들어 처리하므로 헤더가 유실된다. 이 미들웨어는 응답이 성공이든 예외에서 나온 것이든 상관없이
+# 해당 경로 전부에 헤더를 강제로 붙여서 그 사각지대를 없앤다.
+_SENSITIVE_REPORT_PATH_PREFIXES = ("/api/v1/reports", "/api/v1/weekly-reports")
+
+
+@app.middleware("http")
+async def _no_store_for_sensitive_reports(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(_SENSITIVE_REPORT_PATH_PREFIXES):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "src" / "frontend"
 if FRONTEND_DIR.exists():
@@ -44,6 +71,15 @@ async def home() -> FileResponse:
 @app.get("/forest", include_in_schema=False)
 async def carrot_forest() -> FileResponse:
     response = FileResponse(FRONTEND_DIR / "forest.html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/service", include_in_schema=False)
+async def suin_service() -> FileResponse:
+    """Namespaced September 7 frontend; shares the forest's host-only session."""
+    response = FileResponse(FRONTEND_DIR / "suin" / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response

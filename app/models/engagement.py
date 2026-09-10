@@ -46,6 +46,19 @@ class ContentProgress(Model):
         unique_together = (("user_id", "content_id"),)
 
 
+class HealthQuizAttempt(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    quiz_id = fields.CharField(max_length=120, db_index=True)
+    document_id = fields.CharField(max_length=120, db_index=True)
+    submitted_answer = fields.CharField(max_length=100)
+    is_correct = fields.BooleanField()
+    attempted_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "health_quiz_attempts"
+
+
 class Invitation(Model):
     id = fields.BigIntField(primary_key=True)
     inviter_user_id = fields.BigIntField(db_index=True)

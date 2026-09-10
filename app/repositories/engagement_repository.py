@@ -11,6 +11,7 @@ from app.models.engagement import (
     ContentProgress,
     EducationContent,
     Encouragement,
+    HealthQuizAttempt,
     Invitation,
     SharedChallengeGroup,
     SharedChallengeMember,
@@ -22,11 +23,38 @@ class EngagementRepository:
     async def create_barrier(self, **values: Any) -> ChallengeBarrier:
         return await ChallengeBarrier.create(**values)
 
-    async def list_barriers(self, user_id: int, start_date: date | None = None) -> list[ChallengeBarrier]:
+    async def list_barriers(
+        self,
+        user_id: int,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        user_challenge_ids: list[int] | None = None,
+    ) -> list[ChallengeBarrier]:
+        """Barriers for a user, optionally scoped to a date range and a set of selected
+        user_challenge_ids (report-v1.4-draft §2.4 work item F). Without both bounds this
+        keeps the old "everything since start_date" behaviour used by the legacy weekly
+        report. When a range is given, results are deduped to the latest-id row per
+        (user_challenge_id, log_date) so a corrected resubmission doesn't double-count.
+        """
         query = ChallengeBarrier.filter(user_id=user_id)
         if start_date is not None:
             query = query.filter(log_date__gte=start_date)
-        return await query.order_by("-log_date", "-id")
+        if end_date is not None:
+            query = query.filter(log_date__lte=end_date)
+        if user_challenge_ids is not None:
+            if not user_challenge_ids:
+                return []
+            query = query.filter(user_challenge_id__in=user_challenge_ids)
+        items = await query.order_by("-log_date", "-id")
+        if user_challenge_ids is None:
+            return items
+        latest_by_key: dict[tuple[int, date], ChallengeBarrier] = {}
+        for item in items:
+            key = (item.user_challenge_id, item.log_date)
+            existing = latest_by_key.get(key)
+            if existing is None or item.id > existing.id:
+                latest_by_key[key] = item
+        return sorted(latest_by_key.values(), key=lambda item: (item.log_date, item.id), reverse=True)
 
     async def content_catalog(self) -> list[EducationContent]:
         return await EducationContent.filter(is_active=True).order_by("week_number")
@@ -45,6 +73,15 @@ class EngagementRepository:
             content_id=values["content_id"],
         )
         return item
+
+    async def record_quiz_attempt(self, **values: Any) -> HealthQuizAttempt:
+        return await HealthQuizAttempt.create(**values)
+
+    async def correct_quiz_ids(self, user_id: int) -> set[str]:
+        """이 사용자가 정답을 맞힌 적 있는 quiz_id 집합. 회차가 바뀌어도 이미 맞힌 문항을
+        새 문항보다 뒤로 미루는 데 쓴다(퀴즈 노출 우선순위 결정용, 접근 제한 용도 아님)."""
+        rows = await HealthQuizAttempt.filter(user_id=user_id, is_correct=True).values_list("quiz_id", flat=True)
+        return set(rows)
 
     async def create_invitation(self, **values: Any) -> Invitation:
         return await Invitation.create(**values)

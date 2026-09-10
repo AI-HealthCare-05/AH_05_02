@@ -1,0 +1,20 @@
+{
+  "data": {
+    "answer": "가슴 통증, 의식 저하, 심한 호흡곤란, 마비, 경련 같은 증상은 응급상황일 수 있습니다. 이 서비스의 답변을 기다리지 말고 지금 바로 119에 연락하거나 가까운 응급실을 방문하세요.",
+    "answer_status": "emergency_redirect",
+    "citations": [
+      {
+        "document_id": "kdca-hyperglycemia-emergency",
+        "title": "질병관리청 국가건강정보포털 - 고혈당",
+        "url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5304",
+        "checked_at": "2026-08-19"
+      }
+    ],
+    "retrieval_method": "approved_document_keyword_v1",
+    "medical_notice": "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."
+  },
+  "meta": {
+    "request_id": "req_65edc354510347a8",
+    "timestamp": "2026-09-09T06:48:24.144219+00:00"
+  }
+}

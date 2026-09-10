@@ -33,10 +33,17 @@ class Config(BaseSettings):
     DATABASE_URL: str | None = None
     DEMO_MODE: bool = False
 
+    # Challenge V2 remains opt-in outside demo mode until content review is complete.
+    CHALLENGE_V2_ENABLED: bool = False
+    CHALLENGE_V2_CONTENT_APPROVED: bool = False
+    # Photo evidence is reviewed only by explicitly configured active admins.
+    CHALLENGE_V2_REVIEWER_IDS: list[int] = []
+
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_STREAM: str = "ai:jobs"
+    CURRENT_SCREENING_REDIS_STREAM: str = "ai:jobs:current-screening"
     REDIS_CONSUMER_GROUP: str = "ai-workers"
     REDIS_JOB_TTL_SECONDS: int = 86400
 
@@ -61,17 +68,17 @@ class Config(BaseSettings):
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
-    CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.5.0"
-    CURRENT_SCREENING_FEATURE_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-v2"
+    CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.6.1"
+    CURRENT_SCREENING_FEATURE_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-v4-waist-residual"
     CURRENT_SCREENING_INPUT_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-api-v1"
-    CURRENT_SCREENING_PREPROCESSING_VERSION: str = "knhanes-2016-2024-recall-v050"
+    CURRENT_SCREENING_PREPROCESSING_VERSION: str = "knhanes-2016-2024-recall-v061"
     CURRENT_SCREENING_TARGET_DEFINITION_VERSION: str = "current-diabetes-signal-v1"
-    CURRENT_SCREENING_THRESHOLD_VERSION: str = "validation-2021-2022-spec042-v1"
-    CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.023227178771059433
-    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = "c257ebc7785d4a1b36a7cda6d9aeeb107dbfa1b6afbf4c64c806849b8969370e"
-    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+    CURRENT_SCREENING_THRESHOLD_VERSION: str = "validation-2021-2022-spec042-v3"
+    CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.02323125331773926
+    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = "ffc6743849973676308703dd6bd5af0f8d557d5f45a8886e6660f86c81b85178"
+    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
     CURRENT_SCREENING_MANIFEST_URI: str = (
-        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v050.json"
+        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
     )
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
@@ -81,6 +88,16 @@ class Config(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
+
+    HEALTH_EDUCATION_EMBEDDING_PROVIDER: str = "development"
+    HEALTH_EDUCATION_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    HEALTH_EDUCATION_GENERATION_PROVIDER: str = "development"
+    HEALTH_EDUCATION_TIMEOUT_SECONDS: int = 20
+    HEALTH_EDUCATION_KEYWORD_WEIGHT: float = 0.5
+    HEALTH_EDUCATION_EMBEDDING_WEIGHT: float = 0.5
+    HEALTH_EDUCATION_RELEVANCE_THRESHOLD: float = 0.18
+    HEALTH_EDUCATION_TOP_K: int = 6
+    HEALTH_EDUCATION_MAX_CITATIONS: int = 3
 
     # 위치 기반 근처 의료기관 조회. 진단·처방을 대신하지 않고, 위치 기반 안내만 제공합니다.
     MEDICAL_FACILITY_SEARCH_PROVIDER: str = "development"
@@ -103,8 +120,39 @@ class Config(BaseSettings):
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 
     COOKIE_DOMAIN: str = "localhost"
+    FRONTEND_BASE_URL: str = "http://localhost:8001"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
 
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 14 * 24 * 60
     JWT_LEEWAY: int = 5
+
+
+def assert_production_secrets_are_configured(config: Config) -> None:
+    """운영 환경에서 기본값(SECRET_KEY, DB_PASSWORD)이 그대로 남아있으면 기동을 막는다.
+
+    "envs/.prod.env"에 실제 값을 채우는 걸 깜빡해도 서버가 조용히 켜져서, 기본
+    비밀번호(DB_PASSWORD=pw1234)나 매 기동마다 바뀌는 임시 SECRET_KEY로 운영되는
+    상태를 막기 위한 안전장치. ENV가 prod가 아니면(local/dev) 검사하지 않는다.
+    """
+    if config.ENV != Env.PROD:
+        return
+
+    problems: list[str] = []
+    if not config.SECRET_KEY or config.SECRET_KEY.startswith("default-secret-key"):
+        problems.append("SECRET_KEY")
+    if not config.DB_PASSWORD or config.DB_PASSWORD == "pw1234":
+        problems.append("DB_PASSWORD")
+
+    if problems:
+        raise RuntimeError(
+            "운영 환경(ENV=prod)인데 다음 값이 기본값 그대로입니다: "
+            + ", ".join(problems)
+            + ". envs/.prod.env에 실제 값을 설정한 뒤 다시 배포해 주세요."
+        )

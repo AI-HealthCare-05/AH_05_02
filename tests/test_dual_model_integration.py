@@ -14,6 +14,7 @@ from app.core import config
 from app.core.db.databases import TORTOISE_APP_MODELS
 from app.dtos.health import PredictionJobCreateRequest
 from app.main import app
+from app.services.ai_jobs import job_stream
 from app.services.health import HealthService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,6 +32,11 @@ def test_prediction_job_contract_separates_today_and_tomorrow_models() -> None:
             model_key="diabetes_current_screening",
             prediction_type="survival_curve",
         )
+
+
+def test_prediction_jobs_route_to_runtime_specific_streams() -> None:
+    assert job_stream("diabetes_current_screening") == config.CURRENT_SCREENING_REDIS_STREAM
+    assert job_stream("diabetes_incidence") == config.REDIS_STREAM
 
 
 def test_health_checkup_maps_to_current_screening_without_guessing_missing_fields() -> None:
@@ -54,7 +60,7 @@ def test_health_checkup_maps_to_current_screening_without_guessing_missing_field
     assert payload["walking_days"] == 3.0
     assert payload["diabetes_family_history"] is None
     assert payload["energy_kcal"] is None
-    assert payload["aerobic_activity"] is True
+    assert payload["aerobic_activity"] == 1
 
 
 @pytest.mark.asyncio
@@ -69,16 +75,18 @@ async def test_current_screening_worker_keeps_unapproved_result_internal(monkeyp
             "threshold": 0.02,
         }
     )
-    monkeypatch.setattr(screening, "load_current_screening_model", lambda: loaded)
+    monkeypatch.setattr(screening, "load_current_screening_model", lambda **_kwargs: loaded)
     monkeypatch.setattr(
         screening,
         "predict_with_loaded_current_model",
         lambda _loaded, _payload: {
+            "task_type": "current_cross_sectional_screening",
             "screening_signal_detected": True,
             "risk_score_internal": 0.8,
             "model_version": "today-test-v1",
             "feature_schema_version": "today-features-v1",
             "threshold_version": "today-threshold-v1",
+            "threshold_scope": "current_cross_sectional_screening",
         },
     )
 

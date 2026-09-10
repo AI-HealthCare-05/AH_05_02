@@ -67,6 +67,16 @@
 
 ## 로컬 실행
 
+프론트 화면만 빠르게 확인:
+
+```bash
+./scripts/preview-frontend.sh
+```
+
+회원가입 화면 바로 확인: `http://127.0.0.1:8765/?auth=signup`
+
+전체 백엔드 포함 실행:
+
 ```bash
 uv python install 3.13
 uv sync --all-groups --frozen

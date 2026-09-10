@@ -65,7 +65,8 @@ def test_existing_frontend_contracts_remain_visible() -> None:
 
     assert 'href="tel:119"' in html
     assert 'id="risk-traffic-light"' in html
-    assert 'id="risk-hyeoldangi"' in html
+    assert 'id="risk-hyeoldangi"' not in html
+    assert 'id="challenge-lifestyle-summary"' not in html
     assert "hyeoldangi-face-high.png" in html
     assert 'id="rag-challenge-generator"' in html
     assert 'id="medical-guidance-detail"' in html
