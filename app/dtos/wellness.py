@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class WearableConnectionRequest(BaseModel):
-    provider: Literal[
-        "development_mock", "file_import", "apple_health_export", "android_health_connect"
-    ] = "development_mock"
+    provider: Literal["development_mock", "file_import", "apple_health_export", "android_health_connect"] = (
+        "development_mock"
+    )
     scopes: list[Literal["activity", "sleep", "heart_rate"]] = Field(default_factory=lambda: ["activity"])
 
 

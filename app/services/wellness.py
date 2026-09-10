@@ -159,7 +159,9 @@ class WellnessService:
 
     async def wearable_health_candidates(self, user: User, start: date, end: date) -> dict[str, object]:
         if end < start or (end - start).days > 6:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="건강정보 후보는 최대 7일입니다.")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="건강정보 후보는 최대 7일입니다."
+            )
         items = await self.repo.daily_summaries(user.id, start, end)
         return build_health_candidates(items)
 
