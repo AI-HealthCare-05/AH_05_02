@@ -72,6 +72,14 @@ async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
             )
             assert rag.json()["data"]["citations"]
 
+            quizzes = await client.get("/api/v1/health-education/quizzes", headers=headers)
+            assert quizzes.status_code == status.HTTP_200_OK
+            quiz_items = quizzes.json()["data"]["items"]
+            assert quiz_items
+            for item in quiz_items:
+                assert "answer" not in item
+                assert "explanation" not in item
+
             food = await client.post("/api/v1/food-analyses", headers=headers, json={"image_name": "lunch_salad.jpg"})
             food_data = food.json()["data"]
             assert food_data["provider"] == "development_mock"
