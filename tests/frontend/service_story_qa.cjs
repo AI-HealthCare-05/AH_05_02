@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { mkdirSync, readFileSync } = require('node:fs');
-assert.match(readFileSync('src/frontend/app.js', 'utf8'), /const duration = 50;/);
+assert.match(readFileSync('src/frontend/app.js', 'utf8'), /const duration = 200;/);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const base = process.env.QA_BASE_URL || 'http://127.0.0.1:8022';
 assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
@@ -19,6 +19,27 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
       assert.equal(await page.locator('#story-forest .story-forest-footer').count(), 0);
       assert.ok(await page.locator('.intro-safety-note').isVisible());
       assert.ok((await page.locator('#story-closing-title').innerText()).includes('함께 시작해요'));
+      const storyCta = page.locator('.story-closing [data-story-start]');
+      assert.match(await storyCta.innerText(), /회원가입하고 시작하기/);
+      assert.equal(await storyCta.locator('.story-arrow-icon').innerText(), '→');
+      const ctaPalette = await storyCta.evaluate(button => {
+        const style = getComputedStyle(button);
+        const badge = getComputedStyle(button.querySelector('.story-arrow-badge'));
+        return { background: style.backgroundColor, color: style.color, badge: badge.backgroundColor };
+      });
+      assert.deepEqual(ctaPalette, { background: 'rgb(23, 107, 91)', color: 'rgb(245, 244, 239)', badge: 'rgb(11, 77, 66)' });
+      await storyCta.hover();
+      await page.waitForTimeout(520);
+      const reveal = await storyCta.evaluate(button => {
+        const bounds = button.getBoundingClientRect();
+        const icon = button.querySelector('.story-arrow-icon').getBoundingClientRect();
+        return {
+          badgeTransform: getComputedStyle(button.querySelector('.story-arrow-badge')).transform,
+          iconOffset: Math.abs((icon.left + icon.width / 2) - (bounds.left + bounds.width / 2)),
+        };
+      });
+      assert.notEqual(reveal.badgeTransform, 'none');
+      assert.ok(reveal.iconOffset < 2);
       assert.equal(await page.locator('.service-story').evaluate(n => getComputedStyle(n).backgroundColor), 'rgb(245, 244, 239)');
       const minContrast = await page.evaluate(() => {
         const style = getComputedStyle(document.body);
@@ -50,7 +71,7 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
         await page.mouse.move(700, 450);
         const beforeWheel = await page.evaluate(() => scrollY);
         await page.mouse.wheel(0, 600);
-        // A 50ms transition may finish before a browser round-trip observes it.
+        // A 200ms transition keeps the scene change quick while making the motion readable.
         await page.waitForFunction(before => scrollY > before + 100, beforeWheel);
         await page.waitForFunction(() => !document.documentElement.classList.contains('landing-transitioning'));
         assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollSnapType), 'y mandatory');

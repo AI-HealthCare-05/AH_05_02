@@ -41,7 +41,9 @@ def test_pixel_game_state_reward_and_adapter_contract_are_explicit() -> None:
     assert "/user-challenges/{id}/logs/{date}" in html
     assert "/forest/spaces/{group_id}" in html
     assert script.count("completed: 3") == 4
-    assert "completed >= 15" in script
+    assert "Number(state.server?.home?.today?.target || 15)" in script
+    assert 'completed >= target ? "공동 목표 달성!' in script
+    assert "completed < target || state.rewardClaimed" in script
     assert "state.rewardClaimed" in script
     assert "state.avatar.equipped" in script
     assert "state.placed.push" in script
@@ -478,8 +480,8 @@ def test_face_editor_outfit_expansion_and_polish_contract() -> None:
     assert 'homeRecordWarm: new Audio("/static/assets/lp-warm-afternoon-v2.mp3")' in game_script
     assert 'homeRecordBright: new Audio("/static/assets/lp-bright-sam-v2.mp3")' in game_script
     assert 'homeRecordUntitled: new Audio("/static/assets/lp-untitled-v2.mp3")' in game_script
-    assert 'homeRecordSimple' not in game_script
-    assert 'homeRecordElfwood' not in game_script
+    assert "homeRecordSimple" not in game_script
+    assert "homeRecordElfwood" not in game_script
     assert 'garden: new Audio("/static/assets/town-pro-sensory-cc0.mp3")' in game_script
     assert 'homeRecordCatalog[state.homeRecordTrack]?.audioKey || "homeRecordHome"' in game_script
     assert 'target === "record_player"' in game_script
@@ -610,9 +612,9 @@ def test_interactive_placed_objects_use_their_visible_sprite_as_click_target() -
     phaser_script = (ROOT / "src/frontend/forest-phaser.js").read_text(encoding="utf-8")
 
     assert 'window.addEventListener("forest-placed-object-pointer"' in game_script
-    assert 'await interact(`object:${index}`)' in game_script
+    assert "await interact(`object:${index}`)" in game_script
     assert 'actor.getData("pointerTargets") || [actor]' in phaser_script
-    assert 'target.setInteractive({ useHandCursor: true })' in phaser_script
+    assert "target.setInteractive({ useHandCursor: true })" in phaser_script
     assert 'new CustomEvent("forest-placed-object-pointer"' in phaser_script
 
 
@@ -701,9 +703,9 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     assert 'class="asset-dock rail-assets"' in html
     assert html.index('class="asset-dock rail-assets"') < html.index('class="stage-footer arcade-deck"')
     assert 'class="object-inspector footer-objects"' in html
-    assert "grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr)" in (ROOT / "src/frontend/forest-game.css").read_text(
-        encoding="utf-8"
-    )
+    assert "grid-template-columns:minmax(250px,.8fr) minmax(0,2.2fr)" in (
+        ROOT / "src/frontend/forest-game.css"
+    ).read_text(encoding="utf-8")
     assert 'grid-template-areas:"jump up run" "left interact right" "ride down attack"' in (
         ROOT / "src/frontend/forest-game.css"
     ).read_text(encoding="utf-8")
@@ -803,7 +805,7 @@ def test_lpc_clothing_uses_one_shared_animation_for_body_and_outfit_layers() -> 
     assert 'const movementAnimations = options.running ? ["run", "walk", "idle"]' in engine_script
     assert 'jump: ["jump", "walk", "idle"]' in engine_script
     assert "layers.every((layer)" in engine_script
-    assert "return sharedAnimation(avatar, options, movementAnimations) || \"walk\"" in engine_script
+    assert 'return sharedAnimation(avatar, options, movementAnimations) || "walk"' in engine_script
 
 
 def test_tools_use_official_actions_without_the_legacy_carrot_prop_and_preview_on_selection() -> None:

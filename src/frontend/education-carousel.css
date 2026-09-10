@@ -1,0 +1,42 @@
+.education-carousel{margin-top:26px;border:0;border-radius:0;background:transparent;overflow:hidden}
+.education-carousel-hint{margin:0;padding:22px 26px 0;color:var(--muted);font-size:15px;line-height:1.6}
+.education-magnetic-track{display:flex;align-items:center;justify-content:safe center;gap:16px;min-height:510px;padding:30px 26px;margin:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-padding-inline:26px;scrollbar-width:thin;scrollbar-color:#afc8bd transparent}
+.education-magnetic-track .education-overview-card{--magnet:0;position:relative;flex:0 0 auto;width:calc(156px + var(--magnet)*72px);height:calc(338px + var(--magnet)*36px);min-height:0;padding:0;overflow:hidden;border:1px solid #d3dfd8;border-radius:18px;background:var(--surface);box-shadow:0 8px 24px #254b3c12;transition:width .24s ease,height .24s ease,filter .24s ease,opacity .24s ease,box-shadow .24s ease}
+.education-magnetic-track .education-overview-card[data-completed=true]{border:2px solid var(--green)}
+.education-magnetic-track .education-overview-card.is-selected{border:2px solid var(--green);box-shadow:0 8px 24px #254b3c24}
+.education-card-toggle{position:relative;display:block;flex-shrink:0;width:100%;height:100%;padding:0;overflow:hidden;border:0;border-radius:0;background:var(--education-art,#dbece2);color:#173d32;cursor:pointer;text-align:left}
+.education-card-toggle:focus-visible{outline:4px solid var(--green);outline-offset:-5px}
+.education-card-art{position:absolute;inset:0;background:radial-gradient(circle at 68% 30%,#ffffffc9,transparent 60%);overflow:hidden}
+.education-card-art img{position:absolute;top:15%;left:50%;width:225px;max-width:none;height:225px;object-fit:contain;transform:translateX(-50%);pointer-events:none;user-select:none}
+.education-card-week{position:absolute;top:17px;left:15px;padding:6px 10px;border-radius:20px;background:#ffffffde;font-size:14px;font-weight:800;z-index:1}
+.education-card-cover-copy{position:absolute;bottom:0;left:0;right:0;padding:40px 16px 20px;background:linear-gradient(transparent,#173d32e8 30%);color:var(--paper);min-height:118px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px}
+.education-card-cover-copy strong{font-size:20px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
+.education-card-cover-copy .education-status-badge{align-self:flex-start;background:#ffffff25;color:var(--paper);padding:4px 8px;font-size:12px}
+.education-overview-card[data-completed=true] .education-card-cover-copy .education-status-badge{background:#d9f4dc;color:#24583c}
+.education-magnetic-track.has-open .education-overview-card:not(.is-open){filter:blur(1px);opacity:.48;width:116px}
+.education-magnetic-track.has-open .education-overview-card:not(.is-open):focus-within{filter:none;opacity:1}
+.education-magnetic-track .education-overview-card.is-open{width:440px;height:448px;box-shadow:0 18px 35px #254b3c22;filter:none;opacity:1}
+.education-overview-card.is-open .education-card-toggle{height:180px}
+.education-overview-card.is-open .education-card-art img{top:-20px;left:76%;width:190px;height:190px}
+.education-overview-card.is-open .education-card-cover-copy{padding:50px 22px 16px;min-height:92px;background:linear-gradient(transparent,#173d32ed)}
+.education-overview-card.is-open .education-card-cover-copy strong{font-size:22px;padding-right:8px}
+.education-card-details{display:flex;flex-direction:column;gap:12px;min-height:0;flex:1;padding:20px 22px}
+.education-card-details[hidden]{display:none}
+.education-card-details>p{margin:0;color:var(--muted);font-size:16px;line-height:1.65;overflow:auto}
+.education-card-details>small{font-size:13px;color:var(--green)}
+.education-card-details .education-open{min-height:46px;padding:10px 16px;font-size:16px;flex-shrink:0}
+.education-carousel-controls{display:flex;align-items:center;justify-content:center;gap:16px;padding:0 20px 22px}
+.education-carousel-controls[hidden]{display:none}
+.education-carousel-controls button{width:42px;height:42px;border:1px solid #c8d8cf;border-radius:50%;background:var(--paper);color:var(--green-dark);font-size:22px;cursor:pointer}
+.education-carousel-controls button:disabled{opacity:.3;cursor:default}
+.education-carousel-controls [role=status]{font-size:14px;color:var(--muted);min-width:175px;text-align:center}
+.education-magnetic-track>.report-empty{width:100%;align-self:stretch}
+@media(max-width:700px){.education-magnetic-track{justify-content:flex-start;padding:24px 18px;scroll-padding-inline:18px;gap:12px;min-height:490px}.education-magnetic-track .education-overview-card{width:140px;height:324px}.education-magnetic-track .education-overview-card.is-open{width:min(400px,calc(100vw - 100px));height:448px}.education-card-cover-copy strong{font-size:18px}.education-overview-card.is-open .education-card-cover-copy strong{font-size:20px}.education-card-details{padding:16px}.education-card-details>p{font-size:15px}.education-carousel-hint{padding:18px 18px 0}}
+@media(prefers-reduced-motion:reduce){.education-magnetic-track .education-overview-card{transition:none!important}.education-magnetic-track.has-open .education-overview-card:not(.is-open){filter:none}}
+body.education-modal-open{overflow:hidden}
+dialog.education-learning-modal{position:fixed;inset:0;width:min(720px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:26px;overflow:auto;overscroll-behavior:contain;border:1px solid #b8cdc1;border-radius:24px;background:#f8fcfa;color:var(--ink);box-shadow:0 24px 90px #173d3240}
+dialog.education-learning-modal::backdrop{background:#142c2466;backdrop-filter:blur(4px)}
+.education-learning-modal .education-flow-heading{gap:16px;align-items:flex-start}
+.education-learning-modal .education-modal-close{flex-shrink:0;padding:8px 12px;min-height:44px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--green-dark)}
+.education-modal-close span{margin-left:8px;font-size:24px;line-height:1}
+@media(max-width:520px){dialog.education-learning-modal{padding:18px 14px;max-height:calc(100dvh - 24px);border-radius:18px}.education-learning-modal .education-flow-heading{flex-direction:row}.education-learning-modal .education-flow-heading h4{font-size:22px}.education-learning-modal .education-modal-close{padding:6px 9px}}

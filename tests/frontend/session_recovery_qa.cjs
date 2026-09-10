@@ -77,6 +77,7 @@ function authenticatedFixtures(route, { predictionExpired = false, reauthenticat
       state.healthCheckupResult = { checkup_id: 777 };
       state.currentHealthOnly = true;
       state.capabilities.currentHealth = true;
+      state.healthConsentStatus = 'active';
       showStep(5);
     });
     await sessionPage.evaluate(() => runPrediction());

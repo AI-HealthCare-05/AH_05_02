@@ -59,7 +59,8 @@ function displayContext(today) {
       && prediction?.display_allowed !== false,
     rememberModelOutputMetadata: () => {}, requiresMedicalResultGuidance: () => false,
     renderPredictionStatus: () => {}, showFuturePredictionResult: () => {},
-    renderAgeRiskForecast: () => {}, updateLifestyleSummary: () => {},
+    renderXaiExplanationLists: () => {},
+    renderAgeRiskForecast: () => {}, renderTwoYearRiskForecast: () => {}, updateLifestyleSummary: () => {},
     forecastSignalLabel: key => key, escapeHtml: text => text,
   });
   return context;

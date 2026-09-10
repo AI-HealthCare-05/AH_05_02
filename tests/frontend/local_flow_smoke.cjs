@@ -29,6 +29,7 @@ fs.mkdirSync(dir, { recursive: true });
   try {
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.locator('#sidebar-signup').click();
+    await page.locator('#signup-nickname').fill('시연집주인');
     await page.locator('#email').fill(email);
     await page.locator('#password').fill(password);
     await page.locator('#signup-birth-date').fill('1966-04-12');
@@ -89,11 +90,16 @@ fs.mkdirSync(dir, { recursive: true });
       await page.locator('#challenge-follow-up').waitFor({ state: 'hidden' });
       mark('server follow-up acknowledgement retained');
     }
-    await page.locator('[data-challenge-category="activity"]').click();
-    await page.locator('.challenge-detail-option').first().click();
+    await page.locator('.challenge-v3-card').first().waitFor();
+    assert.equal(await page.locator('.challenge-v3-card').count(), 3);
+    assert.equal(await page.locator('#challenge-selection-count').innerText(), '3/3 선택');
     await page.locator('#start-challenge').click();
+    await page.waitForFunction(() => state.step === 8 && state.activeWorkspace === 'challenge');
+    await page.locator('#daily-record-title').waitFor({ state: 'visible' });
+    mark('challenge selection complete -> selected challenge remains visible');
+    await page.locator('[data-top-workspace="home"]').click();
     await page.locator('.screen[data-step="8"].active').waitFor();
-    mark('result -> challenge selection -> cycle creation -> dashboard');
+    mark('result -> challenge selection -> completion confirmation -> dashboard');
     await page.screenshot({ path: path.join(dir, 'dashboard-desktop.png'), fullPage: true });
     const saved = await browser.newPage();
     activePage = saved;

@@ -124,4 +124,4 @@ def test_frontend_accepts_backend_marked_preview_without_enabling_public_display
     assert config_path.is_file()
     assert "prediction?.preview_only === true" in script
     assert "prediction.preview_signal_level" in script
-    assert 'prediction.display_allowed !== false' in script
+    assert "prediction.display_allowed !== false" in script
