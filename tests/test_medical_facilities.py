@@ -5,6 +5,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from app.apis.v1.facility_routers import medical_facility_map_config
 from app.core import config
 from app.facilities.providers import (
     DevelopmentMedicalFacilitySearchProvider,
@@ -40,7 +41,9 @@ def test_address_search_is_available_when_browser_location_fails() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "libraries=services" in html
+    assert "libraries=services" in script
+    assert "dapi.kakao.com/v2/maps/sdk.js" not in html
+    assert 'api("/medical-facilities/map-config")' in script
     assert 'id="facility-address-form"' in html
     assert "coordinatesForAddress" in script
     assert "geocoder.addressSearch" in script
@@ -124,6 +127,30 @@ def test_kakao_provider_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> Non
 
     with pytest.raises(MedicalFacilitySearchError, match="KAKAO_REST_API_KEY"):
         KakaoLocalMedicalFacilitySearchProvider()
+
+
+def test_kakao_keys_are_environment_driven_and_not_embedded_in_html() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    intro_html = (ROOT / "src/frontend/intro-retro.html").read_text(encoding="utf-8")
+    example = (ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert "appkey=" not in html
+    assert "appkey=" not in intro_html
+    assert "MEDICAL_FACILITY_SEARCH_PROVIDER=kakao" in example
+    assert "KAKAO_REST_API_KEY=" in example
+    assert "KAKAO_JAVASCRIPT_KEY=" in example
+
+
+@pytest.mark.asyncio
+async def test_map_config_exposes_only_configured_public_javascript_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(config, "KAKAO_JAVASCRIPT_KEY", "public-js-test-key")
+
+    response = await medical_facility_map_config(object())
+
+    assert response["data"] == {"enabled": True, "javascript_key": "public-js-test-key"}
+    assert "KAKAO_REST_API_KEY" not in str(response)
 
 
 def test_unsupported_provider_setting_raises(monkeypatch: pytest.MonkeyPatch) -> None:

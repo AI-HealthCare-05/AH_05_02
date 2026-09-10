@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.apis.responses import envelope
+from app.core import config
 from app.dependencies.security import get_request_user
 from app.facilities.providers import MedicalFacilitySearchError
 from app.models.users import User
@@ -17,6 +18,17 @@ from app.services.facilities import (
 )
 
 facility_router = APIRouter(tags=["Medical facilities"])
+
+
+@facility_router.get("/medical-facilities/map-config")
+async def medical_facility_map_config(
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    """인증된 화면에 카카오 지도 SDK의 공개 JavaScript 키만 전달합니다."""
+
+    del user
+    key = config.KAKAO_JAVASCRIPT_KEY.strip()
+    return envelope({"enabled": bool(key), "javascript_key": key or None})
 
 
 @facility_router.get("/emergency-facilities/nearby")

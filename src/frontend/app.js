@@ -2123,15 +2123,34 @@ function setMedicalFacilityStatus(status, title, message) {
 
 const facilityMapInstances = {};
 const facilityMapMarkers = { medical: [], emergency: [] };
+let kakaoMapsLoadPromise = null;
 
 function ensureKakaoMapsLoaded() {
-  return new Promise((resolve, reject) => {
-    if (!window.kakao?.maps?.load) {
-      reject(new Error("지도 서비스를 불러오지 못했습니다."));
-      return;
+  if (window.kakao?.maps?.load) {
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  }
+  if (kakaoMapsLoadPromise) return kakaoMapsLoadPromise;
+  kakaoMapsLoadPromise = (async () => {
+    const mapConfig = await api("/medical-facilities/map-config");
+    const javascriptKey = String(mapConfig?.javascript_key || "").trim();
+    if (!mapConfig?.enabled || !javascriptKey) {
+      throw new Error("카카오 지도 연결 키가 설정되어 있지 않습니다.");
     }
-    window.kakao.maps.load(() => resolve(window.kakao));
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(javascriptKey)}&autoload=false&libraries=services`;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("카카오 지도 서비스를 불러오지 못했습니다."));
+      document.head.append(script);
+    });
+    if (!window.kakao?.maps?.load) throw new Error("카카오 지도 서비스를 초기화하지 못했습니다.");
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  })().catch((error) => {
+    kakaoMapsLoadPromise = null;
+    throw error;
   });
+  return kakaoMapsLoadPromise;
 }
 
 function clearFacilityMapMarkers(target) {
