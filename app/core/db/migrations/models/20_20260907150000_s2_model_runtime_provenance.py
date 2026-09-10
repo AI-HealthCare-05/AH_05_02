@@ -8,8 +8,6 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
         ALTER TABLE `prediction_jobs`
             ADD COLUMN `threshold_scope` VARCHAR(100) NULL AFTER `threshold_version`;
         ALTER TABLE `predictions`
-            ADD COLUMN `task_type` VARCHAR(80) NULL AFTER `age_risk_forecast`,
-            ADD COLUMN `threshold_scope` VARCHAR(100) NULL AFTER `task_type`,
             ADD COLUMN `display_allowed` BOOL NOT NULL DEFAULT 0 AFTER `threshold_scope`,
             ADD COLUMN `operational_model_activated` BOOL NOT NULL DEFAULT 0 AFTER `display_allowed`,
             ADD COLUMN `preview_only` BOOL NOT NULL DEFAULT 0 AFTER `operational_model_activated`,
@@ -23,8 +21,6 @@ async def downgrade(db: BaseDBAsyncClient) -> str:
             DROP COLUMN `preview_signal_level`,
             DROP COLUMN `preview_only`,
             DROP COLUMN `operational_model_activated`,
-            DROP COLUMN `display_allowed`,
-            DROP COLUMN `threshold_scope`,
-            DROP COLUMN `task_type`;
+            DROP COLUMN `display_allowed`;
         ALTER TABLE `prediction_jobs` DROP COLUMN `threshold_scope`;
     """

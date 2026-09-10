@@ -49,7 +49,11 @@ async def login(
     return resp
 
 
+@auth_router.get(
+    "/token/refresh", response_model=TokenRefreshResponse, status_code=status.HTTP_200_OK, include_in_schema=False
+)
 @auth_router.post("/refresh", response_model=TokenRefreshResponse, status_code=status.HTTP_200_OK)
+@auth_router.get("/token/refresh", response_model=TokenRefreshResponse, status_code=status.HTTP_200_OK)
 async def token_refresh(
     jwt_service: Annotated[JwtService, Depends(JwtService)],
     refresh_token: Annotated[str | None, Cookie()] = None,

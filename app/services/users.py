@@ -3,6 +3,7 @@ from tortoise.transactions import in_transaction
 from app.core.utils.common import normalize_phone_number
 from app.dtos.users import UserUpdateRequest
 from app.models.users import User
+from app.repositories.forest_repository import ForestRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth import AuthService
 
@@ -22,4 +23,6 @@ class UserManageService:
         async with in_transaction():
             await self.repo.update_instance(user=user, data=data.model_dump(exclude_none=True))
             await user.refresh_from_db()
+            if data.name is not None:
+                await ForestRepository().sync_existing_avatar_name(user)
         return user

@@ -13,11 +13,24 @@ function load(name, data) {
   vm.runInContext(fn[0], context);
   return context[name];
 }
-test('MVP excludes survival chart, scenarios and research API callers, retaining both result areas', () => {
-  assert.doesNotMatch(html, /id="(?:risk-forecast-panel|age-risk-chart|scenario-comparison-title|uncertainty-panel)"/);
+test('MVP keeps the two-year forecast graph design without scenarios or research API callers', () => {
+  assert.match(html, /id="risk-forecast-panel"/);
+  assert.match(html, /id="age-risk-chart"/);
+  assert.match(html, /id="age-risk-chart-points"/);
+  assert.doesNotMatch(html, /id="(?:scenario-comparison-title|uncertainty-panel)"/);
   assert.match(html, /id="risk-confirm-card"/);
   assert.match(html, /id="future-risk-category"/);
+  assert.doesNotMatch(html, /id="future-risk-horizon"/);
   assert.doesNotMatch(source, /\/research\/models\/|tryRunJunhyukModelDemo|future_forecast/);
+});
+test('forecast graph selects only the two-year point from a multi-horizon response', () => {
+  const select = load('selectTwoYearForecastPoint', { normalizeForecastSignal: value => value });
+  const selected = select({ age_risk_forecast: { points: [
+    { display_label: '4년 후', signal_level: 'high' },
+    { display_label: '2년 후 (54세)', signal_level: 'caution' },
+    { display_label: '6년 후', signal_level: 'low' },
+  ] } }, 'low');
+  assert.deepEqual({ ...selected }, { label: '2년 후 (54세)', level: 'caution' });
 });
 test('legacy local preview is a clearly labelled two-model fixture and performs no API calls', () => {
   const state = {};

@@ -1,0 +1,26 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY pyproject.toml uv.lock ./
+
+# 오늘이 v0.6.1은 scikit-learn 1.9.0으로 직렬화되었다. 내일이의
+# 1.8.0 런타임과 섞지 않고 이 전용 이미지 안에서만 버전을 교체한다.
+RUN uv sync --group ai --group modeling --no-dev --frozen \
+    && uv pip install --python /app/.venv/bin/python \
+      "numpy==2.4.6" "pandas==2.3.3" "scikit-learn==1.9.0" "joblib==1.5.3"
+
+COPY ./ai_worker ./ai_worker
+COPY ./app ./app
+COPY ./src/ml ./src/ml
+COPY ./models/registry ./models/registry
+COPY ./models/artifacts/candidates/diabetes_current_screening/v061/model.joblib ./models/artifacts/candidates/diabetes_current_screening/v061/model.joblib
+
+CMD ["uv", "run", "--no-sync", "python", "-m", "ai_worker.main"]

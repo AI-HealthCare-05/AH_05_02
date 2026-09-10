@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -14,14 +14,30 @@ from app.dtos.health import (
 )
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
+from app.services.challenge_proofs import challenge_today, verify_photo
 from app.services.challenges import ChallengeService, challenge_payload
 
 challenge_router = APIRouter(tags=["Challenges"])
 
 
+@challenge_router.post("/user-challenges/{user_challenge_id}/photo-verifications")
+async def create_v3_photo_verification(
+    user_challenge_id: int,
+    user: Annotated[User, Depends(get_request_user)],
+    verification_date: Annotated[date, Form()],
+    actual_value: Annotated[float, Form(ge=0, le=720)],
+    file: Annotated[UploadFile, File()],
+) -> dict[str, object]:
+    return envelope(
+        await verify_photo(ChallengeService(), user, user_challenge_id, verification_date, file, actual_value)
+    )
+
+
 @challenge_router.get("/challenges")
-async def list_challenges() -> dict[str, object]:
-    items = await ChallengeService().ensure_catalog()
+async def list_challenges(
+    catalog_version: Literal["evidence-v3"] | None = Query(default=None),
+) -> dict[str, object]:
+    items = await ChallengeService().ensure_catalog(catalog_version)
     return envelope({"items": [challenge_payload(item) for item in items]})
 
 
@@ -29,8 +45,14 @@ async def list_challenges() -> dict[str, object]:
 async def challenge_recommendations(
     user: Annotated[User, Depends(get_request_user)],
     prediction_id: int | None = Query(default=None),
+    catalog_version: Literal["evidence-v3"] | None = Query(default=None),
+    focus: Literal["balanced", "diet", "activity"] = Query(default="balanced"),
+    difficulty: Literal["easy", "moderate", "advanced"] = Query(default="easy"),
+    rotation: int = Query(default=0, ge=0, le=1_000_000),
 ) -> dict[str, object]:
-    return envelope(await ChallengeService().recommendations(user, prediction_id))
+    return envelope(
+        await ChallengeService().recommendations(user, prediction_id, catalog_version, focus, difficulty, rotation)
+    )
 
 
 @challenge_router.post("/challenge-cycles", status_code=status.HTTP_201_CREATED)
@@ -71,6 +93,32 @@ async def update_challenge_cycle_status(
     service = ChallengeService()
     cycle = await service.stop_cycle(user, cycle_id, request.reason)
     return envelope(await service.cycle_payload(cycle, user.id))
+
+
+@challenge_router.get("/challenge-rewards/daily/{reward_date}")
+async def daily_challenge_reward_status(
+    reward_date: date,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await ChallengeService().daily_reward_status(user, reward_date))
+
+
+@challenge_router.get("/challenge-rewards/daily")
+async def today_challenge_reward_status(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    return envelope(await ChallengeService().daily_reward_status(user, challenge_today()))
+
+
+@challenge_router.post("/challenge-rewards/daily/{reward_date}")
+async def claim_daily_challenge_reward(
+    reward_date: date,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    return envelope(await ChallengeService().claim_daily_reward(user, reward_date))
+
+
+@challenge_router.post("/challenge-rewards/daily")
+async def claim_today_challenge_reward(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
+    return envelope(await ChallengeService().claim_daily_reward(user, challenge_today()))
 
 
 @challenge_router.put("/user-challenges/{user_challenge_id}/logs/{log_date}")

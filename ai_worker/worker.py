@@ -150,6 +150,8 @@ class StreamWorker:
                 "EnsembleArtifactUnavailableError": "ML_MODEL_UNAVAILABLE",
                 "ResearchModelContractError": "ML_MODEL_CONTRACT_ERROR",
                 "EnsembleContractError": "ML_MODEL_CONTRACT_ERROR",
+                "CurrentScreeningArtifactUnavailableError": "MODEL_UNAVAILABLE",
+                "CurrentScreeningContractError": "MODEL_CONTRACT_INVALID",
             }
             error_code = research_model_error_codes.get(type(exc).__name__)
             if error_code is None:
@@ -159,24 +161,11 @@ class StreamWorker:
             else:
                 await self.handle_failure(message_id, fields, attempt, exc)
         except Exception as exc:
-            # 현재위험 선별 모델은 선택적으로 설치되므로 예외 타입도 해당 작업을
-            # 실행할 때만 로드된다. 클래스 이름으로 영구적 배포 오류를 분류하면
-            # RF25 워커가 선택 모델의 의존성(lightgbm) 없이도 기동할 수 있다.
-            current_screening_error_codes = {
-                "CurrentScreeningArtifactUnavailableError": "ML_MODEL_UNAVAILABLE",
-                "CurrentScreeningContractError": "ML_MODEL_CONTRACT_ERROR",
-            }
-            error_code = current_screening_error_codes.get(type(exc).__name__)
-            if error_code is not None:
-                await self.handle_failure(
-                    message_id,
-                    fields,
-                    config.AI_JOB_MAX_ATTEMPTS,
-                    exc,
-                    error_code=error_code,
-                )
-            else:
-                await self.handle_failure(message_id, fields, attempt, exc)
+            # CurrentScreeningArtifactUnavailableError/CurrentScreeningContractError
+            # both subclass RuntimeError, so the except RuntimeError clause above
+            # (research_model_error_codes) already classifies and terminates them;
+            # anything reaching this catch-all is a genuinely unclassified error.
+            await self.handle_failure(message_id, fields, attempt, exc)
 
     async def handle_failure(
         self,

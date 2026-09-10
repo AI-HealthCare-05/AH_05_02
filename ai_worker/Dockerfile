@@ -21,6 +21,7 @@ RUN uv sync --group ai --group modeling --no-dev --frozen
 COPY ./ai_worker ./ai_worker
 COPY ./app ./app
 COPY ./src/ml ./src/ml
+COPY ./models/registry ./models/registry
 
 # 5. 해당 이미지를 활용하여 도커컨테이너 실행시 실행되는 명령어입니다.
 # 아래 커맨드를 수정한 뒤에 사용합니다.

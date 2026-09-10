@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi.exceptions import HTTPException
 from pydantic import EmailStr
 from starlette import status
@@ -29,6 +31,11 @@ class AuthService:
                 phone_number=None,
                 gender=None,
                 birthday=None,
+                # SignUpRequest.terms_agreed는 field_validator에서 True가 아니면 이미 422로
+                # 막히므로 여기 도달했다면 항상 True다. 동의 시각도 함께 남겨 나중에
+                # 동의 이력을 증빙할 수 있게 한다.
+                terms_agreed=data.terms_agreed,
+                terms_agreed_at=datetime.now(UTC),
             )
 
             return user

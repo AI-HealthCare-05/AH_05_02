@@ -1,0 +1,143 @@
+:root{
+  color-scheme:light;
+  --ui-base:#F5F4EF;
+  --ui-section:#D7E3DF;
+  --ui-border:#C7DCD4;
+  --ui-selected:#B7D4C8;
+  --ui-utility:#92B2A2;
+  --ui-success:#9FC0A2;
+  --ui-reward:#D5E7AF;
+  --ui-primary:#176B5B;
+  --ui-primary-hover:#0B4D42;
+  --ui-text:#14213D;
+  --ui-muted:#586477;
+  --safety-danger:#A32828;
+  --safety-warning:#8A4B08;
+  --safety-danger-bg:#FFF2EF;
+  --safety-warning-bg:#FFF4DF;
+
+  /* Existing components consume these aliases. */
+  --ink:var(--ui-text);
+  --muted:var(--ui-muted);
+  --paper:var(--ui-base);
+  --surface:var(--ui-base);
+  --bg:var(--ui-base);
+  --green:var(--ui-primary);
+  --green-dark:var(--ui-primary-hover);
+  --green-soft:var(--ui-section);
+  --mint:var(--ui-section);
+  --line:var(--ui-border);
+  --line-dark:var(--ui-utility);
+  --orange:var(--ui-reward);
+  --orange-soft:var(--ui-reward);
+  --success:var(--ui-success);
+  --warning:var(--safety-warning);
+  --warning-bg:var(--safety-warning-bg);
+  --danger:var(--safety-danger);
+  --danger-bg:var(--safety-danger-bg);
+}
+
+html,body{background-color:var(--ui-base);color:var(--ui-text)}
+input:not([type="checkbox"]):not([type="radio"]),select,textarea{
+  background-color:var(--ui-base);border-color:var(--ui-border);color:var(--ui-text)
+}
+input::placeholder,textarea::placeholder{color:var(--ui-muted)}
+
+/* Shared surfaces and dividers */
+.topbar,.studio-topbar,.content,.step-panel,.tool-rail,.world-stage,.inspector,
+.asset-dock,.object-inspector,.world-dialog,.chat-panel,.avatar-studio,
+.avatar-studio-header,.avatar-item-browser,.avatar-selection-summary,.profile-dialog,
+.profile-editor-card,.feature-grid li,.dashboard-grid article,.result-card,.challenge-card,
+.report-card,.report-progress-item,.report-week-bars,.cycle-history-item,.forest-invite-card,
+.together-member,.forest-group-card,.detail-health-group,.current-health-result-details,
+[data-challenge-v2] .v2-card,[data-challenge-v2]>details,[data-challenge-v2] [data-settings],
+.v2-celebration-card{background-color:var(--ui-base);border-color:var(--ui-border);color:var(--ui-text)}
+
+.rail-title,.stage-toolbar,.stage-footer,.chat-heading,.asset-group,.profile-avatar-stage,
+.profile-summary>div,.forest-today-card,.story-soft,.story-visual,
+[data-challenge-v2] .v2-tags span{background-color:var(--ui-section);border-color:var(--ui-border)}
+
+hr,.divider,.progress-track,.topbar,.studio-topbar,.avatar-studio-header,
+.avatar-category-nav,.avatar-preview-panel,.chat-heading,.chat-form{border-color:var(--ui-border)}
+
+/* Primary, secondary and inactive controls */
+.primary,.primary-button,.avatar-studio-button,.avatar-studio-save,
+.chat-form button,.v2-celebration-card button,[data-challenge-v2] button[type="submit"],
+[data-challenge-v2] .v2-primary,[data-challenge-v2] .v2-dashboard-link,
+#guest-flow-panel #sidebar-signup{background:var(--ui-primary);border-color:var(--ui-primary);color:var(--ui-base)}
+.primary:hover,.primary-button:hover,.avatar-studio-button:hover,.avatar-studio-save:hover,
+.chat-form button:hover,.v2-celebration-card button:hover,[data-challenge-v2] button[type="submit"]:hover,
+[data-challenge-v2] .v2-primary:hover,[data-challenge-v2] .v2-dashboard-link:hover,
+#guest-flow-panel #sidebar-signup:hover{background:var(--ui-primary-hover);border-color:var(--ui-primary-hover);color:var(--ui-base)}
+
+.secondary,.text-button,.plain-button,.toolbar-button,.icon-button,.inventory-item,
+.tool-button,.inspector-tab,.dialog-actions button,.member-menu-button,.invite-mode-tab,
+.outfit-name-form button,.avatar-quick-actions button,[data-challenge-v2] button,
+[data-challenge-v2] .v2-setup-link,[data-challenge-v2] .v2-settings-button{
+  background:var(--ui-base);border-color:var(--ui-border);color:var(--ui-text)
+}
+.secondary:hover,.text-button:hover,.plain-button:hover,.toolbar-button:hover,.icon-button:hover,
+.inventory-item:hover,.tool-button:hover,.inspector-tab:hover,.dialog-actions button:hover,
+.member-menu-button:hover,.invite-mode-tab:hover,.outfit-name-form button:hover,
+.avatar-quick-actions button:hover,[data-challenge-v2] button:hover,
+[data-challenge-v2] .v2-setup-link:hover,[data-challenge-v2] .v2-settings-button:hover{
+  background:var(--ui-section);border-color:var(--ui-primary);color:var(--ui-primary-hover)
+}
+button:disabled,[aria-disabled="true"],.is-disabled{background:var(--ui-utility);border-color:var(--ui-utility);color:var(--ui-base);opacity:.72}
+
+/* Selection, keyboard focus and utility icons */
+.tool-button.is-active,.inspector-tab[aria-selected="true"],.inventory-item[aria-pressed="true"],
+.avatar-category-button[aria-pressed="true"],.avatar-item-card[aria-pressed="true"],
+.check-card:has(input:checked),.invite-mode-tab.active,.report-period-tab.active,
+.record-music-list button[aria-pressed="true"]{background:var(--ui-selected);border-color:var(--ui-primary);color:var(--ui-primary-hover)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+summary:focus-visible,canvas:focus-visible{outline:3px solid var(--ui-selected);outline-offset:3px;box-shadow:0 0 0 2px var(--ui-base)}
+.brand-mark,.asset-group-title>span,.quest-icon,.profile-button>span:first-child,
+.current-health-result-icon,.member-avatar,.avatar-item-card .new-badge,
+.avatar-item-card .selected-check{background:var(--ui-utility);color:var(--ui-base)}
+
+/* Completion and rewards */
+.complete,.completed,.is-complete,.quest-item.is-complete,.report-progress-item.complete,
+.weekly-dot-row span.done,.cycle-history-item.active,.member-status,
+[data-challenge-v2] .v2-completed-note{background-color:var(--ui-success);border-color:var(--ui-success);color:var(--ui-primary-hover)}
+.reward-button:not(:disabled),.group-mission-card,.preview-carrots,.carrot-balance,
+.v2-celebration-card>span,[data-challenge-v2] .v2-reward{background:var(--ui-reward);border-color:var(--ui-reward);color:var(--ui-primary-hover)}
+
+/* Text hierarchy */
+h1,h2,h3,h4,.brand,.forest-brand,.stage-title,.rail-title{color:var(--ui-text)}
+p,small,.lead,.help-text,.empty-assets,.weather-caption,.record-music-list button small,
+.avatar-item-card small,.avatar-selection-summary span{color:var(--ui-muted)}
+a,.eyebrow,.section-kicker{color:var(--ui-primary)}
+
+/* Medical safety colors are intentionally outside the general UI palette. */
+.message[role="alert"],.auth-error-summary,.field-error,.profile-editor-message,
+.notice.error,.notice.danger,.danger,.risk-high,[aria-invalid="true"]{
+  border-color:var(--safety-danger);background-color:var(--safety-danger-bg);color:var(--safety-danger)
+}
+.notice.safety,.notice.warning,.warning,.v2-notice,.prototype-badge{
+  border-color:var(--safety-warning);background-color:var(--safety-warning-bg);color:var(--safety-warning)
+}
+.danger-outline{border-color:var(--safety-danger);background:var(--safety-danger-bg);color:var(--safety-danger)}
+
+/* The challenge domains share one UI system; warning colors remain safety-only. */
+[data-challenge-v2] .v2-domain-badge,
+[data-challenge-v2] .v2-domain-badge[data-domain="routine"],
+[data-challenge-v2] .v2-domain-badge[data-domain="diet"],
+[data-challenge-v2] .v2-domain-badge[data-domain="activity"]{
+  border-color:var(--ui-border);background:var(--ui-section);color:var(--ui-primary-hover)
+}
+
+/* Forest-specific editors no longer introduce a separate purple theme. */
+.avatar-category-button:hover,.avatar-item-card:hover,.avatar-preview-toolbar button:hover{
+  background:var(--ui-section);border-color:var(--ui-primary);color:var(--ui-primary-hover)
+}
+.avatar-preview-panel,.avatar-preview-stage,.avatar-item-card .item-visual,
+.avatar-item-card canvas.catalog-thumb,.avatar-item-card .empty-sprite-thumb{
+  background-color:var(--ui-section);border-color:var(--ui-border)
+}
+.avatar-studio-button,.avatar-studio-save{box-shadow:0 4px 0 var(--ui-primary-hover)}
+.avatar-studio-button:hover,.avatar-studio-save:hover{box-shadow:0 6px 0 var(--ui-primary-hover)}
+.inventory-item.storage-icon-item,.recent-outfit-card{background:var(--ui-base);border-color:var(--ui-border)}
+.inventory-item.storage-icon-item[data-placement="true"],.recent-outfit-entry:first-child .recent-outfit-card{
+  background:var(--ui-selected);border-color:var(--ui-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-primary) 16%,transparent)
+}
