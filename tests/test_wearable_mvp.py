@@ -18,6 +18,7 @@ from src.wearables.android_health import parse_health_connect_export
 from src.wearables.common import build_health_candidates, exercise_verification_candidate
 
 FIXTURES = Path(__file__).parent / "fixtures" / "wearables"
+FRONTEND = Path("src/frontend")
 
 
 @dataclass
@@ -39,6 +40,17 @@ def test_android_health_connect_export_is_reduced_to_daily_values() -> None:
     assert first.sleep_minutes == 460
     assert first.source == "android_health_connect"
     assert "com.example" not in str(first)
+
+
+def test_wearable_and_checkup_demo_controls_are_enabled_in_main_mvp() -> None:
+    html = (FRONTEND / "index.html").read_text(encoding="utf-8")
+    assert 'id="try-apple-wearable-sample"' in html
+    assert 'id="try-android-wearable-sample"' in html
+    assert 'id="load-checkup-sample"' in html
+    assert 'id="connect-watch" type="button" disabled' not in html
+    assert 'id="upload-checkup-image" type="button" disabled' not in html
+    assert 'id="wearable-coming-soon"' not in html
+    assert 'id="checkup-coming-soon"' not in html
 
 
 def test_wearable_file_preview_returns_normalized_items_without_identity() -> None:
