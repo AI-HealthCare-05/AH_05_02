@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 from fastapi import HTTPException, status
 from tortoise.transactions import in_transaction
 
+from app.core import config
 from app.dtos.engagement import (
     ChallengeBarrierCreateRequest,
     ConnectionSharingRequest,
@@ -16,7 +17,6 @@ from app.dtos.engagement import (
     InvitationCreateRequest,
     SharedChallengeCreateRequest,
 )
-from app.core import config
 from app.models.engagement import EducationContent, Invitation, SharedChallengeGroup
 from app.models.health import ChallengeCycle
 from app.models.users import User
