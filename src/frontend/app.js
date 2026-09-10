@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -5047,18 +5047,25 @@ $("#shared-group-list")?.addEventListener("click", async (event) => {
 $("#connect-watch")?.addEventListener("click", () => {
   const box = $("#wearable-result");
   box.hidden = false;
-  box.textContent = "워치 연결 기능을 준비하고 있어요.";
+  box.textContent = "Apple 건강 또는 Android Health Connect에서 내보낸 파일을 일별 요약으로 정제한 뒤 아래에서 확인해 주세요.";
 });
 $("#wearable-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "워치 기록 저장 중…");
   try {
-    if (!state.wearableConnectionId) {
-      const connection = await api("/wearables/connections", { method: "POST", body: JSON.stringify({ provider: "development_mock", scopes: ["activity"] }) });
+    const provider = $("#wearable-provider").value;
+    if (!state.wearableConnectionId || state.wearableProvider !== provider) {
+      const connection = await api("/wearables/connections", { method: "POST", body: JSON.stringify({ provider, scopes: ["activity", "sleep", "heart_rate"] }) });
       state.wearableConnectionId = connection.connection_id;
+      state.wearableProvider = provider;
     }
     const result = await api("/wearables/daily-summaries/import", { method: "POST", body: JSON.stringify({ connection_id: state.wearableConnectionId, items: [{ summary_date: new Date().toISOString().slice(0, 10), steps: Number($("#wearable-steps").value), active_minutes: Number($("#wearable-active").value) }] }) });
-    const box = $("#wearable-result"); box.hidden = false; box.textContent = `${result.imported_count}일 기록을 가져왔습니다. 자동 챌린지 기록 ${result.auto_logged_challenges.length}건`;
+    const candidates = await api("/wearables/health-candidates");
+    const health = candidates.health_input_candidates;
+    const proof = result.exercise_verification_candidates?.[0];
+    const box = $("#wearable-result");
+    box.hidden = false;
+    box.textContent = `${result.imported_count}일 기록을 가져왔습니다. 운동 인증 후보: ${proof?.eligible ? "충족" : "미충족"}, 최근 기록의 운동일 후보: 주 ${health.exercise_days_per_week}일. 저장 전 직접 확인해 주세요.`;
     await refreshDashboard();
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
@@ -5106,6 +5113,20 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
   }
 });
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
+$("#load-checkup-sample")?.addEventListener("click", async () => {
+  const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
+  const box = $("#ocr-upload-result");
+  try {
+    const result = await api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: "2025-general-health-checkup-synthetic.txt", ocr_text: sampleText }) });
+    state.ocrDraftId = result.draft_id;
+    $("#ocr-file-name").textContent = "2025 일반건강검진 합성 예시";
+    $("#ocr-systolic-confirm").value = result.extracted_fields.systolic_bp || "";
+    $("#ocr-diastolic-confirm").value = result.extracted_fields.diastolic_bp || "";
+    $("#ocr-confirm-form").hidden = false;
+    box.hidden = false;
+    box.innerHTML = `<div><strong>합성 검진표에서 값을 찾았습니다.</strong><p>혈압 ${escapeHtml(result.extracted_fields.systolic_bp)}/${escapeHtml(result.extracted_fields.diastolic_bp)} mmHg, 공복혈당 ${escapeHtml(result.extracted_fields.fasting_glucose_mg_dl)} mg/dL. 실제 자료가 아니며 반영 전 확인이 필요합니다.</p></div>`;
+  } catch (error) { showMessage(error.message); }
+});
 $("#checkup-image-input")?.addEventListener("change", (event) => {
   const file = event.target.files?.[0];
   if (!file) return;

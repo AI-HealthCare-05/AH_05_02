@@ -87,6 +87,17 @@ async def wearable_summaries(
     return envelope(await WellnessService().wearable_summaries(user, start, end))
 
 
+@wellness_router.get("/wearables/health-candidates")
+async def wearable_health_candidates(
+    user: Annotated[User, Depends(get_request_user)],
+    start_date: date | None = None,
+    end_date: date | None = None,
+):
+    end = end_date or date.today()
+    start = start_date or end - timedelta(days=6)
+    return envelope(await WellnessService().wearable_health_candidates(user, start, end))
+
+
 @wellness_router.post("/health-education/questions")
 async def ask_health_education(request: RagQuestionRequest, user: Annotated[User, Depends(get_request_user)]):
     _ = user

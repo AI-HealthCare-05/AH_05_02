@@ -897,8 +897,8 @@
                 <div class="health-tool-row">
                   <img class="health-tool-mascot" src="/static/assets/hyeoldangi-wearable.png" alt="워치 연동을 안내하는 혈당이">
                   <div>
-                    <strong>아직 연결된 워치가 없어요</strong>
-                    <p>연결하면 걸음 수와 활동 시간이 자동으로 기록돼요.</p>
+                    <strong>Apple·Android 활동 기록 가져오기</strong>
+                    <p>기기에서 내보낸 일일 요약을 확인한 뒤 건강정보와 운동 인증에 활용해요.</p>
                   </div>
                 </div>
                 <button class="secondary health-tool-inline-action" id="connect-watch" type="button">워치 연결하기</button>
@@ -906,6 +906,7 @@
               <details class="manual-input-details">
                 <summary>워치가 없다면, 직접 입력할게요</summary>
                 <form id="wearable-form" class="two-column">
+                  <div class="form-row"><label for="wearable-provider">데이터 종류</label><select id="wearable-provider"><option value="apple_health_export">Apple 건강 내보내기</option><option value="android_health_connect">Android Health Connect</option></select></div>
                   <div class="form-row"><label for="wearable-steps">오늘 걸음 수</label><input id="wearable-steps" type="number" min="0" max="200000" value="3500" required></div>
                   <div class="form-row"><label for="wearable-active">활동 시간(분)</label><input id="wearable-active" type="number" min="0" max="1440" value="15"></div>
                   <button class="secondary full" type="submit">수동 기록 저장하기</button>
@@ -931,6 +932,7 @@
                   <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
                   <strong>검진표 사진 올리기</strong>
                 </button>
+                <button class="secondary health-tool-inline-action" id="load-checkup-sample" type="button">2025 합성 예시 보기</button>
               </div>
               <div id="ocr-upload-result" class="notice compact" hidden></div>
               <form id="ocr-confirm-form" class="ocr-confirm-form" hidden>

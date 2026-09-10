@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class WearableConnectionRequest(BaseModel):
-    provider: Literal["development_mock", "file_import"] = "development_mock"
+    provider: Literal[
+        "development_mock", "file_import", "apple_health_export", "android_health_connect"
+    ] = "development_mock"
     scopes: list[Literal["activity", "sleep", "heart_rate"]] = Field(default_factory=lambda: ["activity"])
 
 
@@ -47,6 +49,13 @@ class FoodAnalysisConfirmRequest(BaseModel):
 class OcrDraftRequest(BaseModel):
     document_name: str = Field(min_length=1, max_length=200)
     extracted_fields: dict[str, str | int | float | None] = Field(default_factory=dict)
+    ocr_text: str | None = Field(default=None, min_length=2, max_length=20_000)
+
+    @model_validator(mode="after")
+    def require_extracted_fields_or_text(self) -> OcrDraftRequest:
+        if not self.extracted_fields and not self.ocr_text:
+            raise ValueError("추출 필드 또는 OCR 텍스트가 필요합니다.")
+        return self
 
 
 class NotificationPreferenceRequest(BaseModel):

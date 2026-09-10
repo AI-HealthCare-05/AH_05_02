@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import date
 
 import pytest
 
@@ -165,7 +165,7 @@ def test_mile_distance_converted_to_km():
  <Record type="HKQuantityTypeIdentifierDistanceWalkingRunning" sourceName="테스트유저의 iPhone" unit="mi" value="1.0" startDate="2026-03-05 08:00:00 +0000" endDate="2026-03-05 08:10:00 +0000"/>
 </HealthData>
 """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as fh:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False, encoding="utf-8") as fh:
         fh.write(xml)
         path = fh.name
     try:
@@ -185,7 +185,7 @@ def test_in_bed_sleep_value_is_not_counted_as_asleep():
  <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="테스트유저의 Apple Watch" value="HKCategoryValueSleepAnalysisInBed" startDate="2026-03-06 23:00:00 +0900" endDate="2026-03-07 07:00:00 +0900"/>
 </HealthData>
 """
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as fh:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False, encoding="utf-8") as fh:
         fh.write(xml)
         path = fh.name
     try:
