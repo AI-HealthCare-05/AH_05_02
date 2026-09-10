@@ -87,6 +87,12 @@ async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
                 },
             )
             assert imported.json()["data"]["imported_count"] == 1
+            assert imported.json()["data"]["exercise_verification_candidates"][0]["eligible"] is True
+
+            health_candidates = await client.get("/api/v1/wearables/health-candidates", headers=headers)
+            candidate_data = health_candidates.json()["data"]
+            assert candidate_data["health_input_candidates"]["exercise_days_per_week"] == 1
+            assert candidate_data["requires_user_confirmation"] is True
 
             rag = await client.post(
                 "/api/v1/health-education/questions",
@@ -125,6 +131,16 @@ async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
             assert ocr_data["requires_user_confirmation"] is True
             assert "resident_number" in ocr_data["ignored_fields"]
             assert "resident_number" not in ocr_data["extracted_fields"]
+
+            text_ocr = await client.post(
+                "/api/v1/ocr-drafts",
+                headers=headers,
+                json={
+                    "document_name": "2025-general-checkup.txt",
+                    "ocr_text": "검진일: 2025-06-18\n신장: 168.2 cm\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL",
+                },
+            )
+            assert text_ocr.json()["data"]["extracted_fields"]["fasting_glucose_mg_dl"] == 108
 
             preferences = await client.put(
                 "/api/v1/notification-preferences",

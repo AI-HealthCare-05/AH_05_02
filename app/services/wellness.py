@@ -15,6 +15,8 @@ from app.dtos.wellness import (
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
+from src.ocr.health_checkup_2025 import extract_health_checkup_fields
+from src.wearables.common import build_health_candidates, exercise_verification_candidate
 
 ALLOWED_OCR_FIELDS = {
     "checkup_date",
@@ -23,6 +25,16 @@ ALLOWED_OCR_FIELDS = {
     "waist_cm",
     "systolic_bp",
     "diastolic_bp",
+    "bmi",
+    "fasting_glucose_mg_dl",
+    "total_cholesterol_mg_dl",
+    "hdl_cholesterol_mg_dl",
+    "triglycerides_mg_dl",
+    "ldl_cholesterol_mg_dl",
+    "creatinine_mg_dl",
+    "ast_u_l",
+    "alt_u_l",
+    "gamma_gtp_u_l",
 }
 
 FOOD_KEYWORDS = {
@@ -111,9 +123,17 @@ class WellnessService:
                             },
                         )
                         auto_logged.append({"user_challenge_id": user_challenge.id, "log_date": values.summary_date})
+        verification_candidates = [
+            {
+                "summary_date": values.summary_date,
+                **exercise_verification_candidate(steps=values.steps, active_minutes=values.active_minutes),
+            }
+            for values in request.items
+        ]
         return {
             "imported_count": len(summaries),
             "auto_logged_challenges": auto_logged,
+            "exercise_verification_candidates": verification_candidates,
             "notice": "걸음 수만으로 식후 걷기 여부를 추정하지 않습니다. 명확히 대응되는 활동 확인 챌린지만 자동 기록합니다.",
         }
 
@@ -136,6 +156,12 @@ class WellnessService:
                 for item in items
             ],
         }
+
+    async def wearable_health_candidates(self, user: User, start: date, end: date) -> dict[str, object]:
+        if end < start or (end - start).days > 6:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="건강정보 후보는 최대 7일입니다.")
+        items = await self.repo.daily_summaries(user.id, start, end)
+        return build_health_candidates(items)
 
     async def food_analysis(self, user: User, request: FoodAnalysisRequest) -> dict[str, object]:
         normalized = request.image_name.casefold()
@@ -171,7 +197,10 @@ class WellnessService:
         return {"analysis_id": item.id, "status": item.status, "confirmed_category": item.confirmed_category}
 
     async def ocr_draft(self, user: User, request: OcrDraftRequest) -> dict[str, object]:
-        filtered = {key: value for key, value in request.extracted_fields.items() if key in ALLOWED_OCR_FIELDS}
+        extracted = dict(request.extracted_fields)
+        if request.ocr_text:
+            extracted.update(extract_health_checkup_fields(request.ocr_text))
+        filtered = {key: value for key, value in extracted.items() if key in ALLOWED_OCR_FIELDS}
         item = await self.repo.create_ocr_draft(
             user_id=user.id,
             document_name=request.document_name,
@@ -181,7 +210,7 @@ class WellnessService:
             "draft_id": item.id,
             "provider": item.provider,
             "extracted_fields": filtered,
-            "ignored_fields": sorted(set(request.extracted_fields) - ALLOWED_OCR_FIELDS),
+            "ignored_fields": sorted(set(extracted) - ALLOWED_OCR_FIELDS),
             "status": item.status,
             "requires_user_confirmation": True,
             "notice": "OCR 초안은 건강검진 기록에 자동 저장되지 않습니다. 원문과 대조해 확인해야 합니다.",
