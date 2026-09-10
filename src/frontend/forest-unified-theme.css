@@ -1,0 +1,301 @@
+/* Carrot Forest unified UI layer.
+   Existing screen structure and medical risk colors remain intact; this file
+   owns shared surfaces, spacing, controls and responsive sizing. */
+:root {
+  --forest-ink: #2f2419;
+  --forest-muted: #6d5a45;
+  --forest-green: #155f4b;
+  --forest-green-hover: #0f4b3b;
+  --forest-focus: #8fd8c1;
+  --forest-wood-dark: #654126;
+  --forest-wood: #93613b;
+  --forest-wood-light: #c58c56;
+  --forest-paper: #fff9e9;
+  --forest-paper-soft: #f8ecd2;
+  --forest-line: #c9a878;
+  --forest-shadow: 0 18px 38px rgba(65, 43, 24, .2);
+  --forest-card-shadow: 0 8px 18px rgba(65, 43, 24, .1);
+  --forest-radius: 18px;
+}
+
+body:not(.intro-mode) {
+  color: var(--forest-ink);
+  background: #eef5e9;
+}
+
+body:not(.intro-mode) .app-shell {
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: clamp(16px, 2.5vw, 36px);
+}
+
+body:not(.intro-mode) .content {
+  min-height: auto;
+}
+
+/* One calm wood frame for every major product surface. */
+:is(
+  .signup-house-board,
+  .eligibility-forest-board,
+  .health-room-board,
+  .analysis-room-screen .prediction-status-card,
+  .result-room-screen #result-signal-grid,
+  .challenge-forest-screen #challenge-form,
+  #workspace-panel-home,
+  #workspace-panel-challenge,
+  #workspace-panel-report,
+  #workspace-panel-tools,
+  #workspace-panel-together
+) {
+  width: min(100%, 1120px) !important;
+  max-width: 1120px !important;
+  margin-inline: auto !important;
+  padding: clamp(18px, 2.4vw, 32px) !important;
+  border: 6px solid var(--forest-wood-dark) !important;
+  border-radius: var(--forest-radius) !important;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 2px, transparent 2px 42px),
+    linear-gradient(135deg, var(--forest-wood-light), var(--forest-wood) 55%, #7b4d2d) !important;
+  box-shadow: inset 0 0 0 3px #d6a26a, var(--forest-shadow) !important;
+}
+
+/* Forest scenes provide atmosphere, while the content stays a readable size. */
+:is(.signup-house-stage, .eligibility-forest-stage, .health-room-stage) {
+  width: 100% !important;
+  margin-inline: 0 !important;
+  min-height: calc(100svh - 150px) !important;
+  padding: clamp(24px, 5vh, 56px) clamp(14px, 3vw, 40px) !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.account-mode .signup-house-board,
+.signup-house-stage .signup-house-board:has(#signup-form:not([hidden])) {
+  width: min(92vw, 900px) !important;
+  max-width: 900px !important;
+  min-height: 0 !important;
+}
+
+.signup-house-stage {
+  overflow: auto !important;
+}
+
+/* A single parchment card vocabulary across onboarding and the workspace. */
+:is(
+  .signup-house-board .form-row,
+  .signup-house-board .consent-card,
+  .eligibility-card,
+  .health-room-board .form-row,
+  .health-room-board .choice-block,
+  .review-card,
+  .result-signal-card,
+  .result-xai-card,
+  .today-card,
+  .summary-grid > article,
+  .home-feature-card,
+  .health-tool-card,
+  .report-hero-card,
+  .report-detail-card,
+  .report-insight-card,
+  .forest-today-card,
+  .forest-invite-card,
+  .forest-invite-summary,
+  .daily-record-list article
+) {
+  border: 2px solid var(--forest-line) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, var(--forest-paper), var(--forest-paper-soft)) !important;
+  box-shadow: var(--forest-card-shadow) !important;
+  color: var(--forest-ink) !important;
+}
+
+/* Shared hanging nameplate. */
+:is(
+  .signup-house-heading,
+  .eligibility-forest-heading,
+  .health-room-heading,
+  .screen[data-step="8"] .dashboard-hero:not(.is-tools)
+) {
+  width: min(92%, 720px) !important;
+  margin: 0 auto clamp(18px, 2vw, 28px) !important;
+  padding: 16px 24px !important;
+  border: 4px solid var(--forest-wood-dark) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #d9a064, #bd7e48) !important;
+  box-shadow: inset 0 0 0 2px #edc38f, 0 7px 0 #52331f !important;
+  color: #1f140c !important;
+  text-align: center;
+}
+
+:is(.signup-house-heading, .eligibility-forest-heading, .health-room-heading) h2 {
+  font-size: clamp(30px, 3vw, 48px) !important;
+  margin: 0 !important;
+}
+
+/* Consistent controls. */
+body:not(.intro-mode) :is(input, select, textarea) {
+  border: 2px solid #b99a70 !important;
+  border-radius: 12px !important;
+  background: #fffdf6 !important;
+  color: var(--forest-ink) !important;
+}
+
+body:not(.intro-mode) :is(button, a):focus-visible,
+body:not(.intro-mode) :is(input, select, textarea):focus-visible {
+  outline: 4px solid var(--forest-focus) !important;
+  outline-offset: 3px !important;
+}
+
+body:not(.intro-mode) .primary {
+  border-color: #0d4638 !important;
+  border-radius: 12px !important;
+  background: var(--forest-green) !important;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.14), 0 4px 0 #0a3b30 !important;
+  color: #fff !important;
+}
+
+body:not(.intro-mode) .primary:hover {
+  background: var(--forest-green-hover) !important;
+  transform: translateY(1px);
+}
+
+body:not(.intro-mode) .secondary {
+  border-color: #b99a70 !important;
+  border-radius: 12px !important;
+  background: #fffaf0 !important;
+  color: var(--forest-ink) !important;
+}
+
+.workspace-nav {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  padding: 8px !important;
+  border: 2px solid var(--forest-line);
+  background: #f3e4c7 !important;
+}
+
+.workspace-tab.active {
+  background: var(--forest-green) !important;
+  color: #fff !important;
+}
+
+/* Eligibility branches can open the existing facility API without showing
+   empty prediction cards first. */
+.result-room-screen.medical-guidance-only > :not(#medical-guidance-detail) {
+  display: none !important;
+}
+
+.result-room-screen.medical-guidance-only {
+  width: min(100%, 1120px) !important;
+  margin-inline: auto !important;
+}
+
+.result-room-screen.medical-guidance-only #medical-guidance-detail {
+  position: static !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border: 6px solid var(--forest-wood-dark) !important;
+  border-radius: var(--forest-radius) !important;
+  background: var(--forest-paper) !important;
+  box-shadow: var(--forest-shadow) !important;
+}
+
+.screen.result-room-screen.active {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: clamp(28px, 5vh, 56px) clamp(14px, 3vw, 40px) !important;
+  overflow: visible !important;
+}
+
+/* Legacy full-bleed screens used negative side margins. Keep the forest
+   scenery, but contain every post-analysis workspace inside the viewport. */
+:is(
+  .screen.challenge-forest-screen.active,
+  .screen[data-step="8"].active
+) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline: clamp(14px, 3vw, 40px) !important;
+  overflow-x: clip !important;
+}
+
+.result-room-screen > #factors-title,
+.result-room-screen > .result-safety-card,
+.result-room-screen > .result-next-actions {
+  width: min(100%, 1120px) !important;
+}
+
+.result-room-screen #result-signal-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+.result-room-screen #result-signal-grid > .result-signal-card,
+.result-room-screen #result-signal-grid > #future-prediction-result,
+.result-room-screen #result-signal-grid .current-risk-signal-card,
+.result-room-screen #result-signal-grid .risk-forecast-panel,
+.result-room-screen #result-signal-grid .xai-factor-card {
+  min-height: 0 !important;
+  padding: clamp(18px, 2vw, 26px) !important;
+  border: 2px solid var(--forest-line) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, var(--forest-paper), var(--forest-paper-soft)) !important;
+  box-shadow: var(--forest-card-shadow) !important;
+  color: var(--forest-ink) !important;
+}
+
+.result-room-screen #result-signal-grid .current-signal-content {
+  grid-template-columns: 1fr !important;
+  min-height: 0 !important;
+}
+
+@media (max-width: 980px) {
+  .result-room-screen #result-signal-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Do not let a single desktop form dominate the forest scene. */
+.signup-house-board #signup-form:not([hidden]) {
+  gap: 12px 18px !important;
+}
+
+.signup-house-board #signup-form > .form-row,
+.signup-house-board #signup-form .consent-card {
+  min-height: 64px !important;
+  padding: 12px 16px !important;
+}
+
+.signup-house-board .signup-door-button {
+  min-height: 62px !important;
+  font-size: clamp(20px, 2vw, 27px) !important;
+}
+
+@media (max-width: 820px) {
+  body:not(.intro-mode) .app-shell { padding: 12px; }
+  :is(.signup-house-stage, .eligibility-forest-stage, .health-room-stage) {
+    min-height: 0 !important;
+    margin-inline: -12px !important;
+    padding: 24px 12px !important;
+  }
+  :is(
+    .signup-house-board,
+    .eligibility-forest-board,
+    .health-room-board,
+    .analysis-room-screen .prediction-status-card,
+    .result-room-screen #result-signal-grid,
+    .challenge-forest-screen #challenge-form,
+    #workspace-panel-home,
+    #workspace-panel-challenge,
+    #workspace-panel-report,
+    #workspace-panel-tools,
+    #workspace-panel-together
+  ) {
+    padding: 14px !important;
+    border-width: 4px !important;
+  }
+  .signup-house-board #signup-form:not([hidden]) { grid-template-columns: 1fr !important; }
+  .signup-house-board #signup-form > * { grid-column: 1 !important; }
+}
