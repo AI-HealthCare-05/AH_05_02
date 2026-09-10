@@ -142,6 +142,8 @@ async def weekly_report_pdf(user: Annotated[User, Depends(get_request_user)]) ->
         f"기록 요약: {report.get('record_summary', report.get('message', '기록 없음'))}",
         "주의: 생활습관 기록은 질병 진단, 치료 효과 또는 위험 감소를 의미하지 않습니다.",
     ]
+    # §3 API 공통 조건(Cache-Control: private, no-store)은 app/main.py의
+    # `_no_store_for_sensitive_reports` 미들웨어가 이 응답과 인증 실패(401) 응답에도 일괄 적용한다.
     return Response(
         content=build_korean_pdf(lines),
         media_type="application/pdf",

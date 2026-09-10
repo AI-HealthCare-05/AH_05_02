@@ -14,6 +14,39 @@ from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
 
+# frequency/target_count: see docs/frontend/REPORT_CHALLENGE_FREQUENCY_MAPPING_20260908.md
+# for the per-challenge classification rationale (report-v1.4-draft §5.1). A challenge with
+# no "frequency" key here is left unconfirmed (None) — its daily_goal text never states an
+# unambiguous day/week cadence, so the lifestyle report must not guess one.
+_DAILY_TARGET_1 = {
+    "regular_meals_log",
+    "activity_check",
+    "two_minute_activity_break",
+    "reduce_processed_food",
+    "daily_meal_review",
+    "smoke_free_today",
+}
+_WEEKLY_TARGETS = {
+    "weekly_weight_log": 1,
+    "strength_twice_weekly": 2,
+    "balance_flex_twice_weekly": 2,
+    "weekly_habit_review": 1,
+    "walk_three_days_weekly": 3,
+    "unsweetened_drink_five_days": 5,
+    "vegetables_five_days": 5,
+    "whole_grain_three_times": 3,
+    "weekly_weight_trend": 1,
+}
+
+
+def _report_frequency(code: str) -> dict[str, object]:
+    if code in _DAILY_TARGET_1:
+        return {"frequency": "daily", "target_count": 1}
+    if code in _WEEKLY_TARGETS:
+        return {"frequency": "weekly", "target_count": _WEEKLY_TARGETS[code]}
+    return {"frequency": None, "target_count": None}
+
+
 CHALLENGE_CATALOG = (
     {
         "code": "walk_after_meal_10m",
@@ -328,7 +361,8 @@ class ChallengeService:
 
     async def ensure_catalog(self) -> list[Challenge]:
         for values in CHALLENGE_CATALOG:
-            await Challenge.update_or_create(defaults={**values, "is_active": True}, code=values["code"])
+            defaults = {**values, **_report_frequency(values["code"]), "is_active": True}
+            await Challenge.update_or_create(defaults=defaults, code=values["code"])
         return list((await self.repo.challenge_map()).values())
 
     async def recommendations(self, user: User, prediction_id: int | None) -> dict[str, object]:
@@ -409,7 +443,19 @@ class ChallengeService:
                 status=cycle_status,
             )
             for challenge_id in request.challenge_ids:
-                await UserChallenge.create(user_id=user.id, cycle_id=cycle.id, challenge_id=challenge_id)
+                challenge = challenges[challenge_id]
+                await UserChallenge.create(
+                    user_id=user.id,
+                    cycle_id=cycle.id,
+                    challenge_id=challenge_id,
+                    # Snapshot the goal definition as of selection time (report-v1.4-draft
+                    # §5.1) so a later catalog wording/frequency change never retroactively
+                    # changes what an already-selected cycle's report shows.
+                    frequency=challenge.frequency,
+                    target_count=challenge.target_count,
+                    title_snapshot=challenge.title,
+                    definition_version=challenge.definition_version,
+                )
         return cycle
 
     async def upsert_log(
