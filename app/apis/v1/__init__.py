@@ -11,6 +11,7 @@ from app.apis.v1.forest_routers import forest_router
 from app.apis.v1.game_routers import game_router
 from app.apis.v1.health_routers import health_router
 from app.apis.v1.prediction_routers import prediction_router
+from app.apis.v1.rag_routers import rag_router
 from app.apis.v1.reports_routers import reports_router
 from app.apis.v1.research_model_routers import research_model_router
 from app.apis.v1.user_routers import user_router
@@ -30,5 +31,6 @@ v1_routers.include_router(facility_router)
 v1_routers.include_router(engagement_router)
 v1_routers.include_router(reports_router)
 v1_routers.include_router(wellness_router)
+v1_routers.include_router(rag_router)
 v1_routers.include_router(game_router)
 v1_routers.include_router(forest_router)

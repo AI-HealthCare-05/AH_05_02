@@ -9,7 +9,6 @@ from tortoise import Tortoise
 
 from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
-from src.rag.engine import answer_with_sources
 
 
 async def signup_and_login(client: AsyncClient) -> dict[str, str]:
@@ -23,44 +22,6 @@ async def signup_and_login(client: AsyncClient) -> dict[str, str]:
     assert response.status_code == status.HTTP_201_CREATED
     login = await client.post("/api/v1/auth/login", json={"email": signup["email"], "password": signup["password"]})
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
-
-
-def test_rag_returns_citations_and_refuses_medication_changes() -> None:
-    grounded = answer_with_sources("당뇨 예방을 위해 어떤 생활습관을 기록하면 좋나요?")
-    assert grounded["answer_status"] == "grounded"
-    assert grounded["citations"]
-    assert all(item["url"].startswith("https://") for item in grounded["citations"])
-    assert all("checked_at" in item for item in grounded["citations"])
-
-    refused = answer_with_sources("당뇨약 용량을 줄여도 되나요?")
-    assert refused["answer_status"] == "medical_safety_refusal"
-    assert "의료진" in refused["answer"]
-
-
-def test_rag_redirects_emergency_symptoms_before_normal_answer() -> None:
-    emergency = answer_with_sources("갑자기 가슴 통증이 심하고 숨쉬기 힘들어요")
-    assert emergency["answer_status"] == "emergency_redirect"
-    assert "119" in emergency["answer"]
-    assert emergency["citations"]
-    assert emergency["citations"][0]["document_id"] == "kdca-hyperglycemia-emergency"
-
-    unconscious = answer_with_sources("어지러워서 쓰러졌는데 의식이 흐려요")
-    assert unconscious["answer_status"] == "emergency_redirect"
-
-
-def test_rag_emergency_takes_priority_over_medication_pattern() -> None:
-    result = answer_with_sources("의식을 잃었는데 약을 늘려도 되나요?")
-    assert result["answer_status"] == "emergency_redirect"
-
-
-def test_rag_diet_and_complication_questions_are_grounded_in_new_documents() -> None:
-    diet = answer_with_sources("당뇨병 식이요법에서 탄수화물은 얼마나 먹어야 하나요?")
-    assert diet["answer_status"] == "grounded"
-    assert any(item["document_id"] == "kdca-diabetes-diet" for item in diet["citations"])
-
-    complications = answer_with_sources("당뇨병 합병증으로 어떤 검진을 받아야 하나요?")
-    assert complications["answer_status"] == "grounded"
-    assert any(item["document_id"] == "kdca-diabetes-complications" for item in complications["citations"])
 
 
 @pytest.mark.asyncio

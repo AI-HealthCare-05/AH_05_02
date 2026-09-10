@@ -16,7 +16,9 @@ from app.dtos.engagement import (
     InvitationCreateRequest,
     SharedChallengeCreateRequest,
 )
+from app.core import config
 from app.models.engagement import EducationContent, Invitation, SharedChallengeGroup
+from app.models.health import ChallengeCycle
 from app.models.users import User
 from app.repositories.engagement_repository import EngagementRepository
 from app.repositories.health_repository import HealthRepository
@@ -176,9 +178,32 @@ class EngagementService:
             )
         return await self.repo.content_catalog()
 
+    async def _week_anchor_cycle(self, user_id: int) -> ChallengeCycle | None:
+        """이번 주 리포트(app/services/reports.py의 _week_anchor_cycle)와 같은 정책: 활성/예정
+        회차가 있으면 그 회차, 없으면 가장 최근에 끝난 회차를 기준으로 삼는다. reports.py가 이미
+        engagement.py를 가져다 쓰고 있어서(순환 import 방지) 그대로 import하지 않고 복제했다 —
+        이 정책이 바뀌면 두 곳 다 같이 고쳐야 한다."""
+        cycle = await self.health_repo.active_cycle(user_id)
+        if cycle is not None:
+            return cycle
+        return await ChallengeCycle.filter(user_id=user_id).order_by("-end_date", "-id").first()
+
+    async def current_education_week(self, user_id: int) -> int | None:
+        """지금이 4주 커리큘럼 중 몇 주차인지. 활성/과거 회차가 전혀 없으면 잠금 없이 None을 반환해
+        전체를 미리보기 가능 상태로 둔다(챌린지를 시작해야만 주차 페이싱이 의미가 있으므로)."""
+        cycle = await self._week_anchor_cycle(user_id)
+        if cycle is None:
+            return None
+        today = datetime.now(config.TIMEZONE).date()
+        if today < cycle.start_date:
+            return 1
+        week = (today - cycle.start_date).days // 7 + 1
+        return min(week, 4)
+
     async def education_contents(self, user: User) -> dict[str, object]:
         items = await self.ensure_education_catalog()
         progress = await self.repo.content_progress(user.id)
+        current_week = await self.current_education_week(user.id)
         return {
             "items": [
                 {
@@ -190,9 +215,13 @@ class EngagementService:
                     "completed": item.id in progress,
                     "is_correct": progress[item.id].is_correct if item.id in progress else None,
                     "source": {"title": item.source_title, "url": item.source_url},
+                    # 소프트 락: 내용은 항상 보여주고(미리보기), 아직 안 열린 주차인지만 표시한다.
+                    # 실제 제출 차단은 complete_content/answer_health_education_quiz가 담당한다.
+                    "locked": current_week is not None and item.week_number > current_week,
                 }
                 for item in items
             ],
+            "current_week_number": current_week,
             "medical_notice": "교육 콘텐츠는 일반 건강정보이며 진단·처방을 대신하지 않습니다.",
         }
 
@@ -200,6 +229,12 @@ class EngagementService:
         content = await self.repo.get_content(content_id)
         if content is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="교육 콘텐츠를 찾을 수 없습니다.")
+        current_week = await self.current_education_week(user.id)
+        if current_week is not None and content.week_number > current_week:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{content.week_number}주차 문항이에요. {content.week_number}주차가 되면 풀 수 있어요.",
+            )
         normalized = request.quiz_answer.strip().casefold()
         is_correct = normalized == content.quiz_answer.strip().casefold()
         progress = await self.repo.complete_content(

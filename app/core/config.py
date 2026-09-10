@@ -89,6 +89,16 @@ class Config(BaseSettings):
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
 
+    HEALTH_EDUCATION_EMBEDDING_PROVIDER: str = "development"
+    HEALTH_EDUCATION_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    HEALTH_EDUCATION_GENERATION_PROVIDER: str = "development"
+    HEALTH_EDUCATION_TIMEOUT_SECONDS: int = 20
+    HEALTH_EDUCATION_KEYWORD_WEIGHT: float = 0.5
+    HEALTH_EDUCATION_EMBEDDING_WEIGHT: float = 0.5
+    HEALTH_EDUCATION_RELEVANCE_THRESHOLD: float = 0.18
+    HEALTH_EDUCATION_TOP_K: int = 6
+    HEALTH_EDUCATION_MAX_CITATIONS: int = 3
+
     # 위치 기반 근처 의료기관 조회. 진단·처방을 대신하지 않고, 위치 기반 안내만 제공합니다.
     MEDICAL_FACILITY_SEARCH_PROVIDER: str = "development"
     KAKAO_REST_API_KEY: str = ""

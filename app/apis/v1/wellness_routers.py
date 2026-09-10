@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
@@ -13,7 +13,7 @@ from app.dtos.wellness import (
     NotificationPreferenceRequest,
     OcrDraftRequest,
     OcrHealthApplyRequest,
-    RagQuestionRequest,
+    QuizAnswerRequest,
     WearableConnectionRequest,
     WearableHealthCandidateApplyRequest,
     WearableImportRequest,
@@ -21,8 +21,8 @@ from app.dtos.wellness import (
 from app.models.users import User
 from app.services.engagement import EngagementService
 from app.services.wellness import WellnessService
+from src.quiz.curriculum import week_number_for_document
 from src.quiz.generator import generate_quizzes
-from src.rag.engine import answer_with_sources
 
 wellness_router = APIRouter(tags=["Wellness extensions"])
 
@@ -121,19 +121,70 @@ async def apply_wearable_health_candidates(
     return envelope(await WellnessService().apply_wearable_health_candidates(user, checkup_id, request))
 
 
-@wellness_router.post("/health-education/questions")
-async def ask_health_education(request: RagQuestionRequest, user: Annotated[User, Depends(get_request_user)]):
-    _ = user
-    result = answer_with_sources(request.question)
-    result["medical_notice"] = "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."
-    return envelope(result)
-
-
 @wellness_router.get("/health-education/quizzes")
 async def list_health_education_quizzes(user: Annotated[User, Depends(get_request_user)]):
-    _ = user
-    items = [item.as_public_dict() for item in generate_quizzes()]
-    return envelope({"items": items})
+    # already_correct: 이 사용자가 이전 회차 등에서 이미 정답을 맞힌 문항 표시(노출 우선순위 조정용).
+    # week_number/locked: 프론트가 더 이상 자체 weekByDocument 표를 들고 있지 않도록, 문서가 몇 주차
+    # 커리큘럼인지와 지금 그 주차가 열렸는지를 함께 내려준다. 실제 제출 차단은 아래 answers 엔드포인트가 한다.
+    engagement = EngagementService()
+    correct_ids = await engagement.repo.correct_quiz_ids(user.id)
+    current_week = await engagement.current_education_week(user.id)
+    items = []
+    for quiz in generate_quizzes():
+        week_number = week_number_for_document(quiz.document_id)
+        locked = current_week is not None and week_number is not None and week_number > current_week
+        items.append(
+            {
+                **quiz.as_public_dict(),
+                "already_correct": quiz.quiz_id in correct_ids,
+                "week_number": week_number,
+                "locked": locked,
+            }
+        )
+    return envelope({"items": items, "current_week_number": current_week})
+
+
+@wellness_router.post("/health-education/quizzes/{quiz_id}/answers")
+async def answer_health_education_quiz(
+    quiz_id: str,
+    request: QuizAnswerRequest,
+    user: Annotated[User, Depends(get_request_user)],
+):
+    item = next((quiz for quiz in generate_quizzes() if quiz.quiz_id == quiz_id), None)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="퀴즈를 찾을 수 없습니다.")
+    engagement = EngagementService()
+    week_number = week_number_for_document(item.document_id)
+    if week_number is not None:
+        current_week = await engagement.current_education_week(user.id)
+        if current_week is not None and week_number > current_week:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{week_number}주차 문항이에요. {week_number}주차가 되면 풀 수 있어요.",
+            )
+    submitted = request.answer.strip()
+    is_correct = submitted.casefold() == item.answer.strip().casefold()
+    await engagement.repo.record_quiz_attempt(
+        user_id=user.id,
+        quiz_id=item.quiz_id,
+        document_id=item.document_id,
+        submitted_answer=submitted,
+        is_correct=is_correct,
+    )
+    return envelope(
+        {
+            "quiz_id": item.quiz_id,
+            "is_correct": is_correct,
+            "correct_answer": item.answer,
+            "explanation": item.explanation,
+            "source": {
+                "document_id": item.document_id,
+                "title": item.source_title,
+                "url": item.source_url,
+                "checked_at": item.checked_at,
+            },
+        }
+    )
 
 
 @wellness_router.post("/food-analyses", status_code=status.HTTP_201_CREATED)

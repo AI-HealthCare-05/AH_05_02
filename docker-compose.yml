@@ -64,6 +64,10 @@ services:
       - ./app:/app/app
       - ./src/frontend:/app/src/frontend:ro
       - ./models:/app/models:ro
+      - ./src/ocr:/app/src/ocr:ro
+      - ./src/wearables:/app/src/wearables:ro
+      - ./src/quiz:/app/src/quiz:ro
+      - ./src/rag:/app/src/rag:ro
     ports:
       - "127.0.0.1:8001:8000"
     healthcheck:

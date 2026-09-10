@@ -11,6 +11,7 @@ from app.models.engagement import (
     ContentProgress,
     EducationContent,
     Encouragement,
+    HealthQuizAttempt,
     Invitation,
     SharedChallengeGroup,
     SharedChallengeMember,
@@ -72,6 +73,15 @@ class EngagementRepository:
             content_id=values["content_id"],
         )
         return item
+
+    async def record_quiz_attempt(self, **values: Any) -> HealthQuizAttempt:
+        return await HealthQuizAttempt.create(**values)
+
+    async def correct_quiz_ids(self, user_id: int) -> set[str]:
+        """이 사용자가 정답을 맞힌 적 있는 quiz_id 집합. 회차가 바뀌어도 이미 맞힌 문항을
+        새 문항보다 뒤로 미루는 데 쓴다(퀴즈 노출 우선순위 결정용, 접근 제한 용도 아님)."""
+        rows = await HealthQuizAttempt.filter(user_id=user_id, is_correct=True).values_list("quiz_id", flat=True)
+        return set(rows)
 
     async def create_invitation(self, **values: Any) -> Invitation:
         return await Invitation.create(**values)
