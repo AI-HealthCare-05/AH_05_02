@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "experiment_id": "rf25_17input_imputed_v001",
+  "owner": "양준혁",
+  "kind": "candidate",
+  "model_type": "Frozen RF25 with eight masked inputs",
+  "problem": "KLoSA next-wave diabetes incidence risk screening",
+  "dataset_path": "data/processed/official_v1/klosa_diabetes_incidence_stage3_25features_v1.pkl",
+  "dataset_version": "official_v1",
+  "split_version": "pid_group_70_15_15_stratified_any_event_rs42_v1",
+  "model_version": "rf25_17input_imputed_v001-research-v1",
+  "threshold_version": "validation-recall-specificity-v1",
+  "entrypoint": "pipeline.py:run_experiment",
+  "primary_metric": "recall",
+  "minimum_specificity": 0.4,
+  "feature_schema_version": "klosa_rf25_17provided_8imputed_v1",
+  "safety": {
+    "participant_group_split": true,
+    "future_and_target_leakage_excluded": true,
+    "preprocessing_fit_on_train_only": true,
+    "threshold_selected_on_validation_only": true,
+    "test_used_once_after_freeze": true
+  },
+  "notes": "Frozen RF25 receives seventeen observed features; eight optional features are explicitly set to NaN and handled by its fitted Train-only preprocessing. Research use only."
+}
