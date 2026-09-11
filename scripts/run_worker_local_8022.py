@@ -35,13 +35,21 @@ if __name__ == "__main__":
     os.environ.update(database_environment(root.parent / "AH_05_02" / ".env"))
     os.environ.update(local_queue_environment())
     os.environ["WORKER_NAME"] = "local8022-matching-worker"
-    # Opt into hash-verified research artifacts, never public probability display.
-    os.environ["S2_MODEL_RUNTIME_ENABLED"] = "true"
+    # Use the hash-verified shared8 current model and the standard RF25 future model.
+    # Both remain research candidates and never enable public probability display.
+    os.environ["S2_MODEL_RUNTIME_ENABLED"] = "false"
+    os.environ["CURRENT_SCREENING_RUNTIME"] = "shared8-waist"
+    os.environ["ML_SHARED8_MODEL_URI"] = str(
+        root / "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
+    )
     os.environ["ML_SHARED7_MODEL_URI"] = str(
         root / "models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib"
     )
     os.environ["ML_FIRST_INTERVAL_MODEL_URI"] = str(
         root / "models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib"
+    )
+    os.environ["MODEL_URI"] = str(
+        root / "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     )
     try:
         asyncio.run(main())

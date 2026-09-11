@@ -41,7 +41,7 @@ def test_requires_authentication(client):
     ).status_code in (401, 403)
 
 
-@pytest.mark.parametrize("model", ["shared7", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval", "tomorrow-rf25"])
 def test_route_calls_correct_model(client, monkeypatch, model):
     def predict(selected, payload, *, as_of_date, model_path):
         assert selected == model and payload == {"example": 1}

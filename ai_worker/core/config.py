@@ -28,9 +28,9 @@ class Config(BaseSettings):
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
-    PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1.1-sav"
+    PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
     PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
-    PREDICTION_THRESHOLD_VERSION: str = "validation-spec043-caution-recall090-sav-repro-v1"
+    PREDICTION_THRESHOLD_VERSION: str = "validation-spec043-caution-recall090-v1"
     PREDICTION_MODEL_MIN_AGE: int = 45
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
@@ -39,14 +39,18 @@ class Config(BaseSettings):
     PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-v1"
     PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
     PREDICTION_CALIBRATION_VERSION: str = "unapproved"
-    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "b96eaf408982399782073fce97977bef874012cf7d90551120da60266df68ddd"
-    PREDICTION_DECISION_THRESHOLD: float | None = 0.02120045257343795
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8"
+    PREDICTION_DECISION_THRESHOLD: float | None = 0.021153602801262862
 
-    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
-    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
+    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
+    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
     CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
+    )
+    CURRENT_SCREENING_RUNTIME: str = "v061"
+    ML_SHARED8_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
     )
     # Explicitly opt-in local S2 research runtime. This never promotes a model
     # or enables public probability display.

@@ -52,10 +52,15 @@ def local_model_environment(root: Path) -> dict[str, str]:
     verified artifact available before launch. Run v061 with its dedicated
     worker image; it requires a different scikit-learn version from shared7.
     """
-    runtime = os.environ.get("LOCAL_CURRENT_SCREENING_RUNTIME", "shared7")
-    if runtime not in {"shared7", "v061"}:
-        raise ValueError("LOCAL_CURRENT_SCREENING_RUNTIME must be shared7 or v061")
-    name = "knhanes-shared7-sk180-v1" if runtime == "shared7" else "knhanes-current-screening-v061"
+    runtime = os.environ.get("LOCAL_CURRENT_SCREENING_RUNTIME", "shared8-waist")
+    names = {
+        "shared7": "knhanes-shared7-sk180-v1",
+        "shared8-waist": "knhanes-shared8-waist-sk180-v1",
+        "v061": "knhanes-current-screening-v061",
+    }
+    if runtime not in names:
+        raise ValueError("LOCAL_CURRENT_SCREENING_RUNTIME must be shared7, shared8-waist or v061")
+    name = names[runtime]
     manifest_path = root / f"models/registry/diabetes_current_screening/candidates/{name}.json"
     manifest = json.loads(manifest_path.read_text())
     artifact = root / manifest["artifact_local_path"]
@@ -77,9 +82,13 @@ def local_model_environment(root: Path) -> dict[str, str]:
         "CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST": manifest["artifact_sha256"],
         "CURRENT_SCREENING_MODEL_URI": str(root / manifest["artifact_local_path"]),
         "CURRENT_SCREENING_MANIFEST_URI": str(manifest_path),
-        "CURRENT_SCREENING_PREPROCESSING_VERSION": "shared7-standard-api-frame-v1"
-        if runtime == "shared7"
-        else "knhanes-2016-2024-recall-v061",
+        "CURRENT_SCREENING_PREPROCESSING_VERSION": (
+            "shared8-waist-train-estimator-standard-api-frame-v1"
+            if runtime == "shared8-waist"
+            else "shared7-standard-api-frame-v1"
+            if runtime == "shared7"
+            else "knhanes-2016-2024-recall-v061"
+        ),
     }
 
 

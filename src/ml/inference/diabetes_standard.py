@@ -30,7 +30,7 @@ from src.ml.preprocessing.diabetes_api_features import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CANDIDATE_MANIFEST = REPOSITORY_ROOT / (
-    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.1-sav.json"
+    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
 )
 
 
