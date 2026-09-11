@@ -49,7 +49,7 @@ if __name__ == "__main__":
         root / "models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib"
     )
     os.environ["MODEL_URI"] = str(
-        root / "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib"
+        root / "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     )
     try:
         asyncio.run(main())

@@ -7,7 +7,7 @@
 | 구분 | 모델 버전 | 목적 | 임계값 | 상태 |
 |---|---|---|---:|---|
 | 오늘이 | `knhanes-shared8-waist-sk180-research-v1` | 현재 당뇨 관련 위험 신호 선별 | `0.025988709910244948` | 연구 후보·운영 미승인 |
-| 내일이 | `rf25-tuned-spec40-v1.1-sav` | 다음 관찰 시점 신규 의사진단 위험 선별 | caution `0.01725507070479405`, high `0.02120045257343795` | 연구 후보·운영 미승인 |
+| 내일이 | `rf25-tuned-spec40-v1` | 다음 관찰 시점 신규 의사진단 위험 선별 | caution `0.017113354352510553`, high `0.021153602801262862` | 연구 후보·운영 미승인 |
 
 오늘이 8변수 순서는 `age`, `height_cm`, `weight_kg`, `bmi`, `waist_cm`, `sex`,
 `current_smoker`, `education`으로 고정한다. API는 `birth_date`, `height_cm`,
@@ -28,7 +28,7 @@
 | 모델 | Validation R/S | Test R/S | Test PPV | Test AUROC | Test AUPRC | Test TP/FN/TN/FP |
 |---|---|---|---:|---:|---:|---|
 | 오늘이 8변수 sklearn 1.8 | 0.9325 / 0.4323 | 0.9333 / 0.4284 | 0.0641 | 0.7712 | 0.1175 | 364/26/3985/5316 |
-| 내일이 RF25 | 별도 KLoSA Validation 선택 | 0.8359 / 0.4054 | 0.0343 | 0.6634 | 0.0484 | 163/32/3125/4583 |
+| 내일이 RF25 | 0.8256 / 0.4337 | 0.8410 / 0.4024 | 0.0344 | 0.6636 | 0.0485 | 164/31/3102/4606 |
 
 데이터셋·라벨·분할이 다르므로 두 행은 우열 비교용이 아니다. 과거 Test가 반복 조회된
 historical holdout이라는 한계도 유지한다.
@@ -46,8 +46,12 @@ python scripts/provision-models.py \
 
 - 오늘이 경로: `models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib`
 - 오늘이 SHA-256: `aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc`
-- 내일이 경로: `models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib`
-- 내일이 SHA-256: `b96eaf408982399782073fce97977bef874012cf7d90551120da60266df68ddd`
+- 내일이 경로: `models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib`
+- 내일이 SHA-256: `e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8`
+
+SAV 재현본 `rf25-tuned-spec40-v1.1-sav`는 Manifest만 남아 있고 원자료·실행 결과·Artifact를
+현재 검증할 수 없어 서비스 기본값에서 제외했다. v1과 v1.1의 파일·Manifest·임계값을
+서로 섞지 않는다.
 
 관리자 연구 API에서는 `/api/v1/research/models/shared8-waist/predict`와
 `/api/v1/research/models/tomorrow-rf25/predict`를 사용할 수 있다. 공개 활성화가 아니며
