@@ -50,7 +50,9 @@ class Config(BaseSettings):
     PREDICTION_PROVIDER: str = "development"
     ML_RESEARCH_ENDPOINTS_ENABLED: bool = False
     ML_SHARED7_MODEL_URI: str = ""
+    ML_SHARED8_MODEL_URI: str = ""
     ML_FIRST_INTERVAL_MODEL_URI: str = ""
+    ML_RF25_MODEL_URI: str = ""
     PREDICTION_TIMEOUT_SECONDS: int = 30
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
     PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1.1-sav"

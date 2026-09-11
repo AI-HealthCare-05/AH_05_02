@@ -25,6 +25,8 @@ from src.ml.preprocessing.diabetes_api_features import build_standard_model_fram
 ROOT = Path(__file__).resolve().parents[3]
 FEATURES = ("age", "height_cm", "weight_kg", "bmi", "sex", "current_smoker", "education")
 SHARED_MANIFEST = ROOT / "models/registry/diabetes_current_screening/candidates/knhanes-shared7-sk180-v1.json"
+SHARED8_FEATURES = ("age", "height_cm", "weight_kg", "bmi", "waist_cm", "sex", "current_smoker", "education")
+SHARED8_MANIFEST = ROOT / ("models/registry/diabetes_current_screening/candidates/knhanes-shared8-waist-sk180-v1.json")
 
 
 class ResearchArtifactUnavailableError(RuntimeError):
@@ -43,18 +45,29 @@ def validated_input(payload: dict, as_of_date: date):
     return user_input, frame
 
 
-def shared7_frame(payload: dict, *, as_of_date: date) -> pd.DataFrame:
+def reduced_screening_frame(payload: dict, *, as_of_date: date, include_waist: bool = False) -> pd.DataFrame:
     user_input, frame = validated_input(payload, as_of_date)
     row = {
         "age": int(frame.iloc[0]["age"]),
         "height_cm": float(user_input.height_cm),
         "weight_kg": float(user_input.weight_kg),
         "bmi": float(frame.iloc[0]["bmi"]),
+        "waist_cm": np.nan if user_input.waist_cm is None else float(user_input.waist_cm),
         "sex": 1 if user_input.sex == "male" else 2,
         "current_smoker": int(user_input.smoking_status == "current"),
         "education": np.nan if user_input.education_level is None else int(user_input.education_level[-1]),
     }
-    return pd.DataFrame([row], columns=FEATURES)
+    if user_input.waist_cm is not None and not 45 <= float(user_input.waist_cm) <= 160:
+        raise ValueError("waist_cm must be between 45 and 160")
+    return pd.DataFrame([row], columns=SHARED8_FEATURES if include_waist else FEATURES)
+
+
+def shared7_frame(payload: dict, *, as_of_date: date) -> pd.DataFrame:
+    return reduced_screening_frame(payload, as_of_date=as_of_date)
+
+
+def shared8_frame(payload: dict, *, as_of_date: date) -> pd.DataFrame:
+    return reduced_screening_frame(payload, as_of_date=as_of_date, include_waist=True)
 
 
 def _runtime():
@@ -62,10 +75,11 @@ def _runtime():
         raise ResearchModelContractError("Research models require scikit-learn 1.8.0")
 
 
-@lru_cache(maxsize=2)
-def load_shared7(model_path: str = "") -> tuple[dict, dict]:
+@lru_cache(maxsize=4)
+def load_reduced_screening(model_path: str = "", manifest_path: str = "") -> tuple[dict, dict]:
     _runtime()
-    manifest = json.loads(SHARED_MANIFEST.read_text())
+    manifest_file = Path(manifest_path) if manifest_path else SHARED_MANIFEST
+    manifest = json.loads(manifest_file.read_text())
     path = Path(model_path) if model_path else ROOT / manifest["artifact_local_path"]
     if not path.is_file():
         raise ResearchArtifactUnavailableError("Shared7 model is not provisioned")
@@ -77,17 +91,27 @@ def load_shared7(model_path: str = "") -> tuple[dict, dict]:
             bundle = joblib.load(path)
         for key in ("model_key", "model_version", "feature_schema_version", "threshold_version", "threshold"):
             if bundle[key] != manifest[key]:
-                raise ValueError(f"Shared7 {key} mismatch")
-        if tuple(bundle["features"]) != FEATURES or tuple(manifest["features"]) != FEATURES:
-            raise ValueError("Shared7 feature order mismatch")
+                raise ValueError(f"Reduced screening {key} mismatch")
+        if tuple(bundle["features"]) != tuple(manifest["features"]):
+            raise ValueError("Reduced screening feature order mismatch")
         if bundle["ensemble_weights"] != {"logistic": 0.7, "random_forest": 0.3}:
             raise ValueError("Shared7 weights mismatch")
     except Exception as exc:
-        raise ResearchModelContractError("Invalid shared7 artifact") from exc
+        raise ResearchModelContractError("Invalid reduced screening artifact") from exc
     # RF parallel reduction introduces tiny float jitter. Fixed serial serving
     # does not refit or change any tree and makes reduction order deterministic.
     bundle["pipelines"]["random_forest"]["model"].set_params(n_jobs=1)
     return bundle, manifest
+
+
+@lru_cache(maxsize=2)
+def load_shared7(model_path: str = "") -> tuple[dict, dict]:
+    return load_reduced_screening(model_path, str(SHARED_MANIFEST))
+
+
+@lru_cache(maxsize=2)
+def load_shared8(model_path: str = "") -> tuple[dict, dict]:
+    return load_reduced_screening(model_path, str(SHARED8_MANIFEST))
 
 
 @lru_cache(maxsize=2)
@@ -133,9 +157,51 @@ def predict_shared7(payload: dict, *, as_of_date: date, model_path: str = "") ->
     }
 
 
+def predict_shared8(payload: dict, *, as_of_date: date, model_path: str = "") -> dict[str, Any]:
+    frame = shared8_frame(payload, as_of_date=as_of_date)
+    bundle, manifest = load_shared8(model_path)
+    probabilities = []
+    for name, weight in bundle["ensemble_weights"].items():
+        raw = np.clip(bundle["pipelines"][name].predict_proba(frame)[:, 1], 1e-6, 1 - 1e-6)
+        logits = np.log(raw / (1 - raw)).reshape(-1, 1)
+        probabilities.append(weight * bundle["calibrators"][name].predict_proba(logits)[:, 1])
+    score = float(np.sum(probabilities, axis=0)[0])
+    if not np.isfinite(score) or not 0 <= score <= 1:
+        raise ResearchModelContractError("Invalid screening score")
+    return {
+        "model_key": manifest["model_key"],
+        "task_type": "current_cross_sectional_screening",
+        "model_version": manifest["model_version"],
+        "input_schema_version": manifest["input_schema_version"],
+        "feature_schema_version": manifest["feature_schema_version"],
+        "threshold_version": manifest["threshold_version"],
+        "threshold_scope": "current_screening",
+        "calibration_version": "shared8-waist-oof-platt-v1",
+        "screening_decision_threshold": manifest["threshold"],
+        "risk_score_internal": round(score, 15),
+        "screening_signal_detected": score >= manifest["threshold"],
+        "waist_value_source": "estimated" if payload.get("waist_cm") is None else "measured",
+        "artifact_sha256": manifest["artifact_sha256"],
+        "as_of_date": as_of_date.isoformat(),
+        "display_allowed": False,
+        "operational_model_activated": False,
+        "promotion_status": "research_candidate_only",
+        "output_status": "research_candidate_not_operationally_approved",
+        "disclaimer": "현재 당뇨 관련 위험 선별 연구 신호이며 진단·처방 또는 미래 발병확률이 아닙니다.",
+    }
+
+
 def predict_research_model(model: str, payload: dict, *, as_of_date: date, model_path: str = "") -> dict:
     if model == "shared7":
         return predict_shared7(payload, as_of_date=as_of_date, model_path=model_path)
+    if model == "shared8-waist":
+        return predict_shared8(payload, as_of_date=as_of_date, model_path=model_path)
+    if model == "tomorrow-rf25":
+        from src.ml.inference.diabetes_standard import predict_diabetes_risk
+
+        return predict_diabetes_risk(
+            payload, as_of_date=as_of_date, model_path=Path(model_path) if model_path else None
+        )
     if model == "first-interval":
         user_input, _ = validated_input(payload, as_of_date)
         loaded = load_ensemble(model_path)

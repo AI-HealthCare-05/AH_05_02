@@ -38,14 +38,20 @@ def provision(source: Path, manifest_path: Path) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--today", type=Path, help="오늘이 KNHANES model.joblib 경로")
+    parser.add_argument("--today-shared8", type=Path, help="오늘이 8변수 sklearn 1.8 model.joblib 경로")
     parser.add_argument("--tomorrow", type=Path, help="내일이 KLoSA model.joblib 경로")
     args = parser.parse_args()
-    if not args.today and not args.tomorrow:
-        parser.error("--today 또는 --tomorrow 중 하나 이상을 지정하세요.")
+    if not args.today and not args.today_shared8 and not args.tomorrow:
+        parser.error("--today, --today-shared8 또는 --tomorrow 중 하나 이상을 지정하세요.")
     if args.today:
         provision(
             args.today.resolve(),
             ROOT / "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json",
+        )
+    if args.today_shared8:
+        provision(
+            args.today_shared8.resolve(),
+            ROOT / "models/registry/diabetes_current_screening/candidates/knhanes-shared8-waist-sk180-v1.json",
         )
     if args.tomorrow:
         provision(

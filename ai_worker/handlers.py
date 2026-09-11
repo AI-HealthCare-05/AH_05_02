@@ -131,9 +131,10 @@ async def _run_s2_future_model(model_input: dict[str, Any], as_of_date: date) ->
     }
 
 
-async def _run_s2_current_model(
+async def _run_reduced_current_model(
     model_input: dict[str, Any],
     as_of_date_raw: Any,
+    model: str = "shared7",
 ) -> dict[str, Any]:
     if not isinstance(as_of_date_raw, str):
         raise ValueError("S2 diabetes_current_screening payload에는 as_of_date가 필요합니다.")
@@ -145,10 +146,10 @@ async def _run_s2_current_model(
 
     output = await asyncio.to_thread(
         predict_research_model,
-        "shared7",
+        model,
         model_input,
         as_of_date=as_of_date,
-        model_path=config.ML_SHARED7_MODEL_URI,
+        model_path=config.ML_SHARED8_MODEL_URI if model == "shared8-waist" else config.ML_SHARED7_MODEL_URI,
     )
     signal_level = "high" if output["screening_signal_detected"] else "low"
     return {
@@ -166,7 +167,11 @@ async def _run_s2_current_model(
         "model_version": output["model_version"],
         "feature_schema_version": output["feature_schema_version"],
         "input_schema_version": output["input_schema_version"],
-        "preprocessing_version": "shared7-standard-api-frame-v1",
+        "preprocessing_version": (
+            "shared8-waist-train-estimator-standard-api-frame-v1"
+            if model == "shared8-waist"
+            else "shared7-standard-api-frame-v1"
+        ),
         "target_definition_version": "current-diabetes-screening-research-v1",
         "calibration_version": output["calibration_version"],
         "model_artifact_digest": output["artifact_sha256"],
@@ -248,8 +253,10 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
         model_input = payload.get("input")
         if not isinstance(model_input, dict):
             raise ValueError("diabetes_current_screening payload에는 input 객체가 필요합니다.")
+        if config.CURRENT_SCREENING_RUNTIME == "shared8-waist":
+            return await _run_reduced_current_model(model_input, payload.get("as_of_date"), "shared8-waist")
         if config.S2_MODEL_RUNTIME_ENABLED:
-            return await _run_s2_current_model(model_input, payload.get("as_of_date"))
+            return await _run_reduced_current_model(model_input, payload.get("as_of_date"))
         from src.ml.inference.diabetes_current_screening import (
             load_current_screening_model,
             predict_with_loaded_current_model,

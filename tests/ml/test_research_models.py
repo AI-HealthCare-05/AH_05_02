@@ -43,6 +43,8 @@ def fake_models(monkeypatch):
         "ensemble_weights": {"logistic": 0.7, "random_forest": 0.3},
     }
     monkeypatch.setattr(serving, "load_shared7", lambda _: (bundle, manifest))
+    shared8_manifest = json.loads(serving.SHARED8_MANIFEST.read_text())
+    monkeypatch.setattr(serving, "load_shared8", lambda _: (bundle, shared8_manifest))
     ensemble = {
         k: Constant() for k in ("rf_model", "survival_model", "rf_calibrator", "logistic_calibrator", "meta_model")
     }
@@ -64,6 +66,16 @@ def test_shared_frame_maps_only_seven_features(payload):
     assert (row.education, row.current_smoker, row.sex) == (3, 1, 1)
 
 
+def test_shared8_frame_maps_measured_or_missing_waist(payload):
+    frame = serving.shared8_frame(payload, as_of_date=AS_OF)
+    assert tuple(frame.columns) == serving.SHARED8_FEATURES
+    assert np.isnan(frame.iloc[0]["waist_cm"])
+    measured = serving.shared8_frame({**payload, "waist_cm": 84.5}, as_of_date=AS_OF)
+    assert measured.iloc[0]["waist_cm"] == 84.5
+    with pytest.raises(ValueError, match="waist_cm"):
+        serving.shared8_frame({**payload, "waist_cm": 200}, as_of_date=AS_OF)
+
+
 @pytest.mark.parametrize(
     "change",
     [
@@ -79,20 +91,20 @@ def test_shared_frame_maps_only_seven_features(payload):
         {"fasting_glucose": 200},
     ],
 )
-@pytest.mark.parametrize("model", ["shared7", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval"])
 def test_invalid_input_rejected_before_model_load(payload, change, model):
     with pytest.raises(ValueError):
         serving.predict_research_model(model, {**payload, **change}, as_of_date=AS_OF)
 
 
-@pytest.mark.parametrize("model", ["shared7", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval"])
 def test_missing_input_rejected(payload, model):
     payload.pop("height_cm")
     with pytest.raises(ValueError):
         serving.predict_research_model(model, payload, as_of_date=AS_OF)
 
 
-@pytest.mark.parametrize("model", ["shared7", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval"])
 def test_deterministic_private_response(payload, fake_models, model):
     first = serving.predict_research_model(model, payload, as_of_date=AS_OF)
     assert first == serving.predict_research_model(model, payload, as_of_date=AS_OF)
@@ -102,6 +114,8 @@ def test_deterministic_private_response(payload, fake_models, model):
         scores = [p["cumulative_risk_signal"] for p in first["curve"]]
         assert scores == sorted(scores) and len(scores) == 9
         assert all(p["cumulative_risk"] is None for p in first["curve"])
+    if model == "shared8-waist":
+        assert first["waist_value_source"] == "estimated"
 
 
 def test_missing_and_corrupt_shared_artifact(tmp_path):

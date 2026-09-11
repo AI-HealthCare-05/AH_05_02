@@ -48,6 +48,10 @@ class Config(BaseSettings):
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
     )
+    CURRENT_SCREENING_RUNTIME: str = "v061"
+    ML_SHARED8_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
+    )
     # Explicitly opt-in local S2 research runtime. This never promotes a model
     # or enables public probability display.
     S2_MODEL_RUNTIME_ENABLED: bool = False

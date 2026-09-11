@@ -1,4 +1,4 @@
-"""Refit shared7 under sklearn 1.8.0; never deserialize a 1.9 model here."""
+"""Refit a reduced KNHANES screening model under scikit-learn 1.8.0."""
 
 from __future__ import annotations
 
@@ -46,6 +46,7 @@ def main():  # noqa: C901 - fixed train/validation/test protocol kept explicit
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--handoff-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--variant", choices=("shared7", "shared8-waist"), default="shared7")
     args = parser.parse_args()
     if version("scikit-learn") != "1.8.0":
         raise RuntimeError("This reproduction requires scikit-learn 1.8.0")
@@ -65,8 +66,9 @@ def main():  # noqa: C901 - fixed train/validation/test protocol kept explicit
     trainer = import_file(
         "src.ml.modeling.knhanes_current_screening", handoff / "src/ml/modeling/knhanes_current_screening.py"
     )
+    variant_key = "shared7_waist" if args.variant == "shared8-waist" else "shared7"
     config = variants(json.loads((handoff / "configs/knhanes_current_screening_recall_v061.json").read_text()))[
-        "shared7"
+        variant_key
     ]
     cohort = trainer.load_cohort(source, config)
     splits = {
@@ -81,15 +83,25 @@ def main():  # noqa: C901 - fixed train/validation/test protocol kept explicit
     weights = trainer.normalized_weights(train.survey_weight)
     software = {name: version(name) for name in ("scikit-learn", "numpy", "pandas", "joblib", "scipy")}
     software["python"] = platform.python_version()
+    identity = {
+        "shared7": {
+            "model_version": "knhanes-shared7-sk180-research-v1",
+            "feature_schema_version": "knhanes-shared7-v1",
+            "threshold_version": "shared7-sk180-validation-spec042-v1",
+        },
+        "shared8-waist": {
+            "model_version": "knhanes-shared8-waist-sk180-research-v1",
+            "feature_schema_version": "knhanes-shared8-waist-v1",
+            "threshold_version": "shared8-waist-sk180-validation-spec042-v1",
+        },
+    }[args.variant]
     bundle = {
         "features": features,
         "pipelines": {},
         "calibrators": {},
         "ensemble_weights": {"logistic": 0.7, "random_forest": 0.3},
         "model_key": "diabetes_current_screening",
-        "model_version": "knhanes-shared7-sk180-research-v1",
-        "feature_schema_version": "knhanes-shared7-v1",
-        "threshold_version": "shared7-sk180-validation-spec042-v1",
+        **identity,
         "config": config,
         "software": software,
         "operational_model_activated": False,
@@ -122,7 +134,18 @@ def main():  # noqa: C901 - fixed train/validation/test protocol kept explicit
             trainer.normalized_weights(frame.survey_weight),
         )
     example = pd.DataFrame(
-        [dict(age=56, height_cm=162.0, weight_kg=68.0, bmi=68 / 1.62**2, sex=2, current_smoker=0, education=np.nan)]
+        [
+            dict(
+                age=56,
+                height_cm=162.0,
+                weight_kg=68.0,
+                bmi=68 / 1.62**2,
+                waist_cm=np.nan,
+                sex=2,
+                current_smoker=0,
+                education=np.nan,
+            )
+        ]
     )[features]
     repeated = [round(float(trainer.predict_artifact(bundle, example)[0]), 15) for _ in range(5)]
     if len(set(repeated)) != 1:
@@ -135,6 +158,7 @@ def main():  # noqa: C901 - fixed train/validation/test protocol kept explicit
         raise AssertionError("Reloaded model does not reproduce fixed input")
     report = {
         "model_version": bundle["model_version"],
+        "variant": args.variant,
         "software": software,
         "parameters": params,
         "threshold": threshold,
