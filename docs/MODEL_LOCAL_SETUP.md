@@ -11,11 +11,11 @@ uv run python scripts/provision-models.py \
 Windows PowerShell에서도 같은 명령을 사용할 수 있다. 스크립트는 Manifest의 SHA-256을 확인한 뒤 다음 Git 제외 경로로 복사한다.
 
 - 오늘이: `models/artifacts/candidates/diabetes_current_screening/v050/model.joblib`
-- 내일이: `models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1.1-sav/model.joblib`
+- 내일이: `models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib`
 
-내일이는 PR #26의 특성·분할·튜닝 조건을 KLoSA 공식 SPSS(`.sav`) 배포본으로 재현한
-`rf25-tuned-spec40-v1.1-sav`를 사용한다. 기존 PR #26의 DTA 산출물과 혼동하지 않도록
-재현 실행 ID, 임계값, SHA-256을 별도 Manifest에 고정했다.
+내일이는 PR #26에서 DTA 코호트로 재현되어 Artifact와 실행 결과를 현재 검증할 수 있는
+`rf25-tuned-spec40-v1`을 사용한다. SAV 재현본 v1.1은 원자료와 Artifact가 현재 없어
+서비스 기본값으로 사용하지 않는다.
 
 그다음 `.env.example`을 `.env`로 복사하고 로컬 비밀값과 DB 값을 입력한 뒤 실행한다.
 
