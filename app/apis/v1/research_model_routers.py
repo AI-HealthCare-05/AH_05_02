@@ -25,7 +25,7 @@ class ResearchPredictionRequest(BaseModel):
 
 @research_model_router.post("/{model}/predict")
 async def research_predict(
-    model: Literal["shared7", "first-interval"],
+    model: Literal["shared7", "shared8-waist", "first-interval", "tomorrow-rf25"],
     request: ResearchPredictionRequest,
     response: Response,
     user: Annotated[User, Depends(get_request_user)],
@@ -40,13 +40,20 @@ async def research_predict(
         EnsembleArtifactUnavailableError,
         EnsembleContractError,
     )
+    from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
     from src.ml.inference.research_models import (
         ResearchArtifactUnavailableError,
         ResearchModelContractError,
         predict_research_model,
     )
 
-    model_path = config.ML_SHARED7_MODEL_URI if model == "shared7" else config.ML_FIRST_INTERVAL_MODEL_URI
+    model_paths = {
+        "shared7": config.ML_SHARED7_MODEL_URI,
+        "shared8-waist": config.ML_SHARED8_MODEL_URI,
+        "first-interval": config.ML_FIRST_INTERVAL_MODEL_URI,
+        "tomorrow-rf25": config.ML_RF25_MODEL_URI or config.MODEL_URI,
+    }
+    model_path = model_paths[model]
     try:
         result = await asyncio.to_thread(
             predict_research_model,
@@ -55,9 +62,9 @@ async def research_predict(
             as_of_date=request.as_of_date,
             model_path=model_path,
         )
-    except (ResearchArtifactUnavailableError, EnsembleArtifactUnavailableError) as exc:
+    except (ResearchArtifactUnavailableError, EnsembleArtifactUnavailableError, ModelArtifactUnavailableError) as exc:
         raise HTTPException(503, detail={"code": "ML_MODEL_UNAVAILABLE"}) from exc
-    except (ResearchModelContractError, EnsembleContractError) as exc:
+    except (ResearchModelContractError, EnsembleContractError, ModelContractError) as exc:
         raise HTTPException(503, detail={"code": "ML_MODEL_CONTRACT_ERROR"}) from exc
     except ValueError as exc:
         # Do not echo health values in an error response or log.
