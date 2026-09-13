@@ -7,14 +7,13 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 from starlette import status
-from tortoise import Tortoise
 
 from ai_worker.handlers import run_task
 from app.core import config
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.dtos.health import PredictionJobCreateRequest
 from app.main import app
 from app.services.health import HealthService
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -108,8 +107,7 @@ def test_frontend_requests_both_models_and_labels_them_separately() -> None:
 async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode() -> None:
     previous_demo_mode = config.DEMO_MODE
     config.DEMO_MODE = True
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             signup = {
@@ -190,4 +188,4 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
             assert data["raw_probability_exposed"] is False
     finally:
         config.DEMO_MODE = previous_demo_mode
-        await Tortoise.close_connections()
+        await reset_tortoise()

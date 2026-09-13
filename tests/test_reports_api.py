@@ -6,13 +6,12 @@ from datetime import date, timedelta
 import pytest
 from httpx import ASGITransport, AsyncClient
 from starlette import status
-from tortoise import Tortoise
 
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
 from app.models.engagement import ChallengeBarrier
 from app.models.health import Challenge, ChallengeCycle, ChallengeLog, UserChallenge
 from app.services.challenges import ChallengeService
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 
 async def signup_and_login(client: AsyncClient, email: str) -> dict[str, str]:
@@ -70,13 +69,12 @@ async def _barrier(user_id: int, user_challenge_id: int, day: date, reason_code:
 
 @asynccontextmanager
 async def db_session():
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     await ChallengeService().ensure_catalog()
     try:
         yield
     finally:
-        await Tortoise.close_connections()
+        await reset_tortoise()
 
 
 @pytest.mark.asyncio

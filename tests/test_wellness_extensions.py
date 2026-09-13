@@ -5,11 +5,10 @@ from datetime import date
 import pytest
 from httpx import ASGITransport, AsyncClient
 from starlette import status
-from tortoise import Tortoise
 
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
 from src.rag.engine import answer_with_sources
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 
 async def signup_and_login(client: AsyncClient) -> dict[str, str]:
@@ -38,8 +37,7 @@ def test_rag_returns_citations_and_refuses_medication_changes() -> None:
 
 @pytest.mark.asyncio
 async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             headers = await signup_and_login(client)
@@ -110,4 +108,4 @@ async def test_wearable_rag_cv_ocr_notification_and_pdf_contracts() -> None:
             assert pdf.headers["content-type"] == "application/pdf"
             assert pdf.content.startswith(b"%PDF")
     finally:
-        await Tortoise.close_connections()
+        await reset_tortoise()
