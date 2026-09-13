@@ -134,6 +134,8 @@ body.modal-open{overflow:hidden}
 .health-input-panel.two-column{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 38px}
 .health-input-panel .form-row label{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .health-input-panel .form-row label small,.choice-block legend small{display:inline;color:#b5443c;font-size:14px;font-weight:900;margin:0}
+.health-input-panel .form-row label small{flex:0 0 auto;white-space:nowrap}
+#alcohol-frequency-row label{white-space:nowrap}
 .health-input-panel .form-row input,.choice-block select{min-height:66px;border-color:#9cadab;border-radius:10px;font-size:21px;font-weight:800}
 .health-input-notice{align-items:center}
 .health-input-notice>span{display:inline-flex;flex:0 0 auto;width:auto;height:auto;min-height:32px;padding:4px 0;border-radius:0;background:transparent;color:#d2950b;white-space:nowrap}
@@ -386,6 +388,8 @@ body.modal-open{overflow:hidden}
 .photo-state.success>span{display:grid;place-items:center;width:76px;height:76px;margin:0 auto;border-radius:50%;background:var(--mint);color:var(--green);font-size:40px;font-weight:900}
 .photo-state.fail{margin:-10px;padding:26px;border:2px solid #e6bd66;border-radius:18px;background:var(--warning-bg)}
 .photo-state.fail h4{color:#8a5b00}
+.photo-state.pending{margin:-10px;padding:26px;border:2px solid #8bb7ab;border-radius:18px;background:#f2faf7}
+.photo-state.pending h4{color:var(--green-dark)}
 .record-spinner{display:block;width:76px;height:76px;margin:0 auto;border:7px solid #dfe8e4;border-top-color:var(--green);border-radius:50%;animation:record-spin .8s linear infinite}
 @keyframes record-spin{to{transform:rotate(360deg)}}
 .ocr-confirm-form{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
@@ -2017,3 +2021,7 @@ body.intro-mode .service-story .story-arrow-reveal:focus-visible{
 body.intro-mode .topbar .intro-version-switch{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-height:42px;padding:9px 14px;border:1px solid #9eb8aa;border-radius:999px;background:#fffdf1;color:#176b5b;text-decoration:none;font-size:14px;font-weight:900;letter-spacing:-.02em;box-shadow:0 8px 18px rgba(16,75,58,.08);white-space:nowrap}
 body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .intro-version-switch:focus-visible{border-color:#176b5b;background:#e8f3ed;color:#0b473a}
 @media(max-width:760px){body.intro-mode .topbar .intro-version-switch{min-height:36px;padding:7px 10px;font-size:12px;order:2}}
+
+.result-room-screen.medical-guidance-only > :not(#medical-guidance-detail){display:none!important}
+.result-room-screen.medical-guidance-only{width:min(100%,1120px)!important;margin-inline:auto!important}
+.result-room-screen.medical-guidance-only #medical-guidance-detail{position:static!important;width:100%!important;max-width:none!important;margin:0!important}

@@ -13,14 +13,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260910-result-signal-grid-restore-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260913-report-print-scale-up-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
-  <script defer src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=7f2a1f37ce159b787ecc694265ebf333&autoload=false&libraries=services"></script>
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
-  <script src="/static/app.js?v=20260910-result-signal-grid-restore-v1" defer></script>
+  <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
+  <script src="/static/app.js?v=20260913-report-pdf-period-click-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -134,7 +134,7 @@
           <div class="form-row"><label for="signup-gender">성별</label><select id="signup-gender" required><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
           <div class="consent-list full" aria-label="동의 항목">
             <label class="check-card consent-card"><input id="personal-consent" type="checkbox" required><span><strong>서비스 이용약관·개인정보 수집 및 이용</strong><small>계정 생성과 서비스 제공에 필요한 약관 및 개인정보 처리를 확인합니다.</small><em>필수</em></span></label>
-            <label class="check-card consent-card"><input id="health-consent" type="checkbox"><span><strong>건강정보 수집·이용</strong><small>[간당간당]의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
+            <label class="check-card consent-card"><input id="health-consent" type="checkbox" required><span><strong>건강정보 수집·이용</strong><small>[간당간당]의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
             <label class="check-card consent-card"><input id="analytics-consent" type="checkbox"><span><strong>서비스 개선을 위한 이용기록 분석</strong><small>선택하지 않아도 건강정보 입력과 위험 확인 기능을 이용할 수 있습니다.</small><em class="optional">선택</em></span></label>
           </div>
           <button id="signup-login-shortcut" class="link-button signup-login-shortcut full" type="button">이미 집이 있어요 · 로그인</button>
@@ -177,7 +177,7 @@
               </div>
             </section>
             <fieldset class="eligibility-card urgent-card">
-              <legend><span class="card-title-row urgent-title-row"><span class="card-icon" aria-hidden="true">🥕</span><span>지금 긴급한 증상이 있나요?</span><button class="secondary emergency-questionnaire-open" id="open-emergency-questionnaire" type="button" aria-haspopup="dialog">증상 자세히 확인하기</button></span></legend>
+              <legend><span class="card-title-row urgent-title-row"><span class="card-icon" aria-hidden="true">🥕</span><span>즉시 도움이 필요한 긴급 증상이 있나요?</span><button class="secondary emergency-questionnaire-open" id="open-emergency-questionnaire" type="button" aria-haspopup="dialog">긴급한 증상 확인</button></span></legend>
               <div class="urgent-answer-row">
                 <div class="segmented-choice">
                   <label><input id="urgent-warning-yes" name="urgent-warning" type="radio" value="yes"><span>예</span></label>
@@ -187,13 +187,11 @@
               <p id="emergency-questionnaire-summary" class="help-text" hidden></p>
             </fieldset>
             <fieldset class="eligibility-card diagnosis-card">
-              <legend><span class="card-title-row"><span class="card-icon" aria-hidden="true">🥕</span><span>당뇨병을 진단받은 적이 있나요?</span></span></legend>
+              <legend><span class="card-title-row diagnosis-title-row"><span class="card-icon" aria-hidden="true">🥕</span><span>당뇨병을 진단받은 적이 있나요?</span><button class="secondary diagnosis-help-open" id="diagnosis-help-toggle" type="button" aria-haspopup="dialog">진단여부 확인</button></span></legend>
               <div class="segmented-choice">
                 <label><input id="diagnosed-diabetes-yes" name="diabetes-diagnosis" type="radio" value="yes"><span>예</span></label>
                 <label><input id="diagnosed-diabetes-no" name="diabetes-diagnosis" type="radio" value="no"><span>아니요</span></label>
               </div>
-              <button class="link-button" id="diagnosis-help-toggle" type="button" aria-expanded="false" aria-controls="diagnosis-help">진단 여부가 헷갈려요 ›</button>
-              <p id="diagnosis-help" class="help-text" hidden>의료진에게 “당뇨병”이라고 설명을 들었거나 당뇨병 약을 처방받았다면 진단받은 경우에 해당합니다. 단순히 건강검진에서 혈당 수치가 높게 나온 경우는 진단과 다를 수 있습니다.</p>
             </fieldset>
           </div>
           <div class="actions eligibility-actions"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">확인하고 계속하기</button></div>
@@ -209,13 +207,10 @@
               <legend>1단계. 즉시 도움이 필요한 증상</legend>
               <p>현재 다음 중 하나라도 해당하나요?</p>
               <ul class="emergency-symptom-list">
-                <li>의식을 잃었거나 깨우기 어렵다.</li>
                 <li>갑자기 심하게 혼란스럽거나 정상적으로 대화하기 어렵다.</li>
                 <li>숨쉬기가 매우 어렵거나 입술·얼굴이 파랗게 변한다.</li>
                 <li>갑작스러운 심한 가슴 통증이나 압박감이 있다.</li>
                 <li>얼굴 한쪽 처짐, 한쪽 팔·다리 힘 빠짐, 말이 어눌해지는 증상이 갑자기 생겼다.</li>
-                <li>경련하거나 쓰러졌다.</li>
-                <li>몸을 가누기 어렵고 혼자 이동할 수 없다.</li>
               </ul>
               <div class="emergency-summary-choices" aria-label="즉시 도움이 필요한 증상 응답">
                 <label><input id="urgent-has-symptoms" name="urgent-summary" type="radio" value="yes"><span>증상이 있습니다</span></label>
@@ -230,8 +225,6 @@
                 <li>심한 갈증과 잦은 소변이 갑자기 함께 나타났다.</li>
                 <li>구토가 반복되거나 물을 마시기 어렵다.</li>
                 <li>심한 복통과 함께 평소보다 깊고 빠르게 숨을 쉰다.</li>
-                <li>숨에서 평소와 다른 과일 같은 냄새가 난다.</li>
-                <li>심한 졸림, 혼란 또는 급격한 기력 저하가 있다.</li>
                 <li>떨림, 식은땀, 두근거림, 어지럼증이 심하거나 반복된다.</li>
               </ul>
               <div class="emergency-summary-choices" aria-label="당일 확인이 필요한 증상 응답">
@@ -244,6 +237,39 @@
             <div class="emergency-questionnaire-modal-actions">
               <button class="secondary emergency-questionnaire-close" type="button">취소</button>
               <button class="primary" id="apply-emergency-questionnaire" type="button">문진 결과 적용하기</button>
+            </div>
+          </section>
+        </div>
+        <div id="diagnosis-help-modal" class="diagnosis-help-modal" role="dialog" aria-modal="true" aria-labelledby="diagnosis-help-title" hidden>
+          <section class="diagnosis-help-modal-card">
+            <button class="diagnosis-help-close" type="button" aria-label="진단여부 확인 닫기">×</button>
+            <h3 id="diagnosis-help-title" class="card-title-row" tabindex="-1"><span class="card-icon" aria-hidden="true">🥕</span><span>진단여부 확인</span></h3>
+            <div class="diagnosis-help-copy">
+              <article class="diagnosis-help-row">
+                <strong class="diagnosis-help-label">예</strong>
+                <div class="diagnosis-help-body">
+                  <p>의료진에게 당뇨병이라고 진단받았다.</p>
+                  <p>당뇨병 약을 처방받았다.</p>
+                  <p><strong>당뇨병 관리 목적으로 정기 진료를 받고 있다.</strong></p>
+                </div>
+              </article>
+              <article class="diagnosis-help-row">
+                <strong class="diagnosis-help-label">아니요</strong>
+                <div class="diagnosis-help-body">
+                  <p>혈당 수치만 높게 나왔다.</p>
+                  <p><strong>의료진에게 당뇨병 진단을 들은 적이 없다.</strong></p>
+                </div>
+              </article>
+              <article class="diagnosis-help-row">
+                <strong class="diagnosis-help-label">참고</strong>
+                <div class="diagnosis-help-body">
+                  <p><strong>헷갈리면 최근 진료 기록이나 처방 내용을 확인한 뒤 선택해 주세요.</strong></p>
+                  <p><strong>간당간당은 당뇨병을 진단하지 않습니다.</strong></p>
+                </div>
+              </article>
+            </div>
+            <div class="diagnosis-help-modal-actions">
+              <button class="primary diagnosis-help-close" type="button">확인</button>
             </div>
           </section>
         </div>
@@ -264,27 +290,16 @@
           <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
           <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
             <a class="primary" href="tel:119">119에 전화하기</a>
-            <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
-            <button class="secondary" id="find-nearby-emergency" type="button">주변 응급실 보기</button>
             <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
-            <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내">
-              <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
-                <strong>위급하면 검색을 기다리지 마세요</strong>
-                <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
-              </div>
-              <form id="emergency-address-form" class="facility-address-form" hidden>
-                <label for="emergency-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
-                <div><input id="emergency-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off" required><button class="secondary" type="submit">주소로 찾기</button></div>
-              </form>
-              <div id="emergency-facility-map" class="facility-map" aria-label="검색 기준 위치와 주변 응급의료기관 지도" hidden></div>
-              <div class="medical-facility-meta" id="emergency-facility-meta" hidden></div>
-              <div class="medical-facility-results" id="emergency-facility-results" hidden></div>
-            </div>
           </div>
           <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
             <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
-            <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
+            <button class="secondary" id="find-phone-consultation" type="button">전화 문의 가능한 기관 보기</button>
             <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+          </div>
+          <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
+            <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
+            <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
           </div>
           <div class="actions">
             <button class="secondary" id="eligibility-edit-answer" type="button">닫기</button>
@@ -298,40 +313,40 @@
           <div class="health-room-board">
         <div class="screen-title-with-mascot health-room-heading">
           <img src="/static/assets/hyeoldangi-health-input.png" alt="" aria-hidden="true">
-          <div><p class="eyebrow">건강정보 입력</p><h2 id="health-title">건강정보 입력</h2></div>
+          <div><p class="eyebrow"></p><h2 id="health-title">건강정보 입력</h2></div>
         </div>
         <div class="inner-step-tabs health-input-carousel" aria-label="건강정보 입력 순서">
           <button class="active" data-health-tab="metrics" type="button" aria-pressed="true">
             <span class="carousel-icon" aria-hidden="true">📏</span>
-            <span class="carousel-copy"><strong>체형 정보</strong><small>키·몸무게·허리둘레</small></span>
+            <span class="carousel-copy"><strong>체형 정보</strong></span>
           </button>
           <button data-health-tab="vitals" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🩸</span>
-            <span class="carousel-copy"><strong>혈당·혈압</strong><small>공복혈당·수축/이완</small></span>
+            <span class="carousel-copy"><strong>혈당·혈압</strong></span>
           </button>
           <button data-health-tab="drinking" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🍵</span>
-            <span class="carousel-copy"><strong>음주</strong><small>음주 유무·횟수</small></span>
+            <span class="carousel-copy"><strong>음주</strong></span>
           </button>
           <button data-health-tab="habits" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🍚</span>
-            <span class="carousel-copy"><strong>생활상태</strong><small>흡연·건강상태</small></span>
+            <span class="carousel-copy"><strong>생활상태</strong></span>
           </button>
           <button data-health-tab="activity" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🏃</span>
-            <span class="carousel-copy"><strong>운동</strong><small>운동·걷기·시간</small></span>
+            <span class="carousel-copy"><strong>운동</strong></span>
           </button>
           <button data-health-tab="family" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🏡</span>
-            <span class="carousel-copy"><strong>가족력</strong><small>고혈압·당뇨병</small></span>
+            <span class="carousel-copy"><strong>가족력</strong></span>
           </button>
           <button data-health-tab="nutrition" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🥗</span>
-            <span class="carousel-copy"><strong>영양정보</strong><small>식사횟수·열량·영양소</small></span>
+            <span class="carousel-copy"><strong>영양정보</strong></span>
           </button>
           <button data-health-tab="socioeconomic" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🗺️</span>
-            <span class="carousel-copy"><strong>지역·사회경제</strong><small>지역·학력·소득</small></span>
+            <span class="carousel-copy"><strong>사회경제 등</strong></span>
           </button>
         </div>
         <form id="health-form" novalidate>
@@ -435,7 +450,6 @@
                 <div class="form-row"><label for="household-income-quartile">가구 소득 분위</label><select id="household-income-quartile"><option value="">모름</option><option value="1">1분위</option><option value="2">2분위</option><option value="3">3분위</option><option value="4">4분위</option></select></div>
               </article>
             </div>
-            <div class="notice safety health-input-notice"><span aria-hidden="true">안내</span><div><p>세부 건강정보는 현재 위험 신호를 더 세밀하게 살피기 위한 선택 정보입니다. 모르는 값은 임의로 입력하지 않아도 됩니다.</p></div></div>
             <div class="actions full"><button class="primary" type="submit">입력 내용 확인하기</button></div>
           </section>
           <section id="health-review-panel" class="health-input-panel health-review-screen" aria-labelledby="health-review-title" hidden>
@@ -473,6 +487,7 @@
           <button type="button" data-demo-status="running">분석 중</button>
           <button type="button" data-demo-status="succeeded">완료</button>
           <button type="button" data-demo-status="failed">실패</button>
+          <button type="button" data-demo-status="timeout" data-demo-error-code="TIMEOUT">시간초과</button>
         </div>
         <div class="prediction-status-card" id="prediction-status-card" data-status="queued">
           <img class="prediction-mascot" id="prediction-mascot" src="/static/assets/hyeoldangi-default.png" alt="간당간당 캐릭터 혈당이">
@@ -695,6 +710,19 @@
               <button class="text-button" id="profile-notification-settings" type="button">웹 알림 설정</button>
             </div>
           </details>
+          <div class="report-pdf-card report-pdf-hero-control" id="report-pdf-card">
+            <div class="report-pdf-control">
+              <button class="secondary" id="download-report" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="report-pdf-options">PDF로 받기</button>
+              <fieldset class="report-pdf-options" id="report-pdf-options" aria-labelledby="report-pdf-period-title" hidden>
+                <legend id="report-pdf-period-title">PDF에 담을 기간 선택</legend>
+                <div class="report-pdf-periods">
+                  <label><input type="radio" name="report-pdf-period" value="week" checked><span>이번 주</span></label>
+                  <label><input type="radio" name="report-pdf-period" value="four-week"><span>지난 4주</span></label>
+                  <label><input type="radio" name="report-pdf-period" value="all"><span>전체</span></label>
+                </div>
+              </fieldset>
+            </div>
+          </div>
         </div>
         <section class="workspace-panel active" id="workspace-panel-home" role="region" tabindex="-1" data-workspace-panel="home" aria-label="대시보드 홈">
           <h3 id="home-summary-title" class="sr-only">오늘의 건강 요약</h3>
@@ -792,8 +820,16 @@
                   <h4 id="photo-fail-title">사진 기록을 완료하지 못했어요</h4>
                   <p id="photo-fail-hint">밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.</p>
                   <div class="record-modal-actions">
-                    <button class="secondary" id="retake-photo-record" type="button">다시 찍기</button>
+                    <button class="secondary photo-retake-action" id="retake-photo-record" type="button">다시 찍기</button>
                     <button class="primary record-fallback" type="button">간편 체크로 완료</button>
+                  </div>
+                </div>
+                <div id="photo-state-pending" class="photo-state pending" hidden>
+                  <h4 id="photo-pending-title">사진 검토가 필요해요</h4>
+                  <p id="photo-pending-hint">사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.</p>
+                  <div class="record-modal-actions">
+                    <button class="secondary photo-retake-action" type="button">다시 제출하기</button>
+                    <button class="primary record-cancel" type="button">확인하고 닫기</button>
                   </div>
                 </div>
                 <div id="photo-state-success" class="photo-state success" hidden>
@@ -881,7 +917,7 @@
               <div class="report-period-line"><strong id="report-four-week-period">지난 4주</strong><span class="report-period-pill" id="report-four-week-status">선택하면 불러와요</span></div>
               <article class="report-hero-card report-hero-muted">
                 <img src="/static/assets/hyeoldangi-report.png" alt="지난 기록을 돌아보는 혈당이" class="report-mascot">
-                <div><p class="eyebrow">네 번의 일주일을 돌아보면</p><strong id="report-four-week-headline">지난 4주의 흐름을 한눈에</strong><p>현재 주를 제외한 최근 네 번의 주간 기록을 보여드려요.</p></div>
+                <div><p class="eyebrow">네 번의 일주일을 돌아보면</p><strong id="report-four-week-headline">챌린지를 시작한 주부터 흐름을 보여드려요</strong><p>지나간 주차는 기록으로 표시하고, 아직 지나지 않은 주차는 생성 예정으로 표시해요.</p></div>
               </article>
               <div class="report-summary-stats" id="report-four-week-stats" aria-label="지난 4주 실천 요약">
                 <div class="report-summary-stat"><small>실천한 날</small><strong id="report-four-week-days">—</strong><span>기록 확인 중</span></div>
@@ -908,20 +944,6 @@
             </section>
           </div>
           <p class="report-safety" id="report-disclaimer">기록 변화와 수행률은 질병 위험 감소, 진단 또는 치료 효과를 의미하지 않습니다.</p>
-          <div class="report-pdf-card" id="report-pdf-card">
-            <div class="report-pdf-copy"><strong>리포트를 저장하고 싶으신가요?</strong><p>현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 열어요.</p><p id="report-pdf-status" role="status">PDF 저장 화면에서 대상 기간과 내용을 한 번 더 확인해 주세요.</p></div>
-            <div class="report-pdf-control">
-              <button class="secondary" id="download-report" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="report-pdf-options">PDF로 받기</button>
-              <fieldset class="report-pdf-options" id="report-pdf-options" aria-labelledby="report-pdf-period-title" hidden>
-                <legend id="report-pdf-period-title">PDF에 담을 기간 선택</legend>
-                <div class="report-pdf-periods">
-                  <label><input type="radio" name="report-pdf-period" value="week" checked><span>이번 주</span></label>
-                  <label><input type="radio" name="report-pdf-period" value="four-week"><span>지난 4주</span></label>
-                  <label><input type="radio" name="report-pdf-period" value="all"><span>전체</span></label>
-                </div>
-              </fieldset>
-            </div>
-          </div>
           </section>
         </section>
 

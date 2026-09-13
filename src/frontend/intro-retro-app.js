@@ -284,14 +284,13 @@ const eligibilityGuidance = {
     primaryStep: null,
   },
   DIAGNOSED_DIABETES: {
-    code: "D01", title: "이미 당뇨병을 진단받은 사용자는 예측 대상이 아닙니다",
-    message: "이미 당뇨병을 진단받은 사용자에게는 신규 발병 위험 예측을 제공하지 않습니다.",
+    code: "D01", title: "검사·상담 안내를 확인해 주세요",
+    message: "진단받은 분은 담당 의료진의 안내를 우선하며 가까운 의료기관 정보를 확인할 수 있습니다.",
     reasonTitle: "진단 여부 확인",
     reason: "의료진에게 당뇨병을 진단받은 적이 있다고 답했습니다.",
-    action: "담당 의료진의 치료 지침을 우선하고 일반 건강정보를 확인하세요.",
-    primaryLabel: "일반 건강정보 보기",
-    primaryStep: 8,
-    primaryWorkspace: "tools",
+    action: "아래에서 가까운 의료기관의 주소와 전화번호를 확인해 주세요.",
+    primaryLabel: "의료기관 정보 보기",
+    primaryStep: null,
   },
   UNDER_MINIMUM_SERVICE_AGE: {
     code: "E02", title: "만 14세 미만은 서비스를 이용할 수 없습니다",
@@ -313,10 +312,10 @@ const eligibilityGuidance = {
   },
   MODEL_AGE_OUT_OF_RANGE: {
     code: "A19", title: "현재 건강 신호를 확인할 수 있어요",
-    message: "만 19~44세는 현재 건강 신호와 생활습관 챌린지를 이용합니다.",
+    message: "현재 당뇨 신호 확인과 건강 챌린지를 이용하실 수 있습니다!",
     reasonTitle: "연령별 이용 범위",
-    reason: "미래 발병 위험 모델은 만 45세 이상에게 적용되며, 현재 연령에서는 현재 건강 신호를 확인합니다.",
-    action: "건강정보를 입력해 현재 건강 신호를 확인한 뒤 생활습관 챌린지로 이어갈 수 있어요.",
+    reason: "입력한 생년월일 기준으로 만 19~44세에 해당합니다.",
+    action: "건강정보를 입력해 현재 당뇨 신호를 확인하고 건강 챌린지로 이어가세요.",
     primaryLabel: "현재 건강 신호 확인하기",
     primaryStep: 4,
   },
@@ -390,9 +389,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
   const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
   const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  const isDiagnosed = reason === "DIAGNOSED_DIABETES";
   $("#urgent-guidance-actions").hidden = !isUrgent;
   $("#same-day-guidance-actions").hidden = !isSameDay;
-  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
+  $("#diagnosed-guidance-actions").hidden = !isDiagnosed;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay || isDiagnosed;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -1577,7 +1578,7 @@ function applyEmergencyQuestionnaire() {
     return;
   } else if (hasSameDaySymptoms() || isSameDayAnswerUncertain()) {
     $("#urgent-warning-no").checked = true;
-    summary.textContent = "문진 결과: 오늘 의료기관 확인이 필요한 증상을 확인했습니다.";
+    summary.textContent = "문진 결과: 즉시 응급 증상은 아니지만, 오늘 의료기관 확인이 필요한 증상을 확인했습니다.";
   } else if (questionnaireAnswer("same-day-summary") === "none") {
     $("#urgent-warning-no").checked = true;
     summary.textContent = "문진 결과: 해당 증상이 없습니다.";
@@ -2005,15 +2006,34 @@ function setMedicalFacilityStatus(status, title, message) {
 
 const facilityMapInstances = {};
 const facilityMapMarkers = { medical: [], emergency: [] };
+let kakaoMapsLoadPromise = null;
 
 function ensureKakaoMapsLoaded() {
-  return new Promise((resolve, reject) => {
-    if (!window.kakao?.maps?.load) {
-      reject(new Error("지도 서비스를 불러오지 못했습니다."));
-      return;
+  if (window.kakao?.maps?.load) {
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  }
+  if (kakaoMapsLoadPromise) return kakaoMapsLoadPromise;
+  kakaoMapsLoadPromise = (async () => {
+    const mapConfig = await api("/medical-facilities/map-config");
+    const javascriptKey = String(mapConfig?.javascript_key || "").trim();
+    if (!mapConfig?.enabled || !javascriptKey) {
+      throw new Error("카카오 지도 연결 키가 설정되어 있지 않습니다.");
     }
-    window.kakao.maps.load(() => resolve(window.kakao));
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(javascriptKey)}&autoload=false&libraries=services`;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("카카오 지도 서비스를 불러오지 못했습니다."));
+      document.head.append(script);
+    });
+    if (!window.kakao?.maps?.load) throw new Error("카카오 지도 서비스를 초기화하지 못했습니다.");
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  })().catch((error) => {
+    kakaoMapsLoadPromise = null;
+    throw error;
   });
+  return kakaoMapsLoadPromise;
 }
 
 function clearFacilityMapMarkers(target) {
@@ -3602,9 +3622,9 @@ function openSimpleRecordModal(item) {
   $("#confirm-simple-record").focus({ preventScroll: true });
 }
 function showPhotoRecordState(stateId) {
-  const titles = { "photo-state-upload": "v3-photo-heading", "photo-state-analyzing": "photo-analyzing-title", "photo-state-fail": "photo-fail-title", "photo-state-success": "photo-success-title" };
+  const titles = { "photo-state-upload": "v3-photo-heading", "photo-state-analyzing": "photo-analyzing-title", "photo-state-fail": "photo-fail-title", "photo-state-pending": "photo-pending-title", "photo-state-success": "photo-success-title" };
   $("#record-modal").setAttribute("aria-labelledby", titles[stateId]);
-  ["photo-state-upload", "photo-state-analyzing", "photo-state-fail", "photo-state-success"].forEach((id) => {
+  ["photo-state-upload", "photo-state-analyzing", "photo-state-fail", "photo-state-pending", "photo-state-success"].forEach((id) => {
     $(`#${id}`).hidden = id !== stateId;
   });
 }
@@ -3613,6 +3633,7 @@ function resetPhotoRecordModal() {
   state.photoCompletedByFallback = false;
   showPhotoRecordState("photo-state-upload");
   $("#photo-fail-hint").textContent = "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.";
+  $("#photo-pending-hint").textContent = "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
   $("#photo-success-title").textContent = "확인됐어요!";
 }
 function openPhotoRecordModal(item) {
@@ -3674,7 +3695,13 @@ async function submitV3Photo() {
     form.append("actual_value", String(value));
     const result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
     if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
-    if (result.challenge_completed !== true || result.review_status !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
+    const reviewStatus = String(result.review_status || "").toLowerCase();
+    if (reviewStatus === "needs_review" || reviewStatus === "pending" || reviewStatus === "in_review") {
+      $("#photo-pending-hint").textContent = result.notice || "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
+      showPhotoRecordState("photo-state-pending");
+      return;
+    }
+    if (result.challenge_completed !== true || reviewStatus !== "accepted") throw new Error(result.notice || "사진을 확인하지 못했습니다. 밝은 곳에서 대상이 잘 보이도록 다시 제출해 주세요.");
     state.dailyCompleted.add(target.id);
     target.saved = true;
     renderDailyRecordList(); updateDailyRecordSummary();
@@ -5358,6 +5385,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
     }
     state.returningDestination = null;
     showStep(4);
+    showMessage("현재 당뇨 신호 확인과 미래 발병 예측, 건강 챌린지를 이용하실 수 있습니다!", "success");
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
@@ -5467,15 +5495,23 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
 });
-$("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
-$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
-$("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
-$("#find-same-day-medical")?.addEventListener("click", () => {
-  showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
-});
-$("#find-phone-consultation")?.addEventListener("click", () => {
-  showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
-});
+async function openEligibilityMedicalFacilities({ requestLocation = true } = {}) {
+  $("#eligibility-guidance").hidden = true;
+  const resultScreen = document.querySelector('.screen[data-step="6"]');
+  resultScreen?.classList.add("medical-guidance-only");
+  showStep(6);
+  const guidance = $("#medical-guidance-detail");
+  $("#medical-challenge-next").hidden = true;
+  guidance.hidden = false;
+  document.body.classList.add("modal-open");
+  guidance.focus({ preventScroll: true });
+  if (requestLocation) await findNearbyMedicalFacilities();
+}
+
+$("#find-same-day-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-phone-consultation")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities());
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
@@ -5898,10 +5934,10 @@ $("#start-photo-check").addEventListener("click", () => {
   if (state.recordTarget?.item?.catalog_version === "evidence-v3") $("#v3-photo-file").click();
   else $("#confirm-photo-record").click();
 });
-$("#retake-photo-record").addEventListener("click", () => {
+$$("#retake-photo-record, .photo-retake-action").forEach((button) => button.addEventListener("click", () => {
   if (state.recordTarget?.item?.catalog_version === "evidence-v3") showPhotoRecordState("photo-state-upload");
   else simulatePhotoAnalysis();
-});
+}));
 $$(".record-fallback").forEach((button) => button.addEventListener("click", () => {
   if (state.recordTarget?.item?.catalog_version === "evidence-v3") return;
   state.photoCompletedByFallback = true;

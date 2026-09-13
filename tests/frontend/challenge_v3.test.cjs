@@ -121,10 +121,23 @@ function photoHarness(response) {
   });
   return { ...context, $, state, target, fields: formFields, calls: () => calls, photoState: () => photoState };
 }
-test('HTTP success without accepted completion never marks a photo challenge done', async () => {
+test('photo review pending never marks a challenge done and shows pending guidance', async () => {
   for (const response of [
     { challenge_completed: false, review_status: 'needs_review' },
     { challenge_completed: true, review_status: 'needs_review' },
+    { challenge_completed: false, review_status: 'pending' },
+    { challenge_completed: false, review_status: 'in_review' },
+  ]) {
+    const h = photoHarness(async () => response);
+    await h.submitV3Photo();
+    assert.equal(h.state.dailyCompleted.size, 0);
+    assert.equal(h.photoState(), 'photo-state-pending');
+    assert.equal(h.target.submitting, false);
+  }
+});
+test('HTTP success without accepted completion never marks a photo challenge done', async () => {
+  for (const response of [
+    { challenge_completed: false, review_status: 'rejected' },
     { challenge_completed: 'true', review_status: 'accepted' },
   ]) {
     const h = photoHarness(async () => response);

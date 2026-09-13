@@ -31,6 +31,17 @@ initialize_tortoise(app)
 
 app.include_router(v1_routers)
 
+_SENSITIVE_REPORT_PATH_PREFIXES = ("/api/v1/reports", "/api/v1/weekly-reports")
+
+
+@app.middleware("http")
+async def _no_store_for_sensitive_reports(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(_SENSITIVE_REPORT_PATH_PREFIXES):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "src" / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")

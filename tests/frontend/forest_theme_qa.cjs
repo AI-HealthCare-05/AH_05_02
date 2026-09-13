@@ -67,13 +67,13 @@ const server = http.createServer((req, res) => {
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     const statusSizes = [];
-    for (const status of ['queued', 'running', 'succeeded', 'failed']) {
+    for (const status of ['queued', 'running', 'succeeded', 'failed', 'timeout']) {
       await page.goto(base + '/?preview=analysis-status&status=' + status);
       await page.locator('.screen[data-step="5"].active').waitFor();
       statusSizes.push(await page.locator('#prediction-status-card').boundingBox());
     }
     assert.ok(statusSizes.every(size => size && Math.abs(size.width - statusSizes[0].width) < 1 && Math.abs(size.height - statusSizes[0].height) < 1), JSON.stringify(statusSizes));
-    console.log('PASS analysis states keep the same card dimensions');
+    console.log('PASS analysis states including timeout keep the same card dimensions');
     for (const preview of ['results', 'challenge-forest', 'challenge-record', 'report-forest', 'dashboard-home', 'health-tools']) {
       await page.goto(base + '/?preview=' + preview);
       await page.locator('.screen.active').waitFor();

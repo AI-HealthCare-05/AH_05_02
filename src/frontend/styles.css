@@ -65,18 +65,58 @@
 .urgent-card .card-icon{background:#fff1ef;color:#b5443c}
 .age-card .card-icon{background:#eef7ff;color:#2d72b8}
 .diagnosis-card .card-icon{background:var(--warning-bg);color:#9a6500}
-.urgent-title-row{width:100%;flex-wrap:wrap}
-.urgent-title-row .emergency-questionnaire-open{margin-left:auto}
+.urgent-title-row,.diagnosis-title-row{width:100%;flex-wrap:nowrap}
+.urgent-title-row>span:not(.card-icon),.diagnosis-title-row>span:not(.card-icon){min-width:0}
+.urgent-title-row .emergency-questionnaire-open,.diagnosis-title-row .diagnosis-help-open{margin-left:auto}
 .urgent-answer-row{margin-top:10px}
 .urgent-answer-row .segmented-choice{margin:0}
-.emergency-questionnaire-open{min-width:220px;min-height:52px;padding:11px 20px;font-size:17px}
+.emergency-questionnaire-open,.diagnosis-help-open{min-width:220px;min-height:52px;padding:11px 20px;font-size:17px}
+.urgent-title-row .emergency-questionnaire-open,.diagnosis-title-row .diagnosis-help-open{
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  width:auto!important;
+  white-space:nowrap!important;
+}
 .emergency-questionnaire-modal[hidden]{display:none}
-.emergency-questionnaire-modal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,20,18,.58)}
-.emergency-questionnaire-modal-card{position:relative;width:min(1180px,100%);max-height:calc(100vh - 48px);overflow:auto;border-radius:24px;background:#fff;padding:38px;box-shadow:0 24px 70px rgba(6,32,27,.28)}
+.diagnosis-help-modal[hidden]{display:none}
+.emergency-questionnaire-modal,.diagnosis-help-modal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,20,18,.58)}
+.emergency-questionnaire-modal-card,.diagnosis-help-modal-card{position:relative;width:min(1180px,100%);max-height:calc(100vh - 48px);overflow:auto;border-radius:24px;background:#fff;padding:38px;box-shadow:0 24px 70px rgba(6,32,27,.28)}
+.diagnosis-help-modal-card{width:min(760px,100%)}
 .emergency-questionnaire-modal-card>h3{margin:0;padding-right:54px;font-size:31px;color:var(--ink)}
-.emergency-questionnaire-close[aria-label]{position:absolute;top:20px;right:20px;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted);font-size:29px;font-weight:900;cursor:pointer}
-.emergency-questionnaire-modal-actions{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:4px}
-.emergency-questionnaire-modal-actions button{width:100%;min-height:60px}
+.diagnosis-help-modal-card>h3{margin:0 0 18px;padding-right:54px;font-size:31px;color:var(--ink)}
+.emergency-questionnaire-close[aria-label],.diagnosis-help-close[aria-label]{position:absolute;top:20px;right:20px;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted);font-size:29px;font-weight:900;cursor:pointer}
+.emergency-questionnaire-modal-actions,.diagnosis-help-modal-actions{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:4px}
+.diagnosis-help-modal-actions{grid-template-columns:1fr;margin-top:20px}
+.emergency-questionnaire-modal-actions button,.diagnosis-help-modal-actions button{width:100%;min-height:60px}
+.diagnosis-help-copy{display:grid;gap:14px}
+.diagnosis-help-row{display:grid;grid-template-columns:96px 1fr;gap:18px;align-items:stretch}
+.diagnosis-help-label{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:78px;
+  padding:12px;
+  border-radius:12px;
+  background:#eee6d6;
+  color:#351d12;
+  font-size:22px;
+  line-height:1.2;
+  font-weight:900;
+}
+.diagnosis-help-body{
+  min-height:78px;
+  padding:14px 18px;
+  border-radius:12px;
+  background:#fff7e7;
+  color:#5f4618;
+  font-size:18px;
+  line-height:1.55;
+  font-weight:800;
+}
+.diagnosis-help-body p{margin:0}
+.diagnosis-help-body p+p{margin-top:8px}
+.diagnosis-help-body strong{color:#123e32;font-weight:1000}
 .modal-inline-message{margin:0;padding:14px 16px;border:1px solid #d4776f;border-radius:12px;background:#fff1ef;color:#8e2f28;font-size:18px;font-weight:900}
 body.modal-open{overflow:hidden}
 .emergency-questionnaire{display:grid;gap:22px}
@@ -1146,12 +1186,17 @@ body.modal-open{overflow:hidden}
   margin-right:auto;
 }
 .screen[data-step="8"]:has(#workspace-panel-report.active) .dashboard-hero{
+  justify-content:flex-start;
+  gap:12px;
   padding:20px clamp(24px,4vw,42px);
   border:8px solid #75441f;
   border-radius:24px;
   background:linear-gradient(180deg,rgba(255,252,239,.96),rgba(248,224,184,.94));
   color:#4b240f;
   box-shadow:0 12px 0 #4f2d18,0 24px 42px rgba(23,44,36,.22),inset 0 0 0 4px rgba(255,255,255,.56);
+}
+.screen[data-step="8"]:has(#workspace-panel-report.active) #dashboard-hero-copy{
+  margin-right:auto;
 }
 .screen[data-step="8"]:has(#workspace-panel-report.active) .dashboard-hero .lead{
   color:#6d472a;
@@ -1176,15 +1221,8 @@ body.modal-open{overflow:hidden}
   box-shadow:0 16px 0 #4f2d18,0 34px 58px rgba(23,44,36,.26),inset 0 0 0 4px rgba(255,255,255,.55);
 }
 .screen[data-step="8"]:has(#workspace-panel-report.active) #workspace-panel-report::after{
-  content:"";
-  position:fixed;
-  right:clamp(18px,5vw,86px);
-  bottom:clamp(18px,5svh,70px);
-  width:clamp(126px,14vw,210px);
-  aspect-ratio:1;
-  background:url('/static/assets/hyeoldangi-report.png') center/contain no-repeat;
-  filter:drop-shadow(0 16px 18px rgba(33,32,14,.22));
-  pointer-events:none;
+  content:none;
+  display:none;
 }
 .screen[data-step="8"]:has(#workspace-panel-report.active) .report-hero-card,
 .screen[data-step="8"]:has(#workspace-panel-report.active) .report-summary-stats,
@@ -1232,6 +1270,9 @@ body.modal-open{overflow:hidden}
   background:linear-gradient(180deg,rgba(255,252,239,.96),rgba(248,224,184,.94));
   color:#4b240f;
   box-shadow:0 12px 0 #4f2d18,0 24px 42px rgba(23,44,36,.22),inset 0 0 0 4px rgba(255,255,255,.56);
+}
+.screen[data-step="8"]:has(#workspace-panel-tools.active) .dashboard-hero{
+  display:none;
 }
 .screen[data-step="8"]:has(#workspace-panel-tools.active) .dashboard-hero .lead{
   color:#6d472a;
@@ -1433,6 +1474,8 @@ body.modal-open{overflow:hidden}
 .photo-state.success>span{display:grid;place-items:center;width:76px;height:76px;margin:0 auto;border-radius:50%;background:var(--mint);color:var(--green);font-size:40px;font-weight:900}
 .photo-state.fail{margin:-10px;padding:26px;border:2px solid #e6bd66;border-radius:18px;background:var(--warning-bg)}
 .photo-state.fail h4{color:#8a5b00}
+.photo-state.pending{margin:-10px;padding:26px;border:2px solid #8bb7ab;border-radius:18px;background:#f2faf7}
+.photo-state.pending h4{color:var(--green-dark)}
 .record-spinner{display:block;width:76px;height:76px;margin:0 auto;border:7px solid #dfe8e4;border-top-color:var(--green);border-radius:50%;animation:record-spin .8s linear infinite}
 @keyframes record-spin{to{transform:rotate(360deg)}}
 .ocr-confirm-form{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
@@ -1444,7 +1487,7 @@ body.modal-open{overflow:hidden}
 
 @media(max-width:1000px){.eligibility-grid{grid-template-columns:1fr}.eligibility-card{min-height:auto}.eligibility-card .single-line-copy{white-space:normal}.eligibility-profile-fields{grid-template-columns:1fr}.eligibility-actions{flex-direction:column-reverse;align-items:stretch}.eligibility-actions .primary,.eligibility-actions .secondary{width:100%}.branch-result-grid{grid-template-columns:1fr}.branch-result .actions{flex-direction:column-reverse}.branch-result .actions button{width:100%}.status-demo-panel button{flex:1 1 30%}}
 @media(max-width:1000px){.eligibility-card{padding:28px 26px}.eligibility-card legend,.eligibility-card h3{font-size:26px}.eligibility-card p{font-size:20px}.segmented-choice{grid-template-columns:1fr}.segmented-choice span{min-height:68px;font-size:22px;padding:16px 20px}}
-@media(max-width:1000px){.urgent-title-row .emergency-questionnaire-open{width:100%;min-width:0;margin:4px 0 0}.emergency-questionnaire-modal{align-items:flex-end;padding:10px}.emergency-questionnaire-modal-card{max-height:calc(100vh - 20px);padding:28px 18px 22px;border-radius:22px 22px 0 0}.emergency-stage{padding:22px 18px}.emergency-symptom-list{grid-template-columns:1fr}.emergency-summary-choices{grid-template-columns:1fr}.emergency-questionnaire-modal-actions{grid-template-columns:1fr}.emergency-guidance-actions{grid-template-columns:1fr}.emergency-do-not-feed{grid-column:auto}}
+@media(max-width:1000px){.emergency-questionnaire-modal,.diagnosis-help-modal{align-items:flex-end;padding:10px}.emergency-questionnaire-modal-card,.diagnosis-help-modal-card{max-height:calc(100vh - 20px);padding:28px 18px 22px;border-radius:22px 22px 0 0}.diagnosis-help-row{grid-template-columns:1fr;gap:8px}.diagnosis-help-label{min-height:52px;justify-content:flex-start}.emergency-stage{padding:22px 18px}.emergency-symptom-list{grid-template-columns:1fr}.emergency-summary-choices{grid-template-columns:1fr}.emergency-questionnaire-modal-actions{grid-template-columns:1fr}.emergency-guidance-actions{grid-template-columns:1fr}.emergency-do-not-feed{grid-column:auto}}
 @media(max-width:1000px){.challenge-grid,.challenge-detail-grid{grid-template-columns:1fr}.challenge-card span{min-height:auto}#challenge-list{grid-auto-rows:auto}#challenge-list .challenge-card span{height:auto}.challenge-category-heading{align-items:flex-start}.challenge-category-card{min-height:160px}.rag-challenge-controls,.rag-challenge-draft{grid-template-columns:1fr}.rag-challenge-draft button{grid-column:auto;grid-row:auto;width:100%}.rag-challenge-candidate-grid{grid-template-columns:1fr}.rag-challenge-candidate-card{min-height:0}.rag-challenge-selection-actions{align-items:stretch;flex-direction:column}.rag-challenge-selection-actions .primary{width:100%}}
 @media(max-width:1000px){.result-next-actions{display:flex;flex-direction:column-reverse;align-items:stretch}.result-next-actions .primary{grid-column:auto;width:100%}.result-next-actions .back{justify-self:auto;width:100%}}
 @media(max-width:1000px){.returning-route-grid{grid-template-columns:1fr}.returning-route{min-height:auto}.dashboard-account-actions{align-items:stretch;flex-direction:column}.dashboard-account-buttons{width:100%;flex-direction:column}.dashboard-account-buttons button{width:100%}}
@@ -1928,6 +1971,11 @@ body.modal-open{overflow:hidden}
     padding-inline:14px;
   }
 
+  .screen.challenge-forest-screen.active{
+    margin-right:-14px;
+    margin-left:-14px;
+  }
+
   .notice,
   .intro-notice,
   .health-input-notice{
@@ -2209,9 +2257,14 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .report-pdf-card strong,.report-pdf-card p{display:block;margin:0}
 .report-pdf-card p{margin-top:3px;color:var(--muted);font-size:15px}
 .report-pdf-control{position:relative;justify-self:end}
-.report-pdf-options{position:absolute;z-index:12;top:calc(100% + 10px);right:0;width:280px;margin:0;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 16px 38px rgba(20,57,48,.18)}
-.report-pdf-options legend{display:block;margin:0 0 10px;padding:0 4px;color:var(--green-dark);font-size:14px;font-weight:900}
+.report-pdf-hero-control{display:none;width:auto;min-width:0;padding:0;background:transparent;border:0;border-radius:0;grid-template-columns:auto}
+.screen[data-step="8"]:has(#workspace-panel-report.active) .report-pdf-hero-control{display:grid;flex:0 0 auto;width:auto!important;min-width:0!important}
+.report-pdf-hero-control .report-pdf-control{justify-self:auto}
+.report-pdf-hero-control #download-report{min-height:56px;padding:0 18px;border:2px solid #b88950;background:rgba(255,250,240,.9);box-shadow:0 5px 0 rgba(117,68,31,.18);color:#4b240f;font-size:16px}
+.report-pdf-options{box-sizing:border-box;position:absolute;z-index:12;top:calc(100% + 10px);right:0;width:280px;max-width:min(320px,calc(100vw - 32px));min-width:min(280px,calc(100vw - 32px));margin:0;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 16px 38px rgba(20,57,48,.18)}
+.report-pdf-options legend{display:block;float:left;width:100%;box-sizing:border-box;margin:0 0 10px;padding:0 4px;color:var(--green-dark);font-size:14px;font-weight:900;line-height:1.35;white-space:normal}
 .report-pdf-periods{display:grid;grid-template-columns:1fr;gap:8px;width:100%}
+.report-pdf-options legend+.report-pdf-periods{clear:both}
 .report-pdf-periods label{display:inline-flex;align-items:center;cursor:pointer}
 .report-pdf-periods input{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 .report-pdf-periods span{display:inline-flex;align-items:center;justify-content:flex-start;width:100%;min-height:52px;padding:0 18px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font-size:16px;font-weight:900}
@@ -2232,14 +2285,14 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .report-summary-stat span{margin-top:2px;color:var(--muted);font-size:14px}
 .report-summary-stats.is-unavailable{background:#f8faf8}
 .report-summary-stats.is-unavailable .report-summary-stat{opacity:.72}
-.report-week-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);gap:22px;align-items:start}
+.report-week-layout{display:grid;grid-template-columns:1fr;gap:22px;align-items:start}
 .report-detail-card,.report-insight-card,.report-placeholder-card{min-width:0;padding:26px;border:1px solid var(--line);border-radius:18px;background:#fff}
 .report-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}
 .report-section-heading h4,.report-insight-card h4,.report-placeholder-card h4{margin:0;color:var(--ink);font-size:24px;letter-spacing:-.03em}
 .report-section-heading p,.report-insight-card p,.report-placeholder-card p{margin:6px 0 0;color:var(--muted);font-size:16px;line-height:1.55}
 .report-detail-card .report-progress-list{grid-template-columns:1fr;margin:0}
 .report-detail-card .report-progress-item{min-height:142px}
-.report-insight-stack{display:grid;gap:22px}
+.report-insight-stack{display:grid;grid-template-columns:1fr;gap:22px}
 .report-insight-section+.report-insight-section{margin-top:24px;padding-top:24px;border-top:1px solid var(--line)}
 .report-overline{margin:0 0 7px!important;color:var(--green-dark)!important;font-size:15px!important;font-weight:900}
 .report-next-action{background:#eef4ef}
@@ -3459,9 +3512,11 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .report-trend-meter{align-self:end;display:flex;align-items:flex-end;justify-content:center;width:54px;height:150px;padding:6px;border-radius:999px;background:#e2ebe7}
 .report-trend-meter i{display:block;width:100%;min-height:8px;border-radius:999px;background:linear-gradient(180deg,#2b917e,#0b5a4d)}
 .report-trend-list li.report-trend-pending{opacity:.86}
-.report-trend-list li.report-trend-pending .report-trend-meter{background:repeating-linear-gradient(180deg,#eadfc8 0 12px,#f7eddb 12px 24px)}
+.report-trend-list li.report-trend-pending .report-trend-meter{background:#e2ebe7}
 .report-trend-list li.report-trend-pending .report-trend-meter i{display:none}
 .report-trend-list li.report-trend-pending b{color:var(--muted);font-size:18px}
+.report-page .report-hero-card .report-mascot{display:block}
+.report-page .report-hero-card{min-height:unset}
 .report-all-content{display:grid;gap:16px}
 .report-cycle-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .report-cycle-card{padding:22px;border:1px solid var(--line);border-radius:18px;background:#fff}
@@ -3514,7 +3569,7 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 
 @page{
   size:A4;
-  margin:12mm;
+  margin:5mm;
 }
 @media print{
   html,body{
@@ -3534,6 +3589,8 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
   }
   .topbar,
   .step-panel,
+  .dashboard-hero,
+  .workspace-nav,
   .workspace-tabs,
   .report-pdf-card,
   .message,
@@ -3558,6 +3615,9 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
   }
   #workspace-panel-report{
     page-break-inside:auto;
+    transform-origin:top left;
+    transform:scale(1.28);
+    width:78.125% !important;
   }
   #workspace-panel-report [data-report-panel]:not(.active){
     display:none !important;
@@ -3565,10 +3625,68 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
   #workspace-panel-report .report-period-tabs{
     display:none !important;
   }
+  #workspace-panel-report .dashboard-section,
+  #workspace-panel-report .report-page,
+  #workspace-panel-report .report-period-panel{
+    display:block !important;
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  #workspace-panel-report .report-period-line{
+    margin:0 0 6px !important;
+  }
+  #workspace-panel-report .report-period-line strong{
+    font-size:15px !important;
+  }
+  #workspace-panel-report .report-period-pill{
+    min-height:22px !important;
+    padding:1px 8px !important;
+    font-size:10px !important;
+  }
   #workspace-panel-report :is(.report-hero-card,.report-detail-card,.report-insight-card,.report-placeholder-card,.report-summary-stats,.report-cycle-card){
     break-inside:avoid;
     page-break-inside:avoid;
     box-shadow:none !important;
+  }
+  #workspace-panel-report :is(.report-hero-card,.report-detail-card,.report-insight-card,.report-placeholder-card,.report-cycle-card){
+    padding:10px 12px !important;
+    border-radius:10px !important;
+  }
+  #workspace-panel-report .report-hero-card{
+    display:grid !important;
+    grid-template-columns:30px minmax(0,1fr) !important;
+    gap:8px !important;
+    align-items:center !important;
+    min-height:0 !important;
+    margin:0 0 6px !important;
+  }
+  #workspace-panel-report .report-mascot{
+    display:block !important;
+    width:30px !important;
+    height:30px !important;
+    object-fit:contain !important;
+  }
+  #workspace-panel-report .report-hero-card .eyebrow,
+  #workspace-panel-report .report-overline{
+    margin:0 0 2px !important;
+    font-size:8px !important;
+  }
+  #workspace-panel-report .report-hero-card strong,
+  #workspace-panel-report .report-detail-card h4,
+  #workspace-panel-report .report-insight-card h4,
+  #workspace-panel-report .report-placeholder-card h4{
+    margin:0 !important;
+    font-size:12px !important;
+    line-height:1.18 !important;
+  }
+  #workspace-panel-report p,
+  #workspace-panel-report small,
+  #workspace-panel-report span,
+  #workspace-panel-report li{
+    font-size:8.5px !important;
+    line-height:1.22 !important;
   }
   #workspace-panel-report .report-week-layout,
   #workspace-panel-report .report-insight-stack,
@@ -3576,13 +3694,125 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
   #workspace-panel-report .report-cycle-list{
     display:grid !important;
     grid-template-columns:1fr !important;
-    gap:12px !important;
+    gap:6px !important;
   }
   #workspace-panel-report .report-summary-stats{
     grid-template-columns:repeat(3,1fr) !important;
+    margin:0 0 6px !important;
+    border-radius:8px !important;
+  }
+  #workspace-panel-report .report-summary-stat{
+    padding:8px 8px !important;
+  }
+  #workspace-panel-report .report-summary-stat strong{
+    margin-top:1px !important;
+    font-size:12px !important;
   }
   #workspace-panel-report .report-trend-list{
     grid-template-columns:repeat(4,1fr) !important;
+    gap:4px !important;
+    margin-top:5px !important;
+  }
+  #workspace-panel-report .report-trend-list li{
+    grid-template-rows:54px auto auto auto !important;
+    gap:2px !important;
+    padding:5px 4px !important;
+    border-radius:8px !important;
+  }
+  #workspace-panel-report .report-trend-meter{
+    width:24px !important;
+    height:54px !important;
+    padding:2px !important;
+  }
+  #workspace-panel-report .report-trend-list li>strong{
+    font-size:8px !important;
+  }
+  #workspace-panel-report .report-trend-list li>b{
+    font-size:9px !important;
+  }
+  #workspace-panel-report .report-progress-list,
+  #workspace-panel-report .report-history-list{
+    gap:6px !important;
+    margin-top:6px !important;
+  }
+  #workspace-panel-report .report-progress-list.has-daily-detail{
+    grid-template-columns:1fr !important;
+    align-items:stretch !important;
+  }
+  #workspace-panel-report .report-legend,
+  #workspace-panel-report .report-card-note,
+  #workspace-panel-report .report-detail-notice{
+    display:none !important;
+  }
+  #workspace-panel-report .report-progress-item,
+  #workspace-panel-report .report-history-row{
+    padding:8px !important;
+    gap:6px !important;
+    min-height:0 !important;
+  }
+  #workspace-panel-report .report-progress-title{
+    grid-template-columns:22px minmax(0,1fr) !important;
+    gap:5px !important;
+  }
+  #workspace-panel-report .report-progress-icon{
+    width:22px !important;
+    height:22px !important;
+    border-radius:7px !important;
+    font-size:13px !important;
+  }
+  #workspace-panel-report .report-progress-icon svg{
+    width:14px !important;
+    height:14px !important;
+  }
+  #workspace-panel-report .report-progress-title strong{
+    margin:0 !important;
+    font-size:9px !important;
+    line-height:1.15 !important;
+  }
+  #workspace-panel-report .report-progress-title small{
+    margin:1px 0 0 !important;
+    font-size:7px !important;
+    line-height:1.12 !important;
+  }
+  #workspace-panel-report .report-progress-meter{
+    gap:4px !important;
+  }
+  #workspace-panel-report .report-progress-meter b{
+    min-width:24px !important;
+    font-size:8px !important;
+  }
+  #workspace-panel-report .report-progress-bar{
+    height:7px !important;
+  }
+  #workspace-panel-report .report-week-grid{
+    gap:2px !important;
+  }
+  #workspace-panel-report .report-day{
+    font-size:6px !important;
+  }
+  #workspace-panel-report .report-day i{
+    height:20px !important;
+    margin-top:3px !important;
+    border-radius:4px !important;
+    font-size:8px !important;
+  }
+  #workspace-panel-report .weekly-dot-grid{
+    gap:3px !important;
+  }
+  #workspace-panel-report .report-insight-card{
+    padding:5px 8px !important;
+  }
+  #workspace-panel-report .report-insight-section+.report-insight-section{
+    margin-top:4px !important;
+    padding-top:4px !important;
+  }
+  #workspace-panel-report .report-next-action .primary{
+    display:none !important;
+  }
+  #workspace-panel-report .report-safety{
+    margin-top:3px !important;
+    padding:5px !important;
+    font-size:7px !important;
   }
 }
 
@@ -3724,7 +3954,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   background:linear-gradient(90deg,rgba(13,39,30,.22),rgba(255,248,225,.12) 45%,rgba(255,248,225,.02) 75%);
 }
 .eligibility-forest-board{
-  width:min(760px,52vw);
+  width:min(680px,48vw);
   padding:18px 22px 24px;
   border:8px solid #6f4021;
   border-radius:26px;
@@ -3748,7 +3978,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   font-size:clamp(32px,3.7vw,50px);
   line-height:1.14;
   letter-spacing:-.06em;
-  white-space:nowrap;
+  white-space:normal;
   text-shadow:0 2px 0 #fff2c8;
 }
 .eligibility-forest-board .eligibility-lead{margin:0 0 10px;text-align:center}
@@ -3799,16 +4029,22 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   color:inherit;
   font-size:22px;
 }
-.eligibility-forest-board .eligibility-profile-fields{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.eligibility-forest-board .form-row.compact{margin:0}
+.eligibility-forest-board .eligibility-profile-fields{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:end}
+.eligibility-forest-board .form-row.compact{margin:0;min-width:0}
 .eligibility-forest-board .form-row.compact label{font-size:15px;color:#51351f}
 .eligibility-forest-board .form-row.compact input,
 .eligibility-forest-board .form-row.compact select{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  height:50px;
   min-height:50px;
   border:2px solid #b88950;
   border-radius:11px;
   background:#fffaf0;
-  font-size:17px;
+  font-size:16px;
+  line-height:1.2;
 }
 .eligibility-age-check{
   grid-column:1/-1;
@@ -3852,7 +4088,8 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   background:#e9f4dd;
   color:#0b4d42;
 }
-.eligibility-forest-board .urgent-title-row .emergency-questionnaire-open{
+.eligibility-forest-board .urgent-title-row .emergency-questionnaire-open,
+.eligibility-forest-board .diagnosis-title-row .diagnosis-help-open{
   min-height:40px;
   min-width:0;
   padding:7px 12px;
@@ -3895,7 +4132,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 /* Fill the left-hand sign area while leaving the carrot-house doorway visible. */
 @media(min-width:1051px){
   .eligibility-forest-board{
-    width:min(900px,46vw);
+    width:min(660px,40vw);
     min-height:0;
     padding:18px 20px 20px;
     display:block;
@@ -3905,7 +4142,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .eligibility-forest-board #eligibility-form{display:grid;gap:12px}
   .eligibility-forest-board .eligibility-grid{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-columns:1fr;
     gap:12px;
     margin:10px 0 0;
   }
@@ -3920,8 +4157,38 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .eligibility-forest-board .form-row.compact input,
   .eligibility-forest-board .form-row.compact select,
   .eligibility-forest-board .segmented-choice span{min-height:42px;font-size:15px}
-  .eligibility-forest-board .urgent-title-row{flex-wrap:wrap}
+  .eligibility-forest-board .urgent-card,
+  .eligibility-forest-board .diagnosis-card{
+    display:grid;
+    grid-template-rows:auto 1fr;
+    align-items:start;
+  }
+  .eligibility-forest-board .urgent-title-row,
+  .eligibility-forest-board .diagnosis-title-row{
+    flex-wrap:nowrap;
+    gap:10px;
+  }
+  .eligibility-forest-board .urgent-title-row>span:not(.card-icon),
+  .eligibility-forest-board .diagnosis-title-row>span:not(.card-icon){
+    flex:1 1 auto;
+    min-width:0;
+  }
   .eligibility-forest-board .urgent-title-row .emergency-questionnaire-open,
+  .eligibility-forest-board .diagnosis-title-row .diagnosis-help-open{
+    flex:0 0 auto;
+    margin-left:auto;
+    white-space:nowrap;
+  }
+  .eligibility-forest-board .urgent-answer-row{
+    align-self:start;
+    margin-top:8px;
+  }
+  .eligibility-forest-board .diagnosis-card .segmented-choice{
+    align-self:start;
+    margin-top:8px;
+  }
+  .eligibility-forest-board .urgent-title-row .emergency-questionnaire-open,
+  .eligibility-forest-board .diagnosis-title-row .diagnosis-help-open,
   .eligibility-forest-board .link-button,
   .eligibility-forest-board .eligibility-age-check{font-size:13px}
   .eligibility-forest-board .help-text{font-size:13px!important}
@@ -3931,7 +4198,10 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 }
 @media(max-width:1050px){
   .eligibility-forest-stage{justify-content:center;background-position:62% center}
-  .eligibility-forest-board{width:min(760px,94vw)}
+  .eligibility-forest-board{width:min(680px,94vw)}
+}
+@media(max-width:720px){
+  .eligibility-forest-board .eligibility-profile-fields{grid-template-columns:1fr}
 }
 @media(max-width:620px){
   .eligibility-forest-stage{margin-inline:-12px;padding:82px 12px 28px;background-position:66% center}
@@ -3939,7 +4209,10 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .eligibility-forest-heading h2{font-size:clamp(24px,7vw,32px);white-space:normal}
   .eligibility-forest-board .eligibility-profile-fields,
   .eligibility-forest-board .segmented-choice{grid-template-columns:1fr}
-  .eligibility-forest-board .urgent-title-row .emergency-questionnaire-open{width:100%;margin-left:38px}
+  .eligibility-forest-board .urgent-title-row,
+  .eligibility-forest-board .diagnosis-title-row{flex-wrap:wrap}
+  .eligibility-forest-board .urgent-title-row .emergency-questionnaire-open,
+  .eligibility-forest-board .diagnosis-title-row .diagnosis-help-open{width:100%;margin-left:38px}
   .eligibility-forest-board .eligibility-actions{flex-direction:column-reverse;align-items:stretch}
   .eligibility-forest-board .eligibility-actions .primary,
   .eligibility-forest-board .eligibility-actions .secondary{width:100%;min-width:0}
@@ -3959,17 +4232,8 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   color:#351d12;
 }
 #eligibility-guidance.branch-result::before{
-  content:"🥕";
-  display:grid;
-  place-items:center;
-  width:54px;
-  height:54px;
-  margin:-54px auto 10px;
-  border:4px solid #6f4021;
-  border-radius:50%;
-  background:linear-gradient(180deg,#fff6d7,#f4d9a6);
-  box-shadow:0 10px 20px rgba(35,24,12,.18);
-  font-size:31px;
+  content:none!important;
+  display:none!important;
 }
 #eligibility-guidance .eyebrow{
   display:inline-flex;
@@ -4282,16 +4546,19 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 .health-room-board .health-input-panel .form-row label{
   position:relative;
   min-height:28px;
-  padding-inline:72px;
+  padding-inline:0;
 }
 .health-room-board .health-input-panel .form-row label small{
-  position:absolute;
-  right:0;
-  top:50%;
-  transform:translateY(-50%);
+  position:static;
+  flex:0 0 auto;
+  transform:none;
   color:#b4403a;
   font-size:15px;
   white-space:nowrap;
+}
+.health-room-board #alcohol-frequency-row label{
+  white-space:nowrap;
+  font-size:clamp(20px,1.12vw,30px);
 }
 .health-room-board .health-input-panel .form-row input,
 .health-room-board .choice-block select{
@@ -4717,4 +4984,18 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 #health-nutrition-panel .detail-health-group,
 #health-socioeconomic-panel .detail-health-group{
   grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.result-room-screen.medical-guidance-only > :not(#medical-guidance-detail){
+  display:none!important;
+}
+.result-room-screen.medical-guidance-only{
+  width:min(100%,1120px)!important;
+  margin-inline:auto!important;
+}
+.result-room-screen.medical-guidance-only #medical-guidance-detail{
+  position:static!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
 }
