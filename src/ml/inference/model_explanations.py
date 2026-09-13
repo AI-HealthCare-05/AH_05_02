@@ -1,19 +1,29 @@
-"""Deterministic research explanations and cross-model guidance.
+"""Shared display metadata and deterministic cross-model guidance.
 
-The local attribution method is deliberately not called SHAP. It measures the
-score change when one feature is replaced by missing and the fitted pipeline's
-Train-only missing-value policy is applied. It is descriptive, not causal.
+Actual research-only Shapley implementations live in ``shap_explanations``.
+Nothing in this module turns a research explanation into a public result.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
-import numpy as np
-import pandas as pd
-
 DISPLAY_NAMES = {
+    "body_measurements": "체격 정보 (키·체중·BMI)",
+    "log_household_income": "가구소득",
+    "arthritis_rheumatism_diagnosis": "관절염·류머티즘 진단력",
+    "health_satisfaction_score": "건강 만족도",
+    "economic_satisfaction_score": "경제 만족도",
+    "overall_quality_of_life_score": "삶의 만족도",
+    "sleep_difficulty_last_week": "지난주 수면 어려움",
+    "depressed_feeling_last_week": "지난주 우울감",
+    "marital_status": "혼인 상태",
+    "household_structure": "가구 형태",
+    "chronic_lung_disease_diagnosis": "만성 폐질환 진단력",
+    "cancer_diagnosis": "암 진단력",
+    "psychiatric_disease_diagnosis": "정신과 질환 진단력",
+    "liver_disease_diagnosis": "간질환 진단력",
     "age": "나이",
     "sex": "성별",
     "height_cm": "키",
@@ -44,69 +54,6 @@ MODIFIABLE = {
     "exercise_days_per_week",
     "exercise_minutes",
 }
-
-
-def explain_by_missingness_perturbation(
-    frame: pd.DataFrame,
-    score: Callable[[pd.DataFrame], float],
-    *,
-    maximum_items: int = 5,
-) -> dict[str, Any]:
-    """Rank local score changes against the model's fitted missing policy."""
-
-    if len(frame) != 1:
-        raise ValueError("local explanation requires exactly one row")
-    baseline = float(score(frame))
-    if not np.isfinite(baseline):
-        raise ValueError("baseline score is not finite")
-    items = []
-    for feature in frame.columns:
-        perturbed = frame.copy()
-        # There is exactly one row, so replacing the whole column avoids
-        # pandas bool/string dtype assignment warnings without changing any
-        # other feature.
-        perturbed[feature] = np.nan
-        missing_score = float(score(perturbed))
-        if not np.isfinite(missing_score):
-            continue
-        contribution = baseline - missing_score
-        items.append(
-            {
-                "feature": feature,
-                "display_name": DISPLAY_NAMES.get(feature, feature),
-                "direction": "increase" if contribution > 0 else "decrease" if contribution < 0 else "neutral",
-                "contribution": round(contribution, 12),
-                "absolute_contribution": round(abs(contribution), 12),
-                "modifiable": feature in MODIFIABLE,
-                "message": (
-                    "이 입력은 결측 기준값과 비교해 모델 점수를 높이는 방향이었습니다."
-                    if contribution > 0
-                    else "이 입력은 결측 기준값과 비교해 모델 점수를 낮추는 방향이었습니다."
-                    if contribution < 0
-                    else "이 입력의 국소 점수 변화는 관찰되지 않았습니다."
-                ),
-            }
-        )
-    items.sort(key=lambda item: (-item["absolute_contribution"], item["feature"]))
-    return {
-        "status": "research_only",
-        "method": "missingness_perturbation_v1",
-        "explanation_version": "local-missingness-perturbation-v1",
-        "output_space": "risk_score",
-        "additive_to_score": False,
-        "reference_value": None,
-        "baseline_definition": "same record with one feature set to missing and fitted Train-only preprocessing applied",
-        "score": round(baseline, 12),
-        "items": items[:maximum_items],
-        "shap_claimed": False,
-        "display_allowed": False,
-        "limitations": [
-            "not SHAP",
-            "not causal",
-            "correlated features can share or mask influence",
-            "missingness may itself be informative",
-        ],
-    }
 
 
 def model_comparison_guidance(

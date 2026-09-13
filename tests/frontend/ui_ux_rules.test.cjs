@@ -80,21 +80,34 @@ test('XAI explanation cards show only approved returned factors with safe labels
     '#current-factor-list': { innerHTML: '' },
     '#factor-list': { innerHTML: '' },
   };
-  const state = {};
-  const context = loadMany(['factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'renderXaiExplanationLists'], {
+  const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
+  const context = loadMany(['factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),
   });
   const render = context.renderXaiExplanationLists;
-  const approvedFactors = { status: 'approved', shap_claimed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '꾸준한 활동 신호입니다.' }] };
+  const approvedFactors = { status: 'approved', shap_claimed: true, display_allowed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '모델 점수를 낮춘 방향입니다.' }] };
   render(approvedFactors, { approved: true, currentFactors: approvedFactors, currentApproved: true });
   assert.match(nodes['#current-factor-list'].innerHTML, /걷기 시간/);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /위험 감소 방향 · 바꿀 수 있는 요인/);
+  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 점수를 낮춘 방향 · 바꿀 수 있는 요인/);
+  render({ ...approvedFactors, display_allowed: false }, { approved: true });
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /걷기 시간/);
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /임의 표시 금지/);
   assert.match(nodes['#factor-list'].innerHTML, /미래 위험 XAI 연결 대기/);
+});
+test('XAI picks directional 2+1 without padding and hides unknown result states', () => {
+  const context = loadMany(['factorDirectionLabel', 'selectXaiFactors']);
+  const items = [-0.1, 0.4, -0.3, 0.2, 0, NaN].map((value, index) => ({
+    feature: String(index), contribution: value, direction: value > 0 ? 'increase' : 'decrease',
+  }));
+  const select = context.selectXaiFactors;
+  assert.deepEqual(Array.from(select(items, false), i => i.contribution), [-0.3, -0.1, 0.4]);
+  assert.deepEqual(Array.from(select(items, true), i => i.contribution), [0.4, 0.2, -0.3]);
+  assert.equal(select(items, null).length, 0);
+  assert.equal(select(items.filter(i => i.contribution > 0), false).length, 1);
 });
 test('model conflict guidance prioritizes current signal and never treats failure as low risk', () => {
   const context = loadMany(['normalizeRiskKey', 'isPublicRiskDisplayAllowed', 'modelComparisonGuidance']);

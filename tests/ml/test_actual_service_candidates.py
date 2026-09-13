@@ -41,6 +41,9 @@ def test_actual_today_shared8_is_reproducible() -> None:
     assert first["screening_signal_detected"] is True
     assert first["artifact_sha256"] == "aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc"
     assert first["display_allowed"] is False
+    assert first["explanation"]["method"] == "exact_grouped_shap_missing_reference_v1"
+    assert first["explanation"]["additivity_verified"] is True
+    assert len(first["explanation"]["items"]) <= 3
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_RF25_ARTIFACT"), reason="Tomorrow artifact not provisioned")
@@ -54,3 +57,6 @@ def test_actual_tomorrow_rf25_is_reproducible() -> None:
     assert first["risk_category"] == "high"
     assert first["artifact_sha256"] == "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8"
     assert first["display_allowed"] is False
+    assert first["explanation"]["method"] == "treeshap_tree_path_dependent_v1"
+    assert first["explanation"]["additivity_verified"] is True
+    assert len(first["explanation"]["items"]) <= 3
