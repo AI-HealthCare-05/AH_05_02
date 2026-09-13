@@ -260,9 +260,7 @@ async def test_all_period_paginates_cycles_and_rejects_cross_user_report_id() ->
 
         start = date(2026, 1, 5)
         for i in range(13):
-            await _make_cycle(
-                user_a, start + timedelta(days=28 * i), codes=["regular_meals_log"], status_="completed"
-            )
+            await _make_cycle(user_a, start + timedelta(days=28 * i), codes=["regular_meals_log"], status_="completed")
 
         import app.services.reports as reports_module
 
@@ -285,9 +283,7 @@ async def test_all_period_paginates_cycles_and_rejects_cross_user_report_id() ->
         assert page2.json()["data"]["next_cursor"] is None
 
         # Another user's own reports/cycles call must never see user A's data (R15).
-        own_cycles = await client.get(
-            f"/api/v1/reports/{data['report_id']}/cycles", headers=headers_b
-        )
+        own_cycles = await client.get(f"/api/v1/reports/{data['report_id']}/cycles", headers=headers_b)
         assert own_cycles.status_code == status.HTTP_200_OK
         assert own_cycles.json()["data"]["items"] == []
 
@@ -321,9 +317,7 @@ async def test_all_period_cycle_selected_challenges_keep_their_title_snapshot() 
         response = await client.get("/api/v1/reports", params={"period": "all"}, headers=headers)
         data = response.json()["data"]
         item = next(c for c in data["cycles"]["items"] if c["cycle_id"] == str(cycle.id))
-        assert item["selected_challenges"] == [
-            {"challenge_code": "regular_meals_log", "title": original_title}
-        ]
+        assert item["selected_challenges"] == [{"challenge_code": "regular_meals_log", "title": original_title}]
 
 
 @pytest.mark.asyncio
@@ -437,7 +431,9 @@ async def test_barriers_scoped_to_period_selected_challenge_and_deduped() -> Non
         user_id = await _user_id_by_email("barrierscope@example.com")
         anchor = date(2026, 8, 3)
 
-        old_cycle = await _make_cycle(user_id, anchor - timedelta(days=60), codes=["regular_meals_log"], status_="completed")
+        old_cycle = await _make_cycle(
+            user_id, anchor - timedelta(days=60), codes=["regular_meals_log"], status_="completed"
+        )
         old_uc = await UserChallenge.get(cycle_id=old_cycle.id)
 
         current_cycle = await _make_cycle(user_id, anchor, codes=["regular_meals_log"], status_="active")
@@ -534,9 +530,9 @@ async def test_weekly_report_pdf_never_leaks_another_users_content() -> None:
 
         ready_marker = _pdf_text("상태: ready").encode("ascii")
         empty_marker = _pdf_text("상태: empty").encode("ascii")
-        record_marker = _pdf_text("기록 요약: 최근 7일 동안 계획한 활동의 100.0%를 기록했습니다. 현재 실천 목표를 이어가 보세요.").encode(
-            "ascii"
-        )
+        record_marker = _pdf_text(
+            "기록 요약: 최근 7일 동안 계획한 활동의 100.0%를 기록했습니다. 현재 실천 목표를 이어가 보세요."
+        ).encode("ascii")
         empty_message_marker = _pdf_text(
             "기록 요약: 진행 중인 챌린지를 시작하면 주간 리포트를 확인할 수 있습니다."
         ).encode("ascii")
@@ -587,9 +583,7 @@ async def test_generated_at_is_utc_and_response_is_marked_private_no_store() -> 
         assert invalid_period.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert invalid_period.headers["cache-control"] == "private, no-store"
 
-        wrong_period_cycles = await client.get(
-            "/api/v1/reports/rpt-week-2026-09-08/cycles", headers=headers
-        )
+        wrong_period_cycles = await client.get("/api/v1/reports/rpt-week-2026-09-08/cycles", headers=headers)
         assert wrong_period_cycles.status_code == status.HTTP_404_NOT_FOUND
         assert wrong_period_cycles.headers["cache-control"] == "private, no-store"
 
