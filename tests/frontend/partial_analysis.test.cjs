@@ -25,6 +25,9 @@ function harness() {
     renderPrediction: prediction => { state.renderedFuture = prediction; },
     renderTwoYearRiskForecast: () => {},
     renderCurrentHealthResult: prediction => { state.renderedCurrent = prediction; },
+    renderModelComparisonGuidance: () => {},
+    isPublicRiskDisplayAllowed: () => false,
+    renderXaiExplanationLists: () => {},
     openResultStepAfterSuccessfulAnalysis: async guard => { if (!guard || guard()) state.step = 6; },
   });
   for (const name of ['analysisInputKey', 'renderPartialAnalysisNotice', 'runPrediction']) {
@@ -73,7 +76,7 @@ test('current-only flow does not request future prediction', async () => {
   const h = harness();
   h.state.currentHealthOnly = true;
   await h.run();
-  assert.deepEqual(h.calls, [CURRENT]);
+  assert.deepEqual(h.calls, [CURRENT, '/predictions/10/risk-factors']);
   assert.equal(h.state.step, 6);
 });
 test('explanation failure preserves models; retry only fetches explanations', async () => {
@@ -85,7 +88,7 @@ test('explanation failure preserves models; retry only fetches explanations', as
   h.calls.length = 0;
   h.setFactorFailure(false);
   await h.run({ retryFailed: true });
-  assert.deepEqual(h.calls, ['/predictions/20/risk-factors']);
+  assert.deepEqual(h.calls.sort(), ['/predictions/10/risk-factors', '/predictions/20/risk-factors']);
   assert.equal(h.$('#partial-analysis-notice').hidden, true);
 });
 test('changed checkup invalidates cached success, even with retry requested', async () => {

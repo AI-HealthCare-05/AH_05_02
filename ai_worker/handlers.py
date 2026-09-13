@@ -178,7 +178,7 @@ async def _run_reduced_current_model(
         "promotion_status": "research_candidate_only",
         "output_status": output["output_status"],
         "model_population": "knhanes_age_19_plus_research",
-        "explanation_status": "not_available",
+        "explanation_status": output.get("explanation_status", "not_available"),
         "risk_curve_status": "not_applicable",
         "research_output": output,
         "medical_notice": output["disclaimer"],

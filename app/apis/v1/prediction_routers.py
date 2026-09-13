@@ -332,8 +332,14 @@ async def read_risk_factors(
         {
             "prediction_id": item.id,
             "status": item.explanation_status,
+            "method": None,
+            "explanation_version": None,
+            "output_space": None,
+            "additive_to_score": None,
+            "reference_value": None,
             "items": [],
             "message": "검증된 설명 방법이 준비되기 전에는 위험·보호 요인을 표시하지 않습니다.",
             "shap_claimed": False,
+            "display_allowed": False,
         }
     )

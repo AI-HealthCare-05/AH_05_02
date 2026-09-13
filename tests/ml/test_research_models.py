@@ -91,13 +91,13 @@ def test_shared8_frame_maps_measured_or_missing_waist(payload):
         {"fasting_glucose": 200},
     ],
 )
-@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "tomorrow-rf25", "first-interval"])
 def test_invalid_input_rejected_before_model_load(payload, change, model):
     with pytest.raises(ValueError):
         serving.predict_research_model(model, {**payload, **change}, as_of_date=AS_OF)
 
 
-@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "first-interval"])
+@pytest.mark.parametrize("model", ["shared7", "shared8-waist", "tomorrow-rf25", "first-interval"])
 def test_missing_input_rejected(payload, model):
     payload.pop("height_cm")
     with pytest.raises(ValueError):

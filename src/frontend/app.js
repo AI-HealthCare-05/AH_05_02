@@ -2559,6 +2559,127 @@ function forecastSignalLabel(level) {
   return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
 }
 
+function selectTwoYearForecastPoint(prediction = {}, fallbackLevel = null) {
+  const points = Array.isArray(prediction?.age_risk_forecast?.points)
+    ? prediction.age_risk_forecast.points
+    : [];
+  const point = points.find((item) => (
+    Number(item?.years_from_now) === 2
+    || /^\s*(?:약\s*)?2\s*년/.test(String(item?.display_label || item?.horizon_label || ""))
+  ));
+  const level = normalizeForecastSignal(point?.signal_level || point?.risk_category || fallbackLevel);
+  if (!level) return null;
+  return {
+    label: String(point?.display_label || point?.horizon_label || "약 2년 후").trim(),
+    level,
+  };
+}
+
+function renderTwoYearRiskForecast(prediction = {}, options = {}) {
+  const chart = $("#age-risk-chart");
+  const pointContainer = $("#age-risk-chart-points");
+  const stateBox = $("#forecast-state");
+  const statusBadge = $("#forecast-status-badge");
+  if (!chart || !pointContainer || !stateBox || !statusBadge) return;
+  const resolvedPoint = options.canDisplayRisk
+    ? selectTwoYearForecastPoint(prediction, options.fallbackLevel)
+    : null;
+  const point = resolvedPoint || (isDemoEnvironment() && !options.failed
+    ? { label: "약 2년 후", level: normalizeForecastSignal(options.fallbackLevel) || "caution" }
+    : null);
+  const hasPoint = Boolean(point);
+  chart.hidden = !hasPoint;
+  stateBox.hidden = hasPoint;
+  pointContainer.replaceChildren();
+  if (!hasPoint) {
+    stateBox.dataset.state = options.failed ? "unavailable" : "loading";
+    $("#forecast-state-title").textContent = options.failed
+      ? "미래 신규 발병 위험 분석을 완료하지 못했습니다"
+      : "2년 위험 전망 결과를 준비하고 있어요";
+    $("#forecast-state-message").textContent = options.failed
+      ? "실패한 분석만 다시 시도하면 이어서 확인할 수 있어요."
+      : "공개 가능한 결과가 도착하면 그래프에 표시합니다.";
+    statusBadge.textContent = options.failed ? "분석 실패" : "결과 준비 중";
+    statusBadge.dataset.status = options.failed ? "failed" : "pending";
+    chart.setAttribute("aria-label", options.failed
+      ? "약 2년 뒤 위험 신호 전망 그래프: 분석 실패"
+      : "약 2년 뒤 위험 신호 전망 그래프: 결과 준비 중");
+    return;
+  }
+  const item = document.createElement("div");
+  item.className = "age-risk-point";
+  const value = document.createElement("strong");
+  value.textContent = forecastSignalLabel(point.level);
+  const track = document.createElement("span");
+  track.className = "age-risk-signal-track";
+  track.dataset.level = point.level;
+  track.setAttribute("aria-hidden", "true");
+  const marker = document.createElement("img");
+  marker.src = `/static/assets/hyeoldangi-face-${point.level}.png`;
+  marker.alt = "";
+  track.append(marker);
+  const label = document.createElement("small");
+  label.textContent = point.label;
+  item.append(value, track, label);
+  pointContainer.append(item);
+  statusBadge.textContent = options.preview ? "화면 확인용 예시" : "승인된 결과";
+  statusBadge.dataset.status = options.preview ? "preview" : "approved";
+  chart.setAttribute("aria-label", `약 2년 뒤 당뇨병 위험 신호 전망. ${point.label} ${forecastSignalLabel(point.level)}`);
+}
+
+
+
+function renderPrediction(prediction, factors, currentFactors = null) {
+  rememberModelOutputMetadata(prediction, "prediction");
+  const isApprovedRisk = isPublicRiskDisplayAllowed(prediction);
+  const developmentPreviewRisk = isDemoEnvironment()
+    ? normalizeForecastSignal(
+      prediction?.preview_only === true
+        ? prediction.preview_signal_level
+        : state.developmentPreviewRiskCategory,
+    )
+    : null;
+  const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk);
+  const displayPrediction = developmentPreviewRisk
+    ? { ...prediction, risk_category: developmentPreviewRisk, risk_category_label: riskCategoryLabels[developmentPreviewRisk] }
+    : prediction;
+  const hasApprovedExplanation = isApprovedRisk
+    && factors?.status === "approved"
+    && factors?.shap_claimed === true;
+  const hasApprovedCurrentExplanation = isPublicRiskDisplayAllowed(state.currentScreeningPrediction)
+    && currentFactors?.status === "approved"
+    && currentFactors?.shap_claimed === true;
+  renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true });
+  $("#probability-policy").querySelector("p").textContent = isApprovedRisk
+    ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."
+    : developmentPreviewRisk
+      ? "개발 확인용 위험 범주만 표시합니다. 숫자 점수·확률·위험요인은 표시하지 않습니다."
+    : "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
+  renderXaiExplanationLists(factors, {
+    approved: hasApprovedExplanation,
+    currentFactors,
+    currentApproved: hasApprovedCurrentExplanation,
+  });
+  $("#risk-confirm-card").hidden = false;
+  $("#risk-preview-controls").hidden = !isDemoEnvironment();
+  $("#result-unavailable").hidden = canDisplayRisk;
+  $("#development-preview-notice").hidden = true;
+  $("#medical-guidance-detail").hidden = true;
+  // A future-model result must never populate the current-screening traffic light.
+  const futureRiskLabel = canDisplayRisk
+    ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
+    : "현재 공개할 수 있는 예측 결과가 없습니다";
+  $("#future-risk-category").textContent = futureRiskLabel;
+  renderTwoYearRiskForecast(prediction, {
+    canDisplayRisk,
+    fallbackLevel: normalizeRiskKey(displayPrediction),
+    preview: Boolean(developmentPreviewRisk),
+  });
+  updateResultConfirmation();
+  $("#analysis-failure").hidden = true;
+  $("#retry-analysis").hidden = true;
+}
+
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
   if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "위험 증가 방향";
@@ -2581,11 +2702,17 @@ function renderFactorItems(items = []) {
   }).join("");
 }
 
-function renderXaiExplanationLists(factors, { approved = false } = {}) {
+function renderXaiExplanationLists(
+  factors,
+  { approved = false, currentFactors = null, currentApproved = false } = {},
+) {
   const currentList = $("#current-factor-list");
+  const currentItems = Array.isArray(currentFactors?.items) ? currentFactors.items : [];
   const futureList = $("#factor-list");
   if (currentList) {
-    currentList.innerHTML = `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>준혁님 응답 계약이 오면 오늘의 신호에 영향을 준 항목을 표시합니다.</p></li>`;
+    currentList.innerHTML = currentApproved && currentItems.length
+      ? renderFactorItems(currentItems)
+      : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
   const factorItems = Array.isArray(factors?.items) ? factors.items : [];
   if (!futureList) return;
@@ -2670,13 +2797,89 @@ function analysisInputKey() {
 }
 
 function renderPartialAnalysisNotice(run) {
-  const labels = { diabetes_current_screening: "현재 위험 신호 선별", diabetes_incidence: "미래 신규 발병 위험" };
-  const failed = Object.entries(run.models).filter(([, result]) => result.status === "failed");
-  const messages = failed.map(([key, result]) => `${labels[key]}: 분석 실패 (${result.error.code || "REQUEST_FAILED"})`);
-  if (run.factorsError) messages.push("미래 결과의 설명 정보를 불러오지 못했습니다.");
-  $("#partial-analysis-notice").hidden = !messages.length;
-  $("#partial-analysis-message").textContent = messages.join(" / ");
-  $("#retry-partial-analysis").textContent = failed.length ? "실패한 분석만 다시 시도하기" : "설명 정보 다시 불러오기";
+  const failedModels = Object.entries(run?.models || {})
+    .filter(([, result]) => result.status === "failed");
+  const hasFactorFailure = Boolean(run?.factorsError || run?.currentFactorsError);
+  const panel = $("#partial-analysis-notice");
+  panel.hidden = failedModels.length === 0 && !hasFactorFailure;
+  if (panel.hidden) {
+    $("#partial-analysis-message").textContent = "";
+    return;
+  }
+  const modelNames = failedModels.map(([key]) => (
+    key === "diabetes_current_screening" ? "현재 건강 신호" : "미래 위험"
+  ));
+  const errorCodes = failedModels
+    .map(([, result]) => result.error?.code)
+    .filter(Boolean);
+  const parts = [];
+  if (modelNames.length) {
+    parts.push(`${modelNames.join("·")} 분석 실패${errorCodes.length ? ` (${errorCodes.join(", ")})` : ""}`);
+  }
+  if (hasFactorFailure) parts.push("설명 요인 조회 실패");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 실패한 결과는 낮은 위험으로 대체하지 않습니다.`;
+  $("#retry-partial-analysis").textContent = modelNames.length
+    ? "실패한 분석만 다시 시도하기"
+    : "설명 요인 다시 불러오기";
+}
+
+function modelComparisonGuidance(currentRun, futureRun) {
+  if (currentRun?.status !== "succeeded" || futureRun?.status !== "succeeded") {
+    return {
+      code: "MODEL_RESULT_INCOMPLETE",
+      display: true,
+      title: "일부 분석 결과를 확인할 수 없습니다",
+      message: "모델 파일 누락이나 분석 실패는 낮은 위험을 의미하지 않습니다.",
+    };
+  }
+  const current = currentRun.prediction;
+  const future = futureRun.prediction;
+  if (!isPublicRiskDisplayAllowed(current) || !isPublicRiskDisplayAllowed(future)) {
+    return { code: "MODEL_RESULT_NOT_PUBLIC", display: false };
+  }
+  const currentSignal = normalizeRiskKey(current) === "high";
+  const futureCategory = normalizeRiskKey(future);
+  if (currentSignal && futureCategory === "low") {
+    return {
+      code: "CURRENT_SIGNAL_FUTURE_LOW",
+      display: true,
+      title: "현재 신호와 미래 전망의 기준이 다릅니다",
+      message: "현재 신호 확인을 우선하세요. 미래 모델의 낮음은 현재 상태를 배제하거나 진단하지 않습니다.",
+    };
+  }
+  if (!currentSignal && ["caution", "high"].includes(futureCategory)) {
+    return {
+      code: "CURRENT_LOW_FUTURE_ELEVATED",
+      display: true,
+      title: "현재 신호는 낮지만 미래 위험 요인이 관찰됐습니다",
+      message: "현재 진단을 뜻하지 않으며 정기 검사와 생활습관 점검을 위한 선별 정보입니다.",
+    };
+  }
+  if (currentSignal) {
+    return {
+      code: "BOTH_SIGNALS_ELEVATED",
+      display: true,
+      title: "현재 신호 확인이 우선입니다",
+      message: "두 결과 모두 진단이 아니며, 현재 신호는 의료기관 검사를 통해 확인해야 합니다.",
+    };
+  }
+  return {
+    code: "BOTH_SIGNALS_LOW",
+    display: true,
+    title: "두 선별 결과에서 높은 신호가 관찰되지 않았습니다",
+    message: "낮은 선별 결과도 당뇨병을 배제하지 않으며 정기적인 건강 확인이 필요합니다.",
+  };
+}
+
+function renderModelComparisonGuidance(currentRun, futureRun) {
+  const panel = $("#model-comparison-guidance");
+  if (!panel) return;
+  const guidance = modelComparisonGuidance(currentRun, futureRun);
+  panel.dataset.code = guidance.code;
+  panel.hidden = !guidance.display;
+  if (!guidance.display) return;
+  $("#model-comparison-title").textContent = guidance.title;
+  $("#model-comparison-message").textContent = guidance.message;
 }
 
 async function runPrediction({ retryFailed = false } = {}) {
@@ -2701,7 +2904,7 @@ async function runPrediction({ retryFailed = false } = {}) {
   ];
   const run = retryFailed && state.analysisRun?.key === key ? state.analysisRun : {
     key, models: Object.fromEntries(modelKeys.map(modelKey => [modelKey, { status: "pending" }])),
-    factors: null, factorsError: null,
+    factors: null, currentFactors: null, factorsError: null, currentFactorsError: null,
   };
   state.analysisRun = run;
   run.busy = true;
@@ -2733,25 +2936,48 @@ async function runPrediction({ retryFailed = false } = {}) {
       throw Object.values(run.models).find(result => result.error)?.error || new Error("사용 가능한 분석 모델이 없습니다.");
     }
     if (state.currentHealthOnly) {
+      try {
+        run.currentFactors = await api(`/predictions/${current.predictionId}/risk-factors`);
+        run.currentFactorsError = null;
+      } catch (error) {
+        run.currentFactorsError = error;
+      }
+      if (!isCurrent()) return;
       renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: true });
+      const approvedCurrentExplanation = isPublicRiskDisplayAllowed(state.currentScreeningPrediction)
+        && run.currentFactors?.status === "approved"
+        && run.currentFactors?.shap_claimed === true;
+      renderXaiExplanationLists(null, {
+        currentFactors: run.currentFactors,
+        currentApproved: approvedCurrentExplanation,
+      });
       renderPredictionStatus("succeeded", { resultAvailable: true, showResult: true });
+      renderPartialAnalysisNotice(run);
       await openResultStepAfterSuccessfulAnalysis(isCurrent);
       return;
     }
-    if (future?.status === "succeeded" && !run.factors) {
-      try {
-        run.factors = await api(`/predictions/${future.predictionId}/risk-factors`);
-        run.factorsError = null;
-      } catch (error) {
-        run.factorsError = error;
-      }
-      if (!isCurrent()) return;
+    await Promise.all([
+      current?.status === "succeeded" && !run.currentFactors
+        ? api(`/predictions/${current.predictionId}/risk-factors`)
+          .then(value => { run.currentFactors = value; run.currentFactorsError = null; })
+          .catch(error => { run.currentFactorsError = error; })
+        : Promise.resolve(),
+      future?.status === "succeeded" && !run.factors
+        ? api(`/predictions/${future.predictionId}/risk-factors`)
+          .then(value => { run.factors = value; run.factorsError = null; })
+          .catch(error => { run.factorsError = error; })
+        : Promise.resolve(),
+    ]);
+    if (!isCurrent()) return;
+    renderPrediction(future?.prediction || { display_allowed: false }, run.factors, run.currentFactors);
+    if (future?.status === "failed") {
+      $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
+      renderTwoYearRiskForecast({}, { failed: true });
     }
-    renderPrediction(future?.prediction || { display_allowed: false }, run.factors);
-    if (future?.status === "failed") $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
     if (state.currentScreeningPrediction) {
       renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
     }
+    renderModelComparisonGuidance(current, future);
     renderPartialAnalysisNotice(run);
     await openResultStepAfterSuccessfulAnalysis(isCurrent);
   } catch (error) {
