@@ -87,11 +87,36 @@ test('XAI explanation cards show only approved returned factors with safe labels
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),
   });
   const render = context.renderXaiExplanationLists;
-  render({ status: 'approved', shap_claimed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '꾸준한 활동 신호입니다.' }] }, { approved: true });
-  assert.match(nodes['#current-factor-list'].innerHTML, /현재 건강 신호 XAI 연결 대기/);
+  const approvedFactors = { status: 'approved', shap_claimed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '꾸준한 활동 신호입니다.' }] };
+  render(approvedFactors, { approved: true, currentFactors: approvedFactors, currentApproved: true });
+  assert.match(nodes['#current-factor-list'].innerHTML, /걷기 시간/);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
   assert.match(nodes['#factor-list'].innerHTML, /위험 감소 방향 · 바꿀 수 있는 요인/);
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /임의 표시 금지/);
   assert.match(nodes['#factor-list'].innerHTML, /미래 위험 XAI 연결 대기/);
+});
+test('model conflict guidance prioritizes current signal and never treats failure as low risk', () => {
+  const context = loadMany(['normalizeRiskKey', 'isPublicRiskDisplayAllowed', 'modelComparisonGuidance']);
+  const approved = risk => ({
+    risk_category: risk,
+    result_status: 'approved',
+    promotion_status: 'approved',
+    display_allowed: true,
+  });
+  const current = { status: 'succeeded', prediction: approved('high') };
+  const future = { status: 'succeeded', prediction: approved('low') };
+  assert.equal(context.modelComparisonGuidance(current, future).code, 'CURRENT_SIGNAL_FUTURE_LOW');
+  assert.match(context.modelComparisonGuidance(current, future).message, /현재 신호 확인을 우선/);
+  const incomplete = context.modelComparisonGuidance(current, { status: 'failed' });
+  assert.equal(incomplete.code, 'MODEL_RESULT_INCOMPLETE');
+  assert.match(incomplete.message, /낮은 위험을 의미하지 않습니다/);
+});
+
+test('unapproved model outputs cannot create a public conflict explanation', () => {
+  const context = loadMany(['normalizeRiskKey', 'isPublicRiskDisplayAllowed', 'modelComparisonGuidance']);
+  const research = { status: 'succeeded', prediction: { risk_category: 'high', display_allowed: false } };
+  const result = context.modelComparisonGuidance(research, research);
+  assert.equal(result.code, 'MODEL_RESULT_NOT_PUBLIC');
+  assert.equal(result.display, false);
 });

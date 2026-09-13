@@ -2744,7 +2744,7 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
 
 
 
-function renderPrediction(prediction, factors) {
+function renderPrediction(prediction, factors, currentFactors = null) {
   rememberModelOutputMetadata(prediction, "prediction");
   const isApprovedRisk = isPublicRiskDisplayAllowed(prediction);
   const developmentPreviewRisk = isDemoEnvironment()
@@ -2761,13 +2761,20 @@ function renderPrediction(prediction, factors) {
   const hasApprovedExplanation = isApprovedRisk
     && factors?.status === "approved"
     && factors?.shap_claimed === true;
+  const hasApprovedCurrentExplanation = isPublicRiskDisplayAllowed(state.currentScreeningPrediction)
+    && currentFactors?.status === "approved"
+    && currentFactors?.shap_claimed === true;
   renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true });
   $("#probability-policy").querySelector("p").textContent = isApprovedRisk
     ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."
     : developmentPreviewRisk
       ? "개발 확인용 위험 범주만 표시합니다. 숫자 점수·확률·위험요인은 표시하지 않습니다."
     : "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
-  renderXaiExplanationLists(factors, { approved: hasApprovedExplanation });
+  renderXaiExplanationLists(factors, {
+    approved: hasApprovedExplanation,
+    currentFactors,
+    currentApproved: hasApprovedCurrentExplanation,
+  });
   $("#risk-confirm-card").hidden = false;
   $("#risk-preview-controls").hidden = !isDemoEnvironment();
   $("#result-unavailable").hidden = canDisplayRisk;
@@ -2810,11 +2817,17 @@ function renderFactorItems(items = []) {
   }).join("");
 }
 
-function renderXaiExplanationLists(factors, { approved = false } = {}) {
+function renderXaiExplanationLists(
+  factors,
+  { approved = false, currentFactors = null, currentApproved = false } = {},
+) {
   const currentList = $("#current-factor-list");
+  const currentItems = Array.isArray(currentFactors?.items) ? currentFactors.items : [];
   const futureList = $("#factor-list");
   if (currentList) {
-    currentList.innerHTML = `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>준혁님 응답 계약이 오면 오늘의 신호에 영향을 준 항목을 표시합니다.</p></li>`;
+    currentList.innerHTML = currentApproved && currentItems.length
+      ? renderFactorItems(currentItems)
+      : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
   const factorItems = Array.isArray(factors?.items) ? factors.items : [];
   if (!futureList) return;
@@ -2854,9 +2867,89 @@ function analysisInputKey() {
 }
 
 function renderPartialAnalysisNotice(run) {
-  $("#partial-analysis-notice").hidden = true;
-  $("#partial-analysis-message").textContent = "";
-  $("#retry-partial-analysis").textContent = "실패한 분석만 다시 시도하기";
+  const failedModels = Object.entries(run?.models || {})
+    .filter(([, result]) => result.status === "failed");
+  const hasFactorFailure = Boolean(run?.factorsError || run?.currentFactorsError);
+  const panel = $("#partial-analysis-notice");
+  panel.hidden = failedModels.length === 0 && !hasFactorFailure;
+  if (panel.hidden) {
+    $("#partial-analysis-message").textContent = "";
+    return;
+  }
+  const modelNames = failedModels.map(([key]) => (
+    key === "diabetes_current_screening" ? "현재 건강 신호" : "미래 위험"
+  ));
+  const errorCodes = failedModels
+    .map(([, result]) => result.error?.code)
+    .filter(Boolean);
+  const parts = [];
+  if (modelNames.length) {
+    parts.push(`${modelNames.join("·")} 분석 실패${errorCodes.length ? ` (${errorCodes.join(", ")})` : ""}`);
+  }
+  if (hasFactorFailure) parts.push("설명 요인 조회 실패");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 실패한 결과는 낮은 위험으로 대체하지 않습니다.`;
+  $("#retry-partial-analysis").textContent = modelNames.length
+    ? "실패한 분석만 다시 시도하기"
+    : "설명 요인 다시 불러오기";
+}
+
+function modelComparisonGuidance(currentRun, futureRun) {
+  if (currentRun?.status !== "succeeded" || futureRun?.status !== "succeeded") {
+    return {
+      code: "MODEL_RESULT_INCOMPLETE",
+      display: true,
+      title: "일부 분석 결과를 확인할 수 없습니다",
+      message: "모델 파일 누락이나 분석 실패는 낮은 위험을 의미하지 않습니다.",
+    };
+  }
+  const current = currentRun.prediction;
+  const future = futureRun.prediction;
+  if (!isPublicRiskDisplayAllowed(current) || !isPublicRiskDisplayAllowed(future)) {
+    return { code: "MODEL_RESULT_NOT_PUBLIC", display: false };
+  }
+  const currentSignal = normalizeRiskKey(current) === "high";
+  const futureCategory = normalizeRiskKey(future);
+  if (currentSignal && futureCategory === "low") {
+    return {
+      code: "CURRENT_SIGNAL_FUTURE_LOW",
+      display: true,
+      title: "현재 신호와 미래 전망의 기준이 다릅니다",
+      message: "현재 신호 확인을 우선하세요. 미래 모델의 낮음은 현재 상태를 배제하거나 진단하지 않습니다.",
+    };
+  }
+  if (!currentSignal && ["caution", "high"].includes(futureCategory)) {
+    return {
+      code: "CURRENT_LOW_FUTURE_ELEVATED",
+      display: true,
+      title: "현재 신호는 낮지만 미래 위험 요인이 관찰됐습니다",
+      message: "현재 진단을 뜻하지 않으며 정기 검사와 생활습관 점검을 위한 선별 정보입니다.",
+    };
+  }
+  if (currentSignal) {
+    return {
+      code: "BOTH_SIGNALS_ELEVATED",
+      display: true,
+      title: "현재 신호 확인이 우선입니다",
+      message: "두 결과 모두 진단이 아니며, 현재 신호는 의료기관 검사를 통해 확인해야 합니다.",
+    };
+  }
+  return {
+    code: "BOTH_SIGNALS_LOW",
+    display: true,
+    title: "두 선별 결과에서 높은 신호가 관찰되지 않았습니다",
+    message: "낮은 선별 결과도 당뇨병을 배제하지 않으며 정기적인 건강 확인이 필요합니다.",
+  };
+}
+
+function renderModelComparisonGuidance(currentRun, futureRun) {
+  const panel = $("#model-comparison-guidance");
+  if (!panel) return;
+  const guidance = modelComparisonGuidance(currentRun, futureRun);
+  panel.dataset.code = guidance.code;
+  panel.hidden = !guidance.display;
+  if (!guidance.display) return;
+  $("#model-comparison-title").textContent = guidance.title;
+  $("#model-comparison-message").textContent = guidance.message;
 }
 
 async function runPrediction({ retryFailed = false } = {}) {
@@ -2881,7 +2974,7 @@ async function runPrediction({ retryFailed = false } = {}) {
   ];
   const run = retryFailed && state.analysisRun?.key === key ? state.analysisRun : {
     key, models: Object.fromEntries(modelKeys.map(modelKey => [modelKey, { status: "pending" }])),
-    factors: null, factorsError: null,
+    factors: null, currentFactors: null, factorsError: null, currentFactorsError: null,
   };
   state.analysisRun = run;
   run.busy = true;
@@ -2918,21 +3011,40 @@ async function runPrediction({ retryFailed = false } = {}) {
       throw Object.values(run.models).find(result => result.error)?.error || new Error("사용 가능한 분석 모델이 없습니다.");
     }
     if (state.currentHealthOnly) {
+      try {
+        run.currentFactors = await api(`/predictions/${current.predictionId}/risk-factors`);
+        run.currentFactorsError = null;
+      } catch (error) {
+        run.currentFactorsError = error;
+      }
+      if (!isCurrent()) return;
       renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: true });
+      const approvedCurrentExplanation = isPublicRiskDisplayAllowed(state.currentScreeningPrediction)
+        && run.currentFactors?.status === "approved"
+        && run.currentFactors?.shap_claimed === true;
+      renderXaiExplanationLists(null, {
+        currentFactors: run.currentFactors,
+        currentApproved: approvedCurrentExplanation,
+      });
       renderPredictionStatus("succeeded", { resultAvailable: true, showResult: true });
+      renderPartialAnalysisNotice(run);
       await openResultStepAfterSuccessfulAnalysis(isCurrent);
       return;
     }
-    if (future?.status === "succeeded" && !run.factors) {
-      try {
-        run.factors = await api(`/predictions/${future.predictionId}/risk-factors`);
-        run.factorsError = null;
-      } catch (error) {
-        run.factorsError = error;
-      }
-      if (!isCurrent()) return;
-    }
-    renderPrediction(future?.prediction || { display_allowed: false }, run.factors);
+    await Promise.all([
+      current?.status === "succeeded" && !run.currentFactors
+        ? api(`/predictions/${current.predictionId}/risk-factors`)
+          .then(value => { run.currentFactors = value; run.currentFactorsError = null; })
+          .catch(error => { run.currentFactorsError = error; })
+        : Promise.resolve(),
+      future?.status === "succeeded" && !run.factors
+        ? api(`/predictions/${future.predictionId}/risk-factors`)
+          .then(value => { run.factors = value; run.factorsError = null; })
+          .catch(error => { run.factorsError = error; })
+        : Promise.resolve(),
+    ]);
+    if (!isCurrent()) return;
+    renderPrediction(future?.prediction || { display_allowed: false }, run.factors, run.currentFactors);
     if (future?.status === "failed") {
       $("#future-risk-category").textContent = "미래 신규 발병 위험 분석을 완료하지 못했습니다";
       renderTwoYearRiskForecast({}, { failed: true });
@@ -2940,6 +3052,7 @@ async function runPrediction({ retryFailed = false } = {}) {
     if (state.currentScreeningPrediction) {
       renderCurrentHealthResult(state.currentScreeningPrediction, { standalone: false });
     }
+    renderModelComparisonGuidance(current, future);
     renderPartialAnalysisNotice(run);
     await openResultStepAfterSuccessfulAnalysis(isCurrent);
   } catch (error) {

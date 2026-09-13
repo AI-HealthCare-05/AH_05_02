@@ -20,6 +20,7 @@ from src.ml.inference.diabetes_first_interval_survival_ensemble import (
     load_first_interval_ensemble,
     predict_with_loaded_first_interval_ensemble,
 )
+from src.ml.inference.model_explanations import explain_by_missingness_perturbation
 from src.ml.preprocessing.diabetes_api_features import build_standard_model_frame, parse_diabetes_risk_input
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -124,6 +125,15 @@ def load_ensemble(model_path: str = ""):
     return loaded
 
 
+@lru_cache(maxsize=2)
+def load_tomorrow_rf25(model_path: str = ""):
+    """Load and verify RF25 once per worker process."""
+
+    from src.ml.inference.diabetes_standard import load_standard_model
+
+    return load_standard_model(model_path=Path(model_path) if model_path else None)
+
+
 def predict_shared7(payload: dict, *, as_of_date: date, model_path: str = "") -> dict[str, Any]:
     frame = shared7_frame(payload, as_of_date=as_of_date)
     bundle, manifest = load_shared7(model_path)
@@ -160,14 +170,19 @@ def predict_shared7(payload: dict, *, as_of_date: date, model_path: str = "") ->
 def predict_shared8(payload: dict, *, as_of_date: date, model_path: str = "") -> dict[str, Any]:
     frame = shared8_frame(payload, as_of_date=as_of_date)
     bundle, manifest = load_shared8(model_path)
-    probabilities = []
-    for name, weight in bundle["ensemble_weights"].items():
-        raw = np.clip(bundle["pipelines"][name].predict_proba(frame)[:, 1], 1e-6, 1 - 1e-6)
-        logits = np.log(raw / (1 - raw)).reshape(-1, 1)
-        probabilities.append(weight * bundle["calibrators"][name].predict_proba(logits)[:, 1])
-    score = float(np.sum(probabilities, axis=0)[0])
+
+    def score_frame(candidate: pd.DataFrame) -> float:
+        probabilities = []
+        for name, weight in bundle["ensemble_weights"].items():
+            raw = np.clip(bundle["pipelines"][name].predict_proba(candidate)[:, 1], 1e-6, 1 - 1e-6)
+            logits = np.log(raw / (1 - raw)).reshape(-1, 1)
+            probabilities.append(weight * bundle["calibrators"][name].predict_proba(logits)[:, 1])
+        return float(np.sum(probabilities, axis=0)[0])
+
+    score = score_frame(frame)
     if not np.isfinite(score) or not 0 <= score <= 1:
         raise ResearchModelContractError("Invalid screening score")
+    explanation = explain_by_missingness_perturbation(frame, score_frame)
     return {
         "model_key": manifest["model_key"],
         "task_type": "current_cross_sectional_screening",
@@ -181,6 +196,8 @@ def predict_shared8(payload: dict, *, as_of_date: date, model_path: str = "") ->
         "risk_score_internal": round(score, 15),
         "screening_signal_detected": score >= manifest["threshold"],
         "waist_value_source": "estimated" if payload.get("waist_cm") is None else "measured",
+        "explanation": explanation,
+        "explanation_status": explanation["status"],
         "artifact_sha256": manifest["artifact_sha256"],
         "as_of_date": as_of_date.isoformat(),
         "display_allowed": False,
@@ -197,11 +214,23 @@ def predict_research_model(model: str, payload: dict, *, as_of_date: date, model
     if model == "shared8-waist":
         return predict_shared8(payload, as_of_date=as_of_date, model_path=model_path)
     if model == "tomorrow-rf25":
-        from src.ml.inference.diabetes_standard import predict_diabetes_risk
+        from src.ml.inference.diabetes_standard import predict_with_loaded_model
 
-        return predict_diabetes_risk(
-            payload, as_of_date=as_of_date, model_path=Path(model_path) if model_path else None
+        user_input, frame = validated_input(payload, as_of_date)
+        loaded = load_tomorrow_rf25(model_path)
+        output = predict_with_loaded_model(loaded, user_input, as_of_date=as_of_date)
+        explanation = explain_by_missingness_perturbation(
+            frame,
+            lambda candidate: float(loaded.pipeline.predict_proba(candidate)[0, 1]),
         )
+        return {
+            **output,
+            "artifact_sha256": loaded.manifest["artifact_sha256"],
+            "explanation": explanation,
+            "explanation_status": explanation["status"],
+            "display_allowed": False,
+            "operational_model_activated": False,
+        }
     if model == "first-interval":
         user_input, _ = validated_input(payload, as_of_date)
         loaded = load_ensemble(model_path)
