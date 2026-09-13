@@ -7133,7 +7133,10 @@ $("#download-report").addEventListener("click", () => {
   else closeReportPdfOptions({ returnFocus: true });
 });
 $$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("click", async () => {
-  await openSelectedReportPdf(input.value);
+  const releaseBusy = setButtonBusy($("#download-report"), "PDF 화면 여는 중…");
+  try {
+    await openSelectedReportPdf(input.value);
+  } finally { releaseBusy(); }
 }));
 document.addEventListener("click", (event) => {
   const control = $(".report-pdf-control");
