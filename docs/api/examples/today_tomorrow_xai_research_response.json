@@ -3,76 +3,149 @@
   "input_example": "tuned_rf25_valid_input.json",
   "today": {
     "model_key": "diabetes_current_screening",
+    "task_type": "current_cross_sectional_screening",
     "model_version": "knhanes-shared8-waist-sk180-research-v1",
-    "risk_score_internal": 0.057802753905042,
+    "input_schema_version": "diabetes-incidence-api-25features-v2-waist",
+    "feature_schema_version": "knhanes-shared8-waist-v1",
+    "threshold_version": "shared8-waist-sk180-validation-spec042-v1",
+    "threshold_scope": "current_screening",
+    "calibration_version": "shared8-waist-oof-platt-v1",
     "screening_decision_threshold": 0.025988709910244948,
+    "risk_score_internal": 0.057802753905042,
     "screening_signal_detected": true,
     "waist_value_source": "estimated",
-    "artifact_sha256": "aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc",
-    "explanation_status": "research_only",
     "explanation": {
-      "method": "missingness_perturbation_v1",
-      "output_space": "risk_score",
-      "shap_claimed": false,
+      "status": "research_only",
       "display_allowed": false,
-      "items": [
-        {
-          "feature": "bmi",
-          "display_name": "BMI",
-          "direction": "decrease",
-          "contribution": -0.266392970984,
-          "absolute_contribution": 0.266392970984,
-          "modifiable": true,
-          "message": "이 입력은 결측 기준값과 비교해 모델 점수를 낮추는 방향이었습니다."
-        }
-      ]
-    },
-    "display_allowed": false,
-    "operational_model_activated": false
-  },
-  "tomorrow": {
-    "model_key": "diabetes_incidence",
-    "model_version": "rf25-tuned-spec40-v1",
-    "risk_score": 0.022053512988,
-    "risk_category": "high",
-    "decision_threshold": 0.021153602801262862,
-    "artifact_sha256": "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8",
-    "explanation_status": "research_only",
-    "explanation": {
-      "method": "missingness_perturbation_v1",
+      "method": "exact_grouped_shap_missing_reference_v1",
+      "explanation_version": "three-factor-shap-v1",
+      "model_version": "knhanes-shared8-waist-sk180-research-v1",
       "output_space": "risk_score",
-      "shap_claimed": false,
-      "display_allowed": false,
+      "reference_value": 0.034333847519,
+      "score": 0.057802753905,
+      "baseline_definition": "all input groups missing; frozen Train-fitted preprocessing; not population average",
+      "additive_to_score": true,
+      "additivity_verified": true,
+      "shap_claimed": true,
+      "selection_policy": "elevated-2-caution-1-positive-otherwise-2-positive-1-caution-v1",
+      "selection_status": "insufficient_directional_factors",
       "items": [
         {
           "feature": "age",
           "display_name": "나이",
-          "direction": "decrease",
-          "contribution": -0.006730099752,
-          "absolute_contribution": 0.006730099752,
+          "direction": "increase",
+          "display_group": "caution",
+          "contribution": 0.014765253831,
+          "absolute_contribution": 0.014765253831,
           "modifiable": false,
-          "message": "이 입력은 결측 기준값과 비교해 모델 점수를 낮추는 방향이었습니다."
+          "message": "입력 정보가 기준점수 대비 모델 점수를 높이는 방향으로 반영되었습니다."
+        },
+        {
+          "feature": "body_measurements",
+          "display_name": "체격 정보 (키·체중·BMI)",
+          "direction": "increase",
+          "display_group": "caution",
+          "contribution": 0.008703652556,
+          "absolute_contribution": 0.008703652556,
+          "modifiable": false,
+          "message": "입력 정보가 기준점수 대비 모델 점수를 높이는 방향으로 반영되었습니다."
         }
+      ],
+      "other_contribution": 0,
+      "limitations": [
+        "not causal",
+        "not a diagnosis",
+        "correlated features affect attribution",
+        "selected items alone do not sum to the score"
       ]
     },
+    "explanation_status": "research_only",
+    "artifact_sha256": "aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc",
+    "as_of_date": "2026-08-31",
     "display_allowed": false,
-    "output_status": "research_screening_candidate_not_operationally_approved"
+    "operational_model_activated": false,
+    "promotion_status": "research_candidate_only",
+    "output_status": "research_candidate_not_operationally_approved",
+    "disclaimer": "현재 당뇨 관련 위험 선별 연구 신호이며 진단·처방 또는 미래 발병확률이 아닙니다."
   },
-  "comparison_guidance": {
-    "status": "research_only",
-    "code": "BOTH_SIGNALS_ELEVATED",
+  "tomorrow": {
+    "disease_type": "diabetes",
+    "task_type": "binary_incidence_risk_screening",
+    "risk_score": 0.022053512988,
+    "risk_category": "high",
+    "risk_category_label": "높음",
+    "model_version": "rf25-tuned-spec40-v1",
+    "feature_schema_version": "klosa_stage3_25features_v1",
+    "input_schema_version": "diabetes-incidence-api-25features-v1",
+    "threshold_version": "validation-spec043-caution-recall090-v1",
+    "decision_threshold": 0.021153602801262862,
+    "applicability": {
+      "minimum_age": 45,
+      "maximum_age": 105,
+      "age_unit": "years",
+      "notice": "만 45~105세 입력에만 사용할 수 있습니다. 이 범위는 기술적 입력 허용 범위이며 모든 연령에서 동일한 성능을 보장하지 않습니다."
+    },
+    "output_status": "research_screening_candidate_not_operationally_approved",
+    "disclaimer": "향후 신규 당뇨병 의사진단 위험을 선별하기 위한 연구용 점수이며 진단이나 처방이 아닙니다. 의료적 판단은 의료진과 상의하세요.",
+    "artifact_sha256": "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8",
+    "explanation": {
+      "status": "research_only",
+      "display_allowed": false,
+      "method": "treeshap_tree_path_dependent_v1",
+      "explanation_version": "three-factor-shap-v1",
+      "model_version": "rf25-tuned-spec40-v1",
+      "output_space": "risk_score",
+      "reference_value": 0.025139416834,
+      "score": 0.022053512988,
+      "baseline_definition": "training path counts in frozen RF trees",
+      "additive_to_score": true,
+      "additivity_verified": true,
+      "shap_claimed": true,
+      "selection_policy": "elevated-2-caution-1-positive-otherwise-2-positive-1-caution-v1",
+      "selection_status": "complete",
+      "items": [
+        {
+          "feature": "bmi",
+          "display_name": "BMI",
+          "direction": "increase",
+          "display_group": "caution",
+          "contribution": 0.005374786205,
+          "absolute_contribution": 0.005374786205,
+          "modifiable": true,
+          "message": "입력 정보가 기준점수 대비 모델 점수를 높이는 방향으로 반영되었습니다."
+        },
+        {
+          "feature": "education_level",
+          "display_name": "교육 수준",
+          "direction": "increase",
+          "display_group": "caution",
+          "contribution": 0.000848796524,
+          "absolute_contribution": 0.000848796524,
+          "modifiable": false,
+          "message": "입력 정보가 기준점수 대비 모델 점수를 높이는 방향으로 반영되었습니다."
+        },
+        {
+          "feature": "age",
+          "display_name": "나이",
+          "direction": "decrease",
+          "display_group": "positive",
+          "contribution": -0.003654907917,
+          "absolute_contribution": 0.003654907917,
+          "modifiable": false,
+          "message": "입력 정보가 기준점수 대비 모델 점수를 낮추는 방향으로 반영되었습니다."
+        }
+      ],
+      "other_contribution": -0.00565457866,
+      "limitations": [
+        "not causal",
+        "not a diagnosis",
+        "correlated features affect attribution",
+        "selected items alone do not sum to the score"
+      ],
+      "explainer_library_version": "0.52.0"
+    },
+    "explanation_status": "research_only",
     "display_allowed": false,
-    "title": "현재 신호 확인이 우선입니다",
-    "message": "두 결과 모두 진단이 아니며, 현재 신호는 의료기관 검사를 통해 확인해야 합니다."
-  },
-  "xai_contract": {
-    "method": "missingness_perturbation_v1",
-    "explanation_version": "local-missingness-perturbation-v1",
-    "output_space": "risk_score",
-    "additive_to_score": false,
-    "shap_claimed": false,
-    "display_allowed": false,
-    "items": []
-  },
-  "medical_notice": "두 모델은 연구용 위험 선별 후보이며 진단·처방 결과가 아닙니다."
+    "operational_model_activated": false
+  }
 }

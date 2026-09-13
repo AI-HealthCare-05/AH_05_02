@@ -20,7 +20,7 @@ from src.ml.inference.diabetes_first_interval_survival_ensemble import (
     load_first_interval_ensemble,
     predict_with_loaded_first_interval_ensemble,
 )
-from src.ml.inference.model_explanations import explain_by_missingness_perturbation
+from src.ml.inference.shap_explanations import explain_today, explain_tomorrow, safe_explanation
 from src.ml.preprocessing.diabetes_api_features import build_standard_model_frame, parse_diabetes_risk_input
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -171,18 +171,24 @@ def predict_shared8(payload: dict, *, as_of_date: date, model_path: str = "") ->
     frame = shared8_frame(payload, as_of_date=as_of_date)
     bundle, manifest = load_shared8(model_path)
 
-    def score_frame(candidate: pd.DataFrame) -> float:
+    def score_frame(candidate: pd.DataFrame) -> np.ndarray:
         probabilities = []
         for name, weight in bundle["ensemble_weights"].items():
             raw = np.clip(bundle["pipelines"][name].predict_proba(candidate)[:, 1], 1e-6, 1 - 1e-6)
             logits = np.log(raw / (1 - raw)).reshape(-1, 1)
             probabilities.append(weight * bundle["calibrators"][name].predict_proba(logits)[:, 1])
-        return float(np.sum(probabilities, axis=0)[0])
+        return np.sum(probabilities, axis=0)
 
-    score = score_frame(frame)
+    score = float(score_frame(frame)[0])
     if not np.isfinite(score) or not 0 <= score <= 1:
         raise ResearchModelContractError("Invalid screening score")
-    explanation = explain_by_missingness_perturbation(frame, score_frame)
+    explanation = safe_explanation(
+        explain_today,
+        frame,
+        score_frame,
+        model_version=manifest["model_version"],
+        elevated=bool(score >= manifest["threshold"]),
+    )
     return {
         "model_key": manifest["model_key"],
         "task_type": "current_cross_sectional_screening",
@@ -219,9 +225,12 @@ def predict_research_model(model: str, payload: dict, *, as_of_date: date, model
         user_input, frame = validated_input(payload, as_of_date)
         loaded = load_tomorrow_rf25(model_path)
         output = predict_with_loaded_model(loaded, user_input, as_of_date=as_of_date)
-        explanation = explain_by_missingness_perturbation(
+        explanation = safe_explanation(
+            explain_tomorrow,
             frame,
-            lambda candidate: float(loaded.pipeline.predict_proba(candidate)[0, 1]),
+            loaded.pipeline,
+            model_version=loaded.manifest["model_version"],
+            elevated=output["risk_category"] in {"caution", "high"},
         )
         return {
             **output,

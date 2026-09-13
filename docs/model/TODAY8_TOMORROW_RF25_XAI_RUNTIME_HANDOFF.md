@@ -1,6 +1,6 @@
 # 오늘이 8변수·내일이 RF25 v1 모델/XAI/런타임 인계
 
-기준일: 2026-09-11. 두 모델은 **연구 후보이며 운영 미승인**이다. 결과는 진단·처방이 아니라 위험 선별·건강교육에만 사용한다. `display_allowed=false`인 결과, 모델 누락 또는 추론 실패를 실제 사용자 결과처럼 표시하지 않는다.
+기준일: 2026-09-14. 오늘이는 연구 후보이고 내일이 Manifest는 `approved`이지만 두 모델 모두 `operational_model_activated=false`이며 XAI 공개는 미승인이다. 결과는 진단·처방이 아니라 위험 선별·건강교육에만 사용한다. `display_allowed=false`인 결과, 모델 누락 또는 추론 실패를 실제 사용자 결과처럼 표시하지 않는다.
 
 ## 1. 고정 Artifact 계약
 
@@ -70,35 +70,40 @@ pytest -q tests/ml/test_actual_service_candidates.py
 
 ## 5. XAI 응답 계약
 
-현재 구현은 **SHAP이 아니다**. 한 특성을 NaN으로 바꿨을 때 학습된 결측 처리 정책을 거친 점수 차이를 순위화한 `missingness_perturbation_v1` 연구 설명이다. 따라서 `shap_claimed=false`, `additive_to_score=false`, `display_allowed=false`를 반드시 유지한다. 인과효과로 설명하거나 생활습관 변경 시 점수가 그만큼 변한다고 표현하면 안 된다.
+오늘이는 보정·앙상블까지 포함한 최종 출력 함수에 `exact_grouped_shap_missing_reference_v1`을 적용한다. 키·체중·BMI는 파생 관계를 보존하도록 하나의 `body_measurements` 그룹으로 묶고, 모든 그룹 조합을 계산한다. 기준점수는 모든 입력 그룹을 결측으로 둔 뒤 고정된 Train 전처리를 적용한 점수이며 모집단 평균이 아니다.
+
+내일이는 고정 RF25의 positive class에 `treeshap_tree_path_dependent_v1`을 적용한다. 전처리 후 one-hot과 결측 indicator 기여는 원래 25개 변수 단위로 다시 합산한다. 두 설명 모두 `기준점수 + 전체 기여도 = 실제 점수`를 절대오차 `1e-8` 안에서 검증한다.
 
 ```json
 {
   "status": "research_only",
-  "method": "missingness_perturbation_v1",
-  "explanation_version": "local-missingness-perturbation-v1",
+  "method": "treeshap_tree_path_dependent_v1",
+  "explanation_version": "three-factor-shap-v1",
   "output_space": "risk_score",
-  "additive_to_score": false,
-  "reference_value": null,
+  "additive_to_score": true,
+  "additivity_verified": true,
+  "reference_value": 0.025139416834,
   "score": 0.022053512988,
   "items": [
     {
       "feature": "bmi",
       "display_name": "BMI",
       "direction": "increase",
-      "contribution": 0.004590669768,
-      "absolute_contribution": 0.004590669768,
+      "display_group": "caution",
+      "contribution": 0.005374786205,
+      "absolute_contribution": 0.005374786205,
       "modifiable": true,
-      "message": "이 입력은 결측 기준값과 비교해 모델 점수를 높이는 방향이었습니다."
+      "message": "입력 정보가 기준점수 대비 모델 점수를 높이는 방향으로 반영되었습니다."
     }
   ],
-  "shap_claimed": false,
+  "selection_policy": "elevated-2-caution-1-positive-otherwise-2-positive-1-caution-v1",
+  "shap_claimed": true,
   "display_allowed": false,
-  "limitations": ["not SHAP", "not causal", "correlated features can share or mask influence"]
+  "limitations": ["not causal", "not a diagnosis", "correlated features affect attribution"]
 }
 ```
 
-추후 실제 TreeSHAP을 제공하려면 Artifact와 동일한 전처리 후 특성 공간, 배경 표본, positive-class 출력 공간, explainer 버전, 합산 검증을 고정해야 한다. 이 검증 전에는 `status=approved` 또는 `shap_claimed=true`로 바꾸지 않는다.
+계산 검증과 공개 승인은 별개다. 실제 SHAP이므로 `shap_claimed=true`이지만 `status=research_only`, `display_allowed=false`를 유지한다. 높은 결과는 주의 요인 2개+긍정 요인 1개, 낮은 결과는 긍정 요인 2개+주의 요인 1개를 절댓값 순으로 고른다. 해당 방향이 부족하면 억지로 세 개를 채우지 않는다. 상세 계약은 [SHAP 3요인 인계](XAI_THREE_FACTOR_HANDOFF.md)를 따른다.
 
 ## 6. 모델 결과 충돌 안내
 
@@ -134,19 +139,19 @@ renderModelComparisonGuidance(
 
 ## 8. 지연시간 및 시간초과 점검
 
-Mac 로컬, Python 3.13/scikit-learn 1.8.0에서 고정 입력을 100회 측정했다. 네트워크·Redis·DB 시간은 제외한 모델 프로세스 실측이다.
+Mac 로컬, Python 3.13/scikit-learn 1.8.0/SHAP 0.52.0에서 고정 입력을 30회 측정했다. 네트워크·Redis·DB 시간은 제외한 모델 프로세스 실측이며 OS 파일 캐시는 통제하지 않았다.
 
 | 구간 | 오늘이 | 내일이 |
 |---|---:|---:|
-| 최초 Artifact 검증+로드 | 247.7 ms | 57.5 ms |
-| 입력 전처리 중앙값 / p95 | 0.34 / 0.43 ms | 0.20 / 0.22 ms |
-| 전처리+기본 추론 중앙값 / p95 | 27.53 / 58.77 ms | 29.24 / 42.17 ms |
-| 연구 XAI 포함 전체 중앙값 / p95 | 268.69 / 391.11 ms | 787.91 / 896.58 ms |
+| 최초 Artifact 검증+로드 | 283.1 ms | 71.4 ms |
+| 전처리+기본 추론 중앙값 / p95 | 32.5 / 38.3 ms | 28.9 / 38.2 ms |
+| SHAP 포함 전체 중앙값 / p95 | 74.2 / 99.8 ms | 74.7 / 87.8 ms |
+| 최초 SHAP 호출, Artifact 로드 제외 | 115.3 ms | 11,914.7 ms |
 
-기본 모델 계산은 30ms 안팎이므로 화면의 30~35초 시간초과를 단독으로 설명하지 못한다. 주요 후보는 Worker 대기열, Redis 전달/폴링, DB 기록, 프로세스 재시작, Artifact 미탑재 후 재시도다. 로더는 프로세스별 `lru_cache`로 최초 1회만 검증·로드하며 내일이 연구 로더도 동일하게 캐시하도록 수정했다. XAI는 내일이에서 최대 25회 추가 예측하므로 기본 응답 경로와 분리하고 비동기 후속 조회로 유지해야 한다.
+기본 모델 계산은 30ms 안팎이므로 화면의 30~35초 시간초과를 단독으로 설명하지 못한다. 다만 내일이 첫 SHAP import에서 Matplotlib 임시 캐시·폰트 초기화 경고와 함께 약 11.9초가 측정되어 cold-start를 무시하면 안 된다. Worker 대기열, Redis 전달/폴링, DB 기록, 프로세스 재시작과 Artifact 미탑재 여부는 배포 로그가 없어 아직 원인을 확정할 수 없다. 현재 연구 Worker는 XAI를 모델 실행 안에서 계산하므로 운영 전 기본 결과와 설명 계산을 분리해야 한다.
 
 운영 점검 로그에는 `queue_wait_ms`, `artifact_load_ms`, `preprocess_ms`, `predict_ms`, `explain_ms`, `persist_ms`, `end_to_end_ms`, `worker_pid`, `model_version`을 남긴다. 기본 결과를 먼저 저장한 뒤 XAI 실패는 모델 결과를 실패시키지 않도록 한다.
 
 ## 9. Release Gate 의견
 
-현 상태는 **보류**다. Artifact 해시·고정 입력 재현·입력 계약·오류 시 fail-closed는 확인했다. 다만 두 후보 모두 운영 미승인이고, 오늘이는 반복 확인된 과거 Test와 허리둘레 이중 추정 불확실성, 내일이는 낮은 PPV와 wave/외부 일반화 미완료가 남아 있다. TreeSHAP 검증, 성능 CI·calibration·wave 검증, 의료 안전 검토 후에만 공개 플래그를 승인할 수 있다.
+현 상태는 공개 XAI·운영 경로 기준 **보류**다. Artifact 해시·고정 입력 재현·입력 계약·SHAP 가산성·오류 시 fail-closed는 확인했다. 다만 오늘이는 반복 확인된 과거 Test와 허리둘레 이중 추정 불확실성, 내일이는 낮은 PPV와 wave/외부 일반화 미완료가 남아 있다. 영향도 `큰/보통/작은` 경계, 설명 안정성, 승인 설명 저장·조회, 의료 안전 검토 후에만 XAI 공개 플래그를 승인할 수 있다.

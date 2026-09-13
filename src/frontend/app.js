@@ -2797,8 +2797,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "위험 증가 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "위험 감소 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 점수를 높인 방향";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 점수를 낮춘 방향";
   return "";
 }
 
@@ -2817,21 +2817,38 @@ function renderFactorItems(items = []) {
   }).join("");
 }
 
+function selectXaiFactors(items, elevated) {
+  if (typeof elevated !== "boolean") return [];
+  const sorted = [...items].filter(item => item.contribution === undefined
+    || (typeof item.contribution === "number" && Number.isFinite(item.contribution)
+      && Math.abs(item.contribution) > 1e-10))
+    .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0));
+  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("↓"));
+  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("↑"));
+  return elevated ? [...caution.slice(0, 2), ...positive.slice(0, 1)]
+    : [...positive.slice(0, 2), ...caution.slice(0, 1)];
+}
+
 function renderXaiExplanationLists(
   factors,
   { approved = false, currentFactors = null, currentApproved = false } = {},
 ) {
   const currentList = $("#current-factor-list");
-  const currentItems = Array.isArray(currentFactors?.items) ? currentFactors.items : [];
+  const currentSignal = state.currentScreeningPrediction?.screening_signal_detected;
+  const currentItems = selectXaiFactors(
+    Array.isArray(currentFactors?.items) ? currentFactors.items : [], currentSignal,
+  );
   const futureList = $("#factor-list");
   if (currentList) {
-    currentList.innerHTML = currentApproved && currentItems.length
+    currentList.innerHTML = currentApproved && currentFactors?.display_allowed === true && currentItems.length
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
-  const factorItems = Array.isArray(factors?.items) ? factors.items : [];
+  const futureCategory = state.prediction?.risk_category;
+  const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
+    ["low", "caution", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
-  futureList.innerHTML = approved && factorItems.length
+  futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
 }
