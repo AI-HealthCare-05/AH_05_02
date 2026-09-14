@@ -1,0 +1,849 @@
+// Chronic Disease Lifestyle Challenge - ERD ver.5.6
+// 기준: 요구사항 정의서 ver.5.6 / API 명세서 ver.5.6 / 2026-09-14
+// 기존 ERD_v8의 구현 추적 구조를 보존하면서 최신 4종 산출물 검수 기준으로 승격.
+//
+// v7 -> v8 변경 사항
+// 1. `model_registry` 테이블을 실제 구현된 Tortoise 모델(app/models/model_registry.py)에
+//    맞춰 재정의했다. v7에는 data_source, target_horizon, model_population_version,
+//    population_description, excluded_populations, evaluation_date 필드가 문서에만
+//    존재하고 코드로 구현된 적이 없었다 (2026-09-01 리뷰에서 발견한 기존 갭).
+//    diabetes_lifetime_risk를 위해 실제로 구현하면서, 지금 필요한 만큼만
+//    (promotion_status, artifact_local_path, artifact_sha256, model_population,
+//    outcome_definition 등 계약 검증에 쓰이는 필드) 최소로 다시 설계했다.
+//    v7 문서의 확장 필드(data_source/target_horizon/population_description 등)가
+//    실제로 필요해지면 그때 다시 추가하는 것을 권장한다 — 안 쓰는 컬럼을
+//    미리 만들지 않기 위함.
+// 2. `predictions`에 risk_curve_status, output_definition_version 컬럼 추가.
+// 3. 신규 테이블: `prediction_risk_curve_points` (API-LIFE-004 연령별 위험 곡선
+//    포인트), `prediction_scenarios` (REQ-PRED-012 baseline/lifestyle_improved
+//    시나리오 비교, is_active=false 고정 — 별도로 검증되기 전까지 비활성).
+//
+// 주의: diabetes_lifetime_risk용 생존모델은 아직 학습·승인되지 않았다
+// (모델 소유자: 양준혁). 이 문서의 신규 테이블은 모델이 없어도 안전하게
+// "준비되지 않음" 상태를 저장/응답하기 위한 스캐폴딩이며, 실제 곡선 데이터는
+// 아직 없다.
+
+Table users {
+  id integer [pk]
+  email varchar [not null, unique]
+  password_hash varchar [not null]
+  created_at timestamp [not null]
+}
+
+Table consents {
+  id integer [pk]
+  user_id integer [not null]
+  consent_item varchar [not null]
+  consent_version varchar [not null]
+  is_agreed boolean [not null]
+  agreed_at timestamp [not null]
+  withdrawn_at timestamp
+  created_at timestamp [not null]
+  Indexes {
+    (user_id, consent_item, consent_version)
+    (user_id, consent_item, created_at)
+  }
+}
+
+Table eligibility_checks {
+  id integer [pk]
+  user_id integer [not null]
+  model_registry_id integer
+  checked_at timestamp [not null]
+  age integer
+  has_diabetes_diagnosis boolean
+  uses_glucose_lowering_drug boolean
+  is_pregnant boolean
+  has_alarming_symptom boolean
+  has_exercise_limitation boolean
+  service_eligible boolean [not null]
+  target_segment varchar [not null]
+  model_eligible boolean [not null]
+  reason_codes json [not null]
+  next_action varchar [not null]
+  safety_copy_version varchar [not null]
+  is_referred_to_medical boolean [not null, default: false]
+}
+
+Table health_data_disposal_audits {
+  id uuid [pk]
+  user_id integer
+  consent_id integer
+  trigger_type varchar [not null]
+  requested_at timestamp [not null]
+  due_at timestamp [not null]
+  processing_status varchar [not null]
+  disposal_method varchar
+  completed_at timestamp
+  policy_version varchar [not null]
+}
+
+Table user_profiles {
+  id integer [pk]
+  user_id integer [not null, unique]
+  gender varchar
+  birth_date date
+  height_cm float
+}
+
+Table health_checkups {
+  id integer [pk]
+  user_id integer [not null]
+  checkup_type varchar
+  checkup_date date
+  weight_kg float
+  waist_cm float
+  bmi float
+  systolic_bp float
+  diastolic_bp float
+  fasting_glucose float
+  hba1c float
+  total_cholesterol float
+  hdl_cholesterol float
+  triglyceride float
+  has_family_history_diabetes boolean
+  has_hypertension boolean
+  has_dyslipidemia boolean
+  has_cardiovascular_disease boolean
+  has_stroke_history boolean
+  smoking_status varchar
+  current_drinker boolean
+  regular_exercise boolean
+  exercise_days_per_week integer
+  exercise_minutes integer
+  drinking_frequency varchar
+  monthly_drinking boolean
+  moderate_activity_minutes_per_week float
+  vigorous_activity_minutes_per_week float
+  physical_activity_level varchar
+  meets_aerobic_guideline boolean
+  stress_level varchar
+  energy_kcal float
+  sodium_mg float
+  sugar_g float
+  created_at timestamp
+  updated_at timestamp
+  Indexes {
+    (user_id, checkup_date) [unique]
+  }
+}
+
+// v8: app/models/model_registry.py::ModelRegistry 와 1:1로 맞춘 실제 구현 스키마.
+Table model_registry {
+  id bigint [pk, increment]
+  model_key varchar(100) [not null]
+  model_version varchar(100) [not null]
+  model_type varchar(40) [not null, default: 'binary_classifier']
+  promotion_status varchar(40) [not null, default: 'candidate_only']
+  artifact_local_path varchar(255)
+  artifact_sha256 varchar(128)
+  feature_schema_version varchar(100) [not null]
+  target_definition_version varchar(100)
+  calibration_version varchar(100)
+  threshold_version varchar(100)
+  min_age integer [not null]
+  max_age integer
+  model_population varchar(120) [not null]
+  outcome_definition varchar(200)
+  is_active boolean [not null, default: false]
+  created_at timestamp [not null]
+  Indexes {
+    (model_key, model_version) [unique]
+    (model_key, is_active)
+  }
+}
+
+Table feature_metadata {
+  id integer [pk]
+  standard_name varchar [not null, unique]
+  definition text [not null]
+  unit varchar
+  standard_coding json
+  model_role varchar [not null]
+  time_role varchar [not null]
+  user_input_allowed boolean [not null]
+  applicable_model_types json [not null]
+  safety_note text
+  created_at timestamp [not null]
+  updated_at timestamp
+}
+
+Table feature_source_mappings {
+  id integer [pk]
+  feature_metadata_id integer [not null]
+  data_source varchar [not null]
+  source_variable_name varchar [not null]
+  source_definition text [not null]
+  source_unit varchar
+  source_coding json
+  missing_codes json
+  mapping_level varchar [not null]
+  preprocessing_rule text
+  min_age integer
+  max_age integer
+  Indexes {
+    (feature_metadata_id, data_source, source_variable_name) [unique]
+  }
+}
+
+Table prediction_jobs {
+  job_id varchar(36) [pk]
+  task_type varchar(50) [not null]
+  status varchar(20) [not null, default: 'queued']
+  request_payload json [not null]
+  result json
+  error text
+  worker_name varchar(100)
+  attempts integer [not null, default: 0]
+  model_version varchar(100)
+  model_key varchar(100) [not null, default: 'diabetes_incidence']
+  feature_schema_version varchar(100)
+  input_schema_version varchar(100)
+  preprocessing_version varchar(100)
+  target_definition_version varchar(100)
+  calibration_version varchar(100)
+  model_artifact_digest varchar(128)
+  threshold_version varchar(100)
+  user_id bigint
+  health_checkup_id bigint
+  prediction_id bigint
+  error_code varchar(50)
+  retryable boolean [not null, default: false]
+  retry_after_seconds integer
+  deadline_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  started_at timestamp
+  completed_at timestamp
+  Indexes {
+    status
+    user_id
+    health_checkup_id
+  }
+}
+
+// v8: risk_curve_status / output_definition_version 컬럼 추가 (API-LIFE-004).
+Table predictions {
+  id bigint [pk, increment]
+  job_id varchar(36) [not null, unique]
+  user_id bigint [not null]
+  health_checkup_id bigint [not null]
+  model_key varchar(100) [not null]
+  outcome_definition varchar(120) [not null]
+  result_status varchar(40) [not null]
+  risk_category varchar(20)
+  internal_score float
+  model_version varchar(100) [not null]
+  feature_schema_version varchar(100) [not null]
+  input_schema_version varchar(100) [not null]
+  preprocessing_version varchar(100) [not null]
+  target_definition_version varchar(100) [not null]
+  calibration_version varchar(100) [not null]
+  model_artifact_digest varchar(128)
+  threshold_version varchar(100) [not null]
+  decision_threshold float
+  class_probabilities json
+  output_status varchar(80) [not null, default: 'uncalibrated_research_probability_only']
+  model_population varchar(120) [not null]
+  explanation_status varchar(40) [not null, default: 'not_available']
+  disclaimer text [not null]
+  risk_curve_status varchar(20) [not null, default: 'not_applicable']
+  output_definition_version varchar(100)
+  predicted_at timestamp [not null]
+  Indexes {
+    user_id
+    health_checkup_id
+  }
+}
+
+Table risk_factors {
+  id bigint [pk, increment]
+  prediction_id bigint [not null]
+  factor_name varchar(100) [not null]
+  display_name varchar(100) [not null]
+  impact_direction varchar(20) [not null]
+  importance_score float [not null]
+  display_order integer [not null]
+  is_modifiable boolean [not null, default: false]
+  message text [not null]
+  explanation_version varchar(100) [not null]
+  created_at timestamp [not null]
+  Indexes {
+    prediction_id
+  }
+}
+
+// v8 신규: API-LIFE-004 연령별 위험 전망(생존곡선)의 (age, cumulative_risk) 포인트.
+// risk_curve_status가 'available'인 prediction에 대해서만 채워진다.
+Table prediction_risk_curve_points {
+  id bigint [pk, increment]
+  prediction_id bigint [not null]
+  age integer [not null]
+  cumulative_risk double [not null]
+  lower double [not null]
+  upper double [not null]
+  created_at timestamp [not null]
+  Indexes {
+    (prediction_id, age) [unique]
+  }
+}
+
+// v8 신규: REQ-PRED-012 baseline / lifestyle_improved 비교 시나리오.
+// is_active는 별도로 검증된 시나리오 산출 방식이 생기기 전까지 항상 false —
+// 검증되지 않은 인과 해석을 API가 그대로 노출하지 않기 위한 안전장치.
+Table prediction_scenarios {
+  id bigint [pk, increment]
+  prediction_id bigint [not null]
+  scenario varchar(30) [not null]
+  scenario_definition_version varchar(100) [not null]
+  is_active boolean [not null, default: false]
+  created_at timestamp [not null]
+  Indexes {
+    prediction_id
+  }
+}
+
+Table challenge_verifications {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  user_challenge_id bigint [not null]
+  verification_date date [not null]
+  verification_type varchar(20) [not null]
+  evidence_ref varchar(500)
+  evidence_digest varchar(64)
+  location_accuracy_m double
+  review_status varchar(20) [not null, default: 'accepted']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Indexes {
+    (user_challenge_id, verification_date) [unique]
+  }
+}
+
+Table challenge_verification_events {
+  id bigint [pk, increment]
+  verification_id bigint [not null]
+  user_id bigint [not null]
+  event_type varchar(30) [not null]
+  review_status varchar(20) [not null]
+  evidence_digest varchar(64)
+  created_at timestamp [not null]
+}
+
+Table daily_challenge_rewards {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  reward_date date [not null]
+  carrot_amount integer [not null, default: 55]
+  claimed_at timestamp [not null]
+  Indexes {
+    (user_id, reward_date) [unique]
+  }
+}
+
+Table user_wallets {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique]
+  carrot_balance integer [not null, default: 0]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table reward_transactions {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  transaction_type varchar(20) [not null]
+  amount integer [not null]
+  balance_after integer [not null]
+  source_type varchar(40) [not null]
+  source_ref varchar(100) [not null]
+  idempotency_key varchar(150) [not null, unique]
+  created_at timestamp [not null]
+}
+
+Table inventory_items {
+  id bigint [pk, increment]
+  code varchar(50) [not null, unique]
+  name varchar(80) [not null]
+  category varchar(30) [not null]
+  price_carrots integer [not null, default: 0]
+  asset_ref varchar(300)
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+}
+
+Table user_inventory {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  item_id bigint [not null]
+  quantity integer [not null, default: 1]
+  acquired_at timestamp [not null]
+  updated_at timestamp [not null]
+  Indexes {
+    (user_id, item_id) [unique]
+  }
+}
+
+Table user_avatars {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique]
+  equipped_item_ids json [not null]
+  version integer [not null, default: 1]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Core challenge and follow-up domain
+Table challenges {
+  id bigint [pk, increment]
+  code varchar(50) [not null, unique]
+  title varchar(100) [not null]
+  category varchar(30) [not null]
+  daily_goal varchar(50) [not null]
+  description text [not null]
+  safety_copy text [not null]
+  source_url varchar(500) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+}
+
+Table challenge_cycles {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  prediction_id bigint
+  cycle_number integer [not null]
+  start_date date [not null]
+  end_date date [not null]
+  status varchar(20) [not null, default: 'active']
+  ended_reason varchar(80)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table user_challenges {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  cycle_id bigint [not null]
+  challenge_id bigint [not null]
+  frequency varchar(20)
+  target_count integer
+  title_snapshot varchar(100)
+  definition_version varchar(20)
+  created_at timestamp [not null]
+}
+
+Table challenge_logs {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  user_challenge_id bigint [not null]
+  log_date date [not null]
+  is_completed boolean [not null]
+  value float
+  source varchar(30) [not null, default: 'self_report']
+  note varchar(200)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Indexes { (user_challenge_id, log_date) [unique] }
+}
+
+Table follow_up_actions {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  trigger_source varchar(30) [not null]
+  trigger_entity_id bigint [not null]
+  action_type varchar(50) [not null]
+  reason_code varchar(80) [not null]
+  priority varchar(20) [not null]
+  acknowledged_at timestamp
+  created_at timestamp [not null]
+}
+
+Table feedbacks {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  context_type varchar(30) [not null]
+  prediction_id bigint
+  recommendation_id bigint
+  rating integer [not null]
+  comment varchar(500)
+  created_at timestamp [not null]
+}
+
+// Education, sharing and social challenge domain
+Table challenge_barriers {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  user_challenge_id bigint [not null]
+  log_date date [not null]
+  reason_code varchar(40) [not null]
+  adjustment_code varchar(40)
+  note varchar(200)
+  created_at timestamp [not null]
+}
+
+Table education_contents {
+  id bigint [pk, increment]
+  slug varchar(80) [not null, unique]
+  week_number integer [not null]
+  title varchar(120) [not null]
+  summary text [not null]
+  quiz_question varchar(300) [not null]
+  quiz_answer varchar(100) [not null]
+  source_url varchar(500) [not null]
+  is_active boolean [not null, default: true]
+}
+
+Table content_progress {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  content_id bigint [not null]
+  quiz_answer varchar(100) [not null]
+  is_correct boolean [not null]
+  completed_at timestamp [not null]
+  Indexes { (user_id, content_id) [unique] }
+}
+
+Table health_quiz_attempts {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  quiz_id varchar(120) [not null]
+  document_id varchar(120) [not null]
+  submitted_answer varchar(100) [not null]
+  is_correct boolean [not null]
+  attempted_at timestamp [not null]
+}
+
+Table invitations {
+  id bigint [pk, increment]
+  inviter_user_id bigint [not null]
+  invitee_email varchar(255) [not null]
+  token_hash varchar(64) [not null, unique]
+  relation_type varchar(20) [not null]
+  status varchar(20) [not null, default: 'pending']
+  expires_at timestamp [not null]
+  accepted_by_user_id bigint
+  accepted_at timestamp
+  created_at timestamp [not null]
+}
+
+Table connections {
+  id bigint [pk, increment]
+  user_a_id bigint [not null]
+  user_b_id bigint [not null]
+  relation_type varchar(20) [not null]
+  status varchar(20) [not null, default: 'active']
+  sharing_scope json [not null]
+  created_at timestamp [not null]
+  disconnected_at timestamp
+  Indexes { (user_a_id, user_b_id) [unique] }
+}
+
+Table shared_challenge_groups {
+  id bigint [pk, increment]
+  owner_user_id bigint [not null]
+  challenge_id bigint [not null]
+  title varchar(100) [not null]
+  common_goal varchar(150) [not null]
+  start_date date [not null]
+  end_date date [not null]
+  status varchar(20) [not null, default: 'active']
+}
+
+Table shared_challenge_members {
+  id bigint [pk, increment]
+  group_id bigint [not null]
+  user_id bigint [not null]
+  personal_goal varchar(100) [not null]
+  status varchar(20) [not null, default: 'pending']
+  joined_at timestamp [not null]
+  accepted_at timestamp
+  Indexes { (group_id, user_id) [unique] }
+}
+
+Table encouragements {
+  id bigint [pk, increment]
+  group_id bigint [not null]
+  sender_user_id bigint [not null]
+  recipient_user_id bigint [not null]
+  template_code varchar(30) [not null]
+  created_at timestamp [not null]
+}
+
+// Wearable, OCR, CV and notification domain
+Table wearable_connections {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  provider varchar(40) [not null]
+  status varchar(20) [not null, default: 'active']
+  scopes json [not null]
+  connected_at timestamp [not null]
+  disconnected_at timestamp
+  Indexes { (user_id, provider) [unique] }
+}
+
+Table wearable_daily_summaries {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  connection_id bigint [not null]
+  summary_date date [not null]
+  steps integer
+  active_minutes integer
+  sleep_minutes integer
+  resting_heart_rate integer
+  source varchar(40) [not null]
+  quality varchar(20) [not null]
+  Indexes { (user_id, connection_id, summary_date) [unique] }
+}
+
+Table food_analyses {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  image_name varchar(200) [not null]
+  provider varchar(40) [not null]
+  predicted_category varchar(50) [not null]
+  confidence float
+  confirmed_category varchar(50)
+  status varchar(30) [not null]
+  created_at timestamp [not null]
+}
+
+Table ocr_drafts {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  document_name varchar(200) [not null]
+  provider varchar(40) [not null]
+  extracted_fields json [not null]
+  status varchar(30) [not null]
+  created_at timestamp [not null]
+  confirmed_at timestamp
+}
+
+Table notification_preferences {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique]
+  in_app_enabled boolean [not null]
+  challenge_reminder_enabled boolean [not null]
+  weekly_report_enabled boolean [not null]
+  quiet_start_hour integer [not null]
+  quiet_end_hour integer [not null]
+  updated_at timestamp [not null]
+}
+
+Table in_app_notifications {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  notification_type varchar(40) [not null]
+  title varchar(100) [not null]
+  message varchar(300) [not null]
+  is_read boolean [not null, default: false]
+  created_at timestamp [not null]
+  read_at timestamp
+}
+
+// Carrot Forest extension
+Table forest_spaces {
+  id bigint [pk, increment]
+  group_id bigint [not null, unique]
+  name varchar(40) [not null]
+  created_by_user_id bigint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table forest_avatars {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique]
+  display_name varchar(20) [not null]
+  hair_code varchar(40) [not null]
+  outfit_code varchar(40) [not null]
+  accessory_code varchar(40) [not null]
+  carrot_balance integer [not null]
+}
+
+Table forest_inventories {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  item_code varchar(40) [not null]
+  acquired_source varchar(40) [not null]
+  acquired_at timestamp [not null]
+  Indexes { (user_id, item_code) [unique] }
+}
+
+Table forest_objects {
+  id bigint [pk, increment]
+  forest_space_id bigint [not null]
+  placed_by_user_id bigint [not null]
+  object_code varchar(40) [not null]
+  position_x integer [not null]
+  position_y integer [not null]
+  created_at timestamp [not null]
+}
+
+Table forest_rewards {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  forest_space_id bigint [not null]
+  source_key varchar(100) [not null, unique]
+  reward_date date [not null]
+  carrot_amount integer [not null]
+  item_code varchar(40)
+  created_at timestamp [not null]
+}
+
+// Challenge V2 pilot
+Table challenge_v2_enrollments {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique]
+  mode varchar(20) [not null]
+  starts_on date [not null]
+  preferences json [not null]
+}
+
+Table challenge_v2_days {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  assigned_date date [not null]
+  cycle_id bigint
+  policy_version varchar(30) [not null]
+  eligibility_snapshot json [not null]
+  exception_reasons json [not null]
+  Indexes { (user_id, assigned_date) [unique] }
+}
+
+Table challenge_v2_assignments {
+  id bigint [pk, increment]
+  day_id bigint [not null]
+  slot integer [not null]
+  revision integer [not null]
+  replacement_reason varchar(30)
+  goal json [not null]
+  status varchar(20) [not null]
+  verification_status varchar(20) [not null]
+  Indexes { (day_id, slot, revision) [unique] }
+}
+
+Table challenge_v2_sessions {
+  id bigint [pk, increment]
+  assignment_id bigint [not null]
+  session_index integer [not null]
+  performed_at timestamp [not null]
+  values json [not null]
+  recorded_at timestamp [not null]
+  Indexes { (assignment_id, session_index) [unique] }
+}
+
+Table challenge_v2_evidence {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  day_id bigint [not null]
+  assignment_id bigint [not null]
+  evidence_index integer [not null]
+  content_hash varchar(64) [not null]
+  mime varchar(30) [not null]
+  submitted_at timestamp [not null]
+  deletion_due_at timestamp [not null]
+  verification_status varchar(20) [not null]
+  generation integer [not null]
+}
+
+Table challenge_v2_reviews {
+  id bigint [pk, increment]
+  evidence_id bigint [not null]
+  evidence_generation integer [not null]
+  reviewer_id bigint [not null]
+  status varchar(20) [not null]
+  criteria_results json [not null]
+  reason varchar(500) [not null]
+  reviewed_at timestamp [not null]
+}
+
+Table challenge_v2_rewards {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  day_id bigint [not null]
+  source_key varchar(100) [not null, unique]
+  carrot_amount integer [not null]
+  item_code varchar(40)
+  created_at timestamp [not null]
+}
+
+Ref: consents.user_id > users.id
+Ref: eligibility_checks.user_id > users.id
+Ref: eligibility_checks.model_registry_id > model_registry.id
+Ref: health_data_disposal_audits.user_id > users.id
+Ref: health_data_disposal_audits.consent_id > consents.id
+Ref: user_profiles.user_id - users.id
+Ref: health_checkups.user_id > users.id
+Ref: feature_source_mappings.feature_metadata_id > feature_metadata.id
+Ref: prediction_jobs.user_id > users.id
+Ref: prediction_jobs.health_checkup_id > health_checkups.id
+Ref: prediction_jobs.prediction_id > predictions.id
+Ref: predictions.job_id - prediction_jobs.job_id
+Ref: predictions.user_id > users.id
+Ref: predictions.health_checkup_id > health_checkups.id
+Ref: risk_factors.prediction_id > predictions.id
+Ref: prediction_risk_curve_points.prediction_id > predictions.id
+Ref: prediction_scenarios.prediction_id > predictions.id
+Ref: challenge_verifications.user_id > users.id
+Ref: challenge_verifications.user_challenge_id > user_challenges.id
+Ref: challenge_verification_events.verification_id > challenge_verifications.id
+Ref: challenge_verification_events.user_id > users.id
+Ref: daily_challenge_rewards.user_id > users.id
+Ref: user_wallets.user_id - users.id
+Ref: reward_transactions.user_id > users.id
+Ref: user_inventory.user_id > users.id
+Ref: user_inventory.item_id > inventory_items.id
+Ref: user_avatars.user_id - users.id
+Ref: challenge_cycles.user_id > users.id
+Ref: challenge_cycles.prediction_id > predictions.id
+Ref: user_challenges.user_id > users.id
+Ref: user_challenges.cycle_id > challenge_cycles.id
+Ref: user_challenges.challenge_id > challenges.id
+Ref: challenge_logs.user_id > users.id
+Ref: challenge_logs.user_challenge_id > user_challenges.id
+Ref: follow_up_actions.user_id > users.id
+Ref: feedbacks.user_id > users.id
+Ref: feedbacks.prediction_id > predictions.id
+Ref: challenge_barriers.user_id > users.id
+Ref: challenge_barriers.user_challenge_id > user_challenges.id
+Ref: content_progress.user_id > users.id
+Ref: content_progress.content_id > education_contents.id
+Ref: health_quiz_attempts.user_id > users.id
+Ref: invitations.inviter_user_id > users.id
+Ref: invitations.accepted_by_user_id > users.id
+Ref: connections.user_a_id > users.id
+Ref: connections.user_b_id > users.id
+Ref: shared_challenge_groups.owner_user_id > users.id
+Ref: shared_challenge_groups.challenge_id > challenges.id
+Ref: shared_challenge_members.group_id > shared_challenge_groups.id
+Ref: shared_challenge_members.user_id > users.id
+Ref: encouragements.group_id > shared_challenge_groups.id
+Ref: encouragements.sender_user_id > users.id
+Ref: encouragements.recipient_user_id > users.id
+Ref: wearable_connections.user_id > users.id
+Ref: wearable_daily_summaries.user_id > users.id
+Ref: wearable_daily_summaries.connection_id > wearable_connections.id
+Ref: food_analyses.user_id > users.id
+Ref: ocr_drafts.user_id > users.id
+Ref: notification_preferences.user_id - users.id
+Ref: in_app_notifications.user_id > users.id
+Ref: forest_spaces.group_id - shared_challenge_groups.id
+Ref: forest_spaces.created_by_user_id > users.id
+Ref: forest_avatars.user_id - users.id
+Ref: forest_inventories.user_id > users.id
+Ref: forest_objects.forest_space_id > forest_spaces.id
+Ref: forest_objects.placed_by_user_id > users.id
+Ref: forest_rewards.user_id > users.id
+Ref: forest_rewards.forest_space_id > forest_spaces.id
+Ref: challenge_v2_enrollments.user_id - users.id
+Ref: challenge_v2_days.user_id > users.id
+Ref: challenge_v2_days.cycle_id > challenge_cycles.id
+Ref: challenge_v2_assignments.day_id > challenge_v2_days.id
+Ref: challenge_v2_sessions.assignment_id > challenge_v2_assignments.id
+Ref: challenge_v2_evidence.user_id > users.id
+Ref: challenge_v2_evidence.day_id > challenge_v2_days.id
+Ref: challenge_v2_evidence.assignment_id > challenge_v2_assignments.id
+Ref: challenge_v2_reviews.evidence_id > challenge_v2_evidence.id
+Ref: challenge_v2_reviews.reviewer_id > users.id
+Ref: challenge_v2_rewards.user_id > users.id
+Ref: challenge_v2_rewards.day_id > challenge_v2_days.id
