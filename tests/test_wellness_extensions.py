@@ -24,13 +24,14 @@ async def signup_and_login(client: AsyncClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
-def test_rag_returns_citations_and_refuses_medication_changes() -> None:
-    grounded = answer_with_sources("당뇨 예방을 위해 어떤 생활습관을 기록하면 좋나요?")
+@pytest.mark.asyncio
+async def test_rag_returns_citations_and_refuses_medication_changes() -> None:
+    grounded = await answer_with_sources("당뇨 예방을 위해 어떤 생활습관을 기록하면 좋나요?")
     assert grounded["answer_status"] == "grounded"
     assert grounded["citations"]
     assert all(item["url"].startswith("https://") for item in grounded["citations"])
 
-    refused = answer_with_sources("당뇨약 용량을 줄여도 되나요?")
+    refused = await answer_with_sources("당뇨약 용량을 줄여도 되나요?")
     assert refused["answer_status"] == "medical_safety_refusal"
     assert "의료진" in refused["answer"]
 
