@@ -24,7 +24,7 @@ facility_router = APIRouter(tags=["Medical facilities"])
 async def medical_facility_map_config(
     user: Annotated[User, Depends(get_request_user)],
 ) -> dict[str, object]:
-    """인증된 화면에 카카오 지도 SDK의 공개 JavaScript 키만 전달합니다."""
+    """인증된 화면에 지도 SDK의 공개 JavaScript 키만 전달합니다."""
 
     del user
     key = config.KAKAO_JAVASCRIPT_KEY.strip()

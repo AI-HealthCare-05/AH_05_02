@@ -87,7 +87,14 @@ fi
 
 if [[ "$skip_tests" == false ]]; then
   echo "[8/8] 테스트 실행"
-  "$task_venv/bin/python" -m pytest
+  # 초기 설치 검사는 Docker/MySQL과 Git 제외 모델 파일 없이도 재현되어야 한다.
+  PYTHONUTF8=1 \
+  DEMO_MODE=true \
+  DATABASE_URL='sqlite://:memory:' \
+  SECRET_KEY='setup-test-only-not-for-deployment' \
+  PREDICTION_PROVIDER=development \
+  S2_MODEL_RUNTIME_ENABLED=false \
+    "$task_venv/bin/python" -m pytest --ignore=tests/backend/api --basetemp=tmp/setup-pytest -p no:cacheprovider
 else
   echo "[8/8] 테스트 생략"
 fi

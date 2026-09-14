@@ -181,16 +181,23 @@ class ForestService:
             )
         if not accessory["default"] and not await self.repo.has_item(user.id, request.accessory_code):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="아직 획득하지 않은 액세서리입니다.")
+        # `request.display_name` is a deprecated field (see ForestAvatarUpdateRequest).
+        # Named accounts use the main profile as the source of truth; only legacy
+        # nameless accounts may promote this field into their account name so older
+        # clients keep working without reintroducing independently editable nicknames.
         avatar = await self.repo.avatar(user)
-        if request.display_name != avatar.display_name and await self.repo.nickname_taken(
-            request.display_name, user.id
-        ):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 사용 중인 닉네임입니다.")
-        avatar.display_name = request.display_name
+        update_fields = ["hair_code", "outfit_code", "accessory_code", "updated_at"]
+        display_name_value = request.__dict__.get("display_name")
+        legacy_display_name = display_name_value.strip() if display_name_value else None
+        if user.name is None and legacy_display_name:
+            user.name = legacy_display_name
+            await user.save(update_fields=["name", "updated_at"])
+            avatar.display_name = legacy_display_name
+            update_fields.insert(0, "display_name")
         avatar.hair_code = request.hair_code
         avatar.outfit_code = request.outfit_code
         avatar.accessory_code = request.accessory_code
-        await avatar.save(update_fields=["display_name", "hair_code", "outfit_code", "accessory_code", "updated_at"])
+        await avatar.save(update_fields=update_fields)
         wallet = await self.game_repo.wallet(user.id)
         return self._avatar_payload(avatar, wallet.carrot_balance)
 

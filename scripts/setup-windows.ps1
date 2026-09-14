@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$SkipInstall,
     [switch]$SkipTests
 )
@@ -19,13 +19,13 @@ Write-Host "[1/6] 필수 명령 확인"
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     throw "Git이 설치되어 있지 않습니다. Git for Windows를 먼저 설치하세요."
 }
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    throw "Python이 설치되어 있지 않습니다. Python 또는 uv를 먼저 설치하세요."
-}
 
 Write-Host "[2/6] uv 확인"
 $taskUvCommand = Get-Command uv -ErrorAction SilentlyContinue
 if (-not $taskUvCommand) {
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+        throw "Python과 uv가 모두 없습니다. https://docs.astral.sh/uv/getting-started/installation/ 에서 uv를 설치한 뒤 다시 실행하세요."
+    }
     python -m pip install --user uv
     if ($LASTEXITCODE -ne 0) {
         throw "uv 설치에 실패했습니다."
@@ -73,7 +73,29 @@ if (-not (Test-Path -LiteralPath $taskEnvLocal)) {
 
 if (-not $SkipTests) {
     Write-Host "[6/6] 테스트 실행"
-    & "$taskVenv\Scripts\python.exe" -m pytest
+    # 새 PC의 .env는 Docker용 MySQL 주소를 사용한다. 초기 설치 검사는 외부 DB나
+    # 모델 바이너리에 의존하지 않는 SQLite/development 모드로 분리한다.
+    $previousDemoMode = $env:DEMO_MODE
+    $previousDatabaseUrl = $env:DATABASE_URL
+    $previousSecretKey = $env:SECRET_KEY
+    $previousPredictionProvider = $env:PREDICTION_PROVIDER
+    $previousS2Runtime = $env:S2_MODEL_RUNTIME_ENABLED
+    try {
+        $env:PYTHONUTF8 = "1"
+        $env:DEMO_MODE = "true"
+        $env:DATABASE_URL = "sqlite://:memory:"
+        $env:SECRET_KEY = "setup-test-only-not-for-deployment"
+        $env:PREDICTION_PROVIDER = "development"
+        $env:S2_MODEL_RUNTIME_ENABLED = "false"
+        & "$taskVenv\Scripts\python.exe" -m pytest --ignore=tests/backend/api --basetemp=tmp/setup-pytest -p no:cacheprovider
+    }
+    finally {
+        $env:DEMO_MODE = $previousDemoMode
+        $env:DATABASE_URL = $previousDatabaseUrl
+        $env:SECRET_KEY = $previousSecretKey
+        $env:PREDICTION_PROVIDER = $previousPredictionProvider
+        $env:S2_MODEL_RUNTIME_ENABLED = $previousS2Runtime
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "테스트가 실패했습니다. 위 오류를 확인하세요."
     }
