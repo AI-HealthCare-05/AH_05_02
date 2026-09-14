@@ -40,6 +40,7 @@ function setup({ storedFont, legacyLarge = false, blockedRead = false, blockedWr
   };
   const context = vm.createContext({
     window, document: { body }, state, currentScene: 'world', WORLD_WIDTH: 768, WORLD_HEIGHT: 512,
+    WISDOM_SPRING_SIGN: { x: 108, y: 424 },
     $: id => elements.get(id) || null,
     localStorage: {
       getItem(key) { if (blockedRead) throw new Error('blocked'); return storage.get(key) ?? null; },

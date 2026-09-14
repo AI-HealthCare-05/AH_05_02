@@ -147,7 +147,7 @@ test('DOM drawing consumes the same cached atlas as Phaser, not the contaminated
   assert.throws(() => api.createStorageAtlas({ width: 1280, height: 1000 }), /1280×1024/);
 });
 
-const animatedSource = readRgbaPng(path.join(__dirname, '../src/frontend/assets/carrot-forest-animated-objects-v2.png'));
+const animatedSource = readRgbaPng(path.join(__dirname, '../src/frontend/assets/carrot-forest-animated-objects-v3.png'));
 
 test('all animated frames include the complete alpha silhouette inside separated source regions', () => {
   const { api } = setup();
@@ -223,10 +223,15 @@ test('individual manifest names one independent PNG for each storage and animate
   const { api } = setup();
   assert.equal(api.INDIVIDUAL_ASSETS.length, 24);
   assert.equal(new Set(api.INDIVIDUAL_ASSETS.map(asset => asset.url)).size, 24);
-  assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v153/')).length, 24);
+    assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v153/')).length, 6);
+    assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v160/')).length, 18);
+    assert.equal(api.INDIVIDUAL_ASSETS.filter(asset => asset.url.includes('/furniture-v161/')).length, 0);
   for (const asset of api.INDIVIDUAL_ASSETS) {
     assert.equal(asset.key, `furniture-${asset.code}`);
-    assert.equal(asset.url, `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`);
+      const preserved = new Set(['campfire', 'animated_fountain', 'lantern', 'duck_float', 'firefly_lantern', 'garden_pinwheel']).has(asset.code);
+      assert.equal(asset.url, preserved
+        ? `/static/assets/furniture-v153/${asset.code}.png?v=20260907-1`
+        : `/static/assets/furniture-v160/${asset.code}.png?v=20260910-1`);
   }
 });
 
@@ -371,13 +376,14 @@ test('registered images are shared by normal DOM drawing while explicit legacy f
   assert.throws(() => api.registerIndividualImages({}), /All 24/);
 });
 
-test('ordinary furniture uses the pre-carrot-house atlas while campfire keeps its current art', () => {
+test('ordinary furniture uses split standalone tiles while campfire keeps its current art', () => {
   const { api } = setup(), images = individualImages(api);
   api.registerIndividualImages(images);
   const legacy = api.createLegacyStorageAtlas(source);
   const restored = api.createStorageAtlas(source);
-  assert.equal(restored.calls[13][0], legacy, 'bench is copied from the old furniture atlas');
-  assert.notEqual(restored.calls[14][0], legacy, 'campfire remains the approved current illustration');
+  assert.equal(restored.calls[13][0].calls[0][0], images.bench, 'bench comes from its split standalone tile');
+  assert.equal(restored.calls[14][0].calls[0][0], images.campfire, 'campfire remains the approved current illustration');
+  assert.notEqual(restored.calls[13][0], legacy);
 });
 
 test('async art boot blocks legacy flashes and registers nothing until every required PNG is ready', async () => {

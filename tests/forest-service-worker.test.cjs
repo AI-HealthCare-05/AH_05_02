@@ -23,9 +23,14 @@ test('offline shell versions match every HTML script, stylesheet, and restored f
   const objects = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/frontend/forest-objects.js'), 'utf8'), objects);
   const manifest = Array.from(objects.window.ForestObjects.INDIVIDUAL_ASSETS, asset => asset.url).sort();
-  const cachedFurniture = Array.from(context.media).filter(url => /\/furniture-v\d+\//.test(url)).sort();
+  const cachedFurniture = Array.from(context.media).filter(url => manifest.includes(url)).sort();
   assert.deepEqual(cachedFurniture, manifest);
-  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v153/')).length, 24);
+  assert.ok(context.media.includes('/static/assets/carrot-forest-world-v9.png?v=20260910-1'));
+  assert.ok(context.media.includes('/static/assets/carrot-forest-home-v5.png?v=20260910-3'));
+  assert.equal(context.media.some(url => url.includes('/forest-memory-camera-v161.png')), false);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v153/')).length, 6);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v160/')).length, 18);
+  assert.equal(cachedFurniture.filter(url => url.includes('/furniture-v161/')).length, 0);
   assert.equal(cachedFurniture.some(url => url.includes('/furniture-v156/')), false);
   const animals = require('../src/frontend/forest-animals.js');
   assert.deepEqual(Array.from(context.media).filter(url => url.includes('/licensed-rabbits/')).sort(),

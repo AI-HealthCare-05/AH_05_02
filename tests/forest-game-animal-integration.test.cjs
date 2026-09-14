@@ -104,6 +104,7 @@ test('fallback nighttime pass darkens actors too and cuts light only around acti
     localStorage: { getItem: () => 'on' }, ATMOSPHERE_KEY: 'atmosphere', WORLD_WIDTH: 768, WORLD_HEIGHT: 512,
     document: { createElement: () => ({ getContext: () => mask }) },
     context: { save() {}, restore() {}, drawImage: (...args) => overlays.push(args) },
+    WORLD_FIXED_LANTERNS: [],
     state: { placed: [{ code: 'lantern', x: 400, y: 320, active: true }, { code: 'campfire', x: 500, y: 320, active: false }] },
   });
   vm.runInContext(lighting, context);

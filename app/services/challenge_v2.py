@@ -255,7 +255,7 @@ def validate_session(goal, index, request, assigned_date):
     validate_content(goal, index, request, performed)
 
 
-def validate_content(goal, index, request, performed):
+def validate_content(goal, index, request, performed):  # noqa: C901
     family = goal["family_id"]
     if family in {"D01", "D02", "D03"} and not request.note.strip():
         raise HTTPException(422, "회차별 내용 기록이 필요합니다.")
@@ -267,6 +267,15 @@ def validate_content(goal, index, request, performed):
     ):
         raise HTTPException(422, "다음 날 개선점을 한 줄 적어 주세요.")
     if family == "H02":
+        if goal.get("water_mission_version") == "cup-v1":
+            if goal.get("water_goal_status") != "confirmed" or not goal.get("water_goal_cups"):
+                raise HTTPException(422, "개인 음료 목표가 확인된 경우에만 물컵 체크를 완료할 수 있습니다.")
+            if request.quantity is None or request.quantity < goal["water_goal_cups"]:
+                raise HTTPException(422, "확인한 200mL 컵 개수를 모두 체크해 주세요.")
+            expected_ml = goal["water_goal_cups"] * goal.get("water_cup_ml", 200)
+            if request.intake_ml is None or request.intake_ml < expected_ml:
+                raise HTTPException(422, "확인한 컵 개수에 맞는 섭취량을 함께 기록해 주세요.")
+            return
         if request.intake_ml is None:
             raise HTTPException(422, "구간별 실제 양을 기록해 주세요. 0mL도 가능합니다.")
         start, end = [(0, 12), (12, 18), (18, 24)][index - 1]

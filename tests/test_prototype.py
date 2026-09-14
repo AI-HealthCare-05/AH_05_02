@@ -229,7 +229,7 @@ def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
         "초대 코드로 초대",
         "워치 연결하기",
         "근거 자료에서 찾기",
-        "검진표 사진 올리기",
+        "결과통보서 업로드",
         "PDF로 받기",
     ):
         assert label in html
@@ -598,6 +598,7 @@ def test_dashboard_is_split_into_tasks_and_lifestyle_map_is_non_diagnostic() -> 
     assert "공동 챌린지를 불러오지 못했어요." in script
     assert "실제 4주 집계 API" not in html
     assert "전체 기간 이력 API" not in html
+    assert "건강도구" in html
     assert "내 생활습관 지도" in html
     assert "지도 보기" in html
     assert "지도 닫기" in html

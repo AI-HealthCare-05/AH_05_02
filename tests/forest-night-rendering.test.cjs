@@ -82,14 +82,16 @@ test('active lights cut local soft holes in that same mask, and idle updates reu
   assert.equal(scene.localLightSources().length, 3);
 });
 
-test('atmosphere toggle and indoor scenes remove darkness without changing furniture alpha', () => {
+test('atmosphere toggle removes darkness and home lamps cut light into the dark room', () => {
   const { scene, addItem } = setup();
   const actor = addItem({ code: 'chair_green', x: 380, y: 440 });
   scene.updateWorldAtmosphere(0); scene.atmosphereEnabled = false; scene.updateWorldAtmosphere(1000);
   assert.equal(scene.nightOverlay.alpha, 0); assert.equal(scene.nightOverlay.visible, false);
   assert.equal(actor.alpha, undefined, 'no cumulative per-object alpha or tint mutation');
   scene.atmosphereEnabled = true; scene.sceneName = 'home'; scene.updateWorldAtmosphere(2000);
-  assert.equal(scene.nightOverlay.visible, false); assert.equal(scene.lightFx.visible, false);
+  assert.equal(scene.nightOverlay.visible, true); assert.equal(scene.lightFx.visible, true);
+  scene.homeLightOn = true; scene.updateWorldAtmosphere(3000);
+  assert.equal(scene.localLightSources().length, 3);
 });
 
 test('pinwheel hue frames preserve alpha, silhouette, hub, stem, base, and source pixels', () => {

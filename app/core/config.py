@@ -90,6 +90,8 @@ class Config(BaseSettings):
     # 위치 기반 근처 의료기관 조회. 진단·처방을 대신하지 않고, 위치 기반 안내만 제공합니다.
     MEDICAL_FACILITY_SEARCH_PROVIDER: str = "development"
     KAKAO_REST_API_KEY: str = ""
+    # 브라우저 지도 SDK용 공개 키입니다. REST API 키와 분리하고 도메인 제한을 적용합니다.
+    KAKAO_JAVASCRIPT_KEY: str = ""
     # 카테고리 검색(HP8, 반경 내 병원 전체) 대신 키워드 검색으로 좁혀서 반환하기로 결정(2026-09-02 팀 회의).
     MEDICAL_FACILITY_SEARCH_KEYWORDS: str = "당뇨"
     MEDICAL_FACILITY_SEARCH_CATEGORY_GROUP_CODE: str = "HP8"
@@ -106,6 +108,12 @@ class Config(BaseSettings):
     NEMC_EMERGENCY_API_URL: str = "https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytLcinfoInqire"
     NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
+
+    # 건강검진 결과통보서 이미지 OCR. 원본 이미지는 저장하지 않고 추출 초안만 사용자 확인 대상으로 둡니다.
+    CLOVA_OCR_URL: str = ""
+    CLOVA_OCR_SECRET: str = ""
+    CLOVA_OCR_TIMEOUT_SECONDS: int = 20
+    CLOVA_OCR_MAX_BYTES: int = 10 * 1024 * 1024
 
     COOKIE_DOMAIN: str = "localhost"
 

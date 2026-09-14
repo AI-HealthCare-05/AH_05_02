@@ -1891,15 +1891,34 @@ function setMedicalFacilityStatus(status, title, message) {
 
 const facilityMapInstances = {};
 const facilityMapMarkers = { medical: [], emergency: [] };
+let kakaoMapsLoadPromise = null;
 
 function ensureKakaoMapsLoaded() {
-  return new Promise((resolve, reject) => {
-    if (!window.kakao?.maps?.load) {
-      reject(new Error("지도 서비스를 불러오지 못했습니다."));
-      return;
+  if (window.kakao?.maps?.load) {
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  }
+  if (kakaoMapsLoadPromise) return kakaoMapsLoadPromise;
+  kakaoMapsLoadPromise = (async () => {
+    const mapConfig = await api("/medical-facilities/map-config");
+    const javascriptKey = String(mapConfig?.javascript_key || "").trim();
+    if (!mapConfig?.enabled || !javascriptKey) {
+      throw new Error("지도 연결 키가 설정되어 있지 않습니다.");
     }
-    window.kakao.maps.load(() => resolve(window.kakao));
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(javascriptKey)}&autoload=false&libraries=services`;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("지도 서비스를 불러오지 못했습니다."));
+      document.head.append(script);
+    });
+    if (!window.kakao?.maps?.load) throw new Error("지도 서비스를 초기화하지 못했습니다.");
+    return new Promise((resolve) => window.kakao.maps.load(() => resolve(window.kakao)));
+  })().catch((error) => {
+    kakaoMapsLoadPromise = null;
+    throw error;
   });
+  return kakaoMapsLoadPromise;
 }
 
 function clearFacilityMapMarkers(target) {
@@ -5223,6 +5242,15 @@ async function createOcrPreview(documentName, ocrText) {
   return api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: documentName, ocr_text: ocrText }) });
 }
 
+async function createOcrImagePreview(file) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", provider: "development_mock", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  return api("/ocr-drafts/from-image", { method: "POST", body: formData });
+}
+
 $("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
 $("#load-checkup-sample")?.addEventListener("click", async () => {
   const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
@@ -5234,7 +5262,7 @@ $("#checkup-image-input")?.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
-    showOcrPreview(await createOcrPreview(file.name, await file.text()), file.name);
+    showOcrPreview(await createOcrImagePreview(file), file.name);
   } catch (error) { showMessage(error.message); }
   finally { event.target.value = ""; }
 });

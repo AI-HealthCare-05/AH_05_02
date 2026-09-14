@@ -16,19 +16,38 @@
     activity:{label:"운동",message:"당근 밭에 잡초를 제거했습니다.",image:"/static/assets/challenge-weeding-team-v171.webp?v=20260908-1"},
   };
   const mvpStorageKey="gandang.challenge-v2.mvp-completions.v1";
+  const mvpWaterCupStorageKey="gandang.challenge-v2.water-cups.v1";
   const mvpCycleStorageKey="gandang.challenge-v2.daily-cycle.v1";
   const setupUrl = "/service?returnTo=forest-challenges";
   let token=null, plan=null, busy=false, needsSetup=false, connectionFailed=false, settingsOpen=location.hash==="#daily-settings";
   let mvpCompletions=readMvpCompletions();
+  let mvpWaterCups=readMvpWaterCups();
   let mvpCycles=readMvpCycles();
   const channel=typeof BroadcastChannel==="function"?new BroadcastChannel("challenge-v2-refresh"):null;
   window.ForestChallengeV2={enabled:false,plan:null};
   function readMvpCompletions(){try{return JSON.parse(window.localStorage?.getItem(mvpStorageKey)||"{}")||{};}catch{return {};}}
+  function readMvpWaterCups(){try{return JSON.parse(window.localStorage?.getItem(mvpWaterCupStorageKey)||"{}")||{};}catch{return {};}}
   function readMvpCycles(){try{return JSON.parse(window.localStorage?.getItem(mvpCycleStorageKey)||"{}")||{};}catch{return {};}}
   function planDayKey(){return String(plan?.day_id||plan?.starts_on||new Date().toISOString().slice(0,10));}
   function currentCycle(){return Math.max(0,Math.trunc(Number(mvpCycles[planDayKey()])||0));}
   function completionKey(item){return `${planDayKey()}:cycle-${currentCycle()}:${item.id}`;}
   function legacyCompletionKey(item){return `${planDayKey()}:${item.id}`;}
+  function waterCupKey(item){return `${completionKey(item)}:cups`;}
+  function waterGoal(item){
+    const goal=item?.goal||{}, cups=Math.max(0,Math.trunc(Number(goal.water_goal_cups)||0));
+    const cupMl=Math.max(1,Math.trunc(Number(goal.water_cup_ml)||200));
+    return goal.family_id==="H02"&&goal.water_mission_version==="cup-v1"&&goal.water_goal_status==="confirmed"&&cups>0?{cups,cupMl}:null;
+  }
+  function waterCupProgress(item){
+    const water=waterGoal(item), saved=mvpWaterCups[waterCupKey(item)]||[];
+    return new Set((Array.isArray(saved)?saved:[]).map(Number).filter(index=>Number.isInteger(index)&&index>=1&&index<=water?.cups));
+  }
+  function saveWaterCupProgress(item,progress){
+    mvpWaterCups={...mvpWaterCups,[waterCupKey(item)]:[...progress].sort((a,b)=>a-b)};
+    try{window.localStorage?.setItem(mvpWaterCupStorageKey,JSON.stringify(mvpWaterCups));}catch{}
+    const water=waterGoal(item);
+    if(water)window.dispatchEvent(new CustomEvent("forest-water-cup-progress",{detail:{assignmentId:item.id,completionKey:completionKey(item),checked:progress.size,total:water.cups,cupMl:water.cupMl,complete:progress.size>=water.cups}}));
+  }
   function completionRecord(item){return mvpCompletions[completionKey(item)]||(currentCycle()===0?mvpCompletions[legacyCompletionKey(item)]:null);}
   function isMvpCompleted(item){return Boolean(completionRecord(item));}
   function isCompleted(item){return Boolean(isMvpCompleted(item)||(currentCycle()===0&&item.status==="completed"));}
@@ -43,9 +62,11 @@
   }
   function detailNote(item){return Array.from(root.querySelectorAll?.(`[data-session="${item.id}"] [name="note"]`)||[]).map(field=>field.value?.trim()).filter(Boolean).join("\n");}
   function saveMvpCompletion(item){
-    const record={assignmentId:item.id,domain:item.goal.domain,note:detailNote(item),completedAt:new Date().toISOString()};
+    const water=waterGoal(item);
+    const record={assignmentId:item.id,domain:item.goal.domain,note:detailNote(item),completedAt:new Date().toISOString(),...(water?{waterCups:water.cups,waterCupMl:water.cupMl}:null)};
     mvpCompletions={...mvpCompletions,[completionKey(item)]:record};
     try{window.localStorage?.setItem(mvpStorageKey,JSON.stringify(mvpCompletions));}catch{}
+    if(water)saveWaterCupProgress(item,new Set(Array.from({length:water.cups},(_,i)=>i+1)));
     return record;
   }
   function showCelebration(item){
@@ -69,7 +90,7 @@
       const invalidRefresh=auth.status===400&&result.detail==="Provided invalid token.";
       const needsLogin=auth.status===401||auth.status===403||invalidRefresh;
       if(needsLogin)token=null;
-      const error=new Error(needsLogin?"내 챌린지를 저장하려면 먼저 로그인해 주세요. 이용 확인을 마치면 이곳으로 돌아와요.":"로그인 상태를 확인하지 못했어요. 잠시 후 새로고침해 주세요.");
+      const error=new Error(needsLogin?"로그인하고 챌린지 시작!":"로그인 상태를 확인하지 못했어요. 잠시 후 새로고침해 주세요.");
       error.needsSetup=needsLogin;throw error;
     }
     token=(await readJson(auth)).access_token;
@@ -109,6 +130,9 @@
         <label>식단 챌린지<select name="diet_family">${Object.entries({random:"랜덤",D01:"식사 구성",D02:"영양표시",D03:"식사 기록"}).map(([k,v])=>`<option value="${k}" ${(p.diet_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
         <label>운동 챌린지<select name="activity_family">${Object.entries({random:"랜덤",A01:"걷기",A02:"오래 앉기 줄이기"}).map(([k,v])=>`<option value="${k}" ${(p.activity_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
         <label>음료 챌린지<select name="routine_family">${Object.entries({random:"랜덤",H01:"단 음료 바꾸기",H02:"수분 기록",R01:"저녁 습관"}).map(([k,v])=>`<option value="${k}" ${(p.routine_family||"random")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <label>개인 음료 목표 확인<select name="water_goal_status">${Object.entries({unconfirmed:"아직 확인하지 않음",confirmed:"개인 목표가 있음",clinician_review_required:"의료진 확인 필요"}).map(([k,v])=>`<option value="${k}" ${(p.water_goal_status||"unconfirmed")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        ${input("personal_drink_goal_ml","확인한 하루 음료 목표량(mL)","number",`min="200" max="4000" value="${p.personal_drink_goal_ml??""}"`)}
+        <input type="hidden" name="water_cup_ml" value="200">
         ${input("planned_meals","오늘 예정된 식사 횟수","number",`min="0" max="3" value="${p.planned_meals??1}"`)}
         ${input("sugary_drink_opportunities","단 음료 기회 횟수","number",`min="0" max="3" value="${p.sugary_drink_opportunities??0}"`)}
         ${check("safety_confirmed","안전 조건을 확인했어요")}${check("exercise_allowed","편안히 움직일 수 있어요")}
@@ -127,6 +151,9 @@
       <label>어느 정도까지 할 수 있나요?<select name="max_difficulty">${Object.entries(levelLabel).map(([k,v])=>`<option value="${k}" ${(p.max_difficulty||"E")===k?"selected":""}>${v}</option>`).join("")}</select></label>
       ${input("planned_meals","오늘 예정된 식사 횟수","number",`min="0" max="3" value="${p.planned_meals??1}"`)}
       ${input("sugary_drink_opportunities","하루에 단 음료를 마시는 횟수(없으면 0)","number",`min="0" max="3" value="${p.sugary_drink_opportunities??0}"`)}
+      <label>개인 음료 목표 확인<select name="water_goal_status">${Object.entries({unconfirmed:"아직 확인하지 않음",confirmed:"개인 목표가 있음",clinician_review_required:"의료진 확인 필요"}).map(([k,v])=>`<option value="${k}" ${(p.water_goal_status||"unconfirmed")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+      ${input("personal_drink_goal_ml","확인한 하루 음료 목표량(mL)","number",`min="200" max="4000" value="${p.personal_drink_goal_ml??""}"`)}
+      <input type="hidden" name="water_cup_ml" value="200">
       ${check("safety_confirmed","아래 안전 조건을 확인했어요")}${check("exercise_allowed","통증·낙상 위험·운동 제한 없이 편안히 걸을 수 있어요")}
       ${check("dietary_changes_allowed","의료진 지침 안에서 식사 구성을 바꿀 수 있어요")}${check("fluid_restriction","수분 제한이 있거나 아직 몰라요",true)}
       ${check("swallowing_restriction","씹기·삼키기 제한이 있거나 아직 몰라요",true)}${check("therapeutic_diet","치료식이 필요하거나 아직 몰라요",true)}${check("food_allergy","음식 알레르기가 있거나 아직 몰라요",true)}
@@ -162,13 +189,16 @@
       <details><summary>근거·확인 범위</summary><p>목표 수치는 앱 시작용 설계이며 예방 효과의 순위가 아닙니다. 사진으로 실제 섭취나 걷기 진위를 증명하지 않습니다.</p>${g.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`).join(" · ")}</details></article>`;
   }
   function compactQuest(item,openIds) {
-    const g=item.goal, mvpRecord=completionRecord(item), complete=isCompleted(item), domain=domainView[g.domain]||domainView.routine;
+    const g=item.goal, mvpRecord=completionRecord(item), complete=isCompleted(item), domain=domainView[g.domain]||domainView.routine, water=waterGoal(item), waterProgress=water?waterCupProgress(item):null;
     const pending=!complete&&item.verification_status==="pending"&&item.completed_sessions>=g.target_sessions;
-    const label=complete?"인증완료":pending?"확인 중":"인증하기";
+    const waterReady=!water||waterProgress.size>=water.cups;
+    const label=complete?"인증완료":pending?"확인 중":water&&!waterReady?"컵 체크 중":"인증하기";
+    const summary=water?`${water.cupMl}mL 컵 ${water.cups}개 · ${waterProgress.size}/${water.cups}`:g.goal_unit==="minute"?`${g.per_session_quantity}분 × ${g.target_sessions}회`:`${g.target_sessions}회 기록`;
+    const waterButtons=water&&!complete&&!pending?`<div class="v2-water-cups" role="group" aria-label="${water.cupMl}mL 컵 ${water.cups}개 체크">${Array.from({length:water.cups},(_,i)=>{const cup=i+1,checked=waterProgress.has(cup);return `<button type="button" data-water-cup="${esc(item.id)}" data-cup-index="${cup}" aria-pressed="${checked}" class="${checked?"is-checked":""}" aria-label="물컵 ${cup}/${water.cups} ${checked?"체크됨":"체크하기"}"><span class="v2-water-icon" aria-hidden="true"></span><small>${cup}/${water.cups}</small></button>`;}).join("")}</div>`:"";
     const completedNote=item.status==="completed"&&mvpRecord?`<label class="v2-completed-note">추가 기록<textarea data-mvp-note="${esc(item.id)}" maxlength="500" placeholder="오늘 실천한 내용이나 느낀 점을 남길 수 있어요.">${esc(mvpRecord.note||"")}</textarea></label>`:"";
     return `<article class="v2-quest-card${complete?" is-complete":""}">
-      <span class="v2-domain-badge" data-domain="${g.domain}">${domain.label}</span><h4>${esc(g.title)}</h4><div class="v2-quest-row"><small>${g.goal_unit==="minute"?`${g.per_session_quantity}분 × ${g.target_sessions}회`:`${g.target_sessions}회 기록`} · ${complete?g.target_sessions:item.completed_sessions}/${g.target_sessions}</small>
-      <button type="button" data-certify="${esc(item.id)}" aria-label="${esc(g.title)} ${label}" ${complete||pending?"disabled":""}>${label}</button></div>
+      <span class="v2-domain-badge" data-domain="${g.domain}">${domain.label}</span><h4>${esc(g.title)}</h4><div class="v2-quest-row"><small>${summary} · ${complete?g.target_sessions:item.completed_sessions}/${g.target_sessions}</small>
+      <button type="button" data-certify="${esc(item.id)}" aria-label="${esc(g.title)} ${label}" ${complete||pending||!waterReady?"disabled":""}>${label}</button></div>${waterButtons}
       <details class="v2-quest-details" data-quest-details="${esc(item.id)}" ${openIds.has(String(item.id))?"open":""}><summary>자세히 보기</summary>${card(item)}${completedNote}</details></article>`;
   }
   function openRecordDetails(itemId) {
@@ -183,10 +213,12 @@
     const g=item.goal;
     // Photo evidence and measurement-heavy drink/label reviews still need the
     // user-provided file or actual value. A click must never fabricate those.
-    if(g.proof_type!=="T3"||["H02","D02"].includes(g.family_id))return null;
+    const water=waterGoal(item);
+    if(g.proof_type!=="T3"||g.family_id==="D02"||(g.family_id==="H02"&&!water))return null;
     const note=form?.querySelector?.('[name="note"]')?.value?.trim()||"직접 인증 완료";
     const values={performed_at:performedAt.toISOString(),done:true,note};
     if(g.goal_unit==="minute")values.quantity=Number(g.per_session_quantity);
+    if(water){values.quantity=water.cups;values.intake_ml=water.cups*water.cupMl;}
     if(g.family_id==="D03"&&g.difficulty==="H"&&index===g.target_sessions)values.improvement=note;
     return values;
   }
@@ -198,7 +230,6 @@
       ${cycleComplete?`<button class="v2-repeat-button" data-repeat-quests type="button">오늘의 퀘스트 다시 하기</button>`:""}
       <button id="forest-quest-settings" class="v2-settings-button" data-open-settings type="button" aria-label="나에게 맞게 다시 설정하기" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기"}</button>
       ${compactSettings(plan.preferences)}<section data-compact-settings ${settingsOpen?"":"hidden"} aria-label="챌린지 안내와 보상">
-      <p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
       ${(plan.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
       <p>오늘 ${plan.completed||0}/${plan.items?.length||0}개 완료${!plan.day_id?` · 시작일 ${esc(plan.starts_on)}`:""}</p>
@@ -220,7 +251,7 @@
       planned_meals:1, sugary_drink_opportunities:0, fluid_restriction:true, swallowing_restriction:true,
       therapeutic_diet:true, food_allergy:true, photo_consent:false, photo_accessible:false,
       transition_consent:true, max_difficulty:"E",
-      diet_family:"random", activity_family:"random", routine_family:"random", ...current, ...overrides,
+      diet_family:"random", activity_family:"random", routine_family:"random", water_goal_status:"unconfirmed", personal_drink_goal_ml:null, water_cup_ml:200, ...current, ...overrides,
     };
   }
   async function savePreferences(values) {
@@ -236,8 +267,8 @@
     const compact=forestView&&plan?.enrolled&&!needsSetup&&!connectionFailed;
     const openIds=new Set(Array.from(root.querySelectorAll?.(".v2-quest-details[open]")||[],item=>item.dataset.questDetails));
     root.setAttribute?.("data-compact",String(Boolean(compact)));
-    root.innerHTML=compact?compactContent(openIds):`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p><p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>
-      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 설정하기</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기"}</button>
+    root.innerHTML=compact?compactContent(openIds):`<header class="v2-heading"><h3>당뇨 예방 챌린지</h3><button data-refresh type="button">새로고침</button></header><p data-message role="status" aria-live="polite"></p>${forestView?"":'<p class="v2-safety">생활습관을 돌아보는 활동이에요. 진단·처방이나 건강이 좋아졌다는 판정을 대신하지 않아요.</p>'}
+      ${needsSetup?`<a class="v2-setup-link" href="${setupUrl}">로그인하고 챌린지 시작!</a>`:connectionFailed?'<p>연결을 확인한 뒤 위의 새로고침을 눌러주세요. 연결되지 않은 동안에는 설정과 기록을 저장할 수 없어요.</p>':`<button class="v2-settings-button" data-open-settings type="button" aria-expanded="${settingsOpen}" aria-controls="daily-settings">${settingsOpen?"다시 설정 닫기":"나에게 맞게 다시 설정하기"}</button>
       ${(plan?.proof_mix_exception_reason||[]).map(r=>`<p class="v2-notice">${esc(reasonLabel[r]||"몸 상태에 맞는 다른 챌린지를 골랐어요.")}</p>`).join("")}
       ${(plan?.substitutions||[]).map(()=>'<p class="v2-notice">단 음료 줄이기 대신 마신 양을 돌아보는 챌린지를 골랐어요. 더 마실 필요는 없어요.</p>').join("")}
       ${settings(plan?.preferences)}<div class="v2-cards">${(plan?.items||[]).map(card).join("")}</div>
@@ -260,6 +291,17 @@
       mvpCycles={...mvpCycles,[planDayKey()]:currentCycle()+1};
       try{window.localStorage?.setItem(mvpCycleStorageKey,JSON.stringify(mvpCycles));}catch{}
       render();notify("오늘의 퀘스트 3개를 다시 수행할 수 있어요. 표시되는 회차는 늘어나지 않습니다.");
+      return;
+    }
+    const cupButton=event.target.closest("[data-water-cup]");
+    if(cupButton){
+      const item=plan?.items?.find(candidate=>String(candidate.id)===String(cupButton.dataset.waterCup));
+      const water=item&&waterGoal(item), cup=Number(cupButton.dataset.cupIndex);
+      if(!water||isCompleted(item)||!Number.isInteger(cup))return;
+      const progress=waterCupProgress(item);
+      if(progress.has(cup))progress.delete(cup);else progress.add(cup);
+      saveWaterCupProgress(item,progress);
+      render();notify(progress.size>=water.cups?"컵을 모두 체크했어요. 이제 인증할 수 있어요.":"체크한 컵을 저장했어요.");
       return;
     }
     const certify=event.target.closest("[data-certify]");
@@ -342,6 +384,7 @@
       if(form.matches("[data-preferences]")) {
         for(const input of form.querySelectorAll('input[type="checkbox"]'))values[input.name]=input.checked;
         values.planned_meals=Number(values.planned_meals);values.sugary_drink_opportunities=Number(values.sugary_drink_opportunities);
+        values.water_cup_ml=200;values.personal_drink_goal_ml=values.personal_drink_goal_ml?Number(values.personal_drink_goal_ml):null;
         await savePreferences(preferencePayload(values));
       }else if(form.matches("[data-session]")) {
         values.done=true;values.performed_at=new Date(`${values.performed_at}:00+09:00`).toISOString();

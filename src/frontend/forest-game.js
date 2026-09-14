@@ -15,6 +15,24 @@
   const RENDER_SCALE = 2;
   const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
+  const WISDOM_SPRING_SIGN = Object.freeze({ x: 108, y: 424 });
+  const WORLD_MEMORY_CAMERA = Object.freeze({ x: 666, y: 360, bounds: { left: 634, right: 704, top: 320, bottom: 394 } });
+  const WORLD_FIXED_LANTERNS = Object.freeze([
+    { id: "house_back", x: 192, y: 82, radius: 98, bounds: { left: 174, right: 210, top: 56, bottom: 112 } },
+    { id: "garden", x: 608, y: 342, radius: 112, bounds: { left: 586, right: 628, top: 304, bottom: 370 } },
+  ]);
+  const HOME_RECORD_PLAYER = Object.freeze({ x: 630, y: 188 });
+  const HOME_LIGHT_SOURCES = Object.freeze([
+    { x: 145, y: 70, radius: 124, bounds: { left: 108, right: 184, top: 28, bottom: 116 } },
+    { x: 674, y: 144, radius: 152, bounds: { left: 636, right: 712, top: 104, bottom: 190 } },
+    { x: 156, y: 394, radius: 128, bounds: { left: 122, right: 194, top: 354, bottom: 430 } },
+  ]);
+  const WISDOM_QUESTION_EXAMPLES = Object.freeze([
+    "식후 10분 걷기는 혈당 관리에 도움이 돼?",
+    "단 음료 대신 물을 마시면 어떤 점이 좋아?",
+    "혈압은 같은 시간에 재는 게 왜 중요해?",
+    "채소 반찬을 한 끼 더하면 건강에 어떤 점이 좋아?",
+  ]);
   let rewardSkipResolve = null;
   const nicknameAdjectives = ["씩씩한", "다정한", "반짝이는", "꾸준한", "포근한", "용감한", "싱그러운", "재빠른"];
   const nicknameNouns = ["당근", "새싹", "토끼", "숲지기", "햇살"];
@@ -259,6 +277,10 @@
     water: { id: "water", icon: "💧", category: "수분 기록", title: "물 마신 횟수 기록하기", description: "특정 섭취량을 권하지 않고 횟수만 기록", reward: 15 },
     check: { id: "check", icon: "📝", category: "생활습관 기록", title: "오늘 기록 돌아보기", description: "입력한 생활습관 다시 보기", reward: 15 },
   };
+
+  function normalizeWorldLanterns(value = {}) {
+    return Object.fromEntries(WORLD_FIXED_LANTERNS.map(source => [source.id, Boolean(value?.[source.id])]));
+  }
   const questPlans = {
     exercise: ["walk", "stretch", "strength"],
     diet: ["meal", "vegetable", "water"],
@@ -299,7 +321,7 @@
     pond: { name: "돌 연못", kind: "object", icon: "💧" },
     fence: { name: "통나무 울타리", kind: "object", icon: "🪵" },
     flower_cart: { name: "꽃수레", kind: "object", icon: "🌼", animated: true },
-    duck_float: { name: "리버덕", kind: "object", icon: "🦆", animated: true },
+    duck_float: { name: "Ducky", kind: "object", icon: "🦆", animated: true },
     animated_fountain: { name: "물결 분수", kind: "object", icon: "⛲", animated: true },
     firefly_lantern: { name: "반딧불 랜턴", kind: "object", icon: "🏮", animated: true },
     garden_pinwheel: { name: "정원 바람개비", kind: "object", icon: "🎡", animated: true },
@@ -780,6 +802,8 @@
       fishCaught: false,
       fishing: false,
       petFedCount: 0,
+      homeLightOn: false,
+      worldLanterns: normalizeWorldLanterns(),
       homeRecordPlaying: false,
       homeRecordTrack: "home",
     };
@@ -807,6 +831,8 @@
       fallback.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
       fallback.groupGoalMemo = typeof value.groupGoalMemo === "string" ? value.groupGoalMemo.slice(0, 160) : "";
       fallback.homeRecordPlaying = Boolean(value.homeRecordPlaying);
+      fallback.homeLightOn = Boolean(value.homeLightOn);
+      fallback.worldLanterns = normalizeWorldLanterns(value.worldLanterns);
       fallback.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
       fallback.inventory = Array.isArray(value.inventory) ? value.inventory.filter((code) => itemCatalog[code]?.kind === "object") : fallback.inventory;
       fallback.outfitHistory = normalizeOutfitHistory(value.outfitHistory, fallback.avatar);
@@ -847,6 +873,8 @@
       .filter(([, claim]) => Number.isFinite(Number(claim?.amount)) && Number(claim.amount) > 0)
       .map(([id, claim]) => [id, { amount: Math.min(100, Math.round(Number(claim.amount))), harvested: Boolean(claim.harvested) }]));
     state.petFedCount = Math.max(0, Math.round(Number(value.petFedCount) || 0));
+    state.homeLightOn = Boolean(value.homeLightOn);
+    state.worldLanterns = normalizeWorldLanterns(value.worldLanterns);
     state.homeRecordPlaying = Boolean(value.homeRecordPlaying);
     state.homeRecordTrack = Object.hasOwn(homeRecordCatalog, value.homeRecordTrack) ? value.homeRecordTrack : "home";
     state.challengePlan = { ...fallback.challengePlan, ...(value.challengePlan || {}) };
@@ -955,6 +983,8 @@
   window.carrotForestRunning = running;
   let musicEngine = null;
   let sfxEngine = null;
+  let chatMode = "forest";
+  let wisdomIntroShown = false;
   const rewardChestSound = new Audio("/static/assets/reward-chest-success.mp3");
   rewardChestSound.preload = "auto";
   rewardChestSound.volume = .42;
@@ -983,8 +1013,6 @@
   const rewardCowImage = new Image();
   const rewardCowWalkImage = new Image();
   const cowStates = new WeakMap();
-  const homeRecordPlayerImage = new Image();
-  let homeRecordPlayerBounds = null;
   const basicWalkAtlas = new Image();
   const modularAvatarAtlas = new Image();
   const presetSpriteAtlases = {
@@ -1008,25 +1036,13 @@
   }));
   catPetAtlas.src = "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1";
   storageSpriteAtlas.src = "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1";
-  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1";
+  animatedObjectAtlas.src = "/static/assets/carrot-forest-animated-objects-v3.png?v=20260910-1";
   riverDuckImage.src = window.ForestRiverDuckArt.asset.url;
   campfireBaseImage.src = "/static/assets/furniture-v153/campfire.png?v=20260907-1";
   rewardCowImage.src = "/static/assets/animals/lpc-cow-eat.png";
   rewardCowWalkImage.src = "/static/assets/animals/lpc-cow-walk.png";
-  sceneImages.world.src = "/static/assets/carrot-forest-world-v6.png?v=20260907-1";
-  sceneImages.home.src = "/static/assets/carrot-forest-home-v3.png?v=20260907-1";
-  homeRecordPlayerImage.src = "/static/assets/home-record-player-v159.png?v=20260908-1";
-  homeRecordPlayerImage.addEventListener("load", () => {
-    const measure = document.createElement("canvas");
-    measure.width = homeRecordPlayerImage.naturalWidth;
-    measure.height = homeRecordPlayerImage.naturalHeight;
-    const measurement = measure.getContext("2d", { willReadFrequently: true });
-    try {
-      measurement.drawImage(homeRecordPlayerImage, 0, 0);
-      homeRecordPlayerBounds = window.ForestObjects.alphaBounds(measurement.getImageData(0, 0, measure.width, measure.height).data, measure.width, measure.height, 16);
-    } catch { homeRecordPlayerBounds = null; }
-    renderCanvas();
-  });
+  sceneImages.world.src = "/static/assets/carrot-forest-world-v9.png?v=20260910-1";
+  sceneImages.home.src = "/static/assets/carrot-forest-home-v5.png?v=20260910-3";
   sceneImages.garden.src = window.ForestGarden.assets.background.url;
   gardenCarrotImage.addEventListener("load", renderCanvas);
   gardenCarrotImage.src = window.ForestGarden.assets.carrot.url;
@@ -1042,17 +1058,20 @@
     syncLpcCatalog();
     renderCanvas();
     drawWardrobeLookThumbnails();
+    drawMemberFaceThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
   });
   window.LpcAvatarEngine?.ready().then(() => {
     syncLpcCatalog();
     renderCanvas();
     drawWardrobeLookThumbnails();
+    drawMemberFaceThumbnails();
     if ($("#avatar-studio").open) renderAvatarStudio();
   });
   window.addEventListener("lpc-avatar-assets-updated", () => {
     renderCanvas();
     drawWardrobeLookThumbnails();
+    drawMemberFaceThumbnails();
     if ($("#avatar-studio").open) { renderCatalogThumbnailCanvases(); renderAvatarPreview(); }
   });
 
@@ -1227,7 +1246,7 @@
   async function persist(message = null) {
     await adapter.save(state);
     updateProfileUI();
-    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
+    window.dispatchEvent(new CustomEvent("forest-state-updated", { detail: { avatar: state.avatar, scene: currentScene, placed: state.placed, homeLightOn: state.homeLightOn, worldLanterns: state.worldLanterns, homeRecordPlaying: state.homeRecordPlaying, homeRecordTrack: state.homeRecordTrack } }));
     if (message) setStatus(message);
   }
 
@@ -1395,16 +1414,11 @@
   }
 
   function drawHomeRecordPlayer() {
-    if (!homeRecordPlayerImage.complete || !homeRecordPlayerImage.naturalWidth) return;
-    const bounds = homeRecordPlayerBounds || { x: 0, y: 0, width: homeRecordPlayerImage.naturalWidth, height: homeRecordPlayerImage.naturalHeight };
-    const scale = Math.min(76 / bounds.width, 108 / bounds.height);
-    const width = bounds.width * scale, height = bounds.height * scale;
-    context.drawImage(homeRecordPlayerImage, bounds.x, bounds.y, bounds.width, bounds.height, 452 - width / 2, 320 - height, width, height);
     if (state.homeRecordPlaying) {
       context.save();
       context.fillStyle = "#f6d795";
       context.font = "bold 14px sans-serif";
-      context.fillText("♪", 482, 207);
+      context.fillText("♪", HOME_RECORD_PLAYER.x + 28, HOME_RECORD_PLAYER.y - 58);
       context.restore();
     }
   }
@@ -1470,7 +1484,7 @@
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     entry.state = window.ForestRiverDuck.flee(entry.state, { x, y }, { reducedMotion });
     entry.lastAt = performance.now();
-    setStatus(reducedMotion ? "리버덕이 물 위에서 조용히 쉬고 있어요." : "리버덕이 살짝 놀라 반대쪽으로 헤엄친 뒤 다시 쉬어요.");
+    setStatus(reducedMotion ? "Ducky가 물 위에서 조용히 쉬고 있어요." : "Ducky가 살짝 놀라 반대쪽으로 헤엄친 뒤 다시 쉬어요.");
     renderCanvas();
     return true;
   }
@@ -1890,8 +1904,9 @@
   }
 
   function projectMapLabels() {
-    [[".home-label", 205, 62], [".garden-label", 610, 62]].forEach(([selector, x, y]) => {
+    [[".home-label", 205, 62], [".garden-label", 610, 62], ["#wisdom-spring-sign", WISDOM_SPRING_SIGN.x, WISDOM_SPRING_SIGN.y]].forEach(([selector, x, y]) => {
       const label = $(selector);
+      if (!label?.style) return;
       const point = window.ForestCamera?.worldToScreen(x, y) || { x: x / WORLD_WIDTH, y: y / WORLD_HEIGHT };
       label.hidden = currentScene !== "world" || point.x < .03 || point.x > .97 || point.y < .03 || point.y > .94;
       label.style.left = `${point.x * 100}%`;
@@ -1909,7 +1924,7 @@
 
   let fallbackNightCanvas = null;
   function drawFallbackNightLighting() {
-    if (window.carrotForestPhaserActive || currentScene !== "world" || localStorage.getItem(ATMOSPHERE_KEY) === "off") return;
+    if (window.carrotForestPhaserActive || !["world", "home"].includes(currentScene) || localStorage.getItem(ATMOSPHERE_KEY) === "off") return;
     const strength = window.ForestAtmosphere.strength(currentLocalHour());
     if (!strength) return;
     fallbackNightCanvas ||= document.createElement("canvas");
@@ -1921,16 +1936,22 @@
     mask.fillStyle = "#101b2d";
     mask.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     mask.globalCompositeOperation = "destination-out";
-    state.placed.forEach(item => {
-      if (!item.active || !["campfire", "lantern", "firefly_lantern"].includes(item.code)) return;
-      const radius = item.code === "campfire" ? 105 : 86;
-      const y = item.y - (item.code === "campfire" ? 22 : 32);
-      const gradient = mask.createRadialGradient(item.x, y, 0, item.x, y, radius);
+    const fixedWorldLights = currentScene === "world"
+      ? WORLD_FIXED_LANTERNS.filter(source => state.worldLanterns?.[source.id])
+        .map(source => ({ x: source.x, y: source.y, radius: source.radius }))
+      : [];
+    const placedLights = currentScene === "world"
+      ? state.placed.filter(item => item.active && ["campfire", "lantern", "firefly_lantern"].includes(item.code))
+        .map(item => ({ x: item.x, y: item.y - (item.code === "campfire" ? 22 : 32), radius: item.code === "campfire" ? 105 : 86 }))
+      : [];
+    const lights = currentScene === "home" && state.homeLightOn ? HOME_LIGHT_SOURCES : [...fixedWorldLights, ...placedLights];
+    lights.forEach(({ x, y, radius }) => {
+      const gradient = mask.createRadialGradient(x, y, 0, x, y, radius);
       gradient.addColorStop(0, "rgba(0,0,0,.96)");
       gradient.addColorStop(.3, "rgba(0,0,0,.78)");
       gradient.addColorStop(1, "rgba(0,0,0,0)");
       mask.fillStyle = gradient;
-      mask.beginPath(); mask.arc(item.x, y, radius, 0, Math.PI * 2); mask.fill();
+      mask.beginPath(); mask.arc(x, y, radius, 0, Math.PI * 2); mask.fill();
     });
     mask.globalCompositeOperation = "source-over";
     context.save();
@@ -2037,9 +2058,28 @@
     updateInteractionPrompt();
   }
 
+  async function toggleHomeLight() {
+    if (currentScene !== "home") return;
+    state.homeLightOn = !state.homeLightOn;
+    playSfx(state.homeLightOn ? "object-on" : "object-off", { volume: .28 });
+    renderCanvas();
+    await persist(state.homeLightOn ? "방 조명을 켰습니다." : "방 조명을 껐습니다.");
+    updateInteractionPrompt();
+  }
+
+  async function toggleWorldFixedLantern(id) {
+    if (currentScene !== "world" || !WORLD_FIXED_LANTERNS.some(source => source.id === id)) return;
+    state.worldLanterns = normalizeWorldLanterns({ ...state.worldLanterns, [id]: !state.worldLanterns?.[id] });
+    playSfx(state.worldLanterns[id] ? "object-on" : "object-off", { volume: .28 });
+    renderCanvas();
+    await persist(state.worldLanterns[id] ? "숲 등불을 켰습니다." : "숲 등불을 껐습니다.");
+    updateInteractionPrompt();
+  }
+
   function nearbyInteraction() {
     if (currentScene === "home") {
-      if (distanceTo(452, 300) < 76) return "record_player";
+      if (HOME_LIGHT_SOURCES.some(light => distanceTo(light.x, light.y) < 76)) return "home_light";
+      if (distanceTo(HOME_RECORD_PLAYER.x, HOME_RECORD_PLAYER.y) < 76) return "record_player";
       if (distanceTo(292, 246) < 95) return "sofa";
       if (distanceTo(558, 205) < 100) return "wardrobe";
       if (distanceTo(384, 438) < 78) return "exit_home";
@@ -2052,9 +2092,12 @@
     }
     const placed = nearbyPlacedObject();
     if (placed) return `object:${placed.index}`;
+    const fixedLantern = WORLD_FIXED_LANTERNS.find(source => distanceTo(source.x, source.y) < 70);
+    if (fixedLantern) return `fixed_lantern:${fixedLantern.id}`;
+    if (distanceTo(WORLD_MEMORY_CAMERA.x, WORLD_MEMORY_CAMERA.y) < 78) return "memory_camera";
     if (distanceTo(218, 238) < 62) return "home";
     if (distanceTo(612, 246) < 72) return "garden";
-    if (distanceTo(174, 414) < 68) return "pond";
+    if (distanceTo(WISDOM_SPRING_SIGN.x, WISDOM_SPRING_SIGN.y) < 72) return "wisdom_spring";
     return null;
   }
 
@@ -2065,9 +2108,14 @@
     if (target?.startsWith("object:")) {
       const item = state.placed[Number(target.split(":")[1])];
       prompt.querySelector("span").textContent = item ? objectInteractionLabel(item) : "오브젝트 사용하기";
+    } else if (target?.startsWith("fixed_lantern:")) {
+      const id = target.split(":")[1];
+      prompt.querySelector("span").textContent = state.worldLanterns?.[id] ? "등불 끄기" : "등불 켜기";
     } else if (target) prompt.querySelector("span").textContent = {
-      home: "집 안으로", garden: "당근밭으로", pond: "물고기 잡기",
+      home: "집 안으로", garden: "당근밭으로", wisdom_spring: "지혜의 샘 묻기",
+      memory_camera: "사진 찍기",
       sofa: "소파에서 쉬기", wardrobe: "옷장 열기", exit_home: "집 밖으로",
+      home_light: state.homeLightOn ? "조명 끄기" : "조명 켜기",
       record_player: state.homeRecordPlaying ? `${homeRecordCatalog[state.homeRecordTrack]?.name || "LP"} 재생 중` : "LP 음악 고르기",
       crops: pendingChallengeCarrots() ? `당근 ${pendingChallengeCarrots()}개 수확` : "당근 돌보기", exit_garden: "숲으로 돌아가기",
     }[target];
@@ -2079,7 +2127,7 @@
     const content = {
       home: { icon: "🏠", title: "우리 집", copy: "문을 열고 나만의 포근한 홈피로 들어가요.", actions: '<button type="button" data-world-action="enter_home">집 안으로 들어가기</button>' },
       garden: { icon: "🥕", title: "당근 밭", copy: `완료한 챌린지로 당근 ${pendingChallengeCarrots()}개가 자랐어요. 밭 안으로 들어가 직접 수확해요.`, actions: '<button type="button" data-world-action="enter_garden">당근밭 들어가기</button><button type="button" data-world-action="team">공동 진행 보기</button>' },
-      pond: { icon: "🎣", title: "숲의 연못", copy: state.fishCaught ? "오늘 낚시를 즐겼어요. 물결을 바라보며 잠시 쉬어가도 좋아요." : "낚싯대를 드리우고 숲의 물고기를 기다려 볼까요?", actions: `<button type="button" data-world-action="fish">${state.fishCaught ? "한 번 더 낚시하기" : "물고기 잡기"}</button>` },
+      wisdom_spring: { icon: "💧", title: "지혜의 샘", copy: "간당이가 건강 정보를 근거와 함께 알려줘요.", actions: '<button type="button" data-world-action="wisdom_spring">간당이에게 물어보기</button>' },
       sofa: { icon: "🛋️", title: "포근한 소파", copy: "소파에 앉아 창밖의 숲을 바라보며 쉬어가요.", actions: '<button type="button" data-world-action="rest">소파에서 쉬기</button>' },
       wardrobe: { icon: "👗", title: "나의 옷장", copy: "아바타와 함께 걷는 펫을 꾸밀 수 있어요.", actions: '<button type="button" data-world-action="wardrobe">아바타 꾸미기</button>' },
       record_player: { icon: "💿", title: "숲속 LP 재생기", copy: "집 안에서 듣고 싶은 레코드를 골라 보세요.", actions: `<div class="record-music-list">${recordActions}</div><button class="record-stop" type="button" data-world-action="record_off" ${state.homeRecordPlaying ? "" : "disabled"}>LP 끄기 · 집 음악으로</button>` },
@@ -2112,8 +2160,24 @@
       openWorldDialog(target);
       return;
     }
+    if (target.startsWith("fixed_lantern:")) {
+      await toggleWorldFixedLantern(target.split(":")[1]);
+      return;
+    }
+    if (target === "memory_camera") {
+      window.dispatchEvent(new CustomEvent("forest-memory-request"));
+      return;
+    }
+    if (target === "home_light") {
+      await toggleHomeLight();
+      return;
+    }
+    if (target === "wisdom_spring") {
+      openWisdomSpringChat();
+      return;
+    }
     const pose = {
-      crops: "harvest", pond: "fishing", home: "door", garden: "door",
+      crops: "harvest", home: "door", garden: "door",
       exit_home: "door", exit_garden: "door", wardrobe: "door", sofa: "sit",
     }[target];
     if (pose) window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose, duration: pose === "fishing" ? 1800 : 1100 } }));
@@ -2174,13 +2238,16 @@
     const inHouse = x > 45 && x < 335 && y > 55 && y < 275;
     const inGarden = x > 465 && x < 735 && y > 45 && y < 255;
     const inPond = x >= 64 && x <= 288 && y >= 336 && y <= 464;
-    const camera = (typeof window !== "undefined" && window.ForestMemories?.CAMERA) || { x: 694, y: 338 };
+    const camera = (typeof window !== "undefined" && window.ForestMemories?.CAMERA) || WORLD_MEMORY_CAMERA;
     // Reserve only the tripod's 40×23px feet plus this 32px placement cell,
     // not the tall decorative silhouette or the surrounding usable lawn.
     const cellRadius = 16;
     const overlapsCameraFoot = x + cellRadius > camera.x - 20 && x - cellRadius < camera.x + 20
       && y + cellRadius > camera.y - 15 && y - cellRadius < camera.y + 8;
-    if (overlapsCameraFoot) return false;
+    const overlapsFixedLantern = (typeof WORLD_FIXED_LANTERNS !== "undefined" ? WORLD_FIXED_LANTERNS : [])
+      .some(source => x + cellRadius > source.x - 18 && x - cellRadius < source.x + 18
+        && y + cellRadius > source.y - 20 && y - cellRadius < source.y + 8);
+    if (overlapsCameraFoot || overlapsFixedLantern) return false;
     if (waterObjectCodes.has(placementCode)) {
       if (!window.ForestRiverDuck?.isWater(x, y)) return false;
     } else if (inHouse || inGarden || inPond) return false;
@@ -2305,7 +2372,7 @@
     syncActiveQuests();
     const ready = Boolean(state.challengePlan?.onboarded);
     $("#quests-panel").classList.remove("has-compact-quests");
-    $("#start-prediction-flow").textContent = ready ? "당뇨 예방 챌린지 다시 만들기" : "당뇨 예방 챌린지";
+    $("#start-prediction-flow").textContent = ready ? "챌린지 다시 설정하기" : "로그인하고 챌린지 시작!";
     $("#quest-list").innerHTML = ready
       ? quests.map((quest) => `<label class="quest-item"><input type="checkbox" data-quest="${quest.id}" ${state.quests[quest.id] ? "checked" : ""}><span class="quest-icon" aria-hidden="true">${quest.icon}</span><span class="quest-copy"><em>${quest.category}</em><strong>${quest.title}</strong><small>${quest.description}</small></span><b class="quest-reward">+${quest.reward} 🥕</b></label>`).join("")
       : '<div class="quest-empty"><span aria-hidden="true">🌱</span><strong>첫 챌린지를 준비해 주세요</strong><p>이동 가능 확인부터 챌린지 방식 선택까지 마치면 오늘의 퀘스트 3개가 생성됩니다.</p></div>';
@@ -2322,8 +2389,9 @@
     const progressbar = $(".progress-track[role='progressbar']");
     progressbar.setAttribute("aria-valuenow", String(completed));
     $("#group-progress-bar").style.width = `${completed / 15 * 100}%`;
-    $("#group-remaining").textContent = completed >= 15 ? "공동 목표 달성! 오늘의 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
-    $("#member-list").innerHTML = state.members.map((member) => `<li><span aria-hidden="true">${member.completed === 3 ? "✅" : "🌱"}</span><span><strong>${member.name}</strong><small>${member.me ? "내 퀘스트" : "구성원"}</small></span><span class="member-progress">${member.completed}/3</span></li>`).join("");
+    $("#group-remaining").textContent = completed >= 15 ? "공동 보상까지 0개 남았어요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
+    $("#member-list").innerHTML = state.members.map((member) => `<li><canvas class="member-avatar-face" width="48" height="48" data-member-face="${member.id}" aria-hidden="true"></canvas><strong>${member.name}</strong><span class="member-progress">${member.completed}/3</span></li>`).join("");
+    drawMemberFaceThumbnails();
     const rewardButton = $("#reward-button");
     const v2Plan = window.ForestChallengeV2?.enabled ? window.ForestChallengeV2.plan : null;
     if (v2Plan) {
@@ -2337,8 +2405,29 @@
     }
     rewardButton.disabled = completed < 15 || state.rewardClaimed;
     rewardButton.textContent = state.rewardClaimed ? "오늘의 일일 보상 받음" : "일일 보상 받기";
-    $("#group-reward-help").textContent = state.rewardClaimed ? "오늘의 보상 상자를 열었어요." : completed >= 15 ? "지금 바로 보상 상자를 열어 보세요." : `공동 목표까지 ${15 - completed}개 남았어요.`;
+    $("#group-reward-help").textContent = state.rewardClaimed ? "오늘의 보상 상자를 열었어요." : completed >= 15 ? "지금 바로 보상 상자를 열어 보세요." : `공동 보상까지 ${15 - completed}개 남았어요.`;
     $("#group-goal-memo").value = state.groupGoalMemo || "";
+  }
+
+  function memberAvatarFor(member) {
+    if (member?.me) return state.avatar;
+    const role = { m2: "moon_mage", m3: "inventor", m4: "forest_witch", m5: "knight" }[member?.id];
+    const look = state.outfitHistory.find((item) => item.presetRole === role);
+    return look ? { gender: look.gender, engine: "lpc", cosmetics: look.cosmetics } : state.avatar;
+  }
+
+  function drawMemberFaceThumbnails() {
+    if (!window.LpcAvatarEngine?.isReady?.()) return;
+    document.querySelectorAll("canvas[data-member-face]").forEach((thumbnail) => {
+      const member = state.members.find((item) => item.id === thumbnail.dataset.memberFace);
+      const target = thumbnail.getContext("2d");
+      if (!member || !target) return;
+      target.clearRect(0, 0, thumbnail.width, thumbnail.height);
+      target.imageSmoothingEnabled = false;
+      window.LpcAvatarEngine.draw(target, memberAvatarFor(member), {
+        direction: "down", pose: "idle", frame: 0,
+      }, { x: -18, y: -24, width: 84, height: 84 });
+    });
   }
 
   function renderGardenHarvest() {
@@ -3123,6 +3212,12 @@
     renderQuests(); renderGroup();
     adapter.save(state);
   });
+  window.addEventListener("forest-water-cup-progress", (event) => {
+    const { checked = 0, total = 0, complete = false } = event.detail || {};
+    playSfx("water", { volume: 0.22, minInterval: 180 });
+    window.dispatchEvent(new CustomEvent("forest-avatar-action", { detail: { pose: "harvest", duration: 900 } }));
+    setStatus(complete ? `물컵 ${checked}/${total}개를 모두 체크했어요.` : `물컵 ${checked}/${total}개를 체크했어요.`);
+  });
   $("#challenge-flow-close").addEventListener("click", () => $("#challenge-flow-dialog").close());
   $("#challenge-flow-back").addEventListener("click", () => showChallengeFlowStep(challengeFlowStep - 1));
   $("#challenge-flow-next").addEventListener("click", () => {
@@ -3152,17 +3247,18 @@
     await generateChallengeQuests(style, customIds);
   });
 
-  $("#forest-rag-form").addEventListener("submit", (event) => {
+  $("#forest-rag-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const question = $("#forest-rag-question").value.trim();
     const guide = ragGuideFor(question);
     $("#forest-rag-result").innerHTML = `<strong>${guide.answer}</strong><a href="${guide.url}" target="_blank" rel="noopener">검색 근거 · ${guide.source}</a><small>일반적인 건강교육 정보이며 진단·처방이 아닙니다.</small>`;
   });
+  $("#open-wisdom-spring")?.addEventListener("click", openWisdomSpringChat);
 
   $("#group-goal-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 80);
-    await persist("오늘의 슬로건을 저장했습니다.");
+    await persist("오늘의 목표를 저장했습니다.");
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
@@ -3337,7 +3433,9 @@
     if (!placementCode) {
       canvas.focus();
       if (currentScene === "home") {
-        if (x >= 410 && x <= 494 && y >= 208 && y <= 325) await interact("record_player");
+        const light = HOME_LIGHT_SOURCES.find(source => x >= source.bounds.left && x <= source.bounds.right && y >= source.bounds.top && y <= source.bounds.bottom);
+        if (light) await interact("home_light");
+        else if (x >= 590 && x <= 676 && y >= 150 && y <= 210) await interact("record_player");
         else if (x >= 155 && x <= 440 && y >= 120 && y <= 285) interact("sofa");
         else if (x >= 480 && x <= 670 && y >= 55 && y <= 260) interact("wardrobe");
         else if (x >= 330 && x <= 440 && y >= 380) interact("exit_home");
@@ -3354,10 +3452,16 @@
           const reaction = y < placedTarget.item.y - 28 ? "head" : "body";
           reactToCow(placedTarget.index, reaction);
         } else if (placedTarget) await interact(`object:${placedTarget.index}`);
-        else if (x >= 150 && x <= 292 && y >= 120 && y <= 282) await interact("home");
-        else if (x >= 535 && x <= 704 && y >= 120 && y <= 300) await interact("garden");
-        else if (x >= 36 && x <= 252 && y >= 340 && y <= 492) await interact("pond");
-        else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
+        else {
+          const fixedLanternSources = typeof WORLD_FIXED_LANTERNS !== "undefined" ? WORLD_FIXED_LANTERNS : [];
+          const memoryCamera = typeof WORLD_MEMORY_CAMERA !== "undefined" ? WORLD_MEMORY_CAMERA : { bounds: { left: 650, right: 735, top: 278, bottom: 356 } };
+          const fixedLantern = fixedLanternSources.find(source => x >= source.bounds.left && x <= source.bounds.right && y >= source.bounds.top && y <= source.bounds.bottom);
+          if (fixedLantern) await interact(`fixed_lantern:${fixedLantern.id}`);
+          else if (x >= memoryCamera.bounds.left && x <= memoryCamera.bounds.right && y >= memoryCamera.bounds.top && y <= memoryCamera.bounds.bottom) await interact("memory_camera");
+          else if (x >= 150 && x <= 292 && y >= 120 && y <= 282) await interact("home");
+          else if (x >= 535 && x <= 704 && y >= 120 && y <= 300) await interact("garden");
+          else window.dispatchEvent(new CustomEvent("forest-move-to", { detail: { x: pointerX, y: pointerY } }));
+        }
       }
       return;
     }
@@ -3435,6 +3539,103 @@
   });
 
   let chatFocusTimer = 0;
+  function appendChatMessage(authorName, message, className = "") {
+    const row = document.createElement("p");
+    if (className) row.className = className;
+    const author = document.createElement("strong");
+    const copy = document.createElement("span");
+    author.textContent = authorName;
+    copy.textContent = message;
+    row.append(author, copy);
+    $("#chat-messages").append(row);
+    while ($("#chat-messages").children.length > 50) $("#chat-messages").firstElementChild.remove();
+    $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
+    return row;
+  }
+
+  function renderWisdomSuggestions() {
+    const suggestions = $("#wisdom-question-suggestions");
+    if (!suggestions) return;
+    suggestions.innerHTML = "";
+    WISDOM_QUESTION_EXAMPLES.forEach((question) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = question;
+      button.addEventListener("click", () => {
+        const input = $("#chat-input");
+        input.value = question;
+        $("#chat-form").requestSubmit?.();
+        if (!$("#chat-form").requestSubmit) $("#chat-form").dispatchEvent(new Event("submit", { cancelable: true }));
+      });
+      suggestions.append(button);
+    });
+  }
+
+  function setChatMode(mode = "forest") {
+    chatMode = mode;
+    const wisdom = mode === "wisdom";
+    $("#chat-panel").classList?.toggle("wisdom-mode", wisdom);
+    $("#chat-title").textContent = wisdom ? "지혜의 샘" : "숲 채팅";
+    $("#chat-help").textContent = wisdom ? "건강 질문을 입력하거나 예시 질문을 눌러 보세요." : "C를 다시 누르면 채팅이 숨겨집니다.";
+    $("#chat-input").maxLength = wisdom ? 160 : 60;
+    $("#chat-input").placeholder = wisdom ? "건강 질문을 입력해 주세요" : "메시지를 입력하고 Enter";
+    const guide = $("#wisdom-chat-guide");
+    const suggestions = $("#wisdom-question-suggestions");
+    if (guide) guide.hidden = !wisdom;
+    if (suggestions) suggestions.hidden = !wisdom;
+    if (wisdom) renderWisdomSuggestions();
+  }
+
+  function wisdomFallbackAnswer(question) {
+    const lower = question.toLowerCase();
+    if (question.includes("물") || question.includes("음료") || question.includes("당")) {
+      return "단 음료를 물이나 덜 단 음료로 바꾸는 건 당류 섭취를 줄이는 쉬운 시작점이에요. 오늘 한 잔부터 바꿔 보고, 당뇨병이나 복약 중인 상황은 의료진 안내를 우선해 주세요.\n출처: 챌린지 선정 근거, 식약처·질병관리청 일반 건강지침";
+    }
+    if (question.includes("혈압") || question.includes("혈당") || question.includes("검진")) {
+      return "혈압·혈당 같은 건강 수치는 같은 시간대와 비슷한 조건에서 확인해야 변화를 비교하기 쉬워요. 수치가 높거나 증상이 있으면 앱 답변으로 판단하지 말고 의료기관에 문의해 주세요.\n출처: 챌린지 선정 근거, 질병관리청 건강수치 확인 지침";
+    }
+    if (question.includes("걷") || question.includes("운동") || question.includes("식후")) {
+      return "가벼운 걷기는 활동량을 늘리는 부담 낮은 방법이에요. 처음에는 짧게 시작하고, 통증·어지럼·심한 숨참이 있으면 멈추는 게 좋아요.\n출처: 챌린지 선정 근거, 대한당뇨병학회·질병관리청 신체활동 자료";
+    }
+    return "건강한 생활습관은 걷기, 규칙적인 식사, 덜 달게 마시기, 정기적인 건강수치 확인처럼 매일 기록하기 쉬운 행동부터 시작할 수 있어요. 이 답변은 일반 건강교육 정보라서 개인 진단이나 처방을 대신하지 않아요.\n출처: RAG 준비 문서, 공공기관 일반 건강교육 자료";
+  }
+
+  async function askWisdomSpring(question) {
+    const pending = appendChatMessage("간당이", "근거를 찾아보고 있어요...", "is-pending");
+    try {
+      const response = await fetch("/api/v1/health-education/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({ question }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail?.message || payload.detail || "건강 정보를 불러오지 못했어요.");
+      const data = payload.data || payload;
+      const citations = Array.isArray(data.citations) && data.citations.length
+        ? `\n출처: ${data.citations.slice(0, 3).map((item) => item.title || item.url || item.document_id).filter(Boolean).join(", ")}`
+        : "";
+      pending.className = "";
+      pending.children[1].textContent = `${data.answer || wisdomFallbackAnswer(question)}\n${data.medical_notice || "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."}${citations}`;
+    } catch {
+      pending.className = "";
+      pending.children[1].textContent = `${wisdomFallbackAnswer(question)}\n일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다.`;
+    }
+    $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
+  }
+
+  function openWisdomSpringChat() {
+    setChatMode("wisdom");
+    if (!wisdomIntroShown) {
+      $("#chat-messages").innerHTML = "";
+      appendChatMessage("간당이", "당근의 요정 간당이가 알려주는, 건강 정보\n건강에 대한 건 뭐든 물어봐!");
+      wisdomIntroShown = true;
+    }
+    toggleChat(true);
+    setStatus("지혜의 샘에서 간당이가 건강 정보를 알려줄 준비를 했어요.");
+  }
+
   function toggleChat(force) {
     const panel = $("#chat-panel");
     panel.hidden = force === undefined ? !panel.hidden : !force;
@@ -3455,9 +3656,11 @@
     const editing = active?.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(active?.tagName);
     if (event.key.toLowerCase() === "c" && (!editing || inChat)) {
       event.preventDefault();
+      if ($("#chat-panel").hidden) setChatMode("forest");
       toggleChat();
     } else if (event.key === "Enter" && !editing && active?.tagName !== "BUTTON" && $("#chat-panel").hidden) {
       event.preventDefault();
+      setChatMode("forest");
       toggleChat(true);
     } else if (event.key === "Escape" && !$("#chat-panel").hidden && (!editing || inChat)) {
       event.preventDefault();
@@ -3578,6 +3781,9 @@
     window.clearTimeout(catchNoticeTimer);
     catchNoticeTimer = window.setTimeout(() => { toast.hidden = true; }, 4000);
   }
+  window.addEventListener("forest-rat-carrot-warning", () => {
+    showCatchNotice("쥐가 당근을 노리고 있습니다.");
+  });
   window.addEventListener("forest-rat-appeared", (event) => {
     currentWildEncounter = { eventId: event.detail?.eventId, species: event.detail?.species === "rabbit" ? "rabbit" : "mouse" };
     if (event.detail?.species === "rabbit") {
@@ -3820,6 +4026,10 @@
       $("#world-dialog").close();
       activateInspectorPanel("team-inspector", true);
     }
+    if (action === "wisdom_spring") {
+      $("#world-dialog").close();
+      openWisdomSpringChat();
+    }
     if (action === "ride") {
       $("#world-dialog").close();
       await toggleRide(false);
@@ -3852,7 +4062,7 @@
   });
 
   $("#chat-close").addEventListener("click", () => toggleChat(false));
-  $("#chat-toggle").addEventListener("click", () => toggleChat());
+  $("#chat-toggle").addEventListener("click", () => { if ($("#chat-panel").hidden) setChatMode("forest"); toggleChat(); });
   $("#ui-toggle").addEventListener("click", () => { if (document.body.classList.contains("forest-ui-hidden")) toggleChat(false); });
   window.addEventListener("forest-name-updated", () => renderSceneChrome());
   $("#chat-form").addEventListener("submit", (event) => {
@@ -3860,31 +4070,30 @@
     const input = $("#chat-input");
     const message = input.value.trim();
     if (!message) return;
-    const row = document.createElement("p");
-    const author = document.createElement("strong");
-    const copy = document.createElement("span");
-    author.textContent = state.avatar.name;
-    copy.textContent = message;
-    row.append(author, copy);
-    $("#chat-messages").append(row);
-    while ($("#chat-messages").children.length > 50) $("#chat-messages").firstElementChild.remove();
+    appendChatMessage(state.avatar.name, message);
     input.value = "";
-    $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
+    if (chatMode === "wisdom") askWisdomSpring(message);
+  });
+
+  $("#wisdom-spring-sign")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    openWisdomSpringChat();
   });
 
   $("#music-toggle").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
     musicEngine ||= new CozyForestMusic();
-    const enabled = event.currentTarget.getAttribute("aria-pressed") !== "true";
+    const enabled = button.getAttribute("aria-pressed") !== "true";
     try {
       if (enabled) await musicEngine.start($("#avatar-studio").open ? "avatar" : sceneMusicName()); else musicEngine.stop();
     } catch {
       setStatus("이 브라우저에서는 배경음악을 재생할 수 없습니다. 다른 기능은 계속 이용할 수 있어요.");
       return;
     }
-    event.currentTarget.setAttribute("aria-pressed", String(enabled));
-    event.currentTarget.setAttribute("aria-label", `BGM ${enabled ? "켜짐" : "꺼짐"}`);
-    event.currentTarget.title = enabled ? "BGM 끄기" : "BGM 켜기";
-    event.currentTarget.textContent = "BGM";
+    button.setAttribute("aria-pressed", String(enabled));
+    button.setAttribute("aria-label", `BGM ${enabled ? "켜짐" : "꺼짐"}`);
+    button.title = enabled ? "BGM 끄기" : "BGM 켜기";
+    button.textContent = "BGM";
     setStatus(enabled ? "숲 배경음악을 재생합니다." : "숲 배경음악을 멈췄습니다.");
   });
 

@@ -266,7 +266,7 @@ test('house-front framing keeps gathering feet at fixed heights away from pond w
     const { controller, scene, renders } = setup({ pets, reducedMotion });
     await controller.start({ requestId: `house-front-${reducedMotion}`, presets: input });
     const session = controller.session;
-    assert.equal(session.people.length, 6); assert.equal(session.animals.length, 9);
+    assert.equal(session.people.length, 6); assert.equal(session.animals.length, 13);
     // The source roof/doorstep rectangle must be inside the export, and every
     // person stands below the doorstep rather than inside the building art.
     assert.ok(memories.FRAME.x <= 149 && memories.FRAME.y <= 0);
@@ -370,11 +370,11 @@ test('photoshoot source actors are six clothed avatars, both rabbits, pets, four
   assert.equal(scene.memoryCapturing, true);
   const session = controller.session;
   assert.equal(session.people.length, 6);
-  assert.deepEqual(Array.from(session.animals, item => item.kind), ['bunbun', 'last-tick', 'pet', 'pet', 'cow']);
+  assert.deepEqual(Array.from(session.animals, item => item.kind), ['rabbit', 'rabbit', 'rabbit', 'rabbit', 'rabbit', 'rabbit', 'pet', 'pet', 'cow']);
   assert.deepEqual(Array.from(session.animals.filter(item => item.kind === 'pet'), item => item.column), [3, 6]);
   controller.update(session.stagedAt + 300);
   assert.ok(calls.some(call => call[2].moving && call[2].frame > 0), 'actual source walk frames, not a static avatar contact sheet');
-  const lastTick = session.animals.find(animal => animal.kind === 'last-tick');
+  const lastTick = session.animals.find(animal => animal.family === 'last-tick');
   assert.equal(lastTick.sprite.frame, animals.rabbitPose('last-tick', { action: 'hop_right', elapsedMs: 300 }).frame);
   assert.equal(session.animals.find(animal => animal.kind === 'cow').sprite.key, 'forest-cow-walk');
   const movingPets = session.animals.filter(animal => animal.kind === 'pet');
@@ -396,8 +396,8 @@ test('portrait monsters have no ground-shadow ellipses while all six avatar shad
   const session = controller.session;
   const avatarShadows = Array.from(session.people, person => person.shadow);
   const animalKinds = Array.from(session.animals, animal => animal.kind);
-  assert.ok(['bunbun', 'last-tick', 'pet', 'preset-pet', 'cow'].every(kind => animalKinds.includes(kind)));
-  assert.equal(session.animals.length, 9, 'all pets and the cow remain alongside both rabbits');
+  assert.ok(['rabbit', 'pet', 'preset-pet', 'cow'].every(kind => animalKinds.includes(kind)));
+  assert.equal(session.animals.length, 13, 'all pets and the cow remain alongside six rabbits');
   for (const elapsed of [0, 400, 1200, 1800, 3200]) {
     controller.update(session.stagedAt + elapsed);
     assert.deepEqual(Array.from(session.objects.filter(object => object.type === 'shadow')), avatarShadows,

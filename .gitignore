@@ -42,6 +42,12 @@ tmp/
 *.zip
 *.7z
 *.rar
+*.tar
+*.tar.gz
+
+# Local Codex worktree metadata and recovery artifacts
+.codex-worktrees/
+rollback-before-restore.patch
 
 # Model binaries
 models/**/*.joblib

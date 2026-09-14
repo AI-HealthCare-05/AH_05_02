@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 
 const source = readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
+const html = readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
 
 function section(start, end) {
   const begin = source.indexOf(start), finish = source.indexOf(end, begin);
@@ -13,7 +14,7 @@ function section(start, end) {
 }
 
 function setup({ phaserActive = true } = {}) {
-  const elements = new Map(), timers = new Map(), windowListeners = new Map(), events = [], keys = [];
+  const elements = new Map(), timers = new Map(), windowListeners = new Map(), events = [], keys = [], statuses = [];
   let nextTimer = 0, modal = null;
   const document = {
     activeElement: null,
@@ -22,8 +23,18 @@ function setup({ phaserActive = true } = {}) {
   };
   function element(tagName = 'DIV') {
     const listeners = new Map(), attributes = new Map();
+    const classNames = new Set();
     return {
       tagName, hidden: false, value: '', textContent: '', children: [], isContentEditable: false,
+      className: '',
+      classList: {
+        toggle(name, force) {
+          const enabled = force === undefined ? !classNames.has(name) : Boolean(force);
+          if (enabled) classNames.add(name); else classNames.delete(name);
+          return enabled;
+        },
+        contains: name => classNames.has(name),
+      },
       addEventListener(type, callback) { listeners.set(type, callback); },
       emit(type, values = {}) {
         const event = { type, target: this, defaultPrevented: false,
@@ -38,10 +49,14 @@ function setup({ phaserActive = true } = {}) {
       remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
       get firstElementChild() { return this.children[0]; },
       get scrollHeight() { return this.children.length * 20; },
+      set innerHTML(value) { this.children = []; this.textContent = value; },
+      get innerHTML() { return this.textContent; },
     };
   }
   for (const [id, tag] of [['chat-panel', 'SECTION'], ['chat-input', 'INPUT'], ['chat-form', 'FORM'],
-    ['chat-toggle', 'BUTTON'], ['chat-close', 'BUTTON'], ['ui-toggle', 'BUTTON'], ['chat-messages', 'DIV'], ['phaser-world', 'DIV']]) {
+    ['chat-toggle', 'BUTTON'], ['chat-close', 'BUTTON'], ['ui-toggle', 'BUTTON'], ['chat-messages', 'DIV'], ['phaser-world', 'DIV'],
+    ['chat-title', 'H2'], ['chat-help', 'SMALL'], ['wisdom-chat-guide', 'DIV'], ['wisdom-question-suggestions', 'DIV'],
+    ['wisdom-spring-sign', 'BUTTON']]) {
     elements.set(`#${id}`, element(tag));
   }
   const classes = new Set(), canvas = element('CANVAS');
@@ -58,14 +73,19 @@ function setup({ phaserActive = true } = {}) {
   };
   const context = vm.createContext({
     window, document, canvas, $: id => elements.get(id), state: { avatar: { name: '숲 친구' } },
-    renderSceneChrome() {},
+    renderSceneChrome() {}, setStatus: text => statuses.push(text),
+    chatMode: 'forest', wisdomIntroShown: false,
+    WISDOM_QUESTION_EXAMPLES: [
+      '식후 10분 걷기는 혈당 관리에 도움이 돼?',
+      '단 음료 대신 물을 마시면 어떤 점이 좋아?',
+    ],
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   });
   vm.runInContext(section('  let chatFocusTimer = 0;', '  async function toggleSit()') +
     section('  $("#chat-close").addEventListener', '  $("#music-toggle").addEventListener'), context);
   const get = id => elements.get(`#${id}`);
   return {
-    get, document, canvas, events, classes, element,
+    get, document, canvas, events, classes, statuses, element,
     setModal: value => { modal = value; },
     flushTimers() { const pending = [...timers.values()]; timers.clear(); pending.forEach(callback => callback()); },
     key(key, options = {}) {
@@ -184,6 +204,24 @@ test('Enter inside chat retains native form submission, renders plain text and k
   assert.equal(app.get('chat-messages').children.length, 50);
   assert.equal(app.get('chat-messages').children[0].children[1].textContent, 'message 2');
   assert.equal(app.get('chat-messages').scrollTop, app.get('chat-messages').scrollHeight);
+});
+
+test('wisdom spring sign opens Gandangi health chat with example questions and active input', () => {
+  const app = setup();
+  app.get('wisdom-spring-sign').emit('click');
+  app.flushTimers();
+  assert.equal(app.get('chat-panel').hidden, false);
+  assert.equal(app.get('chat-panel').classList.contains('wisdom-mode'), true);
+  assert.equal(app.get('chat-title').textContent, '지혜의 샘');
+  assert.equal(app.get('wisdom-chat-guide').hidden, false);
+  assert.match(html, /class="wisdom-chat-banner" src="\/static\/assets\/wisdom-spring-chat-banner-v1\.png/);
+  assert.equal(app.get('wisdom-question-suggestions').hidden, false);
+  assert.ok(app.get('wisdom-question-suggestions').children.length >= 2);
+  assert.equal(app.get('chat-input').maxLength, 160);
+  assert.equal(app.document.activeElement, app.get('chat-input'));
+  assert.equal(app.get('chat-messages').children[0].children[0].textContent, '간당이');
+  assert.match(app.get('chat-messages').children[0].children[1].textContent, /건강에 대한 건 뭐든 물어봐/);
+  assert.equal(app.statuses.at(-1), '지혜의 샘에서 간당이가 건강 정보를 알려줄 준비를 했어요.');
 });
 
 test('hiding the overall HUD closes chat and releases input focus; restoring HUD does not reopen it', () => {

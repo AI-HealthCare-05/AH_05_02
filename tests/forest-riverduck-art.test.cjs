@@ -5,7 +5,7 @@ const path = require('node:path');
 const art = require('../src/frontend/forest-riverduck-art.js');
 const frontend = path.join(__dirname, '../src/frontend');
 
-test('six original transparent frames and CC0 provenance ship locally and in the offline pack', () => {
+test('six original riverduck pond frames and CC0 provenance ship locally and in the offline pack', () => {
   assert.equal(art.assets.length, 6);
   const worker = fs.readFileSync(path.join(frontend, 'forest-sw.js'), 'utf8');
   for (const asset of art.assets) {
@@ -17,7 +17,7 @@ test('six original transparent frames and CC0 provenance ship locally and in the
     assert.ok(worker.includes(path.basename(name, '.png')));
   }
   const source = fs.readFileSync(path.join(frontend, 'assets/animals/riverduck-v160/SOURCE.md'), 'utf8');
-  for (const text of ['CC0', 'Ulti', 'https://opengameart.org/content/character-spritesheet-duck', 'SHA-256']) assert.ok(source.includes(text));
+  for (const text of ['CC0', 'Ulti', 'https://opengameart.org/content/character-spritesheet-duck', '96 × 96']) assert.ok(source.includes(text));
 });
 
 test('idle, swimming and fleeing use actual source frames with stable contact and scale', () => {

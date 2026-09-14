@@ -137,7 +137,7 @@ async function widget({ forestView = true, plan = today(), authenticated = true,
   const root = element('div', { 'data-challenge-v2': '', ...(forestView ? { 'data-challenge-v2-view': 'forest' } : {}) }, parent);
   parent.children.push(root);
   const settingsButton = element('button', { id: 'forest-quest-settings', hidden: '' });
-  const windowHandlers = {}, requests = [], storage = new Map();
+  const windowHandlers = {}, requests = [], dispatchedEvents = [], storage = new Map();
   if (storedCompletions) storage.set('gandang.challenge-v2.mvp-completions.v1', JSON.stringify(storedCompletions));
   const document = {
     hidden: false, activeElement: null, documentElement: element('html'),
@@ -150,10 +150,12 @@ async function widget({ forestView = true, plan = today(), authenticated = true,
     [Symbol.iterator]() { return Object.entries(this.values)[Symbol.iterator](); }
     get(key) { return this.values[key]; }
   }
-  const window = { addEventListener: (type, handler) => { windowHandlers[type] = handler; }, dispatchEvent() {},
+  const window = { addEventListener: (type, handler) => { windowHandlers[type] = handler; }, dispatchEvent(event) { dispatchedEvents.push(event); windowHandlers[event.type]?.(event); },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } };
   vm.runInNewContext(source, {
-    document, window, location: { hash }, FormData: TestFormData, CustomEvent: class {}, Event: class {},
+    document, window, location: { hash }, FormData: TestFormData,
+    CustomEvent: class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } },
+    Event: class { constructor(type) { this.type = type; } },
     fetch: async (url, options = {}) => {
       requests.push({ url, options });
       if (requestHook) {
@@ -166,7 +168,7 @@ async function widget({ forestView = true, plan = today(), authenticated = true,
     },
   });
   await settled();
-  return { root, settingsButton, requests, windowHandlers, document, storage };
+  return { root, settingsButton, requests, windowHandlers, document, storage, dispatchedEvents };
 }
 
 test('only the forest opts into the compact challenge view', () => {
@@ -246,6 +248,68 @@ test('MVP certify immediately completes photo and measurement cards while preser
   assert.equal(saved['1:cycle-0:1'].note, '채소가 있는 점심을 먹었어요.');
 });
 
+test('confirmed personal water goal shows 200mL cups, persists taps, then certifies once', async () => {
+  const water = assignment(3);
+  water.goal.domain = 'routine';
+  water.goal.family_id = 'H02';
+  water.goal.proof_type = 'T3';
+  water.goal.goal_unit = 'cup';
+  water.goal.target_sessions = 1;
+  water.goal.per_session_quantity = 4;
+  water.goal.water_mission_version = 'cup-v1';
+  water.goal.water_goal_status = 'confirmed';
+  water.goal.water_cup_ml = 200;
+  water.goal.water_goal_cups = 4;
+  const { root, requests, storage, dispatchedEvents } = await widget({ plan: today({ items: [assignment(1), assignment(2), water] }) });
+  assert.match(visibleText(root), /200mL 컵 4개 · 0\/4/);
+  assert.equal(root.querySelector('[data-certify="3"]').disabled, true);
+  assert.equal(root.querySelectorAll('.v2-water-icon').length, 4);
+  assert.equal(root.querySelector('[data-water-cup="3"][data-cup-index="1"]').getAttribute('aria-label'), '물컵 1/4 체크하기');
+  for (const index of [1, 2, 3]) await root.listeners.click({ target: root.querySelector(`[data-water-cup="3"][data-cup-index="${index}"]`) });
+  assert.match(visibleText(root), /200mL 컵 4개 · 3\/4/);
+  assert.deepEqual(JSON.parse(JSON.stringify(dispatchedEvents.filter(event => event.type === 'forest-water-cup-progress').at(-1).detail)), {
+    assignmentId: 3,
+    completionKey: '1:cycle-0:3',
+    checked: 3,
+    total: 4,
+    cupMl: 200,
+    complete: false,
+  });
+  await root.listeners.click({ target: root.querySelector('[data-refresh]') });
+  assert.match(visibleText(root), /200mL 컵 4개 · 3\/4/);
+  await root.listeners.click({ target: root.querySelector('[data-water-cup="3"][data-cup-index="4"]') });
+  assert.equal(root.querySelector('[data-certify="3"]').disabled, false);
+  assert.equal(dispatchedEvents.filter(event => event.type === 'forest-water-cup-progress').at(-1).detail.complete, true);
+  const before = requests.length;
+  await root.listeners.click({ target: root.querySelector('[data-certify="3"]') });
+  const writes = requests.slice(before).filter(request => request.url.includes('/assignments/3/sessions/1'));
+  assert.equal(writes.length, 1);
+  assert.deepEqual(JSON.parse(writes[0].options.body), {
+    performed_at: JSON.parse(writes[0].options.body).performed_at,
+    done: true,
+    note: '직접 인증 완료',
+    quantity: 4,
+    intake_ml: 800,
+  });
+  await root.listeners.click({ target: root.querySelector('[data-certify="3"]') });
+  assert.equal(requests.slice(before).filter(request => request.url.includes('/assignments/3/sessions/1')).length, 1);
+  const saved = JSON.parse(storage.get('gandang.challenge-v2.water-cups.v1'));
+  assert.deepEqual(saved['1:cycle-0:3:cups'], [1, 2, 3, 4]);
+});
+
+test('unconfirmed water cards do not display numeric cup controls', async () => {
+  const water = assignment(3);
+  water.goal.domain = 'routine';
+  water.goal.family_id = 'H02';
+  water.goal.water_mission_version = 'cup-v1';
+  water.goal.water_goal_status = 'unconfirmed';
+  water.goal.water_cup_ml = 200;
+  water.goal.water_goal_cups = null;
+  const { root } = await widget({ plan: today({ items: [assignment(1), assignment(2), water] }) });
+  assert.equal(root.querySelectorAll('[data-water-cup]').length, 0);
+  assert.doesNotMatch(visibleText(root), /200mL 컵/);
+});
+
 test('a server-completed MVP quest keeps an editable optional note under details', async () => {
   const completed = assignment(1, { status: 'completed', completed_sessions: 1, sessions: [{ index: 1 }] });
   const initial = { '1:1': { assignmentId: 1, domain: 'activity', note: '처음 기록', completedAt: '2026-09-08T00:00:00.000Z' } };
@@ -308,13 +372,16 @@ test('photo uploads, saved sessions, safety and original sources survive compact
 });
 
 test('full MVP and first setup retain the complete preferences interface', async () => {
-  for (const options of [{ forestView: false }, { plan: today({ enrolled: false, items: [] }) }]) {
-    const { root } = await widget(options);
-    assert.ok(root.querySelector('[data-preferences]'));
-    assert.equal(root.querySelectorAll('.v2-quest-card').length, 0);
-    assert.match(root.textContent, /진단·처방/);
-    assert.match(root.textContent, /최대 7일/);
-  }
+  const full = await widget({ forestView: false });
+  assert.ok(full.root.querySelector('[data-preferences]'));
+  assert.equal(full.root.querySelectorAll('.v2-quest-card').length, 0);
+  assert.match(full.root.textContent, /진단·처방/);
+  assert.match(full.root.textContent, /최대 7일/);
+  const firstSetup = await widget({ plan: today({ enrolled: false, items: [] }) });
+  assert.ok(firstSetup.root.querySelector('[data-preferences]'));
+  assert.equal(firstSetup.root.querySelectorAll('.v2-quest-card').length, 0);
+  assert.doesNotMatch(firstSetup.root.textContent, /생활습관을 돌아보는 활동이에요/);
+  assert.match(firstSetup.root.textContent, /최대 7일/);
   const { root } = await widget({ forestView: false });
   assert.equal(root.querySelectorAll('.v2-card').length, 3);
 });
@@ -360,7 +427,7 @@ test('settings below all three quests toggle the existing form and retain unsave
   await root.listeners.click({ target: settingsButton });
   assert.equal(root.querySelector('[data-settings]').hidden, false);
   assert.equal(root.querySelector('[data-compact-settings]').hidden, false);
-  assert.match(visibleText(root), /진단·처방/);
+  assert.doesNotMatch(visibleText(root), /생활습관을 돌아보는 활동이에요/);
   assert.match(visibleText(root), /계정 당근/);
   assert.equal(settingsButton.getAttribute('aria-expanded'), 'true');
   assert.deepEqual(root.querySelectorAll('[data-quick-mode]').map(button => button.textContent.trim()), ['운동 위주', '식단 위주']);

@@ -18,6 +18,12 @@
 [data-challenge-v2] .v2-domain-badge[data-domain="routine"]{border-color:#91c8df;background:#e6f7ff;color:#17617b}
 [data-challenge-v2] .v2-domain-badge[data-domain="diet"]{border-color:#d7b778;background:#fff6dc;color:#795012}
 [data-challenge-v2] .v2-domain-badge[data-domain="activity"]{border-color:#e7a48e;background:#fff0e9;color:#863e27}
+[data-challenge-v2] .v2-water-cups{display:grid;grid-template-columns:repeat(auto-fit,minmax(50px,1fr));gap:8px;margin:10px 0 2px}
+[data-challenge-v2] .v2-water-cups button{display:grid;grid-template-rows:28px auto;place-items:center;gap:4px;min-width:0;min-height:64px;padding:7px 5px;border-color:#99cbdc;background:#f4fbff;line-height:1}
+[data-challenge-v2] .v2-water-cups .v2-water-icon{display:block;width:22px;height:22px;margin-top:3px;border-radius:50% 50% 50% 0;background:linear-gradient(135deg,#bff2ff,#5bbbd5);box-shadow:inset 3px 3px 0 #e9fbff;transform:rotate(-45deg);color:#2b7188}
+[data-challenge-v2] .v2-water-cups small{font-size:11px;line-height:1}
+[data-challenge-v2] .v2-water-cups button.is-checked{border-color:#438966;background:#edf8f1;color:#236342}
+[data-challenge-v2] .v2-water-cups button.is-checked .v2-water-icon{background:linear-gradient(180deg,#8fe6f7,#2f9fbd)}
 [data-challenge-v2] .v2-completed-note{display:grid;gap:6px;margin-top:10px;color:#36594a;font-size:13px;font-weight:800}
 [data-challenge-v2] .v2-completed-note textarea{min-height:86px;padding:10px;border:1px solid #b9d1c1;border-radius:10px;background:#fbfffc;color:#20382e;font:inherit;font-weight:500;resize:vertical}
 [data-challenge-v2][data-compact="true"]>#forest-quest-settings{margin:12px 0 8px;background:#fff;border-color:#a9c6b2}

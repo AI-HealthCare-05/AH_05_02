@@ -379,6 +379,19 @@ test('daily reward is a large shared-panel action that reuses the existing chest
   assert.doesNotMatch(v2Claim, /state\.carrots \+= 50/);
 });
 
+test('forest listens to personal water cup progress and styles cup controls in the right HUD', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
+  const game = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.js'), 'utf8');
+  const challenge = fs.readFileSync(path.join(__dirname, '../src/frontend/challenge-v2.js'), 'utf8');
+  assert.match(challenge, /forest-water-cup-progress/);
+  assert.match(game, /window\.addEventListener\("forest-water-cup-progress"/);
+  assert.match(game, /playSfx\("water"/);
+  assert.match(game, /pose: "harvest", duration: 900/);
+  assert.match(game, /물컵 \$\{checked\}\/\$\{total\}개를 체크했어요/);
+  assert.match(css, /\.right-hud \[data-challenge-v2\] \.v2-water-cups\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.right-hud \[data-challenge-v2\] \.v2-water-cups \.v2-water-icon\{[^}]*width:19px;[^}]*height:19px/);
+});
+
 test('native Enter and Space activation do not double-toggle a focused button', () => {
   const app = createHud(); app.elements['ui-toggle'].focus();
   for (const key of ['Enter', ' ']) {

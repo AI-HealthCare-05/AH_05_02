@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class V2Preferences(BaseModel):
@@ -23,6 +23,16 @@ class V2Preferences(BaseModel):
     diet_family: Literal["random", "D01", "D02", "D03"] = "random"
     activity_family: Literal["random", "A01", "A02"] = "random"
     routine_family: Literal["random", "H01", "H02", "R01"] = "random"
+    # A cup is only a UI unit.  It never supplies a medical target by itself.
+    water_goal_status: Literal["unconfirmed", "confirmed", "clinician_review_required"] = "unconfirmed"
+    personal_drink_goal_ml: int | None = Field(default=None, ge=200, le=4000)
+    water_cup_ml: int = Field(default=200, ge=100, le=500)
+
+    @model_validator(mode="after")
+    def confirmed_water_goal_requires_amount(self):
+        if self.water_goal_status == "confirmed" and self.personal_drink_goal_ml is None:
+            raise ValueError("개인 음료 목표를 확인한 경우 하루 목표량(mL)을 함께 입력해 주세요.")
+        return self
 
 
 class V2SessionInput(BaseModel):

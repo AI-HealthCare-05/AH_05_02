@@ -178,6 +178,17 @@ test('both exact species notices are visible for four seconds after saving, then
   }
 });
 
+test('dancing mouse warning reuses the visible notice without changing carrots', () => {
+  const { listeners, state, toast, scheduled, advance } = setup();
+  listeners.get('forest-rat-carrot-warning')({ detail: { eventId: 91 } });
+  assert.equal(state.carrots, 30);
+  assert.equal(toast.textContent, '쥐가 당근을 노리고 있습니다.');
+  assert.equal(toast.hidden, false);
+  assert.equal(scheduled.at(-1).delay, 4000);
+  advance(4000);
+  assert.equal(toast.hidden, true);
+});
+
 test('a new catch replaces the visible notice and cancels the previous hide timeout', async () => {
   const { listeners, toast, timers, scheduled, cancelled, advance } = setup();
   const caught = listeners.get('forest-rat-caught');

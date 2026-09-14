@@ -51,12 +51,16 @@
     code, Object.freeze(animatedBounds[row].map(([left, top, right, bottom]) => Object.freeze([left, top, right - left, bottom - top]))),
   ])));
   const animatedAtlasCache = new WeakMap();
+  const preservedOriginals = new Set(["campfire", "animated_fountain", "lantern", "duck_float", "firefly_lantern", "garden_pinwheel"]);
+  const assetVersionOverrides = Object.freeze({});
   const INDIVIDUAL_ASSETS = Object.freeze([...STORAGE_CODES, ...ANIMATED_CODES].map(code => Object.freeze({
     code, key: `furniture-${code}`,
-    // Restore the complete pre-carrot-house furniture set. Campfire and
-    // fountain already used these exact protected originals; cow and
-    // riverduck are loaded from their dedicated manifests elsewhere.
-    url: `/static/assets/furniture-v153/${code}.png?v=20260907-1`,
+    // v160 is split from the same forest atlas as the background-matched
+    // furniture, with stray neighboring fragments removed. The campfire and
+    // fountain keep their protected originals.
+    url: assetVersionOverrides[code] || (preservedOriginals.has(code)
+      ? `/static/assets/furniture-v153/${code}.png?v=20260907-1`
+      : `/static/assets/furniture-v160/${code}.png?v=20260910-1`),
     kind: Object.hasOwn(STORAGE_INDEX, code) ? "storage" : "animated",
   })));
   const individualAtlasCache = new WeakMap(), hybridStorageCache = new WeakMap(), alphaBoundsCache = new WeakMap(), individualImageSources = new WeakMap();
@@ -162,7 +166,6 @@
     if (!legacySource) return createIndividualAtlas(images, "storage");
     const cached = hybridStorageCache.get(legacySource);
     if (cached?.images === images) return cached.canvas;
-    const legacy = createLegacyStorageAtlas(legacySource);
     const canvas = document.createElement("canvas");
     canvas.width = STORAGE_COLUMNS * STORAGE_TILE_SIZE;
     canvas.height = STORAGE_ROWS * STORAGE_TILE_SIZE;
@@ -171,14 +174,7 @@
     STORAGE_CODES.forEach((code, index) => {
       const x = (index % STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
       const y = Math.floor(index / STORAGE_COLUMNS) * STORAGE_TILE_SIZE;
-      if (code === "campfire") {
-        // The current animated campfire is intentionally retained.
-        context.drawImage(createIndividualTile(images[code]), x, y);
-      } else {
-        // Every ordinary furniture item comes from the pre-carrot-house v4
-        // atlas, not from the later individually generated illustration pack.
-        context.drawImage(legacy, x, y, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE, x, y, STORAGE_TILE_SIZE, STORAGE_TILE_SIZE);
-      }
+      context.drawImage(createIndividualTile(images[code]), x, y);
     });
     hybridStorageCache.set(legacySource, { images, canvas });
     return canvas;

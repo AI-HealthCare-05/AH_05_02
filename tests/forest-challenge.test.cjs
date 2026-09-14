@@ -17,7 +17,10 @@ function setup(plan) {
   }));
   const nodes = Object.fromEntries(['challenge-flow-back', 'challenge-flow-next', 'challenge-flow-generate',
     'challenge-flow-error', 'challenge-flow-title', 'quest-generation-status', 'quest-list'].map(id => [`#${id}`, {}]));
-  nodes['#custom-quest-picker'] = { querySelectorAll: () => custom };
+  nodes['#custom-quest-picker'] = {
+    querySelectorAll: () => custom,
+    querySelector: selector => selector === 'input[value="water"]' ? custom.find(input => input.value === 'water') : null,
+  };
   nodes['#challenge-flow-form'] = { reset() {}, querySelectorAll: () => styles };
   nodes['#challenge-flow-dialog'] = { open: false, showModal() { this.open = true; } };
   const state = { challengePlan: plan, quests: { meal: true }, carrots: 50, rewardClaimed: true };
@@ -25,7 +28,7 @@ function setup(plan) {
     state, $: selector => nodes[selector],
     document: { querySelectorAll: selector => selector === '[data-flow-step]' ? sections : [] },
     activeQuestIds: () => state.challengePlan.questIds,
-    questPlans: { exercise: ['walk', 'stretch', 'strength'], diet: ['meal', 'vegetable', 'water'] },
+    questPlans: { exercise: ['walk', 'stretch', 'water'], diet: ['meal', 'vegetable', 'water'], balanced: ['walk', 'meal', 'water'] },
     window: { matchMedia: () => ({ matches: true }) },
     animationDelay: async () => {}, activateInspectorPanel() {}, syncActiveQuests() {},
     renderQuests() {}, renderGroup() {}, persist: async () => {},
@@ -60,7 +63,7 @@ test('confirmed changes replace active quests without erasing completed records 
   const { context, state } = setup({ onboarded: true, style: 'diet', questIds: ['meal', 'vegetable', 'water'] });
   await context.generateChallengeQuests('exercise');
   assert.equal(state.challengePlan.style, 'exercise');
-  assert.deepEqual(Array.from(state.challengePlan.questIds), ['walk', 'stretch', 'strength']);
+  assert.deepEqual(Array.from(state.challengePlan.questIds), ['walk', 'stretch', 'water']);
   assert.equal(state.quests.meal, true);
   assert.equal(state.quests.walk, false);
   assert.equal(state.carrots, 50);

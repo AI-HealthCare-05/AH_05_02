@@ -24,6 +24,16 @@
     return { width: Math.round(cssWidth * density), height: Math.round(cssHeight * density), density };
   }
   const AVATAR_RENDER_SCALE = 0.43;
+  const HOME_RECORD_PLAYER = Object.freeze({ x: 630, y: 188 });
+  const HOME_LIGHT_SOURCES = Object.freeze([
+    { x: 145, y: 70, radius: 124, type: "light" },
+    { x: 674, y: 144, radius: 152, type: "light" },
+    { x: 156, y: 394, radius: 128, type: "light" },
+  ]);
+  const WORLD_FIXED_LANTERNS = Object.freeze([
+    { id: "house_back", x: 192, y: 82, radius: 98, type: "light" },
+    { id: "garden", x: 608, y: 342, radius: 112, type: "light" },
+  ]);
   const directionRows = { down: 0, up: 1, left: 2, right: 3 };
   const encounterVectors = {
     left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1],
@@ -108,6 +118,8 @@
       this.petAttackRemainingMs = 0;
       this.petIdleMs = 0;
       this.ratActive = false;
+      this.ratDancing = false;
+      this.ratCarrotWarningAt = 0;
       this.ratNextSpawnAt = 0;
       this.ratDespawnAt = 0;
       this.ratTurnAt = 0;
@@ -139,14 +151,14 @@
       this.ratAttackPinned = false;
       this.ratAttackPressedUntil = 0;
       this.ratAttackVisualState = "";
+      this.homeLightOn = Boolean(storedState().homeLightOn);
+      this.worldLanterns = { ...(storedState().worldLanterns || {}) };
       this.homeRecordPlaying = Boolean(storedState().homeRecordPlaying);
     }
 
     preload() {
-      this.load.image("world-bg", "/static/assets/carrot-forest-world-v6.png?v=20260907-1");
-      this.load.image("home-bg", "/static/assets/carrot-forest-home-v3.png?v=20260907-1");
-      this.load.image("home-record-player", "/static/assets/home-record-player-v159.png?v=20260908-1");
-      this.load.image("forest-memory-camera", "/static/assets/forest-memory-camera-v159.png?v=20260908-1");
+      this.load.image("world-bg", "/static/assets/carrot-forest-world-v9.png?v=20260910-1");
+      this.load.image("home-bg", "/static/assets/carrot-forest-home-v5.png?v=20260910-3");
       this.load.image(window.ForestGarden.assets.background.key, window.ForestGarden.assets.background.url);
       this.load.image(window.ForestGarden.assets.carrot.key, window.ForestGarden.assets.carrot.url);
       this.load.spritesheet("lpc-pets", "/static/assets/carrot-forest-lpc-pets-v1.png?v=20260831-1", { frameWidth: 32, frameHeight: 32 });
@@ -166,7 +178,7 @@
       (window.ForestAnimals.rabbitAssets || []).forEach(asset => this.load.spritesheet(asset.key, asset.url, {
         frameWidth: asset.frameWidth, frameHeight: asset.frameHeight,
       }));
-      this.load.image("animated-objects-source", "/static/assets/carrot-forest-animated-objects-v2.png?v=20260907-1");
+      this.load.image("animated-objects-source", "/static/assets/carrot-forest-animated-objects-v3.png?v=20260910-1");
       this.load.image("storage-objects-source", "/static/assets/carrot-forest-storage-atlas-v4.png?v=20260907-1");
       window.ForestObjects.INDIVIDUAL_ASSETS.forEach(asset => this.load.image(asset.key, asset.url));
       this.load.image("campfire-base-source", "/static/assets/furniture-v153/campfire.png?v=20260907-1");
@@ -421,44 +433,29 @@
     }
 
     createHomeRecordPlayer() {
-      const x = 452;
-      const y = 320;
-      // v159 replaces home-record-player-cottage-v2.png; alpha-trim and uniform
-      // fit keep the generated square canvas from squashing the furniture.
-      const furniture = this.add.image(0, 0, "home-record-player").setOrigin(.5, 1);
-      if (window.ForestMemories) {
-        furniture.setTexture(window.ForestMemories.trimmedTexture(this, "home-record-player"));
-        window.ForestMemories.fitImage(furniture, 76, 108);
-      } else furniture.setDisplaySize(76, 108);
-      const note = this.add.text(33, -112, "♪", {
+      const { x, y } = HOME_RECORD_PLAYER;
+      const note = this.add.text(28, -58, "♪", {
         resolution: TEXT_RESOLUTION,
         fontFamily: "Pretendard, Noto Sans KR, sans-serif", fontSize: "14px", fontStyle: "bold", color: "#f6d795", stroke: "#775332", strokeThickness: 2,
       }).setOrigin(.5).setVisible(false);
-      this.recordPlayerActor = this.add.container(x, y, [furniture, note])
-        .setDepth(y - 2).setVisible(false);
+      this.recordPlayerActor = this.add.container(x, y, [note]).setDepth(y + 2).setVisible(true);
       this.recordPlayerNote = note;
       this.syncHomeRecordPlayer(this.homeRecordPlaying);
     }
 
     createMemoryCamera() {
-      const memories = window.ForestMemories;
-      if (!memories || !this.textures.exists("forest-memory-camera")) return;
-      const { x, y, width, height } = memories.CAMERA;
-      const key = memories.trimmedTexture(this, "forest-memory-camera");
-      const body = memories.fitImage(this.add.image(0, 0, key).setOrigin(.5, 1), width, height);
-      this.memoryCameraActor = this.add.container(x, y, [body]).setDepth(y - 2);
-      body.setInteractive({ useHandCursor: true }).on("pointerdown", (pointer, localX, localY, event) => {
-        event?.stopPropagation?.();
-        this.lastMemoryPointerAt = performance.now();
-        if (this.sceneName !== "world" || this.memoryCapturing || this.placementActive) return;
-        this.cancelPointerMovement();
-        window.dispatchEvent(new CustomEvent("forest-memory-request"));
-      });
+      this.memoryCameraActor = null;
     }
 
     syncHomeRecordPlayer(playing) {
       this.homeRecordPlaying = Boolean(playing);
       this.recordPlayerNote?.setVisible(this.sceneName === "home" && this.homeRecordPlaying);
+    }
+
+    syncHomeLight(on) {
+      this.homeLightOn = Boolean(on);
+      this.lastNightMaskKey = null;
+      this.updateWorldAtmosphere(this.time?.now ?? performance.now());
     }
 
     splitPinwheelPixels(pixels) {
@@ -878,11 +875,16 @@
     }
 
     localLightSources() {
-      return (this.placedObjectActors || []).flatMap(actor => {
+      if (this.sceneName === "home") return this.homeLightOn ? HOME_LIGHT_SOURCES : [];
+      const fixedLights = this.sceneName === "world"
+        ? WORLD_FIXED_LANTERNS.filter(source => this.worldLanterns?.[source.id])
+          .map(source => ({ x: source.x, y: source.y, radius: source.radius, type: "light" }))
+        : [];
+      return fixedLights.concat((this.placedObjectActors || []).flatMap(actor => {
         const item = actor.getData?.("item"), type = interactiveObjectTypes[item?.code];
         if (!item?.active || !["fire", "light"].includes(type)) return [];
         return [{ x: item.x, y: item.y - (type === "fire" ? 24 : 30), radius: type === "fire" ? 102 : 124, type }];
-      });
+      }));
     }
 
     refreshNightMask(lights) {
@@ -911,6 +913,7 @@
     updateWorldAtmosphere(time) {
       if (!this.nightOverlay || !this.lightFx || !this.waterRippleFx) return;
       const worldVisible = this.sceneName === "world";
+      const lightableScene = worldVisible || this.sceneName === "home";
       const targetStrength = this.atmosphereEnabled ? this.ambientStrengthForHour(this.currentLocalHour()) : 0;
       const elapsed = Math.max(0, Math.min(100, time - (this.lightingFrameAt ?? time)));
       this.lightingFrameAt = time;
@@ -919,12 +922,20 @@
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.nightStrength += (targetStrength - this.nightStrength) * (reducedMotion ? 1 : 1 - Math.exp(-elapsed / 850));
       if (Math.abs(targetStrength - this.nightStrength) < .001) this.nightStrength = targetStrength;
-      this.nightOverlay.setVisible(worldVisible && this.nightStrength > 0).setAlpha(this.nightStrength);
+      this.nightOverlay.setVisible(lightableScene && this.nightStrength > 0).setAlpha(this.nightStrength);
       this.waterRippleFx.clear().setVisible(worldVisible);
-      this.lightFx.clear().setVisible(worldVisible);
-      if (!worldVisible) return;
+      this.lightFx.clear().setVisible(lightableScene);
+      if (!lightableScene) return;
       const lights = this.localLightSources();
       this.refreshNightMask(lights);
+      if (!worldVisible) {
+        const illuminationStrength = Math.max(this.nightStrength, .28);
+        lights.forEach(({ x, y, radius }) => {
+          this.lightFx.fillStyle(0xfff0b6, .035 + illuminationStrength * .045).fillCircle(x, y, radius * .42);
+          this.lightFx.fillStyle(0xfff7cf, .045 + illuminationStrength * .075).fillCircle(x, y, radius * .24);
+        });
+        return;
+      }
 
       const ripplePhase = time / 780;
       // Keep every ripple inside the irregular pond shoreline. In particular,
@@ -1019,6 +1030,12 @@
         if (Array.isArray(detail.placed)) this.syncPlacedObjects(detail.placed);
         if (detail.rat?.species) this.setRatSpecies(detail.rat.species, detail.rat.variant);
         if (detail.rat?.action) this.setRabbitAction(detail.rat.action, this.time?.now ?? performance.now());
+        if (typeof detail.homeLightOn === "boolean") this.syncHomeLight(detail.homeLightOn);
+        if (detail.worldLanterns && typeof detail.worldLanterns === "object") {
+          this.worldLanterns = { ...detail.worldLanterns };
+          this.lastNightMaskKey = null;
+          this.updateWorldAtmosphere(this.time?.now ?? performance.now());
+        }
         if (typeof detail.homeRecordPlaying === "boolean") this.syncHomeRecordPlayer(detail.homeRecordPlaying);
       };
       window.addEventListener("forest-avatar-updated", this.onAvatar);
@@ -1558,6 +1575,8 @@
       const [x, y] = Phaser.Utils.Array.GetRandom(candidates.length ? candidates : spawnPoints);
       this.ratEventId += 1;
       this.ratActive = true;
+      this.ratDancing = false;
+      this.ratCarrotWarningAt = 0;
       this.rabbitDefeating = false;
       this.rabbitDefeatAction = null;
       this.ratDespawnAt = Infinity;
@@ -1688,6 +1707,8 @@
     dismissRat(time, caught = false) {
       if (!this.ratActive) return;
       this.ratActive = false;
+      this.ratDancing = false;
+      this.ratCarrotWarningAt = 0;
       this.ratAttackPinned = false;
       this.ratHovered = false;
       this.ratAttackHovered = false;
@@ -1791,14 +1812,23 @@
           this.ratNextSpawnAt = time + Phaser.Math.Between(2200, 4200);
         }
         else {
-          this.addMouseCrowdReplica(time);
-          this.spawnRat(time, "mouse");
+          this.ratDancing = true;
+          this.ratDirection = "down";
+          this.ratDespawnAt = Infinity;
+          this.ratAttackPinned = true;
+          this.ratHoverUntil = time + 1800;
+          window.dispatchEvent(new CustomEvent("forest-rat-carrot-warning", { detail: { eventId: this.ratEventId } }));
+          this.ratCarrotWarningAt = time + 5600;
         }
         return;
       }
       this.ratActor.setVisible(true);
+      if (this.ratDancing && time >= this.ratCarrotWarningAt) {
+        window.dispatchEvent(new CustomEvent("forest-rat-carrot-warning", { detail: { eventId: this.ratEventId } }));
+        this.ratCarrotWarningAt = time + 5600;
+      }
       const rabbitAction = this.advanceRabbitBehavior(time);
-      const wantsMove = !rabbitAction || rabbitAction.moves;
+      const wantsMove = !this.ratDancing && (!rabbitAction || rabbitAction.moves);
       const fixedDirection = Object.hasOwn(encounterVectors, rabbitAction?.direction) ? rabbitAction.direction : null;
       if (fixedDirection) this.ratDirection = fixedDirection;
       if (wantsMove && !fixedDirection && time >= this.ratTurnAt) {
@@ -1823,8 +1853,11 @@
           this.ratSprite.setTexture(frame.key, frame.frame).setOrigin(frame.originX, frame.originY);
         }
       } else {
-        const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
-        this.ratSprite.setFrame(directionRow * 3 + (moving ? Math.floor(time / 145) % 3 : 1));
+        if (this.ratDancing) this.ratSprite.setFrame([0, 1, 2, 1][Math.floor(time / 180) % 4]);
+        else {
+          const directionRow = { down: 0, left: 1, right: 2, up: 3 }[this.ratDirection] || 0;
+          this.ratSprite.setFrame(directionRow * 3 + (moving ? Math.floor(time / 145) % 3 : 1));
+        }
       }
     }
 

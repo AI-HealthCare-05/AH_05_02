@@ -3,7 +3,7 @@
   "use strict";
 
   const NICKNAMES = Object.freeze(["성실한 당근", "꾸준한 상균", "달빛의 빛샘", "숲속의 수인", "발명의 준혁", "해결의 세준"]);
-  const CAMERA = Object.freeze({ x: 694, y: 338, width: 52, height: 76 });
+  const CAMERA = Object.freeze({ x: 666, y: 360, width: 70, height: 74 });
   // The real carrot house occupies x149..286, y0..240 in the 768x512 map.
   // Keep its leafy roof and doorstep visible above the group; never replace
   // the field with a generated backdrop or stretch the original background.
@@ -227,14 +227,18 @@
         return { ...preset, x, y, startX: x + (index < 3 ? -36 : 36), startY: y, sprite, shadow, label, texture };
       });
       const animalDefinitions = [
-        { kind: "bunbun", x: 87, y: 302, key: "forest-rabbit-bunbun", scale: 1.4 },
-        { kind: "last-tick", x: 152, y: 301, key: "forest-rabbit-last-tick", scale: 1.4 },
+        { kind: "rabbit", family: "bunbun", x: 77, y: 302, key: "forest-rabbit-bunbun", scale: 1.28 },
+        { kind: "rabbit", family: "last-tick", x: 145, y: 301, key: "forest-rabbit-last-tick", scale: 1.28 },
+        { kind: "rabbit", family: "bunbun", x: 220, y: 318, key: "forest-rabbit-bunbun-cream", scale: 1.1 },
+        { kind: "rabbit", family: "bunbun", x: 458, y: 306, key: "forest-rabbit-bunbun-brown", scale: 1.08 },
+        { kind: "rabbit", family: "last-tick", x: 548, y: 304, key: "forest-rabbit-last-tick-white", scale: 1.08 },
+        { kind: "rabbit", family: "last-tick", x: 587, y: 332, key: "forest-rabbit-last-tick-brown", scale: 1.06 },
         { kind: "pet", column: 3, x: 294, y: 336, key: "lpc-pets", scale: 1.2 },
         { kind: "pet", column: 6, x: 353, y: 338, key: "lpc-pets", scale: 1.2 },
         { kind: "cow", x: 500, y: 330, key: "forest-cow-eat", scale: 1.12 },
       ];
       session.animals = animalDefinitions.map((animal) => {
-        const approachesFromLeft = animal.kind === "bunbun" || animal.kind === "last-tick";
+        const approachesFromLeft = animal.kind === "rabbit";
         const staged = { ...animal, startX: animal.x + (approachesFromLeft ? -22 : 25), startY: animal.y,
           sprite: add(scene.add.sprite(animal.x, animal.y, animal.key, 0).setOrigin(.5, 1).setScale(animal.scale).setDepth(animal.y)),
         };
@@ -345,11 +349,13 @@
           sprite.setTexture("lpc-pets", fallbackFrame).setOrigin(.5, 1).setScale(1.2).setFlipX(false);
           animal.overlay.setVisible(false);
         }
-      } else if (animal.kind === "bunbun" || animal.kind === "last-tick") {
-        const action = animal.kind === "bunbun" ? (moving ? "jump_forward" : "idle") : (moving ? `hop_${travelDirection}` : "ear_flick_1");
-        const clip = animals.rabbitAction(animal.kind, action);
-        const pose = animals.rabbitPose(animal.kind, { action, direction: moving ? travelDirection : animal.kind === "bunbun" ? "right" : "down", elapsedMs: elapsed % clip.durationMs, reducedMotion });
+      } else if (animal.kind === "rabbit") {
+        const family = animal.family || "bunbun";
+        const action = family === "bunbun" ? (moving ? "jump_forward" : "idle") : (moving ? `hop_${travelDirection}` : "ear_flick_1");
+        const clip = animals.rabbitAction(family, action);
+        const pose = animals.rabbitPose(family, { action, direction: moving ? travelDirection : family === "bunbun" ? "right" : "down", elapsedMs: elapsed % clip.durationMs, reducedMotion });
         sprite.setTexture(pose.key, pose.frame).setOrigin(pose.originX, pose.originY).setScale(pose.scale).setFlipX(Boolean(pose.flipX));
+        if (this.scene.textures.exists(animal.key)) sprite.setTexture(animal.key, pose.frame).setScale(animal.scale);
       } else if (animal.kind === "cow") {
         const pose = animals.cowFrame(moving ? -1 : elapsed % animals.cowReactionDurationMs, { direction: moving ? travelDirection : "left", reducedMotion });
         const row = travelDirection === "left" ? 1 : 3;

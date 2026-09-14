@@ -112,7 +112,8 @@ test('actual displaced duck clicks flee without opening pond UI or generic objec
   assert.equal(test.interactions.length, 0); assert.equal(test.events.length, 0);
   assert.equal(first.x, 112); assert.equal(first.y, 398); assert.equal(first.active, true);
   await env.handleWorldPointer(260, 450);
-  assert.deepEqual(test.interactions, ['pond'], 'open water still preserves the existing pond interaction');
+  assert.deepEqual(test.interactions, [], 'open water no longer opens the removed pond interaction');
+  assert.deepEqual(test.events.map(event => event.type), ['forest-move-to']);
 });
 
 test('a defensive placed-object event consumes duck clicks in either renderer without persistence', async () => {

@@ -43,7 +43,7 @@ test('Phaser R ignores auto-repeat and dispatches the same toggle as the button'
 });
 
 test('button-mode running drives actual Phaser distance, pose and footsteps without held R', () => {
-  const update = phaser.slice(phaser.indexOf('    update(time, delta) {'), phaser.indexOf('    spawnRat(time) {'));
+  const update = phaser.slice(phaser.indexOf('    update(time, delta) {'), phaser.indexOf('    addMouseCrowdReplica(time) {'));
   const context = vm.createContext({
     window: { carrotForestRunning: false, dispatchEvent: event => sounds.push(event.detail.name) },
     document: { activeElement: { tagName: 'BUTTON' } },

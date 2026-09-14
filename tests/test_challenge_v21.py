@@ -128,7 +128,10 @@ async def test_joint_constraints_and_modes(mode, expected):
 
 
 async def test_equally_ranked_catalog_choices_vary_by_day_but_stay_stable_within_day():
-    daily = [tuple(x["code"] for x in select_plan(full_pref(), ordinal, review_available=True)["items"]) for ordinal in range(1, 15)]
+    daily = [
+        tuple(x["code"] for x in select_plan(full_pref(), ordinal, review_available=True)["items"])
+        for ordinal in range(1, 15)
+    ]
     assert len(set(daily)) > 1
     assert select_plan(full_pref(), 8, review_available=True) == select_plan(full_pref(), 8, review_available=True)
 
@@ -138,8 +141,16 @@ async def test_custom_family_choices_are_honored_across_all_three_domains():
         full_pref(diet_family="D02", activity_family="A02", routine_family="R01"), 1, review_available=True
     )
     assert {item["domain"]: item["family_id"] for item in plan["items"]} == {
-        "diet": "D02", "activity": "A02", "routine": "R01"
+        "diet": "D02",
+        "activity": "A02",
+        "routine": "H02",
     }
+
+
+async def test_daily_plan_always_includes_water_challenge_when_available():
+    for mode in ["balanced", "activity_focus", "diet_focus"]:
+        plan = select_plan(full_pref(mode=mode, routine_family="R01"), 3, review_available=True)
+        assert any(item["family_id"] == "H02" for item in plan["items"])
 
 
 async def test_drink_nonconsumer_same_difficulty_substitute():
@@ -182,13 +193,24 @@ async def test_today_stable_and_old_wallet_preserved(db):
 
 async def test_today_migrates_old_duplicate_domains_without_deleting_history(db):
     user = await User.create(
-        email="v2-domain-migration@example.com", hashed_password="not-a-login", gender="FEMALE", birthday=date(1970, 1, 1)
+        email="v2-domain-migration@example.com",
+        hashed_password="not-a-login",
+        gender="FEMALE",
+        birthday=date(1970, 1, 1),
     )
     await Consent.create(user_id=user.id, version="test")
     await EligibilityCheck.create(
-        user_id=user.id, age=56, service_eligible=True, target_segment="test", model_eligible=True,
-        next_action="continue", model_key="test", model_version="test", feature_schema_version="test",
-        threshold_version="test", safety_copy_version="test",
+        user_id=user.id,
+        age=56,
+        service_eligible=True,
+        target_segment="test",
+        model_eligible=True,
+        next_action="continue",
+        model_key="test",
+        model_version="test",
+        feature_schema_version="test",
+        threshold_version="test",
+        safety_copy_version="test",
     )
     await svc.enroll(user, full_pref())
     day = await svc.Day.create(user_id=user.id, assigned_date=NOW.date(), eligibility_snapshot={}, policy_version="2.1")
@@ -231,6 +253,37 @@ async def test_zero_hydration_intervals_no_volume_bonus_idempotent(db):
     assert (await ForestAvatar.get(user_id=db.id)).carrot_balance == 160
     with pytest.raises(HTTPException):
         await svc.record_session(db, item.id, 2, log(at=NOW.replace(hour=15), intake_ml=2000))
+
+
+async def test_confirmed_personal_water_goal_uses_one_cup_check_and_idempotent_reward(db):
+    pref = full_pref(routine_family="H02", water_goal_status="confirmed", personal_drink_goal_ml=750)
+    plan = select_plan(pref, 1, review_available=True)
+    water = next(item for item in plan["items"] if item["family_id"] == "H02")
+    assert water["goal_unit"] == "cup"
+    assert water["water_cup_ml"] == 200
+    assert water["water_goal_cups"] == 4
+    assert water["target_sessions"] == 1
+
+    await svc.enroll(db, pref)
+    day = await svc.Day.create(user_id=db.id, assigned_date=NOW.date(), eligibility_snapshot={})
+    item = await svc.Assignment.create(day_id=day.id, slot=1, goal=water)
+    with pytest.raises(HTTPException):
+        await svc.record_session(db, item.id, 1, log(quantity=3, intake_ml=600))
+    result = await svc.record_session(db, item.id, 1, log(quantity=4, intake_ml=800))
+    await asyncio.gather(*(svc.record_session(db, item.id, 1, log(quantity=4, intake_ml=800)) for _ in range(3)))
+    assert result["items"][0]["completed_sessions"] == 1
+    assert result["items"][0]["intake_ml"] == 800
+    assert await svc.Reward.all().count() == 2
+
+
+async def test_unconfirmed_water_goal_does_not_publish_numeric_cups():
+    plan = select_plan(full_pref(routine_family="H02"), 1, review_available=True)
+    water = next(item for item in plan["items"] if item["family_id"] == "H02")
+    assert water["water_goal_status"] == "unconfirmed"
+    assert water["water_goal_cups"] is None
+    assert water["goal_unit"] == "record"
+    with pytest.raises(ValueError):
+        full_pref(water_goal_status="confirmed", personal_drink_goal_ml=None)
 
 
 async def test_t1_pending_manual_late_review_and_single_reward(db, monkeypatch):

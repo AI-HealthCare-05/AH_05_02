@@ -319,14 +319,14 @@ test('photo UI is nonmodal, concise, has no calligraphy overlay, and keeps the c
   assert.doesNotMatch(memoryCode, /showModal\(|localStorage|sessionStorage|fetch\(|adapter\.save|innerHTML/);
 });
 
-test('2D LP fallback alpha-fits the new whole image without changing its aspect ratio or music catalog', () => {
-  assert.match(source, /homeRecordPlayerImage\.src = "\/static\/assets\/home-record-player-v159\.png/);
-  assert.match(source, /homeRecordPlayerBounds = window\.ForestObjects\.alphaBounds/);
+test('2D LP fallback uses the room-integrated record player with only a playing cue', () => {
+  assert.match(source, /carrot-forest-home-v5\.png/);
+  assert.doesNotMatch(source, /homeRecordPlayerImage|homeRecordPlayerBounds|home-record-player-v160/);
   const block = source.slice(source.indexOf('  function drawHomeRecordPlayer()'), source.indexOf('  function drawPlacedObject('));
-  const draws = [], image = { complete: true, naturalWidth: 1254, naturalHeight: 1254 };
-  const context = vm.createContext({ homeRecordPlayerImage: image, homeRecordPlayerBounds: { x: 80, y: 100, width: 1000, height: 500 }, state: { homeRecordPlaying: false }, context: { drawImage: (...args) => draws.push(args) } });
+  const fills = [];
+  const context = vm.createContext({ HOME_RECORD_PLAYER: { x: 630, y: 188 }, state: { homeRecordPlaying: true }, context: { save() {}, restore() {}, set fillStyle(value) {}, set font(value) {}, fillText: (...args) => fills.push(args) } });
   vm.runInContext(block, context); context.drawHomeRecordPlayer();
-  assert.deepEqual(draws[0], [image, 80, 100, 1000, 500, 414, 282, 76, 38]);
+  assert.deepEqual(fills[0], ["♪", 658, 130]);
   assert.match(source, /home: \{ name: "우리 집", audioKey: "homeRecordHome" \}/);
   assert.match(source, /forestFairy: \{ name: "숲 속의 요정", audioKey: "homeRecordForestFairy" \}/);
 });

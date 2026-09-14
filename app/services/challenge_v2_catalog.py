@@ -3,6 +3,7 @@
 import copy
 import itertools
 import json
+import math
 import random
 from pathlib import Path
 
@@ -118,6 +119,46 @@ def mix_valid(items):
     )
 
 
+def attach_water_cup_goal(items: list[dict], pref: V2Preferences) -> list[dict]:
+    """Attach a self-attested cup UI contract without creating a medical target.
+
+    H02 remains the existing hydration-record family.  A numeric cup target is
+    available only when the user has already confirmed an individual drinking
+    plan; otherwise the card stays visible but its numeric completion control
+    is blocked by the client and service.
+    """
+    for item in items:
+        if item["family_id"] != "H02":
+            continue
+        item["water_mission_version"] = "cup-v1"
+        item["water_goal_status"] = pref.water_goal_status
+        item["water_cup_ml"] = pref.water_cup_ml
+        item["personal_drink_goal_ml"] = pref.personal_drink_goal_ml
+        if pref.water_goal_status == "confirmed" and pref.personal_drink_goal_ml:
+            cups = math.ceil(pref.personal_drink_goal_ml / pref.water_cup_ml)
+            item.update(
+                title="개인 음료 계획 물컵 체크",
+                goal_unit="cup",
+                target_sessions=1,
+                per_session_quantity=cups,
+                water_goal_cups=cups,
+                special_rule=(
+                    "Personal-plan cup check only; fill each cup once, no catch-up or extra reward. "
+                    "This is not a diabetes treatment or a universal water target."
+                ),
+            )
+        else:
+            item.update(
+                title="개인 수분 계획 확인",
+                goal_unit="record",
+                target_sessions=1,
+                per_session_quantity=1,
+                water_goal_cups=None,
+                special_rule="Numeric cup completion is blocked until an individual drinking plan is confirmed.",
+            )
+    return items
+
+
 def exceptions_for(items, pref, review_available):
     reasons = []
     if not review_available:
@@ -154,7 +195,7 @@ def select_plan(pref: V2Preferences, day_ordinal: int, recent=None, review_avail
     preferred_family = {
         "diet": pref.diet_family,
         "activity": pref.activity_family,
-        "routine": pref.routine_family,
+        "routine": "H02",
     }
     # Enumerate complete combinations before ranking; no top-three approximation.
     choices = [
@@ -181,8 +222,12 @@ def select_plan(pref: V2Preferences, day_ordinal: int, recent=None, review_avail
         )
 
     balanced = [combo for combo in choices if {x["domain"] for x in combo} == set(desired)]
+    water_balanced = [combo for combo in balanced if any(x["family_id"] == "H02" for x in combo)]
+    difficulty_water_balanced = [
+        combo for combo in water_balanced if {x["difficulty"] for x in combo} == {"E", "M", "H"}
+    ]
     difficulty_balanced = [combo for combo in balanced if {x["difficulty"] for x in combo} == {"E", "M", "H"}]
-    pool = difficulty_balanced or balanced or exact or choices
+    pool = difficulty_water_balanced or water_balanced or difficulty_balanced or balanced or exact or choices
     # Keep the result stable during a calendar day, while varying equally
     # eligible catalog entries from day to day.  Preferences affect the score;
     # they never remove the required drink/diet/exercise trio.
@@ -194,7 +239,7 @@ def select_plan(pref: V2Preferences, day_ordinal: int, recent=None, review_avail
     else:
         selected = []
     return {
-        "items": selected,
+        "items": attach_water_cup_goal(selected, pref),
         "proof_mix_exception_reason": exceptions_for(selected, pref, review_available),
         "substitutions": [s for s in substitutions if s["to"] in {x["code"] for x in selected}],
     }
