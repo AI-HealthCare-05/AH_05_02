@@ -60,18 +60,14 @@ async def test_success_resets_login_failures(client: AsyncClient):
 
 
 async def test_unknown_email_uses_same_public_error(client: AsyncClient):
-    known = await client.post(
-        "/api/v1/auth/login", json={"email": "missing@example.com", "password": "wrongpass1!"}
-    )
+    known = await client.post("/api/v1/auth/login", json={"email": "missing@example.com", "password": "wrongpass1!"})
     assert known.status_code == 400
     assert known.json()["detail"] == "이메일 또는 비밀번호가 올바르지 않습니다."
 
 
 async def test_password_change_invalidates_existing_tokens(client: AsyncClient):
     await _signup(client)
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": "auth-security@example.com", "password": "health1!"}
-    )
+    login = await client.post("/api/v1/auth/login", json={"email": "auth-security@example.com", "password": "health1!"})
     token = login.json()["access_token"]
     changed = await client.patch(
         "/api/v1/auth/password",
@@ -94,16 +90,10 @@ async def test_password_change_invalidates_existing_tokens(client: AsyncClient):
 
 async def test_password_reset_is_neutral_single_use_and_invalidates_session(client: AsyncClient):
     await _signup(client)
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": "auth-security@example.com", "password": "health1!"}
-    )
+    login = await client.post("/api/v1/auth/login", json={"email": "auth-security@example.com", "password": "health1!"})
     old_token = login.json()["access_token"]
-    requested = await client.post(
-        "/api/v1/auth/password-reset/request", json={"email": "auth-security@example.com"}
-    )
-    missing = await client.post(
-        "/api/v1/auth/password-reset/request", json={"email": "not-registered@example.com"}
-    )
+    requested = await client.post("/api/v1/auth/password-reset/request", json={"email": "auth-security@example.com"})
+    missing = await client.post("/api/v1/auth/password-reset/request", json={"email": "not-registered@example.com"})
     assert requested.status_code == missing.status_code == 202
     assert requested.json()["message"] == missing.json()["message"]
     token = requested.json()["development_reset_token"]

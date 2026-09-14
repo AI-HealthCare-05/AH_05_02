@@ -3945,7 +3945,7 @@ async function loadEducation() {
     const fallback = localEducationContents();
     state.educationContents = fallback.items.map((item) => ({ ...item, medical_notice: fallback.medical_notice }));
     renderEducationList();
-    showMessage("승인 퀴즈를 불러오지 못해 기본 건강교육을 표시합니다.");
+    showMessage("건강교육을 불러오지 못했어요. 승인된 기본 자료를 표시합니다.");
   }
 }
 async function loadConnections() {
