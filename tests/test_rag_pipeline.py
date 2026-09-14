@@ -33,7 +33,6 @@ from src.rag.generation import (
 from src.rag.retrieval import hybrid_search, top_chunks
 from src.rag.verification import cited_document_ids, verify_sentences
 
-
 # ---------------------------------------------------------------------------
 # ① 문서 청킹
 # ---------------------------------------------------------------------------
@@ -130,7 +129,7 @@ class _FakeEmbeddingsAsyncClient:
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
 
-    async def __aenter__(self) -> "_FakeEmbeddingsAsyncClient":
+    async def __aenter__(self) -> _FakeEmbeddingsAsyncClient:
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:
@@ -287,7 +286,7 @@ class _FakeChatAsyncClient:
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
 
-    async def __aenter__(self) -> "_FakeChatAsyncClient":
+    async def __aenter__(self) -> _FakeChatAsyncClient:
         return self
 
     async def __aexit__(self, *exc_info: object) -> None:

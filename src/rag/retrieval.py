@@ -24,7 +24,7 @@ async def _corpus_embeddings(chunks: tuple[Chunk, ...], provider: EmbeddingProvi
     if cached is not None:
         return cached
     vectors = await provider.embed([chunk.text for chunk in chunks])
-    mapping = {chunk.chunk_id: vector for chunk, vector in zip(chunks, vectors)}
+    mapping = {chunk.chunk_id: vector for chunk, vector in zip(chunks, vectors, strict=False)}
     _embedding_cache[provider.provider_kind] = mapping
     return mapping
 
