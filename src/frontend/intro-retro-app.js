@@ -4649,6 +4649,19 @@ function setIntroChallenge(key) {
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", goBack));
 $$('[data-intro-challenge]').forEach((button) => button.addEventListener("click", () => setIntroChallenge(button.dataset.introChallenge)));
+function openAuthEntry(mode = "signup", { context = "login", updateUrl = true } = {}) {
+  const authMode = mode === "login" ? "login" : "signup";
+  if (typeof cancelLandingMotion === "function") cancelLandingMotion();
+  closeLandingPicker?.();
+  showStep(2);
+  showAuthMode(authMode, { context });
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("auth", authMode);
+    url.searchParams.set("cache", "retro-entry-20260909");
+    history.pushState({ auth: authMode }, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+  }
+}
 $$('#step-list li[data-flow-stage]').forEach((element) => {
   const flowStage = Number(element.dataset.flowStage);
   if (element.hasAttribute("data-auth-entry")) return;
@@ -4667,12 +4680,14 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  openAuthEntry("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
-  window.location.href = state.token
-    ? "/?resume=together&workspace=together&cache=retro-entry-20260909"
-    : "/?auth=signup&cache=retro-entry-20260909";
+  if (state.token) {
+    window.location.href = "/?resume=together&workspace=together&cache=retro-entry-20260909";
+    return;
+  }
+  openAuthEntry("signup");
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -4990,12 +5005,22 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  openAuthEntry("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  window.location.href = "/?auth=login&cache=retro-entry-20260909";
+  openAuthEntry("login", { context: "login" });
 });
+$$("[data-intro-signup]").forEach((button) => {
+  button.addEventListener("click", () => openAuthEntry("signup"));
+});
+function applyAuthEntryFromUrl() {
+  const requestedAuth = new URLSearchParams(window.location.search).get("auth");
+  if (requestedAuth !== "signup" && requestedAuth !== "login") return;
+  openAuthEntry(requestedAuth, { context: requestedAuth === "login" ? "login" : "signup", updateUrl: false });
+}
+window.addEventListener("popstate", applyAuthEntryFromUrl);
+applyAuthEntryFromUrl();
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
     openProfileEditor();
