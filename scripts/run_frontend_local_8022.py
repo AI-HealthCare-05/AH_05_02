@@ -69,13 +69,17 @@ def local_model_environment(root: Path) -> dict[str, str]:
         "CURRENT_SCREENING_RUNTIME": runtime,
         "CURRENT_SCREENING_MODEL_VERSION": manifest["model_version"],
         "CURRENT_SCREENING_FEATURE_SCHEMA_VERSION": manifest["feature_schema_version"],
-        "CURRENT_SCREENING_INPUT_SCHEMA_VERSION": manifest.get("input_schema_version", "knhanes-current-diabetes-screening-api-v1"),
+        "CURRENT_SCREENING_INPUT_SCHEMA_VERSION": manifest.get(
+            "input_schema_version", "knhanes-current-diabetes-screening-api-v1"
+        ),
         "CURRENT_SCREENING_THRESHOLD_VERSION": manifest["threshold_version"],
         "CURRENT_SCREENING_DECISION_THRESHOLD": str(manifest["threshold"]),
         "CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST": manifest["artifact_sha256"],
         "CURRENT_SCREENING_MODEL_URI": str(root / manifest["artifact_local_path"]),
         "CURRENT_SCREENING_MANIFEST_URI": str(manifest_path),
-        "CURRENT_SCREENING_PREPROCESSING_VERSION": "shared7-standard-api-frame-v1" if runtime == "shared7" else "knhanes-2016-2024-recall-v061",
+        "CURRENT_SCREENING_PREPROCESSING_VERSION": "shared7-standard-api-frame-v1"
+        if runtime == "shared7"
+        else "knhanes-2016-2024-recall-v061",
     }
 
 

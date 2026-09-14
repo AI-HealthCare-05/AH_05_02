@@ -23,7 +23,9 @@ FIELD_PATTERNS: dict[str, tuple[str, ...]] = {
 def extract_health_checkup_fields(ocr_text: str) -> dict[str, str | int | float]:
     """Extract an editable draft from OCR text; identity fields are never returned."""
     fields: dict[str, str | int | float] = {}
-    date_match = re.search(r"(?:검진일|검진일자)\s*[:：]?\s*(20\d{2})[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})", ocr_text)
+    date_match = re.search(
+        r"(?:검진일|검진일자)\s*[:：]?\s*(20\d{2})[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})", ocr_text
+    )
     if date_match:
         fields["checkup_date"] = datetime(*map(int, date_match.groups())).date().isoformat()
     bp_match = re.search(r"(?:혈압|수축기\s*/\s*이완기)\s*[:：]?\s*(\d{2,3})\s*/\s*(\d{2,3})", ocr_text)

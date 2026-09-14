@@ -86,9 +86,7 @@ def build_health_candidates(items: Iterable[DailyWearableLike]) -> dict[str, obj
     health checkup or trigger a diagnosis without the user's review.
     """
     accepted = [item for item in items if item.quality == "user_confirmed"]
-    activity_days = [
-        item for item in accepted if (item.active_minutes or 0) >= 10 or (item.steps or 0) >= 1_000
-    ]
+    activity_days = [item for item in accepted if (item.active_minutes or 0) >= 10 or (item.steps or 0) >= 1_000]
     active_values = [item.active_minutes for item in activity_days if item.active_minutes is not None]
     step_values = [item.steps for item in accepted if item.steps is not None]
     sleep_values = [item.sleep_minutes for item in accepted if item.sleep_minutes is not None]

@@ -46,9 +46,7 @@ async def run(base_url: str) -> dict:
                 json={"name": "S2 모델 점검", "email": email, "password": password, "terms_agreed": True},
             )
         )
-        login = await _data(
-            await client.post("/api/v1/auth/login", json={"email": email, "password": password})
-        )
+        login = await _data(await client.post("/api/v1/auth/login", json={"email": email, "password": password}))
         headers = {"Authorization": f"Bearer {login['access_token']}"}
         birthday = "1970-04-12"
         await _data(

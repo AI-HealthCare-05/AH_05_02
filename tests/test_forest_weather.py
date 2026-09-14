@@ -25,9 +25,13 @@ def test_neighbourhood_weather_cache_and_outage(monkeypatch):
             requests.append(params)
             if fail:
                 raise httpx.ConnectError("offline")
-            return httpx.Response(200, request=httpx.Request("GET", url), json={
-                "current": {"temperature_2m": 24.3, "weather_code": 2, "time": "2026-09-03T18:00"},
-            })
+            return httpx.Response(
+                200,
+                request=httpx.Request("GET", url),
+                json={
+                    "current": {"temperature_2m": 24.3, "weather_code": 2, "time": "2026-09-03T18:00"},
+                },
+            )
 
     monkeypatch.setattr(httpx, "AsyncClient", Client)
     service = ForestWeather()

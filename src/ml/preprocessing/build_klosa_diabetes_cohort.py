@@ -57,9 +57,7 @@ def _read_wave(data_dir: Path, wave: int, columns: list[str]) -> pd.DataFrame:
         )
         return frame
 
-    raise FileNotFoundError(
-        f"KLoSA wave {wave} not found; expected {dta_path.name} or {sav_path.name} in {data_dir}"
-    )
+    raise FileNotFoundError(f"KLoSA wave {wave} not found; expected {dta_path.name} or {sav_path.name} in {data_dir}")
 
 
 def _numeric(series: pd.Series) -> pd.Series:

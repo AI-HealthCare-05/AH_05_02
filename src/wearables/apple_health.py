@@ -113,7 +113,7 @@ class NormalizedRecord:
 
 
 def _parse_apple_datetime(raw: str) -> datetime:
-    """"2026-03-01 08:00:00 +0900" 형태의 Apple Health 타임스탬프를 파싱한다."""
+    """ "2026-03-01 08:00:00 +0900" 형태의 Apple Health 타임스탬프를 파싱한다."""
     return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S %z")
 
 
@@ -213,11 +213,7 @@ def _normalize_completed_element(
     """완료된 지원 태그를 정규화하고 Record 메타데이터의 수명을 관리한다."""
     if tag == "Record":
         record_type = RECORD_TYPE_MAP.get(elem.get("type", ""))
-        normalized = (
-            _normalize_record(elem, record_type, metadata, user_pseudo_id)
-            if record_type is not None
-            else None
-        )
+        normalized = _normalize_record(elem, record_type, metadata, user_pseudo_id) if record_type is not None else None
         return normalized, {}
     if tag == "Workout":
         return _normalize_workout(elem, user_pseudo_id), metadata
@@ -407,9 +403,7 @@ def flag_duplicates(records: list[NormalizedRecord]) -> list[NormalizedRecord]:
             winner = ranked[0]
             result.append(winner)
             for loser in ranked[1:]:
-                result.append(
-                    NormalizedRecord(**{**loser.__dict__, "quality_flag": "중복"})
-                )
+                result.append(NormalizedRecord(**{**loser.__dict__, "quality_flag": "중복"}))
     return result
 
 
@@ -460,7 +454,9 @@ def build_daily_summaries(records: Iterable[NormalizedRecord]) -> list[DailySumm
 
     for record in records:
         key = (record.user_pseudo_id, record.local_date)
-        summary = grouped.setdefault(key, DailySummary(user_pseudo_id=record.user_pseudo_id, local_date=record.local_date))
+        summary = grouped.setdefault(
+            key, DailySummary(user_pseudo_id=record.user_pseudo_id, local_date=record.local_date)
+        )
 
         if record.quality_flag == "중복":
             summary.quality_flags.append("중복_레코드_제외")

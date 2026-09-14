@@ -18,7 +18,9 @@ def main() -> None:  # noqa: C901 - deterministic pixel-mask stages are clearer 
             red, green, blue, alpha = pixels[x, y]
             if not alpha:
                 continue
-            in_flame_shape = (y < 126 and abs(x - 130) < min(48, 9 + (y - 22) * 0.47)) or (y >= 126 and abs(x - 130) < 34)
+            in_flame_shape = (y < 126 and abs(x - 130) < min(48, 9 + (y - 22) * 0.47)) or (
+                y >= 126 and abs(x - 130) < 34
+            )
             flame_silhouette = in_flame_shape and ((red - green > 20 and red - blue > 30) or max(red, green, blue) < 72)
             upper_flame = y < 126 and 78 < x < 182 and red > 74 and red - green > 16 and red - blue > 24 and blue < 130
             lower_flame = y >= 121 and red > 226 and (green > 122 or red - green > 118) and blue < 105

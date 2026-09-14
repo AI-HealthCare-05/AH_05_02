@@ -16,10 +16,7 @@ def remove_checker(image: Image.Image) -> Image.Image:
 
     def is_background(x: int, y: int) -> bool:
         red, green, blue, alpha = pixels[x, y]
-        return alpha == 0 or (
-            max(red, green, blue) - min(red, green, blue) <= 16
-            and (red + green + blue) / 3 >= 205
-        )
+        return alpha == 0 or (max(red, green, blue) - min(red, green, blue) <= 16 and (red + green + blue) / 3 >= 205)
 
     queue: deque[tuple[int, int]] = deque()
     visited = bytearray(rgba.width * rgba.height)
