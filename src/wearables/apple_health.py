@@ -20,9 +20,9 @@ import hashlib
 import re
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
-from typing import Iterable, Iterator
+from datetime import UTC, date, datetime, timedelta
 
 # --------------------------------------------------------------------------
 # 스키마
@@ -191,36 +191,39 @@ def iter_normalized_records(xml_path: str, user_pseudo_id: str) -> Iterator[Norm
             elem.clear()
             continue
 
-        if tag == "Record":
-            record_type_raw = elem.get("type", "")
-            record_type = RECORD_TYPE_MAP.get(record_type_raw)
-            if record_type is None:
-                elem.clear()
-                current_metadata = {}
-                continue
-            normalized = _normalize_record(elem, record_type, current_metadata, user_pseudo_id)
-            current_metadata = {}
+        normalized, current_metadata = _normalize_completed_element(
+            tag,
+            elem,
+            current_metadata,
+            user_pseudo_id,
+        )
+        if normalized is not None:
+            yield normalized
+        if tag in {"Record", "Workout", "ActivitySummary"}:
             elem.clear()
             root.clear()
-            if normalized is not None:
-                yield normalized
-            continue
 
-        if tag == "Workout":
-            normalized = _normalize_workout(elem, user_pseudo_id)
-            elem.clear()
-            root.clear()
-            if normalized is not None:
-                yield normalized
-            continue
 
-        if tag == "ActivitySummary":
-            normalized = _normalize_activity_summary(elem, user_pseudo_id)
-            elem.clear()
-            root.clear()
-            if normalized is not None:
-                yield normalized
-            continue
+def _normalize_completed_element(
+    tag: str,
+    elem: ET.Element,
+    metadata: dict[str, str],
+    user_pseudo_id: str,
+) -> tuple[NormalizedRecord | None, dict[str, str]]:
+    """완료된 지원 태그를 정규화하고 Record 메타데이터의 수명을 관리한다."""
+    if tag == "Record":
+        record_type = RECORD_TYPE_MAP.get(elem.get("type", ""))
+        normalized = (
+            _normalize_record(elem, record_type, metadata, user_pseudo_id)
+            if record_type is not None
+            else None
+        )
+        return normalized, {}
+    if tag == "Workout":
+        return _normalize_workout(elem, user_pseudo_id), metadata
+    if tag == "ActivitySummary":
+        return _normalize_activity_summary(elem, user_pseudo_id), metadata
+    return None, metadata
 
 
 def _normalize_record(
@@ -273,8 +276,8 @@ def _normalize_record(
         user_pseudo_id=user_pseudo_id,
         platform="apple_health",
         record_type=record_type,
-        start_at_utc=start.astimezone(tz=timezone_utc()),
-        end_at_utc=end.astimezone(tz=timezone_utc()),
+        start_at_utc=start.astimezone(tz=UTC),
+        end_at_utc=end.astimezone(tz=UTC),
         local_date=local_date,
         timezone_offset=_timezone_offset_str(start),
         value=value,
@@ -308,8 +311,8 @@ def _normalize_workout(elem: ET.Element, user_pseudo_id: str) -> NormalizedRecor
         user_pseudo_id=user_pseudo_id,
         platform="apple_health",
         record_type=f"workout:{activity_type.lower()}" if activity_type else "workout",
-        start_at_utc=start.astimezone(tz=timezone_utc()),
-        end_at_utc=end.astimezone(tz=timezone_utc()),
+        start_at_utc=start.astimezone(tz=UTC),
+        end_at_utc=end.astimezone(tz=UTC),
         local_date=start.date(),
         timezone_offset=_timezone_offset_str(start),
         value=round(duration_value, 1),
@@ -355,12 +358,6 @@ def _normalize_activity_summary(elem: ET.Element, user_pseudo_id: str) -> Normal
         source_record_id=_source_record_id("activity_summary", "activity_summary", naive_start, naive_start, date_str),
         quality_flag="정상" if value > 0 else "미착용 의심",
     )
-
-
-def timezone_utc():
-    from datetime import timezone
-
-    return timezone.utc
 
 
 # --------------------------------------------------------------------------
@@ -469,19 +466,7 @@ def build_daily_summaries(records: Iterable[NormalizedRecord]) -> list[DailySumm
             summary.quality_flags.append("중복_레코드_제외")
             continue
 
-        if record.record_type == "steps":
-            summary.steps = (summary.steps or 0) + int(record.value)
-        elif record.record_type == "distance":
-            summary.distance_km = round((summary.distance_km or 0.0) + record.value, 3)
-        elif record.record_type == "active_energy":
-            summary.active_energy_kcal = round((summary.active_energy_kcal or 0.0) + record.value, 1)
-        elif record.record_type == "resting_heart_rate":
-            resting_hr_accumulator[key].append(record.value)
-        elif record.record_type == "sleep":
-            summary.sleep_minutes = round((summary.sleep_minutes or 0.0) + record.value, 1)
-        elif record.record_type.startswith("workout"):
-            summary.workout_minutes = round(summary.workout_minutes + record.value, 1)
-            summary.workout_count += 1
+        _apply_record_to_daily_summary(summary, record, resting_hr_accumulator, key)
 
         if record.quality_flag not in ("정상", "중복"):
             summary.quality_flags.append(record.quality_flag)
@@ -490,3 +475,25 @@ def build_daily_summaries(records: Iterable[NormalizedRecord]) -> list[DailySumm
         grouped[key].resting_heart_rate = round(sum(values) / len(values), 1)
 
     return sorted(grouped.values(), key=lambda s: s.local_date)
+
+
+def _apply_record_to_daily_summary(
+    summary: DailySummary,
+    record: NormalizedRecord,
+    resting_hr_accumulator: dict[tuple[str, date], list[float]],
+    key: tuple[str, date],
+) -> None:
+    """하나의 정상 레코드를 일 단위 집계에 반영한다."""
+    if record.record_type == "steps":
+        summary.steps = (summary.steps or 0) + int(record.value)
+    elif record.record_type == "distance":
+        summary.distance_km = round((summary.distance_km or 0.0) + record.value, 3)
+    elif record.record_type == "active_energy":
+        summary.active_energy_kcal = round((summary.active_energy_kcal or 0.0) + record.value, 1)
+    elif record.record_type == "resting_heart_rate":
+        resting_hr_accumulator[key].append(record.value)
+    elif record.record_type == "sleep":
+        summary.sleep_minutes = round((summary.sleep_minutes or 0.0) + record.value, 1)
+    elif record.record_type.startswith("workout"):
+        summary.workout_minutes = round(summary.workout_minutes + record.value, 1)
+        summary.workout_count += 1
