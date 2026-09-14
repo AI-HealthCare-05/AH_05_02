@@ -93,7 +93,9 @@ def get_embedding_provider() -> EmbeddingProvider:
         return DevelopmentEmbeddingProvider()
     if config.HEALTH_EDUCATION_EMBEDDING_PROVIDER == "openai":
         return OpenAIEmbeddingProvider()
-    raise EmbeddingError(f"지원하지 않는 HEALTH_EDUCATION_EMBEDDING_PROVIDER입니다: {config.HEALTH_EDUCATION_EMBEDDING_PROVIDER}")
+    raise EmbeddingError(
+        f"지원하지 않는 HEALTH_EDUCATION_EMBEDDING_PROVIDER입니다: {config.HEALTH_EDUCATION_EMBEDDING_PROVIDER}"
+    )
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:

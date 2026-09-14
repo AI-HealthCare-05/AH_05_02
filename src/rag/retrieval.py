@@ -29,7 +29,9 @@ async def _corpus_embeddings(chunks: tuple[Chunk, ...], provider: EmbeddingProvi
     return mapping
 
 
-def _keyword_scores(chunks: tuple[Chunk, ...], keyword_lookup: dict[str, tuple[str, ...]], normalized_question: str) -> dict[str, float]:
+def _keyword_scores(
+    chunks: tuple[Chunk, ...], keyword_lookup: dict[str, tuple[str, ...]], normalized_question: str
+) -> dict[str, float]:
     scores: dict[str, float] = {}
     for chunk in chunks:
         keywords = keyword_lookup.get(chunk.document_id, ())
@@ -73,8 +75,7 @@ async def hybrid_search(
     question_vectors = await embedding_provider.embed([normalized_question])
     question_vector = question_vectors[0] if question_vectors else []
     embedding_raw = {
-        chunk.chunk_id: cosine_similarity(question_vector, corpus_vectors.get(chunk.chunk_id, []))
-        for chunk in chunks
+        chunk.chunk_id: cosine_similarity(question_vector, corpus_vectors.get(chunk.chunk_id, [])) for chunk in chunks
     }
 
     keyword_weight = config.HEALTH_EDUCATION_KEYWORD_WEIGHT

@@ -36,7 +36,9 @@ def verify_sentences(generated: GeneratedAnswer, chunks_by_id: dict[str, Chunk])
     """
     verified: list[str] = []
     for sentence in generated.sentences:
-        source_texts = [chunks_by_id[chunk_id].text for chunk_id in sentence.supporting_chunk_ids if chunk_id in chunks_by_id]
+        source_texts = [
+            chunks_by_id[chunk_id].text for chunk_id in sentence.supporting_chunk_ids if chunk_id in chunks_by_id
+        ]
         if not source_texts:
             continue
         if _has_lexical_support(sentence.text, source_texts):
@@ -44,7 +46,9 @@ def verify_sentences(generated: GeneratedAnswer, chunks_by_id: dict[str, Chunk])
     return tuple(verified)
 
 
-def cited_document_ids(generated: GeneratedAnswer, chunks_by_id: dict[str, Chunk], verified_sentences: tuple[str, ...]) -> tuple[str, ...]:
+def cited_document_ids(
+    generated: GeneratedAnswer, chunks_by_id: dict[str, Chunk], verified_sentences: tuple[str, ...]
+) -> tuple[str, ...]:
     """검증을 통과한 문장이 실제로 인용한 문서 id를, 처음 등장한 순서대로 중복 없이 반환한다."""
     verified_set = set(verified_sentences)
     ordered: list[str] = []

@@ -66,7 +66,9 @@ class OpenAIAnswerGenerationProvider:
 
     def __init__(self) -> None:
         if not config.OPENAI_API_KEY:
-            raise AnswerGenerationError("OPENAI_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가한 뒤 다시 시도해주세요.")
+            raise AnswerGenerationError(
+                "OPENAI_API_KEY가 설정되어 있지 않습니다. .env에 키를 추가한 뒤 다시 시도해주세요."
+            )
         self._api_key = config.OPENAI_API_KEY
         self._model = config.OPENAI_MODEL
 

@@ -269,11 +269,11 @@ APPROVED_DOCUMENTS = (
 # 지혜의 샘 하이브리드 검색용 색인. APPROVED_DOCUMENTS는 프로세스 실행 중 바뀌지 않으므로
 # 모듈 로드 시 한 번만 문장 단위 청크로 쪼개 둔다.
 ALL_CHUNKS: tuple[Chunk, ...] = tuple(
-    chunk
-    for document in APPROVED_DOCUMENTS
-    for chunk in split_into_chunks(document.document_id, document.text)
+    chunk for document in APPROVED_DOCUMENTS for chunk in split_into_chunks(document.document_id, document.text)
 )
-KEYWORDS_BY_DOCUMENT: dict[str, tuple[str, ...]] = {document.document_id: document.keywords for document in APPROVED_DOCUMENTS}
+KEYWORDS_BY_DOCUMENT: dict[str, tuple[str, ...]] = {
+    document.document_id: document.keywords for document in APPROVED_DOCUMENTS
+}
 DOCUMENTS_BY_ID: dict[str, KnowledgeDocument] = {document.document_id: document for document in APPROVED_DOCUMENTS}
 
 EMERGENCY_SYMPTOM_PATTERN = re.compile(

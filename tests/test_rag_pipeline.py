@@ -140,8 +140,7 @@ class _FakeEmbeddingsAsyncClient:
         texts = json["input"]
         # 일부러 역순으로 반환해서, provider가 index로 재정렬하는지 검증한다.
         data = [
-            {"index": index, "embedding": [float(len(text)), 0.0]}
-            for index, text in reversed(list(enumerate(texts)))
+            {"index": index, "embedding": [float(len(text)), 0.0]} for index, text in reversed(list(enumerate(texts)))
         ]
         return _FakeHttpResponse({"data": data})
 
@@ -212,8 +211,7 @@ async def test_hybrid_search_gives_near_zero_combined_score_for_fully_unrelated_
 
 def test_top_chunks_respects_limit():
     scored_chunks = [
-        type("S", (), {"chunk": _chunk("d", i, f"t{i}"), "combined_score": 1.0 - i * 0.1})()
-        for i in range(10)
+        type("S", (), {"chunk": _chunk("d", i, f"t{i}"), "combined_score": 1.0 - i * 0.1})() for i in range(10)
     ]
     limited = top_chunks(tuple(scored_chunks), limit=3)
     assert len(limited) == 3
