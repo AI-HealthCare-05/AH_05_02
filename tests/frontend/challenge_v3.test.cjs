@@ -34,7 +34,7 @@ function recommendationHarness(api) {
   const state = { token: 'session-A' };
   const challengeV3 = { active: false, busy: false, owner: null, request: 0, rotation: 0, focus: 'balanced', difficulty: 'easy' };
   let renders = 0;
-  const context = load(['loadChallenges'], {
+  const context = load(['recommendationDomain', 'normalizeRecommendationResult', 'loadChallenges'], {
     $, state, challengeV3, api, URLSearchParams, isLocalPreview: () => false,
     showChallengeSelectionView() {}, updateChallengeStartState() {},
     closeRagChallengeGenerator() {}, renderChallengeChoices() { renders++; }, showMessage() {},
@@ -42,6 +42,26 @@ function recommendationHarness(api) {
   return { ...context, $, state, challengeV3, renders: () => renders };
 }
 const result = () => ({ items: [1, 2, 3].map(challenge_id => ({ challenge_id, catalog_version: 'evidence-v3' })), policy: {} });
+test('backend catalog recommendations without v3 display fields are accepted and normalized', async () => {
+  const harness = recommendationHarness(async url => {
+    assert.ok(url.startsWith('/challenge-recommendations'));
+    return {
+      items: [
+        { challenge_id: 1, category: 'activity', title: '식후 걷기', daily_goal: '10분', recommendation_reason: '운동 실천 제안' },
+        { challenge_id: 2, category: 'diet', title: '채소 먼저', daily_goal: '1회', source: { title: '가이드' } },
+        { challenge_id: 3, category: 'tracking', title: '체중 기록', daily_goal: '주 1회' },
+      ],
+      notice: '일반 건강 실천입니다.',
+    };
+  });
+  await harness.loadChallenges();
+  assert.equal(harness.challengeV3.active, true);
+  assert.equal(harness.renders(), 1);
+  assert.deepEqual([...harness.state.selectedChallengeIds], [1, 2, 3]);
+  assert.deepEqual(harness.state.challengeRecommendations.map(item => item.domain), ['aerobic_activity', 'fiber_diet', 'tracking']);
+  assert.ok(harness.state.challengeRecommendations.every(item => item.catalog_version === 'evidence-v3'));
+  assert.ok(harness.state.challengeRecommendations.every(item => item.verification_type === 3));
+});
 test('late follow-up response cannot expose previous session identifiers', async () => {
   let resolveActions;
   const harness = recommendationHarness(async url => url.startsWith('/challenge-recommendations')
