@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
@@ -48,8 +48,13 @@ if FRONTEND_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-async def home() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "index.html")
+async def home(intro: str | None = Query(default=None)) -> FileResponse:
+    """Serve the retro cover by default; retain the current MVP at ?intro=original."""
+    page = "index.html" if intro == "original" else "intro-retro.html"
+    response = FileResponse(FRONTEND_DIR / page)
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @app.get("/forest", include_in_schema=False)

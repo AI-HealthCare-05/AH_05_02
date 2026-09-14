@@ -23,6 +23,15 @@ def test_facility_buttons_call_real_nearby_endpoints() -> None:
     assert 'api("/medical-facilities/map-config")' in script
 
 
+def test_map_sdk_is_loaded_from_authenticated_runtime_config() -> None:
+    html, script = _frontend_sources()
+
+    assert "dapi.kakao.com/v2/maps/sdk.js" not in html
+    assert 'api("/medical-facilities/map-config")' in script
+    assert "encodeURIComponent(javascriptKey)" in script
+    assert "kakaoMapsLoadPromise" in script
+
+
 def test_location_failure_offers_address_search_without_fixed_fallback() -> None:
     html, script = _frontend_sources()
 

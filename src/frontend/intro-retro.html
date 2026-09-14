@@ -6,14 +6,14 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260914-guidance-format-v1">
+  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <link rel="stylesheet" href="/static/retro-intro.css?v=20260910-result-signal-grid-restore-v1">
   <script src="/static/retro-intro.js?v=20260910-result-signal-grid-restore-v1" defer></script>
-  <script src="/static/intro-retro-app.js?v=20260914-guidance-format-v1" defer></script>
+  <script src="/static/intro-retro-app.js?v=20260910-result-signal-grid-restore-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -44,9 +44,7 @@
     </nav>
     <nav class="workspace-top-nav onboarding-top-nav" id="onboarding-top-nav" aria-label="가입 후 입력 메뉴" hidden>
       <ol>
-        <li><button type="button" data-onboarding-step="3">이용확인</button></li>
-        <li><button type="button" data-onboarding-step="4">건강정보 입력</button></li>
-        <li><button type="button" data-onboarding-step="5">분석</button></li>
+        <li><button type="button" data-onboarding-health>건강정보 입력</button></li>
       </ol>
     </nav>
     <div class="header-utilities">
@@ -62,7 +60,6 @@
       <button class="text-button font-toggle-button" id="font-toggle" type="button" aria-pressed="false">글자 크게</button>
     </div>
   </header>
-  <a class="intro-version-switch intro-version-switch-floating" href="/?intro=original&v=20260910-orbit-card-height-v1" aria-label="원래 소개 화면 보기">원래 화면 보기</a>
   <div class="profile-editor" id="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profile-editor-title" hidden>
     <div class="profile-editor-card">
       <button class="profile-editor-close" id="profile-editor-close" type="button" aria-label="마이페이지 닫기">×</button>
@@ -180,7 +177,7 @@
           <div class="form-row"><label for="signup-gender">성별</label><select id="signup-gender" required><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
           <div class="consent-list full" aria-label="동의 항목">
             <label class="check-card consent-card"><input id="personal-consent" type="checkbox" required><span><strong>서비스 이용약관·개인정보 수집 및 이용</strong><small>계정 생성과 서비스 제공에 필요한 약관 및 개인정보 처리를 확인합니다.</small><em>필수</em></span></label>
-            <label class="check-card consent-card"><input id="health-consent" type="checkbox"><span><strong>건강정보 수집·이용</strong><small>간당간당의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
+            <label class="check-card consent-card"><input id="health-consent" type="checkbox"><span><strong>건강정보 수집·이용</strong><small>[간당간당]의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
             <label class="check-card consent-card"><input id="analytics-consent" type="checkbox"><span><strong>서비스 개선을 위한 이용기록 분석</strong><small>선택하지 않아도 건강정보 입력과 위험 확인 기능을 이용할 수 있습니다.</small><em class="optional">선택</em></span></label>
           </div>
           <div class="actions full"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">가입·동의하고 계속</button></div>
@@ -218,7 +215,7 @@
         <form id="eligibility-form">
           <div class="eligibility-grid" aria-label="적합성 확인 항목">
             <fieldset class="eligibility-card urgent-card">
-              <legend><span class="card-title-row urgent-title-row"><span class="card-icon" aria-hidden="true">⚠</span><span>1. 즉시 도움이 필요한 긴급 증상이 있나요?</span><button class="secondary emergency-questionnaire-open" id="open-emergency-questionnaire" type="button" aria-haspopup="dialog">증상 자세히 확인하기</button></span></legend>
+              <legend><span class="card-title-row urgent-title-row"><span class="card-icon" aria-hidden="true">⚠</span><span>1. 지금 긴급한 증상이 있나요?</span><button class="secondary emergency-questionnaire-open" id="open-emergency-questionnaire" type="button" aria-haspopup="dialog">증상 자세히 확인하기</button></span></legend>
               <div class="urgent-answer-row">
                 <div class="segmented-choice">
                   <label><input id="urgent-warning-yes" name="urgent-warning" type="radio" value="yes"><span>예</span></label>
@@ -296,45 +293,48 @@
           </section>
         </div>
         <div id="eligibility-guidance" class="branch-result" role="dialog" aria-modal="true" aria-labelledby="eligibility-guidance-title" tabindex="-1" hidden>
+          <p class="eyebrow" id="eligibility-guidance-code"></p>
           <h3 id="eligibility-guidance-title"></h3>
-          <p class="eligibility-guidance-message" id="eligibility-guidance-message"></p>
-          <div class="eligibility-guidance-sections">
-            <article class="eligibility-guidance-section">
-              <span class="eligibility-guidance-label">사유</span>
-              <div class="eligibility-guidance-copy">
-                <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
-                <p id="eligibility-guidance-reason"></p>
-              </div>
+          <p id="eligibility-guidance-message"></p>
+          <div class="branch-result-grid">
+            <article>
+              <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
+              <p id="eligibility-guidance-reason"></p>
             </article>
-            <article class="eligibility-guidance-section eligibility-guidance-action">
-              <span class="eligibility-guidance-label">행동 안내</span>
-              <div class="eligibility-guidance-copy">
-                <p id="eligibility-guidance-action"></p>
-              </div>
+            <article>
+              <strong>다음 행동</strong>
+              <p id="eligibility-guidance-action"></p>
             </article>
           </div>
-          <div class="eligibility-guidance-buttons">
-            <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
-              <a class="primary" href="tel:119">119에 전화하기</a>
-              <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
-            </div>
-            <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
-              <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
-              <button class="secondary" id="find-phone-consultation" type="button">전화 문의 가능한 기관 보기</button>
-              <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
-            </div>
-            <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
-              <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
-              <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
-            </div>
-            <div class="actions eligibility-guidance-primary-actions">
-              <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
-              <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
+          <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
+          <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
+            <a class="primary" href="tel:119">119에 전화하기</a>
+            <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
+            <button class="secondary" id="find-nearby-emergency" type="button">주변 응급실 보기</button>
+            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+            <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내">
+              <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
+                <strong>위급하면 검색을 기다리지 마세요</strong>
+                <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
+              </div>
+              <form id="emergency-address-form" class="facility-address-form" hidden>
+                <label for="emergency-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
+                <div><input id="emergency-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off" required><button class="secondary" type="submit">주소로 찾기</button></div>
+              </form>
+              <div id="emergency-facility-map" class="facility-map" aria-label="검색 기준 위치와 주변 응급의료기관 지도" hidden></div>
+              <div class="medical-facility-meta" id="emergency-facility-meta" hidden></div>
+              <div class="medical-facility-results" id="emergency-facility-results" hidden></div>
             </div>
           </div>
-          <p class="branch-safety">간당간당은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
-          <div class="actions eligibility-guidance-close-actions">
-            <button class="secondary" id="eligibility-edit-answer" type="button">닫기</button>
+          <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
+            <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
+            <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
+            <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="eligibility-edit-answer" type="button">답변 다시 확인하기</button>
+            <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
+            <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
           </div>
         </div>
       </section>
@@ -447,6 +447,7 @@
                 <div class="form-row"><label for="diabetes-family-history">당뇨병 가족력</label><select id="diabetes-family-history"><option value="">모름</option><option value="true">있음</option><option value="false">없음</option></select></div>
               </article>
             </div>
+            <div class="notice safety health-input-notice"><span aria-hidden="true">안내</span><div><p>세부 건강정보는 현재 위험 신호를 더 세밀하게 살피기 위한 선택 정보입니다. 모르는 값은 임의로 입력하지 않아도 됩니다.</p></div></div>
             <div class="actions full"><button class="secondary" id="back-to-lifestyle-input" type="button">이전</button><button class="primary" type="submit">입력 내용 확인하기</button></div>
           </section>
           <section id="health-review-panel" class="health-input-panel" aria-labelledby="health-review-title" hidden>
@@ -471,7 +472,7 @@
                 <dl id="review-detail-health"></dl>
               </article>
             </div>
-            <div class="notice safety health-input-notice"><span aria-hidden="true">안전 안내</span><div><p>간당간당은 당뇨병을 진단하거나 치료하지 않습니다. 입력 내용 확인 후 위험 신호 확인만 요청합니다.</p></div></div>
+            <div class="notice safety health-input-notice"><span aria-hidden="true">안전 안내</span><div><p>[간당간당]은 당뇨병을 진단하거나 치료하지 않습니다. 입력 내용 확인 후 위험 신호 확인만 요청합니다.</p></div></div>
             <div class="actions full review-submit-actions"><button class="primary" id="submit-analysis" type="submit">이 내용으로 분석하기</button></div>
           </section>
         </form>
@@ -792,16 +793,8 @@
                   <h4 id="photo-fail-title">사진 기록을 완료하지 못했어요</h4>
                   <p id="photo-fail-hint">밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.</p>
                   <div class="record-modal-actions">
-                    <button class="secondary photo-retake-action" id="retake-photo-record" type="button">다시 찍기</button>
+                    <button class="secondary" id="retake-photo-record" type="button">다시 찍기</button>
                     <button class="primary record-fallback" type="button">간편 체크로 완료</button>
-                  </div>
-                </div>
-                <div id="photo-state-pending" class="photo-state pending" hidden>
-                  <h4 id="photo-pending-title">사진 검토가 필요해요</h4>
-                  <p id="photo-pending-hint">사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.</p>
-                  <div class="record-modal-actions">
-                    <button class="secondary photo-retake-action" type="button">다시 제출하기</button>
-                    <button class="primary record-cancel" type="button">확인하고 닫기</button>
                   </div>
                 </div>
                 <div id="photo-state-success" class="photo-state success" hidden>
