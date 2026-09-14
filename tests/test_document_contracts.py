@@ -40,3 +40,14 @@ def test_privacy_lifecycle_policy_is_not_tbd() -> None:
     assert "30일 이내 삭제" in requirements
     assert "동의 철회 즉시" in safety
     assert "복구 불가능한 익명화" in safety
+
+
+def test_optional_rag_challenge_does_not_add_hidden_required_fields() -> None:
+    html = read("src/frontend/index.html")
+    frontend = read("src/frontend/app.js")
+
+    assert 'id="custom-challenge-title"' not in html
+    assert 'id="custom-challenge-goal"' not in html
+    assert 'id="rag-challenge-generator"' in html
+    assert 'id="open-rag-challenge"' in frontend
+    assert "if (!ids.length && !customSelected)" in frontend

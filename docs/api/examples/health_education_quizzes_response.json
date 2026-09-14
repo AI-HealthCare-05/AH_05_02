@@ -1,0 +1,51 @@
+{
+  "data": {
+    "items": [
+      {
+        "quiz_id": "blank-kdca-diabetes",
+        "document_id": "kdca-diabetes",
+        "quiz_type": "fill_in_blank",
+        "question": "빈칸에 알맞은 단어를 고르세요: \"＿＿＿＿병 예방과 관리를 위해 규칙적인 신체활동, 균형 있는 식사, 적정 체중 유지가 중요합니다.\"",
+        "options": [
+          "습관",
+          "생활습관",
+          "쇼크",
+          "당뇨"
+        ],
+        "source_title": "질병관리청 국가건강정보포털 - 당뇨병",
+        "source_url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=5292",
+        "checked_at": "2026-09-09"
+      },
+      {
+        "quiz_id": "ox-kdca-diabetes-exercise",
+        "document_id": "kdca-diabetes-exercise",
+        "quiz_type": "ox",
+        "question": "다음 설명은 맞을까요, 틀릴까요? \"당뇨병 위험이 높은 사람은 중등도 강도의 유산소 운동을 주 150분 이상, 근력 운동을 주 2회 이상 하면 당뇨병 예방에 도움이 됩니다.\"",
+        "options": null,
+        "source_title": "질병관리청 국가건강정보포털 - 당뇨환자의 운동요법",
+        "source_url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=3390",
+        "checked_at": "2026-09-09"
+      },
+      {
+        "quiz_id": "blank-kdca-diabetes-exercise",
+        "document_id": "kdca-diabetes-exercise",
+        "quiz_type": "fill_in_blank",
+        "question": "빈칸에 알맞은 단어를 고르세요: \"당뇨병 위험이 높은 사람은 중등도 강도의 유산소 ＿＿＿＿을 주 150분 이상, 근력 ＿＿＿＿을 주 2회 이상 하면 당뇨병 예방에 도움이 됩니다.\"",
+        "options": [
+          "저혈당",
+          "응급",
+          "의식",
+          "운동"
+        ],
+        "source_title": "질병관리청 국가건강정보포털 - 당뇨환자의 운동요법",
+        "source_url": "https://health.kdca.go.kr/healthinfo/biz/health/gnrlzHealthInfo/gnrlzHealthInfo/gnrlzHealthInfoView.do?cntnts_sn=3390",
+        "checked_at": "2026-09-09"
+      }
+    ]
+  },
+  "meta": {
+    "request_id": "req_b60c552062e34e7f",
+    "timestamp": "2026-09-09T06:48:24.145635+00:00"
+  },
+  "_note": "실제 응답은 승인 문서 12개 기준 약 17개 항목을 반환한다. 예시는 앞 3개만 보여준다."
+}

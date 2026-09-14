@@ -53,14 +53,14 @@ Train은 양성 910건, 음성 35,394건이며 음성:양성 비율은 38.8945:1
 | 원순위 | 단계·모델 | 가중치 | 임계값 | Recall | Specificity | R/S 균형 | AUROC | AUPRC |
 | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | 3단계 RF | **없음** | 0.022411 | **0.8000** | **0.4742** | **0.6371** | **0.6596** | **0.0511** |
-| 1 | 3단계 RF | balanced | 0.400781 | 0.7538 | 0.4176 | 0.5857 | 0.6430 | 0.0502 |
-| 1 | 3단계 RF | balanced_subsample | 0.402613 | 0.7590 | 0.4235 | 0.5912 | 0.6441 | 0.0466 |
+| 1 | 3단계 RF | balanced | 0.425998 | 0.7744 | 0.4187 | 0.5965 | 0.6492 | 0.0474 |
+| 1 | 3단계 RF | balanced_subsample | 0.399888 | 0.7538 | 0.4158 | 0.5848 | 0.6422 | 0.0457 |
 | 2 | 4단계 RF | **없음** | 0.021910 | **0.8051** | **0.4569** | **0.6310** | **0.6597** | **0.0503** |
-| 2 | 4단계 RF | balanced | 0.397480 | 0.7795 | 0.4124 | 0.5960 | 0.6485 | 0.0410 |
-| 2 | 4단계 RF | balanced_subsample | 0.396395 | 0.7897 | 0.4067 | 0.5982 | 0.6488 | 0.0464 |
+| 2 | 4단계 RF | balanced | 0.425306 | 0.7846 | 0.4145 | 0.5996 | 0.6477 | 0.0464 |
+| 2 | 4단계 RF | balanced_subsample | 0.394918 | 0.7795 | 0.4023 | 0.5909 | 0.6489 | 0.0459 |
 | 3 | 2단계 RF | **없음** | 0.021661 | **0.7744** | **0.4547** | **0.6145** | **0.6511** | **0.0437** |
-| 3 | 2단계 RF | balanced | 0.406479 | 0.7590 | 0.4135 | 0.5862 | 0.6422 | 0.0423 |
-| 3 | 2단계 RF | balanced_subsample | 0.402204 | 0.7692 | 0.4036 | 0.5864 | 0.6418 | 0.0416 |
+| 3 | 2단계 RF | balanced | 0.422917 | 0.7795 | 0.3988 | 0.5891 | 0.6449 | 0.0419 |
+| 3 | 2단계 RF | balanced_subsample | 0.402626 | 0.7692 | 0.4049 | 0.5871 | 0.6425 | 0.0416 |
 | 4 | 4단계 XGBoost | **없음** | 0.018905 | **0.8103** | **0.4131** | **0.6117** | **0.6591** | **0.0452** |
 | 4 | 4단계 XGBoost | balanced_ratio | 0.398459 | 0.7744 | 0.4057 | 0.5900 | 0.6490 | 0.0432 |
 | 5 | 4단계 Logistic | **없음** | 0.019590 | 0.7744 | **0.4485** | **0.6114** | **0.6590** | **0.0489** |
@@ -70,18 +70,18 @@ Train은 양성 910건, 음성 35,394건이며 음성:양성 비율은 38.8945:1
 
 | 단계·모델 | 가중치 | ΔRecall | ΔSpecificity | ΔR/S 균형 |
 | --- | --- | ---: | ---: | ---: |
-| 3단계 RF | balanced | -0.0462 | -0.0566 | -0.0514 |
-| 3단계 RF | balanced_subsample | -0.0410 | -0.0507 | -0.0459 |
-| 4단계 RF | balanced | -0.0256 | -0.0445 | -0.0351 |
-| 4단계 RF | balanced_subsample | -0.0154 | -0.0502 | -0.0328 |
-| 2단계 RF | balanced | -0.0154 | -0.0413 | -0.0283 |
-| 2단계 RF | balanced_subsample | -0.0051 | -0.0511 | -0.0281 |
+| 3단계 RF | balanced | -0.0256 | -0.0555 | -0.0406 |
+| 3단계 RF | balanced_subsample | -0.0462 | -0.0584 | -0.0523 |
+| 4단계 RF | balanced | -0.0205 | -0.0424 | -0.0315 |
+| 4단계 RF | balanced_subsample | -0.0256 | -0.0546 | -0.0401 |
+| 2단계 RF | balanced | +0.0051 | -0.0559 | -0.0254 |
+| 2단계 RF | balanced_subsample | -0.0051 | -0.0498 | -0.0275 |
 | 4단계 XGBoost | balanced_ratio | -0.0359 | -0.0074 | -0.0216 |
 | 4단계 Logistic | balanced | +0.0051 | -0.0087 | -0.0018 |
 
-가중 Logistic만 양성 누락이 44건에서 43건으로 1건 감소했지만 위양성이 4,251건에서 4,318건으로 67건 증가했다. 다른 가중 변형은 Recall과 Specificity가 모두 감소했다.
+2단계 가중 RF와 가중 Logistic은 각각 양성 누락이 44건에서 43건으로 1건 감소했지만, 위양성은 각각 4,203건에서 4,634건으로 431건, 4,251건에서 4,318건으로 67건 증가했다. 다른 가중 변형은 Recall과 Specificity가 모두 감소하거나 Recall 개선 없이 Specificity가 하락했다.
 
-가중 모델의 임계값은 약 0.40~0.43으로 상승했고 Brier score도 비가중 약 0.024에서 약 0.185~0.230으로 크게 악화됐다. 이는 가중 목적함수의 원시 점수를 실제 발생확률로 해석할 수 없음을 보여주며, 별도 확률 보정 없이는 사용자 위험확률로 표시하면 안 된다.
+가중 모델의 임계값은 약 0.39~0.43으로 상승했고 Brier score도 비가중 약 0.024에서 약 0.185~0.230으로 크게 악화됐다. 이는 가중 목적함수의 원시 점수를 실제 발생확률로 해석할 수 없음을 보여주며, 별도 확률 보정 없이는 사용자 위험확률로 표시하면 안 된다.
 
 ## 결론
 
@@ -95,15 +95,15 @@ Train은 양성 910건, 음성 35,394건이며 음성:양성 비율은 38.8945:1
 원본 KLoSA `.dta` 파일은 Git에 포함하지 않고 아래 경로에 별도로 배치한다.
 
 ```bash
-uv run python -m ai_worker.ml.compare_klosa_top_balanced_model_weights \
-  --data-dir data/raw/klosa/20260413/extracted \
-  --output-dir experiments/klosa_top_balanced_model_weights
+uv run --group modeling python -m src.ml.evaluation.compare_klosa_top_balanced_model_weights \
+  --data-dir data/interim/source_extract/klosa/20260413 \
+  --output-dir experiments/diabetes_incidence/candidates/klosa_top_balanced_model_weights
 ```
 
-근거 산출물: `experiments/klosa_top_balanced_model_weights/metrics.json`
+근거 산출물: `experiments/diabetes_incidence/candidates/klosa_top_balanced_model_weights/metrics.json`
 
 빠른 계약 검증(원본 데이터 불필요):
 
 ```bash
-uv run pytest ai_worker/tests/test_klosa_top_balanced_model_weights.py
+uv run --group modeling pytest tests/ml/test_klosa_top_balanced_model_weights.py
 ```

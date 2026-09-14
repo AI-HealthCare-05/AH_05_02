@@ -1,0 +1,66 @@
+.habit-map{padding:0;border:0;border-radius:0;background:transparent;margin:0 0 28px}
+.habit-map-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.habit-map-heading h3{margin:0;font-size:26px;color:var(--green-dark)}
+.habit-map-heading>span{color:var(--muted);font-size:14px}
+.habit-topic-items{display:contents}
+.habit-map-dialog{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 40px);margin:auto;padding:0;border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--ink);box-shadow:0 24px 80px #122c3433;overflow:auto;overscroll-behavior:contain}
+.habit-map-dialog[hidden]{display:none}
+.habit-map-dialog::backdrop{background:rgb(18 39 43 / 48%);backdrop-filter:blur(3px)}
+.habit-modal-open{overflow:hidden}
+.habit-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.habit-dialog-heading h3{font-size:24px;color:var(--green-dark);margin:0}
+.habit-dialog-heading button{flex-shrink:0;padding:8px 12px}
+.habit-map-content{padding:0 22px 24px;min-width:0}
+#habit-record-panel #habit-detail-label,#habit-record-panel #habit-detail-title{display:none}
+.habit-map-content h4{font-size:25px;line-height:1.4;margin:0 0 8px;color:var(--green-dark)}
+.habit-map-content p{font-size:16px;color:var(--muted);margin:8px 0 16px}
+.habit-body-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.habit-body-inputs label{font-size:15px;color:var(--muted);min-width:0}
+.habit-body-inputs input{display:block;width:100%;min-width:0;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:20px;color:var(--ink);background:var(--surface)}
+.habit-bmi-result{background:var(--mint);border-radius:14px;padding:20px;margin:18px 0 12px}
+.habit-bmi-result>div{display:flex;justify-content:space-between;gap:10px;font-size:16px}
+.habit-bmi-result>div span{font-size:13px;color:var(--green)}
+.habit-bmi-result output{display:block;font-size:46px;font-weight:800;line-height:1.35;color:var(--green);margin:6px 0}
+.habit-bmi-result small{display:block;color:var(--muted);font-size:14px}
+.habit-map-content .habit-bmi-note{font-size:13px;margin-bottom:6px}
+.habit-reset{border:0;background:transparent;color:var(--green);padding:4px 0;font-size:14px;cursor:pointer}
+.habit-record-metric{display:block;font-size:21px;line-height:1.6;margin-top:4px;overflow-wrap:anywhere}
+.habit-record-source{font-size:14px;display:block;margin:6px 0 16px;color:var(--muted)}
+.habit-linked-challenge{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.habit-linked-challenge strong{display:block;font-size:17px}
+.habit-linked-challenge small{display:block;font-size:14px;margin:5px 0;color:var(--green)}
+.habit-progress-copy{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin:12px 0 8px}
+.habit-linked-challenge progress{display:block;width:100%;height:8px;accent-color:var(--green);border:0;border-radius:8px;overflow:hidden}
+.habit-linked-challenge progress::-webkit-progress-bar{background:var(--mint)}
+.habit-linked-challenge progress::-webkit-progress-value{background:var(--green)}
+.habit-map .habit-map-empty{font-size:14px;color:var(--muted);margin:12px 0}
+.habit-map-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.habit-map-actions button{font-size:16px;padding:12px 16px;border-radius:10px}
+.habit-map-content .health-tool-card{padding:0;border:0;background:transparent;box-shadow:none;display:block}
+.habit-map-content .health-tool-question-mascot{width:76px;height:76px;object-fit:contain;margin:14px 0}
+.habit-map-content .form-row input{min-width:0;width:100%;font-size:17px}
+.habit-map-content .notice{font-size:16px;overflow-wrap:anywhere}
+.habit-help-back{font-size:15px;padding:7px 12px;margin-bottom:16px}
+.habit-linked-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.habit-linked-actions button{font-size:15px}
+.health-tools-pending-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:24px 0}
+.health-tools-pending-grid .health-tool-section.is-coming-soon{margin:0;padding:0;border:0;background:transparent;min-width:0}
+.health-tools-pending-grid .health-tool-section.is-coming-soon>h3{font-size:18px;text-align:center;margin:0 0 16px}
+.health-tools-pending-grid .health-tool-card{height:auto}
+.health-tool-overlay-wrap{position:relative}
+.health-tool-section.is-coming-soon .health-tool-overlay-label{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;margin:0;padding:16px;pointer-events:none;text-shadow:0 0 12px var(--paper),0 2px 5px var(--paper)}
+.health-tools-pending-grid .health-tool-status-row{align-items:center;flex-wrap:wrap}
+.health-tools-pending-grid .health-tool-mascot{width:76px;height:76px;object-fit:contain;flex-shrink:0}
+.health-tools-pending-grid .health-tool-row{min-width:0}
+.health-tools-pending-grid .health-tool-row p{font-size:15px}
+.health-tools-pending-grid .health-tool-row strong{font-size:17px}
+.health-tools-pending-grid .health-tool-inline-action{font-size:15px;max-width:100%}
+.health-tools-pending-grid .manual-input-details{display:none}
+@media(max-width:1000px){.health-tools-pending-grid{grid-template-columns:minmax(0,1fr)}.health-tools-pending-grid .health-tool-card{height:auto}}
+@media(max-width:520px){.habit-map{padding:0}.habit-map-heading{align-items:flex-start;flex-direction:column;gap:8px}.habit-map-heading h3{font-size:23px}.habit-topic{padding:17px 14px}.habit-map-content{padding:0 14px 20px}.habit-topic-title{font-size:18px;gap:8px}.habit-topic strong{font-size:18px}.habit-topic small,.habit-topic-status{font-size:13px}.habit-map-content h4{font-size:22px}.habit-map-actions button{flex:1}.habit-linked-actions{justify-content:flex-start}.habit-body-inputs{gap:10px}}
+.large-text .habit-map{font-size:1.1em}
+
+@media(max-width:420px){.habit-body-inputs{grid-template-columns:1fr}.habit-map-actions{flex-direction:column}.habit-map-actions button{width:100%;min-height:48px}}
+
+.dashboard-hero.is-tools{position:relative;min-height:0;margin:0;padding:0}
+.dashboard-hero.is-tools>.profile-menu{position:absolute;right:0;top:0;z-index:2}
