@@ -1451,19 +1451,39 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
   z-index:46;
   top:50%;
   left:50%;
-  width:min(820px,calc(100vw - 40px));
+  width:min(900px,calc(100vw - 40px));
   max-height:calc(100vh - 48px);
   margin:0;
   overflow-y:auto;
   transform:translate(-50%,-50%);
-  background:#fff;
-  border:2px solid #efb4ad;
-  border-top:8px solid #c34d43;
-  border-left:2px solid #efb4ad;
-  border-radius:24px;
-  padding:34px 38px;
+  background:linear-gradient(180deg,rgba(255,251,232,.98),rgba(246,225,185,.97));
+  border:8px solid #6f4021;
+  border-radius:26px;
+  padding:42px 42px 34px;
+  text-align:center;
   box-shadow:0 0 0 100vmax rgba(8,20,18,.58),0 24px 70px rgba(6,32,27,.28);
 }
+#eligibility-guidance h3{margin:0 0 10px;color:#173a31;font-size:clamp(32px,3.2vw,48px);line-height:1.2;text-shadow:0 2px 0 #fff2c8}
+#eligibility-guidance .eligibility-guidance-message{margin:0 auto 28px;max-width:760px;color:#51351f;font-size:clamp(20px,2.2vw,30px);line-height:1.35;font-weight:800;white-space:pre-line}
+#eligibility-guidance .eligibility-guidance-sections{display:grid;gap:14px;margin:0 auto 22px;max-width:760px}
+#eligibility-guidance .eligibility-guidance-section{display:grid;grid-template-columns:minmax(116px,150px) minmax(0,1fr);gap:18px;align-items:stretch;padding:0;background:transparent;box-shadow:none}
+#eligibility-guidance .eligibility-guidance-label{display:flex;align-items:center;justify-content:center;min-height:92px;padding:18px 16px;border-radius:16px;background:rgba(255,248,228,.84);box-shadow:inset 0 0 0 2px rgba(184,137,80,.3);color:#4b2d19;font-size:clamp(18px,2vw,24px);line-height:1.25;font-weight:900;word-break:keep-all}
+#eligibility-guidance .eligibility-guidance-copy{display:grid;align-content:center;gap:8px;min-height:92px;padding:18px 20px;border-radius:16px;background:rgba(255,248,228,.74);box-shadow:inset 0 0 0 2px rgba(184,137,80,.24);text-align:center}
+#eligibility-guidance .eligibility-guidance-section strong{display:block;margin:0;color:#173a31;font-size:18px;line-height:1.4;word-break:keep-all}
+#eligibility-guidance .eligibility-guidance-section p{margin:0;color:#4b2d19;font-size:18px;line-height:1.55;font-weight:800;white-space:pre-line;word-break:keep-all;overflow-wrap:break-word}
+#eligibility-guidance .eligibility-guidance-action .eligibility-guidance-copy{background:rgba(255,234,224,.82);box-shadow:inset 0 0 0 2px rgba(195,77,67,.18)}
+#eligibility-guidance .eligibility-guidance-buttons{display:grid;gap:14px;margin:0 auto 22px;width:100%;max-width:760px}
+#eligibility-guidance .emergency-guidance-actions{grid-template-columns:1fr;gap:12px;margin:0}
+#eligibility-guidance .emergency-guidance-actions a,#eligibility-guidance .emergency-guidance-actions button,#eligibility-guidance .actions button{min-height:58px;font-size:18px;word-break:keep-all}
+#eligibility-guidance .eligibility-guidance-primary-actions{display:grid;width:100%;max-width:760px;margin:0 auto;justify-items:stretch}
+#eligibility-guidance .eligibility-guidance-primary-actions .primary,#eligibility-guidance .eligibility-guidance-primary-actions .secondary{display:flex;align-items:center;justify-content:center;width:100%;max-width:760px}
+#eligibility-guidance .branch-safety,#eligibility-guidance .emergency-do-not-feed{margin:0 auto;max-width:760px;border:0;border-radius:14px;background:rgba(255,255,255,.76);color:#6b4424!important;font-size:16px;line-height:1.5;font-weight:800;word-break:keep-all;overflow-wrap:break-word}
+#eligibility-guidance .emergency-do-not-feed{display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;min-height:58px;padding:14px 18px;border:2px dashed #b88950;background:#fff7dd}
+#eligibility-guidance .actions{justify-content:center;margin-top:0}
+#eligibility-guidance .eligibility-guidance-close-actions{margin-top:18px}
+#eligibility-guidance .eligibility-guidance-buttons,#eligibility-guidance .eligibility-guidance-buttons .eligibility-guidance-primary-actions{width:760px;max-width:100%}
+#eligibility-guidance .eligibility-guidance-buttons .eligibility-guidance-primary-actions button{width:100%;min-width:0}
+#eligibility-guidance #eligibility-guidance-primary{display:flex;align-items:center;justify-content:center;width:760px;max-width:100%;min-width:0;margin:0 auto}
 
 @media(max-width:720px){
   #eligibility-guidance{
@@ -1476,6 +1496,9 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
     transform:none;
     border-radius:24px 24px 0 0;
   }
+  #eligibility-guidance .eligibility-guidance-section{grid-template-columns:1fr;gap:10px}
+  #eligibility-guidance .eligibility-guidance-label,#eligibility-guidance .eligibility-guidance-copy{min-height:auto}
+  #eligibility-guidance .eligibility-guidance-section p{font-size:16px}
 }
 
 /* 상단 당근의 숲 바로가기와 숫자 없는 기본 이용 흐름 */

@@ -6,14 +6,14 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260913-health-info-layout-v1">
+  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260914-guidance-format-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <link rel="stylesheet" href="/static/retro-intro.css?v=20260910-result-signal-grid-restore-v1">
   <script src="/static/retro-intro.js?v=20260910-result-signal-grid-restore-v1" defer></script>
-  <script src="/static/intro-retro-app.js?v=20260913-urgent-question-copy-v2" defer></script>
+  <script src="/static/intro-retro-app.js?v=20260914-guidance-format-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -44,7 +44,9 @@
     </nav>
     <nav class="workspace-top-nav onboarding-top-nav" id="onboarding-top-nav" aria-label="가입 후 입력 메뉴" hidden>
       <ol>
-        <li><button type="button" data-onboarding-health>건강정보 입력</button></li>
+        <li><button type="button" data-onboarding-step="3">이용확인</button></li>
+        <li><button type="button" data-onboarding-step="4">건강정보 입력</button></li>
+        <li><button type="button" data-onboarding-step="5">분석</button></li>
       </ol>
     </nav>
     <div class="header-utilities">
@@ -178,7 +180,7 @@
           <div class="form-row"><label for="signup-gender">성별</label><select id="signup-gender" required><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
           <div class="consent-list full" aria-label="동의 항목">
             <label class="check-card consent-card"><input id="personal-consent" type="checkbox" required><span><strong>서비스 이용약관·개인정보 수집 및 이용</strong><small>계정 생성과 서비스 제공에 필요한 약관 및 개인정보 처리를 확인합니다.</small><em>필수</em></span></label>
-            <label class="check-card consent-card"><input id="health-consent" type="checkbox"><span><strong>건강정보 수집·이용</strong><small>[간당간당]의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
+            <label class="check-card consent-card"><input id="health-consent" type="checkbox"><span><strong>건강정보 수집·이용</strong><small>간당간당의 건강정보 입력·위험 확인 기능 이용에 필요합니다.</small><em>필수</em></span></label>
             <label class="check-card consent-card"><input id="analytics-consent" type="checkbox"><span><strong>서비스 개선을 위한 이용기록 분석</strong><small>선택하지 않아도 건강정보 입력과 위험 확인 기능을 이용할 수 있습니다.</small><em class="optional">선택</em></span></label>
           </div>
           <div class="actions full"><button class="secondary back" type="button">이전</button><button class="primary" type="submit">가입·동의하고 계속</button></div>
@@ -294,37 +296,45 @@
           </section>
         </div>
         <div id="eligibility-guidance" class="branch-result" role="dialog" aria-modal="true" aria-labelledby="eligibility-guidance-title" tabindex="-1" hidden>
-          <p class="eyebrow" id="eligibility-guidance-code"></p>
           <h3 id="eligibility-guidance-title"></h3>
-          <p id="eligibility-guidance-message"></p>
-          <div class="branch-result-grid">
-            <article>
-              <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
-              <p id="eligibility-guidance-reason"></p>
+          <p class="eligibility-guidance-message" id="eligibility-guidance-message"></p>
+          <div class="eligibility-guidance-sections">
+            <article class="eligibility-guidance-section">
+              <span class="eligibility-guidance-label">사유</span>
+              <div class="eligibility-guidance-copy">
+                <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
+                <p id="eligibility-guidance-reason"></p>
+              </div>
             </article>
-            <article>
-              <strong>다음 행동</strong>
-              <p id="eligibility-guidance-action"></p>
+            <article class="eligibility-guidance-section eligibility-guidance-action">
+              <span class="eligibility-guidance-label">행동 안내</span>
+              <div class="eligibility-guidance-copy">
+                <p id="eligibility-guidance-action"></p>
+              </div>
             </article>
           </div>
-          <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
-          <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
-            <a class="primary" href="tel:119">119에 전화하기</a>
-            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+          <div class="eligibility-guidance-buttons">
+            <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
+              <a class="primary" href="tel:119">119에 전화하기</a>
+              <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+            </div>
+            <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-phone-consultation" type="button">전화 문의 가능한 기관 보기</button>
+              <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+            </div>
+            <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
+            </div>
+            <div class="actions eligibility-guidance-primary-actions">
+              <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
+              <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
+            </div>
           </div>
-          <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
-            <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
-            <button class="secondary" id="find-phone-consultation" type="button">전화 문의 가능한 기관 보기</button>
-            <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
-          </div>
-          <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
-            <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
-            <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
-          </div>
-          <div class="actions">
-            <button class="secondary" id="eligibility-edit-answer" type="button">답변 다시 확인하기</button>
-            <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
-            <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
+          <p class="branch-safety">간당간당은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
+          <div class="actions eligibility-guidance-close-actions">
+            <button class="secondary" id="eligibility-edit-answer" type="button">닫기</button>
           </div>
         </div>
       </section>
@@ -461,7 +471,7 @@
                 <dl id="review-detail-health"></dl>
               </article>
             </div>
-            <div class="notice safety health-input-notice"><span aria-hidden="true">안전 안내</span><div><p>[간당간당]은 당뇨병을 진단하거나 치료하지 않습니다. 입력 내용 확인 후 위험 신호 확인만 요청합니다.</p></div></div>
+            <div class="notice safety health-input-notice"><span aria-hidden="true">안전 안내</span><div><p>간당간당은 당뇨병을 진단하거나 치료하지 않습니다. 입력 내용 확인 후 위험 신호 확인만 요청합니다.</p></div></div>
             <div class="actions full review-submit-actions"><button class="primary" id="submit-analysis" type="submit">이 내용으로 분석하기</button></div>
           </section>
         </form>

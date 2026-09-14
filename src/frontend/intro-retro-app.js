@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthConsent: null, healthConsentStatus: "unknown", healthDraftDirty: false, checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, medicalGuidanceReturnStep: null, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, challengeListStatus: "idle", challengeStartSafetyBlocked: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home", invitations: { sent: [], received: [] }, reportPeriods: {}, reportPeriodStatus: { week: "idle", "four-week": "idle", all: "idle" } };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -270,7 +270,7 @@ const eligibilityGuidance = {
     message: "지금은 당뇨 위험도 예측보다 즉시 도움을 받는 것이 우선입니다.",
     reasonTitle: "즉시 도움이 필요한 증상",
     reason: "한 가지 이상의 즉시 도움이 필요한 증상을 선택했습니다.",
-    action: "직접 운전하거나 병원을 검색하며 기다리지 말고 119에 연락해 현재 위치와 증상을 알려주세요.",
+    action: "직접 운전하거나 병원을 검색하며 기다리지 말고\n119에 연락해 현재 위치와 증상을 알려주세요.",
     primaryLabel: "119 안내 확인하기",
     primaryStep: null,
   },
@@ -285,7 +285,7 @@ const eligibilityGuidance = {
   },
   DIAGNOSED_DIABETES: {
     code: "D01", title: "검사·상담 안내를 확인해 주세요",
-    message: "진단받은 분은 담당 의료진의 안내를 우선하며 가까운 의료기관 정보를 확인할 수 있습니다.",
+    message: "진단받은 분은 담당 의료진의 안내를 우선하며\n가까운 의료기관 정보를 확인할 수 있습니다.",
     reasonTitle: "진단 여부 확인",
     reason: "의료진에게 당뇨병을 진단받은 적이 있다고 답했습니다.",
     action: "아래에서 가까운 의료기관의 주소와 전화번호를 확인해 주세요.",
@@ -380,7 +380,7 @@ function showEligibilityGuidance(reasonCodes) {
   state.eligibilityGuidanceSecondaryStep = guidance.secondaryStep || null;
   state.modelOutOfRange = reason === "MODEL_AGE_OUT_OF_RANGE";
   state.currentHealthOnly = reason === "MODEL_AGE_OUT_OF_RANGE";
-  $("#eligibility-guidance-code").textContent = guidance.code;
+  $("#eligibility-guidance").dataset.code = guidance.code;
   $("#eligibility-guidance-title").textContent = guidance.title;
   $("#eligibility-guidance-message").textContent = guidance.message;
   $("#eligibility-guidance-reason-title").textContent = guidance.reasonTitle;
@@ -597,8 +597,8 @@ function syncTopNavigation() {
   const hasChallengeAccess = Boolean(state.cycle || state.capabilities.challenge || state.step >= 7);
   const needsAccountSetup = Boolean(state.accountRecovery);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
-  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess);
-  const showOnboardingNav = isLoggedIn && !needsAccountSetup && !showWorkspaceNav;
+  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || (state.step >= 3 && state.step <= 5));
+  const showOnboardingNav = isLoggedIn && !needsAccountSetup && (!showWorkspaceNav || (state.step >= 3 && state.step <= 5));
   const guestNav = $("#guest-flow-panel");
   const workspaceNav = $("#workspace-top-nav");
   const onboardingNav = $("#onboarding-top-nav");
@@ -617,8 +617,9 @@ function syncTopNavigation() {
     button.classList.toggle("active", selected);
     button.setAttribute("aria-current", selected ? "page" : "false");
   });
-  $$("[data-onboarding-health]").forEach((button) => {
-    const selected = state.step >= 3 && state.step <= 6;
+  $$("[data-onboarding-step]").forEach((button) => {
+    const targetStep = Number(button.dataset.onboardingStep);
+    const selected = state.step === targetStep || (targetStep === 5 && state.step === 6);
     button.classList.toggle("active", selected);
     button.setAttribute("aria-current", selected ? "page" : "false");
   });
@@ -715,6 +716,14 @@ async function goStepFromNav(step) {
 }
 
 function goBack() {
+  if (state.token && state.step === 4) {
+    showStep(3);
+    return;
+  }
+  if (state.token && state.step === 5) {
+    showStep(4);
+    return;
+  }
   if (state.navigationHistory.length <= 1) return;
   state.navigationHistory.pop();
   const previousStep = state.navigationHistory.at(-1) || 1;
@@ -5081,15 +5090,20 @@ $$("[data-top-step]").forEach((button) => button.addEventListener("click", async
   }
   showStep(targetStep);
 }));
-$$("[data-onboarding-health]").forEach((button) => button.addEventListener("click", () => {
+$$("[data-onboarding-step]").forEach((button) => button.addEventListener("click", () => {
   if (!state.token) {
     showStep(2);
     showAuthMode("login", { context: "login" });
     return;
   }
-  if (!isLocalPreview() && !requireActiveHealthConsent("건강정보 입력")) return;
-  if (state.capabilities.currentHealth || state.step >= 4) showStep(4);
-  else showStep(3);
+  const targetStep = Number(button.dataset.onboardingStep);
+  if (targetStep >= 4 && !isLocalPreview() && !requireActiveHealthConsent("건강정보 입력")) return;
+  if (targetStep === 5) {
+    if (state.step >= 5 || state.analysisRun || state.prediction || state.currentScreeningPrediction) showStep(5);
+    else showMessage("건강정보 입력 후 분석을 시작할 수 있어요.");
+    return;
+  }
+  showStep(targetStep);
 }));
 $("#profile-edit")?.addEventListener("click", openProfileEditor);
 $("#open-privacy-settings")?.addEventListener("click", () => openHealthConsentSettings());
@@ -5495,7 +5509,8 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
   }
 });
-async function openEligibilityMedicalFacilities({ requestLocation = true } = {}) {
+async function openEligibilityMedicalFacilities({ requestLocation = true, returnToEligibility = false } = {}) {
+  state.medicalGuidanceReturnStep = returnToEligibility ? 3 : null;
   $("#eligibility-guidance").hidden = true;
   const resultScreen = document.querySelector('.screen[data-step="6"]');
   resultScreen?.classList.add("medical-guidance-only");
@@ -5510,8 +5525,8 @@ async function openEligibilityMedicalFacilities({ requestLocation = true } = {})
 
 $("#find-same-day-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
 $("#find-phone-consultation")?.addEventListener("click", () => openEligibilityMedicalFacilities());
-$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities());
-$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities());
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
@@ -5671,6 +5686,22 @@ $("#to-challenges").addEventListener("click", async () => {
     return;
   }
   try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+});
+$("#close-medical-guidance")?.addEventListener("click", () => {
+  $("#medical-guidance-detail").hidden = true;
+  document.querySelector('.screen[data-step="6"]')?.classList.remove("medical-guidance-only");
+  document.body.classList.remove("modal-open");
+  if (state.medicalGuidanceReturnStep === 3) {
+    state.medicalGuidanceReturnStep = null;
+    showStep(3);
+    const title = $("#eligibility-title");
+    title?.setAttribute("tabindex", "-1");
+    title?.focus({ preventScroll: true });
+    title?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  state.medicalGuidanceReturnStep = null;
+  $("#to-challenges")?.focus();
 });
 $("#medical-to-challenges").addEventListener("click", async (event) => {
   if (!canContinueAfterMedicalGuidance() || $("#medical-guidance-detail").hidden) return;

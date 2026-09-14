@@ -4220,8 +4220,8 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 
 /* Safety branch popups inherit the carrot-house signboard mood. */
 #eligibility-guidance.branch-result{
-  width:min(860px,calc(100vw - 40px));
-  padding:24px 28px 28px;
+  width:min(900px,calc(100vw - 40px));
+  padding:42px 42px 34px;
   border:8px solid #6f4021;
   border-top:8px solid #6f4021;
   border-left:8px solid #6f4021;
@@ -4230,65 +4230,178 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
     linear-gradient(180deg,rgba(255,251,232,.98),rgba(246,225,185,.97));
   box-shadow:0 0 0 100vmax rgba(8,20,18,.62),0 24px 0 rgba(72,42,21,.26),0 36px 72px rgba(6,32,27,.32),inset 0 0 0 3px rgba(255,255,255,.58);
   color:#351d12;
+  text-align:center;
 }
 #eligibility-guidance.branch-result::before{
   content:none!important;
   display:none!important;
 }
-#eligibility-guidance .eyebrow{
-  display:inline-flex;
-  min-height:34px;
-  align-items:center;
-  justify-content:center;
-  padding:6px 12px;
-  border:2px solid #b88950;
-  border-radius:999px;
-  background:#fff7dd;
-  color:#6b4424;
-  font-size:13px;
-}
 #eligibility-guidance h3{
-  margin:8px 0 10px;
+  margin:0 0 10px;
   color:#173a31;
-  font-size:clamp(30px,3vw,44px);
+  font-size:clamp(32px,3.2vw,48px);
+  line-height:1.2;
   text-shadow:0 2px 0 #fff2c8;
 }
-#eligibility-guidance>p:not(.eyebrow):not(.branch-safety){
+#eligibility-guidance .eligibility-guidance-message{
+  margin:0 auto 28px;
+  max-width:760px;
   color:#51351f;
+  font-size:clamp(20px,2.2vw,30px);
+  line-height:1.35;
   font-weight:800;
+  white-space:pre-line;
 }
-#eligibility-guidance .branch-result-grid{
+#eligibility-guidance .eligibility-guidance-sections{
+  display:grid;
   gap:14px;
+  margin:0 auto 22px;
+  max-width:760px;
 }
-#eligibility-guidance .branch-result-grid article{
-  border:2px solid #b88950;
+#eligibility-guidance .eligibility-guidance-section{
+  display:grid;
+  grid-template-columns:minmax(116px,150px) minmax(0,1fr);
+  gap:18px;
+  align-items:stretch;
+  padding:0;
+  background:transparent;
+  box-shadow:none;
+}
+#eligibility-guidance .eligibility-guidance-label{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:92px;
+  padding:18px 16px;
   border-radius:16px;
-  background:linear-gradient(180deg,#fff8e4,#f8e2bd);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.68);
-}
-#eligibility-guidance .branch-result-grid strong{
-  color:#173a31;
-}
-#eligibility-guidance .branch-result-grid p{
+  background:rgba(255,248,228,.84);
+  box-shadow:inset 0 0 0 2px rgba(184,137,80,.3);
   color:#4b2d19;
+  font-size:clamp(18px,2vw,24px);
+  line-height:1.25;
+  font-weight:900;
+  word-break:keep-all;
+}
+#eligibility-guidance .eligibility-guidance-copy{
+  display:grid;
+  align-content:center;
+  gap:8px;
+  min-height:92px;
+  padding:18px 20px;
+  border-radius:16px;
+  background:rgba(255,248,228,.74);
+  box-shadow:inset 0 0 0 2px rgba(184,137,80,.24);
+  text-align:center;
+}
+#eligibility-guidance .eligibility-guidance-section strong{
+  color:#173a31;
+  font-size:18px;
+  line-height:1.4;
+  word-break:keep-all;
+}
+#eligibility-guidance .eligibility-guidance-section p{
+  margin:0;
+  color:#4b2d19;
+  font-size:18px;
+  line-height:1.55;
+  font-weight:800;
+  white-space:pre-line;
+  word-break:keep-all;
+  overflow-wrap:break-word;
+}
+#eligibility-guidance .eligibility-guidance-action .eligibility-guidance-copy{
+  background:rgba(255,234,224,.82);
+  box-shadow:inset 0 0 0 2px rgba(195,77,67,.18);
+}
+#eligibility-guidance .eligibility-guidance-buttons{
+  display:grid;
+  gap:14px;
+  margin:0 auto 22px;
+  width:100%;
+  max-width:760px;
+}
+#eligibility-guidance .emergency-guidance-actions{
+  grid-template-columns:1fr;
+  gap:12px;
+  margin:0;
+}
+#eligibility-guidance .emergency-guidance-actions a,
+#eligibility-guidance .emergency-guidance-actions button,
+#eligibility-guidance .actions button{
+  min-height:58px;
+  font-size:18px;
+  word-break:keep-all;
+}
+#eligibility-guidance .eligibility-guidance-primary-actions{
+  display:grid;
+  width:100%;
+  max-width:760px;
+  margin:0 auto;
+  justify-items:stretch;
+}
+#eligibility-guidance .eligibility-guidance-primary-actions .primary,
+#eligibility-guidance .eligibility-guidance-primary-actions .secondary{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  max-width:760px;
 }
 #eligibility-guidance .branch-safety,
 #eligibility-guidance .emergency-do-not-feed{
-  border:2px dashed #b88950;
+  margin:0 auto;
+  max-width:760px;
+  border:0;
   border-radius:14px;
-  background:#fff7dd;
+  background:rgba(255,255,255,.76);
   color:#6b4424!important;
+  font-size:16px;
+  line-height:1.5;
+  font-weight:800;
+  word-break:keep-all;
+  overflow-wrap:break-word;
+}
+#eligibility-guidance .emergency-do-not-feed{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  box-sizing:border-box;
+  min-height:58px;
+  padding:14px 18px;
+  border:2px dashed #b88950;
+  background:#fff7dd;
 }
 #eligibility-guidance .actions{
-  justify-content:flex-end;
+  justify-content:center;
+  margin-top:0;
+}
+#eligibility-guidance .eligibility-guidance-close-actions{
+  margin-top:18px;
+}
+#eligibility-guidance .eligibility-guidance-buttons,
+#eligibility-guidance .eligibility-guidance-buttons .eligibility-guidance-primary-actions{
+  width:760px;
+  max-width:100%;
+}
+#eligibility-guidance .eligibility-guidance-buttons .eligibility-guidance-primary-actions button{
+  width:100%;
+  min-width:0;
 }
 #eligibility-guidance #eligibility-edit-answer{
-  min-width:132px;
+  min-width:180px;
   border-color:#b88950;
   background:#fff8e8;
   color:#4b2d19;
 }
 #eligibility-guidance #eligibility-guidance-primary{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:760px;
+  max-width:100%;
+  min-width:0;
+  margin:0 auto;
   background:#0b4d42;
   border-color:#123e32;
   color:#fffbe8;
@@ -4303,8 +4416,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   text-align:center;
   gap:18px;
 }
-#eligibility-guidance[data-variant="age-band-mismatch"] #eligibility-guidance-code,
-#eligibility-guidance[data-variant="age-band-mismatch"] .branch-result-grid,
+#eligibility-guidance[data-variant="age-band-mismatch"] .eligibility-guidance-sections,
 #eligibility-guidance[data-variant="age-band-mismatch"] .branch-safety{
   display:none;
 }
@@ -4314,7 +4426,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   white-space:nowrap;
   font-size:clamp(28px,2.8vw,38px);
 }
-#eligibility-guidance[data-variant="age-band-mismatch"]>p:not(.eyebrow):not(.branch-safety){
+#eligibility-guidance[data-variant="age-band-mismatch"] .eligibility-guidance-message{
   margin:0;
   max-width:620px;
   color:#4b2d19;
@@ -4336,10 +4448,21 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   #eligibility-guidance.branch-result::before{
     margin-top:-52px;
   }
+  #eligibility-guidance .eligibility-guidance-section{
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  #eligibility-guidance .eligibility-guidance-label,
+  #eligibility-guidance .eligibility-guidance-copy{
+    min-height:auto;
+  }
   #eligibility-guidance[data-variant="age-band-mismatch"] h3{
     font-size:clamp(20px,5vw,28px);
   }
-  #eligibility-guidance[data-variant="age-band-mismatch"]>p:not(.eyebrow):not(.branch-safety){
+  #eligibility-guidance .eligibility-guidance-section p{
+    font-size:16px;
+  }
+  #eligibility-guidance[data-variant="age-band-mismatch"] .eligibility-guidance-message{
     font-size:clamp(22px,5.2vw,28px);
   }
 }
