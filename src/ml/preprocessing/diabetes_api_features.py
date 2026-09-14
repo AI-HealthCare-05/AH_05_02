@@ -63,6 +63,7 @@ REQUIRED_API_FIELDS = (
     "previously_diagnosed_diabetes",
 )
 OPTIONAL_API_FIELDS = (
+    "waist_cm",
     "annual_household_income_10k_krw",
     "health_satisfaction_score",
     "economic_satisfaction_score",
@@ -108,6 +109,7 @@ API_INPUT_CONTRACT = {
         "model_feature": False,
         "true_policy": "reject_as_ineligible",
     },
+    "waist_cm": {"required": False, "type": "number|null", "unit": "cm", "range": [45, 160]},
     "annual_household_income_10k_krw": {
         "required": False,
         "type": "number|null",
@@ -187,6 +189,7 @@ class DiabetesRiskInput:
     exercise_days_per_week: float
     exercise_minutes: float
     previously_diagnosed_diabetes: bool
+    waist_cm: float | None = None
     annual_household_income_10k_krw: float | None = None
     health_satisfaction_score: float | None = None
     economic_satisfaction_score: float | None = None
