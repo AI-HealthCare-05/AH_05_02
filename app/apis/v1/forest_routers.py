@@ -1,24 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
 from app.dtos.forest import ForestAvatarUpdateRequest, ForestObjectCreateRequest, ForestSpaceCreateRequest
 from app.models.users import User
 from app.services.forest import ForestService
-from app.services.forest_weather import forest_weather
 
 forest_router = APIRouter(prefix="/forest", tags=["Carrot Forest Lite"])
-
-
-@forest_router.get("/weather")
-async def local_weather(response: Response) -> dict:
-    response.headers["Cache-Control"] = "no-store"
-    try:
-        return await forest_weather.get()
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail="날씨를 잠시 불러올 수 없습니다.") from exc
 
 
 @forest_router.get("/catalog")

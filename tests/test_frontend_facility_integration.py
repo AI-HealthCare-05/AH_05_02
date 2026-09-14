@@ -18,9 +18,9 @@ def test_facility_buttons_call_real_nearby_endpoints() -> None:
     html, script = _frontend_sources()
 
     assert 'id="find-nearby-medical-facilities"' in html
-    assert 'id="find-nearby-emergency"' in html
+    assert 'id="find-nearby-emergency"' not in html
     assert "api(`/medical-facilities/nearby?${params.toString()}`)" in script
-    assert "api(`/emergency-facilities/nearby?${params.toString()}`)" in script
+    assert 'api("/medical-facilities/map-config")' in script
 
 
 def test_map_sdk_is_loaded_from_authenticated_runtime_config() -> None:
@@ -36,13 +36,12 @@ def test_location_failure_offers_address_search_without_fixed_fallback() -> None
     html, script = _frontend_sources()
 
     assert 'id="facility-address-form"' in html
-    assert 'id="emergency-address-form"' in html
+    assert 'id="emergency-address-form"' not in html
     assert "coordinatesForAddress" in script
     assert "geocoder.addressSearch" in script
     assert "DEFAULT_FACILITY_LOCATION" not in script
     assert "기본 위치" not in script
     assert '$("#facility-address-form").hidden = false' in script
-    assert '$("#emergency-address-form").hidden = false' in script
 
 
 def test_location_statuses_distinguish_denied_timeout_and_unavailable() -> None:
@@ -59,7 +58,7 @@ def test_new_or_failed_search_clears_previous_results_and_map() -> None:
     html, script = _frontend_sources()
 
     assert 'id="medical-facility-map"' in html
-    assert 'id="emergency-facility-map"' in html
+    assert 'id="emergency-facility-map"' not in html
     assert "function resetFacilitySearchUi(target)" in script
     assert 'results.innerHTML = ""' in script
     assert "clearFacilityMapMarkers(target)" in script
@@ -74,7 +73,8 @@ def test_existing_frontend_contracts_remain_visible() -> None:
 
     assert 'href="tel:119"' in html
     assert 'id="risk-traffic-light"' in html
-    assert 'id="risk-hyeoldangi"' in html
+    assert 'id="risk-hyeoldangi"' not in html
+    assert 'id="challenge-lifestyle-summary"' not in html
     assert "hyeoldangi-face-high.png" in html
     assert 'id="rag-challenge-generator"' in html
     assert 'id="medical-guidance-detail"' in html

@@ -6,7 +6,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../src/frontend/app.js'), 'utf8');
 function harness() {
   const nodes = new Map();
-  const state = { dailyCompleted: new Set(['7', '9']) };
+  const state = { dailyCompleted: new Set(['7', '9']), cycle: { user_challenges: [{ user_challenge_id: 7 }, { user_challenge_id: 8 }, { user_challenge_id: 9 }] } };
   let writes = 0;
   const $ = key => {
     if (!nodes.has(key)) nodes.set(key, { hidden: false, dataset: {}, classList: { toggle() {} }, setAttribute() {}, focus() {} });
@@ -14,9 +14,9 @@ function harness() {
   };
   const ctx = vm.createContext({ state, $, Date, challengeDay: () => "2026-09-08", isLocalPreview: () => false,
     api: async () => { writes++; }, renderDailyRecordList() {}, updateDailyRecordSummary() {},
-    loadWeeklyReport: async () => {}, showMessage() {}, habitRecordIcon: kind => kind,
+    loadWeeklyReport: async () => {}, showMessage() {}, habitRecordIcon: kind => kind, openForestEntryDialog() {},
   });
-  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'openSimpleRecordModal', 'showPhotoRecordState', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'completeDailyRecord', 'undoDailyRecord']) {
+  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'openSimpleRecordModal', 'showPhotoRecordState', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'dailyChallengeTargetCount', 'allDailyChallengesCompleted', 'closeChallengeRewardDialog', 'openChallengeRewardDialog', 'maybeOpenDailyReward', 'completeDailyRecord', 'undoDailyRecord']) {
     const match = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
     assert.ok(match, name); vm.runInContext(match[0], ctx);
   }
@@ -59,7 +59,26 @@ test('duplicate completion never overwrites stored logs, while new completion wr
   assert.equal(writes(), 0);
   await ctx.completeDailyRecord({ id: '8' });
   await ctx.completeDailyRecord({ id: '8' });
-  assert.equal(writes(), 1);
+  assert.equal(writes(), 2);
+});
+
+test('last daily completion claims reward and opens reward dialog', async () => {
+  const {ctx,$} = harness();
+  const requests = [];
+  ctx.api = async (url, options) => {
+    requests.push({ url, method: options?.method });
+    if (url.startsWith('/challenge-rewards/daily/')) return { carrot_amount: 55, carrot_balance: 155, claimed: true };
+    return {};
+  };
+  $('#challenge-reward-dialog').showModal = () => { $('#challenge-reward-dialog').open = true; };
+  await ctx.completeDailyRecord({ id: '8' });
+  assert.deepEqual(requests.map((item) => [item.method, item.url]), [
+    ['PUT', '/user-challenges/8/logs/2026-09-08'],
+    ['POST', '/challenge-rewards/daily/2026-09-08'],
+  ]);
+  assert.equal($('#challenge-reward-dialog').open, true);
+  assert.equal($('#challenge-reward-amount').textContent, '+55 당근');
+  assert.equal($('#challenge-reward-balance').textContent, '현재 보유 당근 155개');
 });
 
 test('undo saves false for today, removes only that completion and allows recording again', async () => {

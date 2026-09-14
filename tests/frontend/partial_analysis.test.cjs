@@ -23,6 +23,7 @@ function harness() {
     api: async url => { calls.push(url); if (factorFailure) throw new Error('503'); return { items: [] }; },
     renderPredictionStatus: status => { state.status = status; },
     renderPrediction: prediction => { state.renderedFuture = prediction; },
+    renderTwoYearRiskForecast: () => {},
     renderCurrentHealthResult: prediction => { state.renderedCurrent = prediction; },
     openResultStepAfterSuccessfulAnalysis: async guard => { if (!guard || guard()) state.step = 6; },
   });

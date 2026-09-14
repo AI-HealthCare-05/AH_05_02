@@ -7,14 +7,13 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 from starlette import status
-from tortoise import Tortoise
 
 from ai_worker.handlers import run_task
 from app.core import config
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.dtos.health import PredictionJobCreateRequest
 from app.main import app
 from app.services.health import HealthService
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -97,8 +96,8 @@ def test_frontend_requests_both_models_and_labels_them_separately() -> None:
     assert '...(state.capabilities.currentHealth ? ["diabetes_current_screening"] : [])' in script
     assert '...(!state.currentHealthOnly ? ["diabetes_incidence"] : [])' in script
     assert "requestPredictionModel(modelKey)" in script
-    assert 'id="risk-confirm-title">현재 위험 신호 선별 결과' in html
-    assert 'id="future-onset-title">앞으로의 위험 신호 선별 결과' in html
+    assert 'id="risk-confirm-title">지금 건강정보에서 확인된 신호예요' in html
+    assert 'id="future-onset-title">앞으로 약 2년 동안 조심할 위험 신호예요' in html
     assert 'id="future-risk-category"' in html
     for internal_name in ("오늘이", "내일이", "모레노"):
         assert internal_name not in html
@@ -108,8 +107,7 @@ def test_frontend_requests_both_models_and_labels_them_separately() -> None:
 async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode() -> None:
     previous_demo_mode = config.DEMO_MODE
     config.DEMO_MODE = True
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             signup = {
@@ -190,4 +188,4 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
             assert data["raw_probability_exposed"] is False
     finally:
         config.DEMO_MODE = previous_demo_mode
-        await Tortoise.close_connections()
+        await reset_tortoise()

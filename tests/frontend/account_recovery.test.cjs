@@ -14,7 +14,7 @@ function harness(api = async () => ({})) {
     assert.ok(fn, name);
     vm.runInContext(fn[0], context);
   }
-  const recovery = { token: 'session', birthday: '1974-04-12', gender: 'FEMALE', healthAgreed: true };
+  const recovery = { token: 'session', name: '테스트집주인', birthday: '1974-04-12', gender: 'FEMALE', healthAgreed: true };
   return { state, context, recovery };
 }
 test('only active health-data consent of the current contract permits continuation', () => {
@@ -69,4 +69,19 @@ test('account change during profile save cannot send consent under the new sessi
   await assert.rejects(pending, error => error.code === 'SESSION_CHANGED');
   assert.deepEqual(calls, ['/users/me/profile']);
   assert.equal(state.step, undefined);
+});
+test('signup nickname is stored with the profile before health consent', async () => {
+  const calls = [];
+  const { context, recovery, state } = harness(async (url, options = {}) => {
+    calls.push({ url, body: options.body ? JSON.parse(options.body) : null });
+    if (url === '/consents') return options.method === 'POST' ? { consent_id: 1 } : { items: [] };
+    return {};
+  });
+  await context.saveAccountSetup(recovery);
+  assert.deepEqual(calls[0], {
+    url: '/users/me/profile',
+    body: { name: '테스트집주인', birthday: '1974-04-12', gender: 'FEMALE' },
+  });
+  assert.equal(state.userProfile.name, '테스트집주인');
+  assert.equal(state.step, 3);
 });

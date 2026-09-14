@@ -5,20 +5,18 @@ from datetime import date
 import pytest
 from httpx import ASGITransport, AsyncClient
 from starlette import status
-from tortoise import Tortoise
 
 from app.core import config
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
 from app.prediction import ACTIVE_MODEL
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 
 @pytest.mark.asyncio
 async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
     previous_demo_mode = config.DEMO_MODE
     config.DEMO_MODE = True
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             signup = {
@@ -132,4 +130,4 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
             assert len(pdf.content) > 1000
     finally:
         config.DEMO_MODE = previous_demo_mode
-        await Tortoise.close_connections()
+        await reset_tortoise()

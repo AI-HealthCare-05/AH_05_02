@@ -6,8 +6,21 @@
   <meta name="description" content="미래 당뇨병 발병 위험 선별과 생활습관 챌린지 개발용 서비스">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
-  <link rel="stylesheet" href="/static/styles.css?v=20260907-guest-header-right-v1">
-  <script src="/static/app.js?v=20260907-priority-flow-v1" defer></script>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const explicitAppEntry = ["intro", "auth", "preview", "resume", "workspace", "invite_token"].some((key) => params.has(key)) || window.location.hash;
+      if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/styles.css?v=20260914-guidance-format-v1">
+  <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
+  <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
+  <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
+  <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
+  <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
+  <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
+  <script src="/static/app.js?v=20260914-backend-reco-normalize-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -245,20 +258,12 @@
           <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
             <a class="primary" href="tel:119">119에 전화하기</a>
             <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
-            <button class="secondary" id="find-nearby-emergency" type="button">주변 응급실 보기</button>
-            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요. 주변 응급실 보기는 가까운 의료기관 찾기 안내와 함께 확인합니다.</p>
             <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내">
               <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
                 <strong>위급하면 검색을 기다리지 마세요</strong>
                 <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
               </div>
-              <form id="emergency-address-form" class="facility-address-form" hidden>
-                <label for="emergency-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
-                <div><input id="emergency-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off" required><button class="secondary" type="submit">주소로 찾기</button></div>
-              </form>
-              <div id="emergency-facility-map" class="facility-map" aria-label="검색 기준 위치와 주변 응급의료기관 지도" hidden></div>
-              <div class="medical-facility-meta" id="emergency-facility-meta" hidden></div>
-              <div class="medical-facility-results" id="emergency-facility-results" hidden></div>
             </div>
           </div>
           <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
@@ -465,7 +470,7 @@
         <div id="development-preview-notice" class="notice safety" role="status" hidden><span>개발</span><div><strong>개발 확인용 결과 화면입니다</strong><p>로컬 데모에서 화면 연결을 확인하기 위한 위험 범주이며, 운영 승인 결과가 아닙니다. 숫자 점수·확률·위험요인은 표시하지 않습니다.</p></div></div>
         <section class="current-risk-signal-card" id="risk-confirm-card" data-risk="pending" aria-labelledby="risk-confirm-title">
           <div class="current-risk-signal-heading">
-            <div><p class="eyebrow">현재 위험 신호 선별</p><h3 id="risk-confirm-title">현재 위험 신호 선별 결과</h3></div>
+            <div><p class="eyebrow">현재 위험 신호 선별</p><h3 id="risk-confirm-title">지금 건강정보에서 확인된 신호예요</h3></div>
             <span class="current-signal-status" id="risk-confirm-label">결과 준비 중</span>
           </div>
           <div class="risk-preview-controls" id="risk-preview-controls" aria-label="현재 위험 신호 화면 확인" hidden>
@@ -485,7 +490,7 @@
         <div id="future-prediction-result">
         <section class="current-health-result" aria-labelledby="future-onset-title">
           <p class="eyebrow">미래 신규 발병 위험</p>
-          <h3 id="future-onset-title">앞으로의 위험 신호 선별 결과</h3>
+          <h3 id="future-onset-title">앞으로 약 2년 동안 조심할 위험 신호예요</h3>
           <strong id="future-risk-category">결과 준비 중</strong>
           <p>현재 위험 신호와 별도로 계산한 예측입니다. 진단이나 확정 발병확률이 아닙니다.</p>
         </section>
@@ -535,7 +540,6 @@
         </div>
         <section class="lifestyle-summary-card" aria-labelledby="lifestyle-map-title">
           <div class="lifestyle-summary-heading">
-            <img id="risk-hyeoldangi" src="/static/assets/hyeoldangi-risk-low.png" alt="생활습관 방향을 안내하는 혈당이">
             <div>
               <p class="eyebrow">생활습관 요약</p>
               <h3 id="lifestyle-map-title">지금 살펴볼 생활습관</h3>

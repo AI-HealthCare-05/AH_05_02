@@ -187,6 +187,9 @@ class Challenge(Model):
     title = fields.CharField(max_length=100)
     category = fields.CharField(max_length=30)
     daily_goal = fields.CharField(max_length=50)
+    frequency = fields.CharField(max_length=20, null=True)
+    target_count = fields.IntField(null=True)
+    definition_version = fields.CharField(max_length=20, default="v1")
     description = fields.TextField()
     safety_copy = fields.TextField()
     source_title = fields.CharField(max_length=200)
@@ -219,6 +222,10 @@ class UserChallenge(Model):
     user_id = fields.BigIntField(db_index=True)
     cycle_id = fields.BigIntField(db_index=True)
     challenge_id = fields.BigIntField(db_index=True)
+    frequency = fields.CharField(max_length=20, null=True)
+    target_count = fields.IntField(null=True)
+    title_snapshot = fields.CharField(max_length=100, null=True)
+    definition_version = fields.CharField(max_length=20, null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
