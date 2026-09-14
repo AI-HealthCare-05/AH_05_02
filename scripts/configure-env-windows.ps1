@@ -107,6 +107,17 @@ $prodValues = [ordered]@{
     DB_ROOT_PASSWORD = New-ProjectSecret -ByteCount 30
     DB_NAME = "ah05_healthcare"
     REDIS_PORT = "6379"
+    REDIS_HOST = "redis"
+    CURRENT_SCREENING_REDIS_STREAM = "ai:jobs:current-screening"
+    DB_GENERATE_SCHEMAS = "false"
+    PREDICTION_PROVIDER = "production"
+    PREDICTION_TIMEOUT_SECONDS = "60"
+    MODEL_ARTIFACTS_PATH = "/opt/ah05/models/artifacts"
+    MODEL_URI = ""
+    MODEL_MANIFEST_URI = ""
+    CURRENT_SCREENING_MODEL_URI = ""
+    CURRENT_SCREENING_MANIFEST_URI = ""
+    AWS_REGION = "ap-northeast-2"
 }
 
 Write-EnvValues -Path $localEnv -Values $localValues
