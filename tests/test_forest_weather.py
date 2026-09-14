@@ -3,7 +3,6 @@ import time
 
 import httpx
 import pytest
-
 from app.services.forest_weather import ForestWeather
 
 

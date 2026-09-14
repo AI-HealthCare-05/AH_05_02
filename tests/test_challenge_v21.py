@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 import pytest_asyncio
+from app.models.challenge_v2 import ChallengeV2Review
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from PIL import Image
@@ -14,7 +15,6 @@ from app.core.db.databases import TORTOISE_APP_MODELS
 from app.dependencies.security import get_request_user
 from app.dtos.challenge_v2 import V2Preferences, V2Replacement, V2Review, V2SessionInput
 from app.main import app
-from app.models.challenge_v2 import ChallengeV2Review
 from app.models.forest import ForestAvatar
 from app.models.health import ChallengeCycle, Consent, EligibilityCheck
 from app.models.users import User
