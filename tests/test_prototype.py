@@ -85,8 +85,14 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "has_urgent_warning_sign: false" in script
     assert 'params.get("preview") !== "emergency-questionnaire"' in script
     assert "medicalGuidanceReturnStep: null" in script
-    assert '$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));' in script
-    assert '$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));' in script
+    assert (
+        '$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));'
+        in script
+    )
+    assert (
+        '$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));'
+        in script
+    )
     assert "state.medicalGuidanceReturnStep === 3" in script
     assert "showStep(3);" in script
     assert '$("#eligibility-title")' in script
@@ -660,15 +666,21 @@ def test_forest_return_accepts_resume_and_workspace_links() -> None:
     assert 'data-onboarding-step="3">이용확인' in html
     assert 'data-onboarding-step="4">건강정보 입력' in html
     assert 'data-onboarding-step="5">분석' in html
-    assert 'data-onboarding-health' not in html + script
-    assert 'const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || (state.step >= 3 && state.step <= 5));' in script
-    assert 'const showOnboardingNav = isLoggedIn && !needsAccountSetup && (!showWorkspaceNav || (state.step >= 3 && state.step <= 5));' in script
-    assert 'const selected = state.step === targetStep || (targetStep === 5 && state.step === 6);' in script
+    assert "data-onboarding-health" not in html + script
+    assert (
+        "const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || (state.step >= 3 && state.step <= 5));"
+        in script
+    )
+    assert (
+        "const showOnboardingNav = isLoggedIn && !needsAccountSetup && (!showWorkspaceNav || (state.step >= 3 && state.step <= 5));"
+        in script
+    )
+    assert "const selected = state.step === targetStep || (targetStep === 5 && state.step === 6);" in script
     assert "if (state.token && state.step === 4)" in script
     assert "if (state.token && state.step === 5)" in script
     assert "건강정보 입력 후 분석을 시작할 수 있어요." in script
-    assert '직접 운전하거나 병원을 검색하며 기다리지 말고\\n119에 연락해 현재 위치와 증상을 알려주세요.' in script
-    assert '진단받은 분은 담당 의료진의 안내를 우선하며\\n가까운 의료기관 정보를 확인할 수 있습니다.' in script
+    assert "직접 운전하거나 병원을 검색하며 기다리지 말고\\n119에 연락해 현재 위치와 증상을 알려주세요." in script
+    assert "진단받은 분은 담당 의료진의 안내를 우선하며\\n가까운 의료기관 정보를 확인할 수 있습니다." in script
     assert "white-space:pre-line" in styles
     assert html.count("data-workspace-panel=") >= 5
     assert html.count('role="region"') >= 5
