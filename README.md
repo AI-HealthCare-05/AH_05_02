@@ -64,6 +64,7 @@
 - [Sprint 2 주간 QA 및 2주 과업 종합](docs/SPRINT2_WEEKLY_QA_AND_TEAM_AUDIT_20260821.md)
 - [KLoSA·KNHANES 공통 전처리 프로토콜](docs/DATA_PREPROCESSING_PROTOCOL.md)
 - [전처리 결과 공유용 요약](docs/NOTION_PREPROCESSING_SHARE.md)
+- [EC2 운영 배포 체크리스트](docs/EC2_PRODUCTION_DEPLOYMENT_CHECKLIST.md)
 
 ## 로컬 실행
 
@@ -86,3 +87,5 @@ API 문서 확인: `GET http://localhost:8000/api/docs`
 - 생성형 AI: OpenAI API
 - OCR: CLOVA OCR
 - CI: GitHub Actions
+
+운영 배포는 [EC2 운영 배포 체크리스트](docs/EC2_PRODUCTION_DEPLOYMENT_CHECKLIST.md)의 릴리스 게이트와 HTTPS 전환 절차를 따른다. 운영 Compose는 Nginx의 `80/443`만 외부에 공개하며 DB·Redis·FastAPI·AI Worker는 내부 네트워크로 제한한다.
