@@ -3815,6 +3815,7 @@ function renderEducationList() {
   }
   list.innerHTML = state.educationContents.map((item) => {
     const completed = Boolean(item.completed && item.is_correct !== false);
+    const locked = Boolean(item.locked);
     const questionCount = educationQuestions(item).length;
     return `<article class="education-overview-card" data-completed="${completed}">
       <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
@@ -5245,7 +5246,14 @@ $("#education-list").addEventListener("click", (event) => {
   if (button) openEducationFlow(button.dataset.id);
 });
 $("#close-education-flow")?.addEventListener("click", closeEducationFlow);
-$("#start-education-quiz")?.addEventListener("click", renderEducationQuizQuestion);
+$("#start-education-quiz")?.addEventListener("click", () => {
+  const item = activeEducationContent();
+  if (item?.locked) {
+    showMessage(`${item.week_number}주차가 되면 퀴즈를 풀 수 있어요. 지금은 내용만 미리 볼 수 있어요.`);
+    return;
+  }
+  renderEducationQuizQuestion();
+});
 $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const item = activeEducationContent();
@@ -5257,19 +5265,31 @@ $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
     const result = isLocalPreview()
-      ? { is_correct: answer === question.correctAnswer }
-      : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
+      ? { is_correct: answer === question.correctAnswer, correct_answer: question.correctAnswer, explanation: question.explanation, source: question.source }
+      : question.quizId
+        ? await api(`/health-education/quizzes/${encodeURIComponent(question.quizId)}/answers`, { method: "POST", body: JSON.stringify({ answer }) })
+        : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
     const isCorrect = Boolean(result.is_correct);
     if (isCorrect) state.educationQuizCorrectCount += 1;
     $("#education-quiz-form").hidden = true;
     const feedback = $("#education-feedback-card");
     feedback.hidden = false;
     feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    const correctAnswer = result.correct_answer || question.correctAnswer;
     $("#education-feedback-title").textContent = isCorrect
-      ? `정답입니다 · 정답: ${question.correctAnswer}`
-      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
-    $("#education-feedback-explanation").textContent = question.explanation;
-    $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
+      ? `정답입니다 · 정답: ${correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${correctAnswer}`;
+    $("#education-feedback-explanation").textContent = question.explanation || result.explanation;
+    const source = result.source || question.source || item.source;
+    const sourceRoot = $("#education-feedback-source");
+    sourceRoot.textContent = source?.title ? "근거 및 출처: " : "근거 자료를 확인해 주세요.";
+    const sourceUrl = safeExternalUrl(source?.url);
+    if (source?.title) {
+      const link = document.createElement(sourceUrl ? "a" : "span");
+      link.textContent = source.title;
+      if (sourceUrl) { link.href = sourceUrl; link.target = "_blank"; link.rel = "noopener noreferrer"; }
+      sourceRoot.append(link);
+    }
     const action = $("#education-feedback-action");
     if (!isCorrect) {
       action.dataset.action = "review";
@@ -5431,6 +5451,20 @@ async function resumeAuthenticatedAccount() {
     if (error.status === 401) state.token = null;
     showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token, verifyOnly: true },
       state.token ? "로그인은 완료했지만 계정의 저장 상태를 불러오지 못했습니다. 다시 가입하지 말고 저장 상태를 다시 확인해 주세요." : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
+  }
+}
+
+async function resumeCookieSession() {
+  if (state.token || isLocalPreview()) return false;
+  try {
+    const refreshed = await api("/auth/token/refresh");
+    if (!refreshed?.access_token) return false;
+    state.token = refreshed.access_token;
+    await resumeAuthenticatedAccount();
+    return true;
+  } catch (error) {
+    if (error.status !== 401) console.warn("저장된 로그인 상태를 복원하지 못했습니다.");
+    return false;
   }
 }
 $("#login-form").addEventListener("submit", async (event) => {
@@ -5621,6 +5655,7 @@ function normalizeHealthEducationResult(result) {
     grounded: ["근거 자료에서 답변을 찾았어요", "done"],
     insufficient_evidence: ["근거를 충분히 찾지 못했어요", "insufficient"],
     medical_safety_refusal: ["의료진 확인이 필요한 질문입니다", "refused"],
+    emergency_redirect: ["지금은 건강정보 검색보다 119 연락이 먼저입니다", "emergency"],
   };
   const answer = typeof result?.answer === "string" ? result.answer.trim() : "";
   if (!answer) return { title: "표시할 답변이 없어요", state: "empty", answer: "질문을 바꾸거나 다시 시도해 주세요.", citations: [], medicalNotice };
