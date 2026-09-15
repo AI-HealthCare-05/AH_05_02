@@ -86,11 +86,20 @@ class Config(BaseSettings):
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.
-    FOOD_VISION_PROVIDER: str = "development"
+    FOOD_VISION_PROVIDER: str = "local_kfood"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
+    KFOOD_CLASSIFIER_PATH: Path = Path("models/artifacts/food_vision/kfood/best.pt")
+    KFOOD_CLASSIFIER_META_PATH: Path = Path("models/artifacts/food_vision/kfood/meta.json")
+    KFOOD_CLASSIFIER_SHA256: str = "4c4df6ba2b9d3daf77f7ffe107285df17a360342729177d15465ba9872d42726"
+    KFOOD_SEGMENTER_PATH: Path = Path("models/artifacts/food_vision/kfood/1.tflite")
+    KFOOD_SEGMENTER_SHA256: str = "edb7df52467afd02a502d7765ca7ac82e63ad86082c72e18135764f1b1817b52"
+    KFOOD_SEGMENTATION_CONFIG_PATH: Path = Path("configs/food_vision/seg_config.json")
+    KFOOD_DISH_VEGETABLES_PATH: Path = Path("configs/food_vision/dish_vegetables.json")
+    FOOD_COVERAGE_PASS_THRESHOLD: float = 0.60
+    VEGETABLE_RATIO_PASS_THRESHOLD: float = 0.30
 
     HEALTH_EDUCATION_EMBEDDING_PROVIDER: str = "development"
     HEALTH_EDUCATION_EMBEDDING_MODEL: str = "text-embedding-3-small"
