@@ -1,3 +1,7 @@
+import asyncio
+from dataclasses import replace
+from types import SimpleNamespace
+
 import pytest
 
 from app.core import config
@@ -54,6 +58,34 @@ def test_vlm_is_only_used_for_borderline_or_unreliable_results() -> None:
     assert needs_vlm(_result(70, 40, False))
     assert not needs_vlm(_result(70, 40))
     assert not needs_vlm(_result(30, 10))
+
+
+def test_enabled_vlm_fallback_is_applied_without_per_submission_consent(monkeypatch: pytest.MonkeyPatch) -> None:
+    local_result = _result(48, 28)
+    supplemented = replace(_result(50, 30), decision_status="valid")
+    calls = []
+
+    async def analyze(_photo, _mime_type, _filename):
+        return local_result
+
+    async def supplement(result, photo):
+        calls.append((result, photo))
+        return supplemented
+
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(config, "OPENAI_VLM_FALLBACK_ENABLED", True)
+    monkeypatch.setattr(
+        "app.services.challenge_proofs.get_food_vision_provider",
+        lambda: SimpleNamespace(provider_kind="local_kfood_cv", analyze=analyze),
+    )
+    monkeypatch.setattr("app.vision.openai_vlm.supplement_with_vlm", supplement)
+
+    from app.services.challenge_proofs import _review
+
+    status, _notice, result = asyncio.run(_review(b"image", 1))
+    assert status == "needs_confirmation"
+    assert result is supplemented
+    assert calls == [(local_result, b"image")]
 
 
 @pytest.mark.asyncio

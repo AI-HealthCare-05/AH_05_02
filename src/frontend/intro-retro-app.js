@@ -3648,12 +3648,17 @@ function openPhotoRecordModal(item) {
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
   $("#v3-photo-file").value = "";
-  $("#v3-photo-value").value = "";
+  $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
+  const usesMinutes = Boolean(item.goal.target_minutes);
+  $("#v3-meal-count-field").hidden = usesMinutes;
+  $("#v3-photo-minutes-field").hidden = !usesMinutes;
+  $("#v3-photo-minutes").value = "";
   $("#confirm-photo-record").disabled = false;
   $("#confirm-photo-record").textContent = v3 ? "사진과 실천량 제출하기" : "사진으로 인증하기";
   $("#v3-photo-heading").textContent = v3 ? item.title : "식사 사진을 올려주세요";
   $("#v3-photo-scope").textContent = v3 ? item.verification_scope : "사진 또는 간편 체크로 기록해요.";
-  $("#v3-photo-value-label").textContent = v3 ? `${item.goal.target_minutes ? "실제 활동 시간(분)" : "실제 실천한 끼니 수"} · 목표 ${item.goal.target_minutes || item.goal.target_count}` : "실천량";
+  $("#v3-photo-value-label").textContent = v3 ? `실제 실천한 끼니 수 (설정 목표 = ${item.goal.target_count})` : "실천량";
+  $("#v3-photo-minutes-label").textContent = `실제 활동 시간 (설정 목표 = ${item.goal.target_minutes || 0}분)`;
   $$(".record-fallback").forEach((button) => { button.hidden = v3; });
   $("#record-simple-panel").hidden = true;
   $("#record-photo-panel").hidden = false;
@@ -3677,13 +3682,31 @@ function simulatePhotoAnalysis() {
 async function submitV3Photo() {
   const target = state.recordTarget;
   if (target?.item?.catalog_version !== "evidence-v3" || target.submitting || target.saved) return;
-  if (isLocalPreview()) return showMessage("화면 미리보기에서는 사진 인증을 완료하지 않습니다. 실제 계정으로 로그인해 주세요.");
   const file = $("#v3-photo-file").files[0];
-  const valueText = $("#v3-photo-value").value;
+  const valueText = target.item.goal.target_minutes
+    ? $("#v3-photo-minutes").value
+    : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
   if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
   if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  if (isLocalPreview()) {
+    showPhotoRecordState("photo-state-analyzing");
+    window.setTimeout(() => {
+      if (file.name === "demo-pass.png") {
+        $("#photo-success-title").textContent = "인증을 통과했어요";
+        showPhotoRecordState("photo-state-success");
+        return;
+      }
+      $("#photo-fail-hint").textContent = file.name === "demo-low-vegetable.png"
+        ? "음식은 확인됐지만 채소가 충분히 보이지 않아요."
+        : file.name === "demo-irrelevant.png"
+          ? "음식과 관련된 사진인지 확인하기 어려워요."
+          : "로컬 미리보기에서는 제공된 시연 사진으로 결과를 확인해 주세요.";
+      showPhotoRecordState("photo-state-fail");
+    }, 300);
+    return;
+  }
   const token = state.token;
   const cycleId = state.cycle?.cycle_id;
   target.submitting = true;
@@ -3694,7 +3717,6 @@ async function submitV3Photo() {
     form.append("file", file);
     form.append("verification_date", challengeDay());
     form.append("actual_value", String(value));
-    form.append("external_vlm_consent", String(Boolean($("#v3-vlm-consent")?.checked)));
     let result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
     if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
     if (result.review_status === "needs_confirmation") {
@@ -6002,6 +6024,10 @@ async function selectDemoPhoto(button) {
   } catch (error) { showMessage(error.message); }
 }
 $$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+}));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });

@@ -384,6 +384,20 @@ body.modal-open{overflow:hidden}
 .photo-upload-box span svg{display:block;width:42px;height:42px}
 .photo-upload-box span svg{display:block;width:42px;height:42px}
 .photo-upload-box strong{font-size:19px;color:var(--ink)}
+.photo-upload-box small{display:block;max-width:320px;font-size:14px;line-height:1.5;color:#5f6965}
+.record-modal-card{border:5px solid #704522;background:linear-gradient(160deg,#d7a45f 0%,#a96832 52%,#81502b 100%);box-shadow:inset 0 0 0 3px rgba(255,222,157,.42),0 24px 70px rgba(38,20,8,.38)}
+.record-modal-card>section{border:3px solid #b97936;border-radius:20px;background:#fff8e7;padding:24px;box-shadow:inset 0 0 18px rgba(111,69,34,.08)}
+#record-photo-panel #photo-state-upload>.eyebrow{color:#17120c!important}
+.meal-count-fieldset{margin:18px 0;padding:0;border:0}
+.meal-count-fieldset legend,#v3-photo-minutes-field label{display:block;margin-bottom:10px;font-weight:800;color:var(--ink)}
+.meal-count-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.meal-count-options label{cursor:pointer}
+.meal-count-options input{position:absolute;opacity:0;pointer-events:none}
+.meal-count-options span{display:grid;min-height:52px;place-items:center;border:2px solid #b9c5c1;border-radius:14px;background:#fff;color:var(--ink);font-weight:800}
+.meal-count-options input:focus-visible+span{outline:3px solid rgba(28,112,91,.3);outline-offset:2px}
+.meal-count-options input:checked+span{border-color:#24765f;background:#e2f2e9;color:#174c3d}
+#v3-photo-minutes-field{margin:18px 0}
+#v3-photo-minutes{width:100%}
 .demo-photo-gallery{margin:14px 0}.demo-photo-gallery>p{margin:6px 0;color:var(--muted)}.demo-photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.demo-photo-card{padding:8px;border:1px solid #d8e0dd;border-radius:14px;background:#fff;text-align:left;cursor:pointer}.demo-photo-card:hover,.demo-photo-card:focus-visible{border-color:var(--primary);box-shadow:0 0 0 2px rgba(27,122,85,.12)}.demo-photo-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:9px}.demo-photo-card strong,.demo-photo-card span{display:block;margin-top:5px}.demo-photo-card span{font-size:13px;color:var(--muted)}
 .photo-state{text-align:center;padding:22px 0 8px}
 .photo-state h4{margin-top:14px}
