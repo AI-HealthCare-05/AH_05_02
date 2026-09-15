@@ -6791,6 +6791,31 @@ function renderMvpResultPreview() {
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
 }
 
+function resumeMealPhotoPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "meal-photo" || !isDemoEnvironment()) return;
+  const item = {
+    challenge_id: "local-vegetable-meal",
+    user_challenge_id: "local-meal-photo",
+    catalog_version: "evidence-v3",
+    verification_type: 1,
+    title: "채소가 포함된 한 끼 인증",
+    daily_goal: "하루 1끼",
+    verification_scope: "한 끼 식사에 음식과 채소가 충분히 보이는지 확인해요.",
+    goal: { target_count: 1, target_minutes: null },
+  };
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.cycle = { cycle_id: "local-photo-preview", cycle_number: 1, user_challenges: [item] };
+  state.navigationHistory = [1, 8];
+  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  showStep(8, { recordHistory: false });
+  showWorkspace("challenge", { moveFocus: false });
+  openPhotoRecordModal(item);
+}
+
 function resumeForecastPreview() {
   const params = new URLSearchParams(window.location.search);
   // Preserve existing local QA bookmarks, but show only the two MVP result areas.
@@ -6841,5 +6866,6 @@ $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", (
 showStep(state.step, { recordHistory: false });
 resumeFromForest();
 resumeReturningPreview();
+resumeMealPhotoPreview();
 resumeForecastPreview();
 resumeEmergencyQuestionnairePreview();
