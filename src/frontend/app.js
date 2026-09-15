@@ -3084,14 +3084,9 @@ async function loadChallenges() {
     closeRagChallengeGenerator();
     $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
     state.openFollowUpActionIds = [];
-    $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-    if (result.medical_guidance_required_first) {
-      $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
-      const actions = await api("/follow-up-actions");
-      if (!isCurrent()) return;
-      state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
-      $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-    }
+    state.challengeStartSafetyBlocked = false;
+    $("#challenge-follow-up").hidden = true;
+    $("#acknowledge-challenge-follow-up").hidden = true;
     state.challengeListStatus = "ready";
     renderChallengeChoices();
   } catch (error) {
@@ -3163,28 +3158,10 @@ async function loadLegacyChallenges() {
   state.activeChallengeCategory = null;
   state.challengeListStatus = "ready";
   closeRagChallengeGenerator();
-  const followUpPanel = $("#challenge-follow-up");
   state.openFollowUpActionIds = [];
-  followUpPanel.hidden = true;
-  if (result.medical_guidance_required_first) {
-    try {
-      const followUps = await api("/follow-up-actions");
-      const openActions = (followUps.items || []).filter((item) => !item.acknowledged_at);
-      const openAction = openActions[0];
-      state.openFollowUpActionIds = openActions.map((item) => item.action_id);
-      $("#challenge-follow-up-message").textContent = openAction?.reason_code === "URGENT_MEDICAL_ATTENTION"
-        ? "이전에 입력한 긴급 증상 안내를 확인한 뒤 챌린지를 시작해 주세요."
-        : "이전 의료기관 안내를 확인한 뒤 챌린지를 시작해 주세요.";
-      $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-      state.challengeStartSafetyBlocked = !state.openFollowUpActionIds.length;
-    } catch (error) {
-      $("#challenge-follow-up-message").textContent = error.message;
-      $("#acknowledge-challenge-follow-up").hidden = true;
-      state.challengeStartSafetyBlocked = true;
-    }
-    followUpPanel.hidden = false;
-    startButton.disabled = true;
-  }
+  state.challengeStartSafetyBlocked = false;
+  $("#challenge-follow-up").hidden = true;
+  $("#acknowledge-challenge-follow-up").hidden = true;
   if (!items.length) {
     renderChallengeChoices();
     return;
@@ -4693,11 +4670,9 @@ function closeEducationFlow() {
 async function loadEducation() {
   const fallbackContents = setLocalEducationPreviewContents();
   renderEducationList();
+  if (isLocalPreview()) return;
   try {
-    const previewQuizzes = Array.isArray(window.healthQuizPreviewItems) ? window.healthQuizPreviewItems : [];
-    const contents = isLocalPreview()
-      ? (previewQuizzes.length ? mapHealthEducationQuizzes({ items: previewQuizzes }) : fallbackContents)
-      : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
+    const contents = fallbackContents;
     const items = Array.isArray(contents.items) ? contents.items : [];
     if (items.length) {
       state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
@@ -6200,11 +6175,6 @@ $("#challenge-form").addEventListener("submit", async (event) => {
   if (!requireActiveHealthConsent("새 챌린지 시작")) return;
   if (challengeV3.busy || state.challengeListStatus !== "ready" || !challengeV3.active) return;
   const token = state.token;
-  if (!$("#challenge-follow-up").hidden) {
-    $("#challenge-follow-up").focus({ preventScroll: true });
-    showMessage("이전 의료기관 안내를 먼저 확인해 주세요.");
-    return;
-  }
   const ids = [...state.selectedChallengeIds];
   if (challengeV3.active && challengeV3.owner !== state.token) return showMessage("로그인한 계정의 후보를 다시 불러와 주세요.");
   if (challengeV3.active && ids.length !== 3) return showMessage("음료·식단·운동 각 1개가 필요합니다.");
