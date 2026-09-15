@@ -223,6 +223,8 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
         model_population="baseline_undiagnosed_age_45_plus",
         predicted_at=datetime.now(UTC),
         age_risk_forecast=None,
+        operational_model_activated=True,
+        display_allowed=True,
     )
     public = prediction_payload(item)
     assert public["risk_category"] is None
@@ -232,7 +234,7 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
     assert "probability" not in public
 
 
-def test_approved_caution_prediction_exposes_a_korean_risk_label() -> None:
+def test_approved_caution_prediction_uses_v56_public_moderate_category() -> None:
     item = SimpleNamespace(
         id=10,
         health_checkup_id=5,
@@ -255,7 +257,9 @@ def test_approved_caution_prediction_exposes_a_korean_risk_label() -> None:
         model_population="undiagnosed_klosa_age_45_105",
         predicted_at=datetime.now(UTC),
         age_risk_forecast=None,
+        operational_model_activated=True,
+        display_allowed=True,
     )
     public = prediction_payload(item)
-    assert public["risk_category"] == "caution"
+    assert public["risk_category"] == "moderate"
     assert public["risk_category_label"] == "주의"

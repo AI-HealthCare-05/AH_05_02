@@ -76,6 +76,11 @@ def test_shared8_frame_maps_measured_or_missing_waist(payload):
         serving.shared8_frame({**payload, "waist_cm": 200}, as_of_date=AS_OF)
 
 
+def test_shared8_maps_education_code_97_to_missing(payload):
+    frame = serving.shared8_frame({**payload, "education_level": "code_97"}, as_of_date=AS_OF)
+    assert np.isnan(frame.iloc[0]["education"])
+
+
 @pytest.mark.parametrize(
     "change",
     [
@@ -84,7 +89,6 @@ def test_shared8_frame_maps_measured_or_missing_waist(payload):
         {"weight_kg": float("nan")},
         {"birth_date": "1990-01-01"},
         {"birth_date": "1900-01-01"},
-        {"education_level": "code_97"},
         {"previously_diagnosed_diabetes": True},
         {"sex": 2},
         {"smoking_status": "unknown"},

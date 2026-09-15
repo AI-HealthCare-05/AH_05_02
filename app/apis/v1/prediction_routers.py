@@ -19,7 +19,17 @@ from app.services.ai_jobs import create_prediction_job, get_prediction_job
 
 prediction_router = APIRouter(tags=["Prediction"])
 
-RISK_LABELS = {"low": "낮음", "caution": "주의", "high": "높음"}
+# ML artifacts retain the historical internal value ``caution``.  The v5.6
+# public API contract uses low/moderate/high and the Korean UI label remains
+# 낮음/주의/높음.  Convert only at the public boundary so an old persisted row
+# and a newly computed row serialize identically.
+RISK_LABELS = {"low": "낮음", "moderate": "주의", "high": "높음"}
+
+
+def public_risk_category(value: str | None) -> str | None:
+    return "moderate" if value == "caution" else value
+
+
 PUBLIC_DISCLAIMER = "이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다."
 DEVELOPMENT_DISCLAIMER = (
     "개발용 추론 연결은 완료되었지만 검토된 임계값이 없어 개인 위험 범주와 확률을 제공하지 않습니다."
@@ -37,7 +47,7 @@ async def active_models(model_key: str | None = None) -> dict[str, object]:
                         "threshold_approved": CURRENT_SCREENING_MODEL.threshold_is_approved,
                         "public_result_available": CURRENT_SCREENING_MODEL.threshold_is_approved,
                         "artifact_status": (
-                            "configured" if CURRENT_SCREENING_MODEL.model_artifact_digest else "not_configured"
+                            "digest_declared" if CURRENT_SCREENING_MODEL.model_artifact_digest else "not_configured"
                         ),
                     }
                 ]
@@ -51,7 +61,9 @@ async def active_models(model_key: str | None = None) -> dict[str, object]:
                         **ACTIVE_MODEL.model_dump(),
                         "threshold_approved": ACTIVE_MODEL.threshold_is_approved,
                         "public_result_available": ACTIVE_MODEL.threshold_is_approved,
-                        "artifact_status": "verified" if ACTIVE_MODEL.model_artifact_digest else "not_configured",
+                        "artifact_status": "digest_declared"
+                        if ACTIVE_MODEL.model_artifact_digest
+                        else "not_configured",
                     }
                 ]
             }
@@ -140,15 +152,17 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         item.result_status == "approved"
         and item.threshold_version != "unapproved"
         and item.decision_threshold is not None
+        and getattr(item, "operational_model_activated", False) is True
+        and getattr(item, "display_allowed", False) is True
     )
     promotion_status = "approved" if public_result_available else "development_only"
-    public_category = item.risk_category if public_result_available else None
+    public_category = public_risk_category(item.risk_category) if public_result_available else None
     local_preview_available = (
         config.ENV.value == "local"
         and getattr(item, "preview_only", False) is True
         and getattr(item, "display_allowed", False) is False
         and getattr(item, "operational_model_activated", False) is False
-        and getattr(item, "preview_signal_level", None) in RISK_LABELS
+        and public_risk_category(getattr(item, "preview_signal_level", None)) in RISK_LABELS
     )
     is_current_screening = item.model_key == CURRENT_SCREENING_MODEL_KEY
     screening_signal = public_category == "high" if is_current_screening and public_category else None
@@ -165,8 +179,10 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         "promotion_status": promotion_status,
         "risk_category": public_category,
         "risk_category_label": RISK_LABELS.get(public_category) if public_category else None,
-        "preview_signal_level": getattr(item, "preview_signal_level", None) if local_preview_available else None,
-        "preview_signal_label": RISK_LABELS.get(getattr(item, "preview_signal_level", None))
+        "preview_signal_level": public_risk_category(getattr(item, "preview_signal_level", None))
+        if local_preview_available
+        else None,
+        "preview_signal_label": RISK_LABELS.get(public_risk_category(getattr(item, "preview_signal_level", None)))
         if local_preview_available
         else None,
         "preview_only": local_preview_available,

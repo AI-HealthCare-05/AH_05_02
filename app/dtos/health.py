@@ -35,7 +35,7 @@ class HealthCheckupCreateRequest(BaseModel):
     checkup_date: date
     height_cm: float = Field(ge=120, le=220)
     weight_kg: float = Field(ge=25, le=250)
-    waist_cm: float | None = Field(default=None, ge=45, le=180)
+    waist_cm: float | None = Field(default=None, ge=45, le=160)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
     self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
@@ -45,7 +45,7 @@ class HealthCheckupCreateRequest(BaseModel):
     current_drinker: bool
     exercise_days_per_week: float = Field(ge=0, le=7)
     exercise_minutes: float = Field(ge=0, le=720)
-    annual_household_income_10k_krw: float | None = Field(default=None, ge=0)
+    annual_household_income_10k_krw: float | None = Field(default=None, ge=0, le=123_500)
     health_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
     economic_satisfaction_score: float | None = Field(default=None, ge=0, le=100)
     overall_quality_of_life_score: float | None = Field(default=None, ge=0, le=100)

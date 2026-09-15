@@ -25,6 +25,7 @@ class Config(BaseSettings):
     REDIS_CLAIM_IDLE_MS: int = 60000
     AI_JOB_MAX_ATTEMPTS: int = 3
     PREDICTION_TIMEOUT_SECONDS: int = 30
+    MODEL_PRELOAD_ENABLED: bool = False
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
@@ -35,6 +36,7 @@ class Config(BaseSettings):
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
+    PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = False
     PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-25features-v1"
     PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-v1"
     PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
