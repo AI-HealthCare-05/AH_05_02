@@ -883,9 +883,9 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $("#signup-form").hidden = isLogin;
   $("#login-form").hidden = !isLogin;
   $("#auth-title-eyebrow").textContent = isLogin
-    ? context === "mypage" ? "마이페이지 로그인" : "기존 회원 로그인"
-    : "가입 및 건강정보 동의";
-  $("#signup-title").textContent = isLogin ? "기존 계정으로 로그인해 주세요" : "계정과 동의 정보를 입력해 주세요";
+    ? context === "mypage" ? "마이페이지 로그인" : "당근의 숲에 도착했어요"
+    : "당근의 숲에 도착했어요";
+  $("#signup-title").textContent = isLogin ? "우리집 들어가기" : "새로운 집주인을 등록해요";
   if (isLogin) {
     $("#flow-context").textContent = context === "mypage" ? "마이페이지" : "계정 이용";
     $("#progress-bar").style.width = "0";
@@ -900,7 +900,7 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $$("[data-auth-entry]").forEach((element) => {
     element.classList.toggle("active", element.dataset.authEntry === (isLogin ? "login" : "signup"));
   });
-  if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
+  if (moveFocus) (isLogin ? $("#login-email") : ($("#signup-nickname") || $("#email"))).focus();
 }
 
 function openProfileEditor() {
@@ -952,9 +952,11 @@ function showAccountRecovery(recovery, message) {
   $("#auth-title-eyebrow").textContent = "가입 후 설정";
   $("#recovery-birthday").value = recovery.birthday || "";
   $("#recovery-gender").value = recovery.gender || "";
+  $("#recovery-name").value = recovery.name || "";
   $("#recovery-health-consent").checked = recovery.healthAgreed === true;
   const needsLogin = !state.token;
   const verifyOnly = recovery.verifyOnly === true;
+  $("#recovery-name").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-birthday").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-gender").disabled = needsLogin || verifyOnly || recovery.profileSaved;
   $("#recovery-health-consent").disabled = needsLogin || verifyOnly;
@@ -978,10 +980,14 @@ async function saveAccountSetup(recovery) {
   }
   if (!recovery.profileSaved) {
     recovery.stage = "profile";
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ birthday: recovery.birthday, gender: recovery.gender }) });
+    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      ...(recovery.name ? { name: recovery.name } : {}),
+      birthday: recovery.birthday,
+      gender: recovery.gender,
+    }) });
     checkSession();
     recovery.profileSaved = true;
-    state.userProfile = { ...(state.userProfile || {}), birthday: recovery.birthday, gender: recovery.gender };
+    state.userProfile = { ...(state.userProfile || {}), name: recovery.name, birthday: recovery.birthday, gender: recovery.gender };
   }
   recovery.stage = "consent";
   // A failed response may still have committed. Read before retrying this append-only write.
@@ -4849,6 +4855,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
   const gender = $("#signup-gender").value;
   let recovery = null;
   try {
+    const name = $("#signup-nickname")?.value.trim() || "";
     const email = $("#email").value;
     const password = $("#password").value;
     const signupAge = getAgeFromBirth(birthDate);
@@ -4870,9 +4877,10 @@ $("#signup-form").addEventListener("submit", async (event) => {
     state.userProfile = {
       ...(state.userProfile || {}),
       id: signup?.user_id ?? signup?.id ?? state.userProfile?.id,
+      name,
       email: signup?.email || email.trim(),
     };
-    recovery = { email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
+    recovery = { name, email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
     state.accountRecovery = recovery;
     state.token = null;
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
@@ -4901,6 +4909,8 @@ $("#recovery-login").addEventListener("click", () => {
   state.token = null;
   showAuthMode("login");
 });
+$("#signup-login-shortcut")?.addEventListener("click", () => showAuthMode("login", { context: "login" }));
+$("#login-signup-back")?.addEventListener("click", () => showAuthMode("signup"));
 $("#account-recovery-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -4912,6 +4922,7 @@ $("#account-recovery-form").addEventListener("submit", async (event) => {
       await resumeAuthenticatedAccount();
       return;
     }
+    recovery.name = $("#recovery-name")?.value.trim() || recovery.name || "";
     recovery.birthday = $("#recovery-birthday").value;
     recovery.gender = $("#recovery-gender").value;
     recovery.healthAgreed = $("#recovery-health-consent").checked;
@@ -6218,6 +6229,18 @@ function resumeEmergencyQuestionnairePreview() {
   showStep(3, { recordHistory: false });
 }
 
+function resumeAuthEntryFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedAuth = params.get("auth");
+  if (!["login", "signup"].includes(requestedAuth)) return false;
+
+  state.navigationHistory = [2];
+  state.visitedSteps.add(2);
+  showStep(2, { recordHistory: false });
+  showAuthMode(requestedAuth, { moveFocus: false, context: requestedAuth });
+  return true;
+}
+
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 $$('input[name="current-drinker"]').forEach((input) => input.addEventListener("change", syncAlcoholFrequencyDetails));
@@ -6226,6 +6249,7 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
+resumeAuthEntryFromQuery();
 resumeFromForest();
 resumeReturningPreview();
 resumeForecastPreview();

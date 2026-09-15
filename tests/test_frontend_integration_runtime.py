@@ -66,14 +66,17 @@ def test_current_result_and_medical_guidance_are_not_hidden_with_future_results(
     assert "risk-forecast-panel" not in parser.parents
 
 
-def test_retro_intro_auth_entry_opens_forms_without_reload() -> None:
+def test_retro_intro_auth_entry_routes_to_cached_app_forms() -> None:
     source = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
+    app_source = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'function openAuthEntry(mode = "signup"' in source
-    assert 'new URLSearchParams(window.location.search).get("auth")' in source
-    assert 'window.addEventListener("popstate", applyAuthEntryFromUrl)' in source
-    assert 'window.location.href = "/?auth=signup' not in source
-    assert 'window.location.href = "/?auth=login' not in source
+    assert 'window.location.href = "/?auth=signup&cache=retro-entry-20260909"' in source
+    assert 'window.location.href = "/?auth=login&cache=retro-entry-20260909"' in source
+    assert "window.location.href = state.token" in source
+    assert "function resumeAuthEntryFromQuery()" in app_source
+    assert 'params.get("auth")' in app_source
+    assert "showStep(2, { recordHistory: false })" in app_source
+    assert "showAuthMode(requestedAuth" in app_source
 
 
 def test_retro_intro_does_not_show_original_intro_switch() -> None:

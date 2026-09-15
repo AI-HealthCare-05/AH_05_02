@@ -4730,6 +4730,7 @@ function openAuthEntry(mode = "signup", { context = "login", updateUrl = true } 
   if (updateUrl) {
     const url = new URL(window.location.href);
     url.searchParams.set("auth", authMode);
+    url.searchParams.set("cache", "retro-entry-20260909");
     history.pushState({ auth: authMode }, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
   }
 }
@@ -4751,14 +4752,12 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  navigateToAppAuth("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
-  if (state.token) {
-    window.location.href = "/?resume=together&workspace=together";
-    return;
-  }
-  navigateToAppAuth("signup");
+  window.location.href = state.token
+    ? "/?resume=together&workspace=together&cache=retro-entry-20260909"
+    : "/?auth=signup&cache=retro-entry-20260909";
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -5074,25 +5073,23 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
   });
 }
 updateLandingPosition();
-function navigateToAppAuth(mode) {
-  const target = mode === "signup" ? "signup" : "login";
-  window.location.assign(`/?auth=${target}&v=login-still-app`);
-}
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  navigateToAppAuth("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  navigateToAppAuth("login");
+  window.location.href = "/?auth=login&cache=retro-entry-20260909";
 });
 $$("[data-intro-signup]").forEach((button) => {
-  button.addEventListener("click", () => navigateToAppAuth("signup"));
+  button.addEventListener("click", () => {
+    window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  });
 });
 function applyAuthEntryFromUrl() {
   const requestedAuth = new URLSearchParams(window.location.search).get("auth");
   if (requestedAuth !== "signup" && requestedAuth !== "login") return;
-  navigateToAppAuth(requestedAuth);
+  openAuthEntry(requestedAuth, { updateUrl: false });
 }
 window.addEventListener("popstate", applyAuthEntryFromUrl);
 applyAuthEntryFromUrl();
