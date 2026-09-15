@@ -2970,6 +2970,9 @@ body.account-mode .signup-house-board{
 .signup-house-board #signup-form .form-row>small:not(.sr-only),.signup-house-board #account-recovery-form .form-row>small:not(.sr-only){grid-column:2;font-size:13px;line-height:1.35;color:#695f53}
 .signup-house-board .consent-list{gap:8px;margin:8px 0}
 .signup-house-board .consent-card{min-height:58px;margin:0;padding:9px 14px;border-color:#c9a574;border-radius:10px;background:linear-gradient(180deg,#fff7df,#f7e6c4)}
+.signup-house-board #account-recovery-form .consent-card span{grid-template-columns:minmax(0,1fr) auto;gap:4px 16px}
+.signup-house-board #account-recovery-form .consent-card small{grid-column:1}
+.signup-house-board #account-recovery-form .consent-card em{grid-column:2;grid-row:1/3}
 .signup-house-board .consent-card:has(input:checked){border-color:#176b5b;background:#edf6e5}
 .signup-house-board .consent-card strong{font-size:17px}
 .signup-house-board .consent-card small{font-size:13px}

@@ -416,8 +416,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
-  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
+  if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -884,9 +883,9 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $("#signup-form").hidden = isLogin;
   $("#login-form").hidden = !isLogin;
   $("#auth-title-eyebrow").textContent = isLogin
-    ? context === "mypage" ? "마이페이지 로그인" : "기존 회원 로그인"
-    : "가입 및 건강정보 동의";
-  $("#signup-title").textContent = isLogin ? "기존 계정으로 로그인해 주세요" : "계정과 동의 정보를 입력해 주세요";
+    ? context === "mypage" ? "마이페이지 로그인" : "당근의 숲에 도착했어요"
+    : "당근의 숲에 도착했어요";
+  $("#signup-title").textContent = isLogin ? "우리집 들어가기" : "새로운 집주인을 등록해요";
   if (isLogin) {
     $("#flow-context").textContent = context === "mypage" ? "마이페이지" : "계정 이용";
     $("#progress-bar").style.width = "0";
@@ -901,7 +900,7 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $$("[data-auth-entry]").forEach((element) => {
     element.classList.toggle("active", element.dataset.authEntry === (isLogin ? "login" : "signup"));
   });
-  if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
+  if (moveFocus) (isLogin ? $("#login-email") : ($("#signup-nickname") || $("#email"))).focus();
 }
 
 function openProfileEditor() {
@@ -953,12 +952,14 @@ function showAccountRecovery(recovery, message) {
   $("#auth-title-eyebrow").textContent = "가입 후 설정";
   $("#recovery-birthday").value = recovery.birthday || "";
   $("#recovery-gender").value = recovery.gender || "";
+  $("#recovery-name").value = recovery.name || "";
   $("#recovery-health-consent").checked = recovery.healthAgreed === true;
   const needsLogin = !state.token;
   const verifyOnly = recovery.verifyOnly === true;
-  $("#recovery-birthday").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-gender").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-health-consent").disabled = needsLogin || verifyOnly;
+  $("#recovery-name").disabled = verifyOnly;
+  $("#recovery-birthday").disabled = verifyOnly;
+  $("#recovery-gender").disabled = verifyOnly;
+  $("#recovery-health-consent").disabled = verifyOnly;
   $("#recovery-submit").hidden = needsLogin;
   $("#recovery-submit").textContent = verifyOnly ? "저장 상태 다시 확인하기" : "설정 저장하고 계속";
   $("#account-recovery-message").textContent = message;
@@ -977,12 +978,19 @@ async function saveAccountSetup(recovery) {
   if (!Number.isFinite(age) || age < 14 || !["FEMALE", "MALE"].includes(recovery.gender)) {
     throw new Error("생년월일과 성별을 확인해 주세요. 만 14세 미만은 가입할 수 없습니다.");
   }
-  if (!recovery.profileSaved) {
+  const profileChanged = recovery.name !== state.userProfile?.name
+    || recovery.birthday !== state.userProfile?.birthday
+    || recovery.gender !== state.userProfile?.gender;
+  if (!recovery.profileSaved || profileChanged) {
     recovery.stage = "profile";
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ birthday: recovery.birthday, gender: recovery.gender }) });
+    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      ...(recovery.name ? { name: recovery.name } : {}),
+      birthday: recovery.birthday,
+      gender: recovery.gender,
+    }) });
     checkSession();
     recovery.profileSaved = true;
-    state.userProfile = { ...(state.userProfile || {}), birthday: recovery.birthday, gender: recovery.gender };
+    state.userProfile = { ...(state.userProfile || {}), name: recovery.name, birthday: recovery.birthday, gender: recovery.gender };
   }
   recovery.stage = "consent";
   // A failed response may still have committed. Read before retrying this append-only write.
@@ -4850,6 +4858,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
   const gender = $("#signup-gender").value;
   let recovery = null;
   try {
+    const name = $("#signup-nickname")?.value.trim() || "";
     const email = $("#email").value;
     const password = $("#password").value;
     const signupAge = getAgeFromBirth(birthDate);
@@ -4871,9 +4880,10 @@ $("#signup-form").addEventListener("submit", async (event) => {
     state.userProfile = {
       ...(state.userProfile || {}),
       id: signup?.user_id ?? signup?.id ?? state.userProfile?.id,
+      name,
       email: signup?.email || email.trim(),
     };
-    recovery = { email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
+    recovery = { name, email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
     state.accountRecovery = recovery;
     state.token = null;
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
@@ -4902,6 +4912,8 @@ $("#recovery-login").addEventListener("click", () => {
   state.token = null;
   showAuthMode("login");
 });
+$("#signup-login-shortcut")?.addEventListener("click", () => showAuthMode("login", { context: "login" }));
+$("#login-signup-back")?.addEventListener("click", () => showAuthMode("signup"));
 $("#account-recovery-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -4913,6 +4925,7 @@ $("#account-recovery-form").addEventListener("submit", async (event) => {
       await resumeAuthenticatedAccount();
       return;
     }
+    recovery.name = $("#recovery-name")?.value.trim() || recovery.name || "";
     recovery.birthday = $("#recovery-birthday").value;
     recovery.gender = $("#recovery-gender").value;
     recovery.healthAgreed = $("#recovery-health-consent").checked;
@@ -5698,7 +5711,7 @@ async function resumeAuthenticatedAccount() {
     const profileSaved = Boolean(profile.birthday && ["FEMALE", "MALE"].includes(profile.gender));
     if (!profileSaved || !hasHealthDataConsent(consents)) {
       showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token,
-        birthday: profile.birthday, gender: profile.gender, profileSaved,
+        name: profile.name, birthday: profile.birthday, gender: profile.gender, profileSaved,
         healthAgreed: hasHealthDataConsent(consents), consentSaved: hasHealthDataConsent(consents),
         reconcileConsent: true, stage: profileSaved ? "consent" : "profile" },
       profileSaved ? "프로필은 저장되어 있습니다. 건강정보 수집·이용 동의를 확인하고 계속해 주세요." : "저장되지 않은 프로필과 건강정보 동의를 확인해 주세요.");
@@ -5745,8 +5758,16 @@ async function resumeAuthenticatedAccount() {
   } catch (error) {
     if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
-    showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token, verifyOnly: true },
-      state.token ? "로그인은 완료했지만 계정의 저장 상태를 불러오지 못했습니다. 다시 가입하지 말고 저장 상태를 다시 확인해 주세요." : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
+    showAccountRecovery({
+      email: $("#login-email").value.trim(),
+      token: state.token,
+      verifyOnly: !state.token,
+      profileSaved: false,
+      healthAgreed: false,
+      stage: state.token ? "profile" : "login",
+    }, state.token
+      ? "로그인은 완료했습니다. 계정 설정을 입력하고 계속 진행해 주세요."
+      : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
   }
 }
 
@@ -6219,6 +6240,18 @@ function resumeEmergencyQuestionnairePreview() {
   showStep(3, { recordHistory: false });
 }
 
+function resumeAuthEntryFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedAuth = params.get("auth");
+  if (!["login", "signup"].includes(requestedAuth)) return false;
+
+  state.navigationHistory = [2];
+  state.visitedSteps.add(2);
+  showStep(2, { recordHistory: false });
+  showAuthMode(requestedAuth, { moveFocus: false, context: requestedAuth });
+  return true;
+}
+
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 $$('input[name="current-drinker"]').forEach((input) => input.addEventListener("change", syncAlcoholFrequencyDetails));
@@ -6227,6 +6260,7 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
+resumeAuthEntryFromQuery();
 resumeFromForest();
 resumeReturningPreview();
 resumeForecastPreview();
