@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol
 
 import httpx
@@ -39,6 +40,11 @@ class FoodVisionResult:
     vegetable_confidence: float | None
     vegetable_ratio_percent: float | None = None
     detected_items: list[str] = field(default_factory=list)
+    food_coverage_percent: float | None = None
+    reliable: bool = True
+    uncertainty_reasons: list[str] = field(default_factory=list)
+    model_version: str | None = None
+    decision_status: str | None = None
 
 
 class FoodVisionProvider(Protocol):
@@ -178,8 +184,29 @@ def get_food_vision_provider() -> FoodVisionProvider:
     if config.FOOD_VISION_PROVIDER == "development":
         return DevelopmentFoodVisionProvider()
     if config.FOOD_VISION_PROVIDER == "openai":
-        return OpenAIFoodVisionProvider()
+        raise FoodVisionError(
+            "OpenAI Vision 제공자는 비활성화되어 있습니다. FOOD_VISION_PROVIDER=local_kfood를 사용해 주세요."
+        )
+    if config.FOOD_VISION_PROVIDER == "local_kfood":
+        from app.vision.local_kfood import LocalKFoodVisionProvider
+
+        return LocalKFoodVisionProvider()
     raise FoodVisionError(f"지원하지 않는 FOOD_VISION_PROVIDER입니다: {config.FOOD_VISION_PROVIDER}")
+
+
+def food_vision_is_configured() -> bool:
+    if config.FOOD_VISION_PROVIDER != "local_kfood":
+        return False
+    required = (
+        config.KFOOD_CLASSIFIER_PATH,
+        config.KFOOD_CLASSIFIER_META_PATH,
+        config.KFOOD_SEGMENTER_PATH,
+        config.KFOOD_SEGMENTATION_CONFIG_PATH,
+        config.KFOOD_DISH_VEGETABLES_PATH,
+    )
+    return bool(config.KFOOD_CLASSIFIER_SHA256 and config.KFOOD_SEGMENTER_SHA256) and all(
+        Path(path).is_file() for path in required
+    )
 
 
 def sha256_digest(image_bytes: bytes) -> str:

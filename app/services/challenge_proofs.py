@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import io
+import json
+import logging
 import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -15,6 +17,8 @@ from app.core import config
 from app.models.health import Challenge, ChallengeCycle, ChallengeLog, ChallengeVerification, UserChallenge
 from app.services.challenge_catalog import metadata_for
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
+
+logger = logging.getLogger(__name__)
 
 
 def challenge_today():
@@ -67,36 +71,55 @@ async def _context(service, user, selected_id, proof_date, *, for_update=False):
     return metadata
 
 
-async def _review(photo: bytes, verification_type: int) -> tuple[str, str]:
+async def _review(photo: bytes, verification_type: int) -> tuple[str, str, object | None]:
     if verification_type == 2:
-        return "accepted", "사진 제출을 확인했습니다. 활동 시간·섭취량은 본인 기록이며 AI 검증이 아닙니다."
-    if config.FOOD_VISION_PROVIDER != "openai" or not config.OPENAI_API_KEY:
+        return "accepted", "사진 제출을 확인했습니다. 활동 시간·섭취량은 본인 기록이며 AI 검증이 아닙니다.", None
+    if config.FOOD_VISION_PROVIDER != "local_kfood":
         raise HTTPException(
             status_code=503, detail="사진 검토 서비스가 연결되지 않았습니다. 완료로 처리하지 않았습니다."
         )
     try:
         provider = get_food_vision_provider()
-        if provider.provider_kind != "openai_vision":
-            raise FoodVisionError("A real image-review provider is required")
+        if provider.provider_kind != "local_kfood_cv":
+            raise FoodVisionError("The local Korean-food CV provider is required")
         result = await provider.analyze(photo, "image/jpeg", "challenge.jpg")
-        if result.provider_kind != "openai_vision":
-            raise FoodVisionError("The image-review result is not from a real provider")
+        if result.provider_kind != "local_kfood_cv":
+            raise FoodVisionError("The image-review result is not from the local provider")
     except FoodVisionError as exc:
         raise HTTPException(
             status_code=502, detail="사진 검토에 실패했습니다. 완료되지 않았으니 다시 시도해 주세요."
         ) from exc
-    accepted = (
-        result.contains_vegetable is True
-        and type(result.vegetable_confidence) in (int, float)
-        and 0.5 <= result.vegetable_confidence <= 1
-        and math.isfinite(result.vegetable_confidence)
-    )
-    return (
-        "accepted" if accepted else "needs_review",
-        "대표 사진의 채소 포함을 확인했습니다. 끼니 수·섭취량은 본인 기록입니다."
-        if accepted
-        else "사진의 채소 포함 여부를 확인하지 못했습니다. 완료로 처리하지 않았습니다.",
-    )
+    internal_metrics = {
+        "event": "challenge_photo_ratio_analysis",
+        "provider": result.provider_kind,
+        "model_version": result.model_version,
+        "food_coverage_percent": result.food_coverage_percent,
+        "food_threshold_percent": config.FOOD_COVERAGE_PASS_THRESHOLD * 100,
+        "vegetable_ratio_percent": result.vegetable_ratio_percent,
+        "vegetable_threshold_percent": config.VEGETABLE_RATIO_PASS_THRESHOLD * 100,
+        "reliable": result.reliable,
+        "uncertainty_reasons": result.uncertainty_reasons,
+        "decision_status": result.decision_status,
+    }
+    logger.info("%s", json.dumps(internal_metrics, ensure_ascii=False, separators=(",", ":")))
+
+    messages = {
+        "valid": ("needs_confirmation", "사진이 인증 기준을 충족했어요. 최종 확인 후 기록됩니다."),
+        "invalid_food_ratio": (
+            "rejected",
+            "음식이 충분히 보이지 않아요. 식사 전체가 크게 보이도록 다시 촬영해 주세요.",
+        ),
+        "invalid_vegetable_ratio": (
+            "rejected",
+            "채소 포함 기준을 확인하지 못했어요. 채소가 잘 보이도록 다시 촬영해 주세요.",
+        ),
+        "uncertain": (
+            "needs_review",
+            "사진을 정확히 확인하기 어려워요. 밝은 곳에서 음식이 가리지 않도록 다시 촬영해 주세요.",
+        ),
+    }
+    review_status, notice = messages.get(result.decision_status or "uncertain", messages["uncertain"])
+    return review_status, notice, result
 
 
 async def _accepted_submission(user_id, selected_id, proof_date):
@@ -115,20 +138,30 @@ async def _accepted_submission(user_id, selected_id, proof_date):
     return None
 
 
-async def verify_photo(service, user, selected_id, proof_date, file, actual_value):
+async def verify_photo(service, user, selected_id, proof_date, file, actual_value, confirmed=False):
     metadata = await _context(service, user, selected_id, proof_date)
     target = metadata["goal"]["target_minutes"] or metadata["goal"]["target_count"]
     if not math.isfinite(actual_value) or actual_value < target:
         raise HTTPException(status_code=422, detail=f"실제 실천량을 입력해 주세요. 완료 목표는 {target}입니다.")
     photo = await sanitized_photo(file)
     digest = sha256_digest(photo)
+    prior_draft = await ChallengeVerification.get_or_none(
+        user_id=user.id,
+        user_challenge_id=selected_id,
+        verification_date=proof_date,
+        evidence_digest=digest,
+        review_status="needs_confirmation",
+    )
     try:
         existing = await _accepted_submission(user.id, selected_id, proof_date)
         if existing is not None:
             return existing
-        review_status, notice = await _review(photo, metadata["verification_type"])
+        review_status, notice, result = await _review(photo, metadata["verification_type"])
     finally:
         del photo
+    if review_status == "needs_confirmation" and confirmed and prior_draft is not None:
+        review_status = "accepted"
+        notice = "최종 확인이 완료되어 채소 식사 인증을 기록했어요."
     completed = review_status == "accepted"
     async with in_transaction():
         # The external review can take time. Honor any consent, eligibility or
@@ -145,7 +178,11 @@ async def verify_photo(service, user, selected_id, proof_date, file, actual_valu
             values={
                 "verification_type": "photo",
                 "evidence_digest": digest,
-                "evidence_ref": "v3:server-photo",
+                "evidence_ref": (
+                    f"v3:{result.provider_kind}:{result.model_version}:{result.decision_status}"
+                    if result is not None
+                    else "v3:server-photo"
+                ),
                 "review_status": review_status,
             },
         )

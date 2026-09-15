@@ -108,18 +108,44 @@ async def start_cycle(api, *, focus="balanced", difficulty="easy", rotation=0):
 
 
 async def submit_photo(
-    api, item, *, actual=1, content=None, proof_date=None, headers=None, filename="private-salad.png"
+    api, item, *, actual=1, content=None, proof_date=None, headers=None, filename="private-salad.png", confirmed=False
 ):
     return await api.client.post(
         f"/api/v1/user-challenges/{item['user_challenge_id']}/photo-verifications",
         headers=headers or api.headers,
-        data={"verification_date": (proof_date or challenge_today()).isoformat(), "actual_value": str(actual)},
+        data={
+            "verification_date": (proof_date or challenge_today()).isoformat(),
+            "actual_value": str(actual),
+            "confirmed": str(confirmed).lower(),
+        },
         files={"file": (filename, image_bytes() if content is None else content, "image/png")},
     )
 
 
 def find_item(cycle, domain):
     return next(item for item in cycle["user_challenges"] if item["domain"] == domain)
+
+
+def local_result(decision: str) -> FoodVisionResult:
+    values = {
+        "valid": (68.0, 34.0, True),
+        "invalid_food_ratio": (42.0, 40.0, True),
+        "invalid_vegetable_ratio": (68.0, 18.0, True),
+        "uncertain": (68.0, 34.0, False),
+    }
+    food, vegetable, reliable = values[decision]
+    return FoodVisionResult(
+        "local_kfood_cv",
+        "채소" if decision == "valid" else "확인불가",
+        decision == "valid",
+        None,
+        vegetable_ratio_percent=vegetable,
+        food_coverage_percent=food,
+        reliable=reliable,
+        uncertainty_reasons=[] if reliable else ["segmentation_unreliable_for_dish"],
+        model_version="test-kfood-v1",
+        decision_status=decision,
+    )
 
 
 @pytest.mark.asyncio
@@ -157,8 +183,8 @@ async def test_recommendations_apply_preference_keep_water_and_hide_unavailable_
         assert all(item["verification_type"] != 1 for item in body["items"])
         assert body["policy"]["focus"] == focus and body["policy"]["difficulty"] == difficulty
         assert body["personalized"] is False and body["preference_applied"] is True
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
     response = await api.client.get(
         "/api/v1/challenge-recommendations",
         headers=api.headers,
@@ -231,14 +257,14 @@ async def test_type2_accepts_real_image_without_ai_and_duplicate_does_not_change
     forbidden_provider = AsyncMock(side_effect=AssertionError("Type2 must not invoke AI"))
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", forbidden_provider)
     first = await submit_photo(api, item, content=image_bytes(exif=True))
-    assert first.status_code == 200, first.text
+    assert first.status_code == 201, first.text
     assert first.json()["data"]["challenge_completed"] is True
     verification = await ChallengeVerification.get(id=first.json()["data"]["verification_id"])
     original_digest = verification.evidence_digest
     assert len(original_digest) == 64 and verification.evidence_ref == "v3:server-photo"
     assert "private" not in verification.evidence_ref
     second = await submit_photo(api, item, actual=2, content=image_bytes("blue"))
-    assert second.status_code == 200, second.text
+    assert second.status_code == 201, second.text
     assert second.json()["data"]["already_recorded"] is True
     await verification.refresh_from_db()
     assert verification.evidence_digest == original_digest
@@ -323,8 +349,8 @@ async def test_stopped_cycle_and_new_medical_exclusion_do_not_accept_photo(api):
 
 @pytest.mark.asyncio
 async def test_type1_development_mock_is_fail_closed_even_for_salad_filename(api, monkeypatch):
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
     cycle = await start_cycle(api, rotation=1)
     item = find_item(cycle, "fiber_diet")
     assert item["verification_type"] == 1
@@ -343,23 +369,28 @@ async def test_type1_development_mock_is_fail_closed_even_for_salad_filename(api
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("contains", "confidence", "expected"),
-    [(True, 0.8, "accepted"), (False, 0.9, "needs_review"), (True, None, "needs_review"), (True, 0.49, "needs_review")],
+    ("decision", "expected"),
+    [
+        ("valid", "needs_confirmation"),
+        ("invalid_food_ratio", "rejected"),
+        ("invalid_vegetable_ratio", "rejected"),
+        ("uncertain", "needs_review"),
+    ],
 )
 async def test_type1_provider_review_is_limited_to_vegetables_and_uncertainty_does_not_complete(
-    api, monkeypatch, contains, confidence, expected
+    api, monkeypatch, decision, expected
 ):
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
     provider = SimpleNamespace(
-        provider_kind="openai_vision",
-        analyze=AsyncMock(return_value=FoodVisionResult("openai_vision", "채소", contains, confidence)),
+        provider_kind="local_kfood_cv",
+        analyze=AsyncMock(return_value=local_result(decision)),
     )
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", lambda: provider)
     cycle = await start_cycle(api, rotation=1)
     item = find_item(cycle, "fiber_diet")
     response = await submit_photo(api, item, content=image_bytes(exif=True))
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     body = response.json()["data"]
     assert body["review_status"] == expected
     assert body["challenge_completed"] is (expected == "accepted")
@@ -375,10 +406,10 @@ async def test_type1_provider_review_is_limited_to_vegetables_and_uncertainty_do
 
 @pytest.mark.asyncio
 async def test_type1_provider_error_leaves_no_completion(api, monkeypatch):
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
     provider = SimpleNamespace(
-        provider_kind="openai_vision", analyze=AsyncMock(side_effect=FoodVisionError("offline test failure"))
+        provider_kind="local_kfood_cv", analyze=AsyncMock(side_effect=FoodVisionError("offline test failure"))
     )
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", lambda: provider)
     cycle = await start_cycle(api, rotation=1)
@@ -418,7 +449,7 @@ async def test_photo_uses_seoul_business_date_for_today_and_future_validation(ap
     )
     item = {"user_challenge_id": selected.id}
     accepted = await submit_photo(api, item, proof_date=business_day)
-    assert accepted.status_code == 200, accepted.text
+    assert accepted.status_code == 201, accepted.text
     rejected = await submit_photo(api, item, proof_date=business_day + timedelta(days=1))
     assert rejected.status_code == 422, rejected.text
 
@@ -474,8 +505,8 @@ async def test_type1_selection_is_not_available_without_real_review_configuratio
 
 @pytest.mark.asyncio
 async def test_late_rejected_review_cannot_overwrite_concurrent_accepted_proof(api, monkeypatch):
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
     started = asyncio.Event()
     release = asyncio.Event()
     calls = 0
@@ -486,43 +517,46 @@ async def test_late_rejected_review_cannot_overwrite_concurrent_accepted_proof(a
         if calls == 1:
             started.set()
             await asyncio.wait_for(release.wait(), timeout=5)
-            return FoodVisionResult("openai_vision", "확인불가", False, 0.9)
-        return FoodVisionResult("openai_vision", "채소", True, 0.9)
+            return local_result("invalid_vegetable_ratio")
+        return local_result("valid")
 
-    provider = SimpleNamespace(provider_kind="openai_vision", analyze=analyze)
+    provider = SimpleNamespace(provider_kind="local_kfood_cv", analyze=analyze)
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", lambda: provider)
     cycle = await start_cycle(api, rotation=1)
     item = find_item(cycle, "fiber_diet")
     late_rejection = asyncio.create_task(submit_photo(api, item, actual=2, content=image_bytes("red")))
     await asyncio.wait_for(started.wait(), timeout=5)
     try:
-        accepted = await submit_photo(api, item, content=image_bytes("blue"))
-        assert accepted.status_code == 200, accepted.text
+        draft = await submit_photo(api, item, content=image_bytes("blue"))
+        assert draft.status_code == 201, draft.text
+        assert draft.json()["data"]["review_status"] == "needs_confirmation"
+        accepted = await submit_photo(api, item, content=image_bytes("blue"), confirmed=True)
+        assert accepted.status_code == 201, accepted.text
         assert accepted.json()["data"]["challenge_completed"] is True
         original = await ChallengeVerification.get(id=accepted.json()["data"]["verification_id"])
         accepted_digest = original.evidence_digest
     finally:
         release.set()
     repeated = await asyncio.wait_for(late_rejection, timeout=5)
-    assert repeated.status_code == 200, repeated.text
+    assert repeated.status_code == 201, repeated.text
     assert repeated.json()["data"]["already_recorded"] is True
     await original.refresh_from_db()
     assert original.review_status == "accepted" and original.evidence_digest == accepted_digest
     assert await ChallengeVerification.all().count() == 1
-    assert await ChallengeVerificationEvent.all().count() == 1
+    assert await ChallengeVerificationEvent.all().count() == 2
     assert (await ChallengeLog.get(user_challenge_id=item["user_challenge_id"])).value == 1
 
 
 @pytest.mark.asyncio
 async def test_consent_withdrawal_during_external_review_prevents_commit(api, monkeypatch):
-    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "openai")
-    monkeypatch.setattr(config, "OPENAI_API_KEY", "unused-offline-test-placeholder")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
 
     async def analyze(*_):
         await Consent.filter(user_id=api.user.id).update(is_agreed=False, withdrawn_at=datetime.now(UTC))
-        return FoodVisionResult("openai_vision", "채소", True, 0.9)
+        return local_result("valid")
 
-    provider = SimpleNamespace(provider_kind="openai_vision", analyze=analyze)
+    provider = SimpleNamespace(provider_kind="local_kfood_cv", analyze=analyze)
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", lambda: provider)
     cycle = await start_cycle(api, rotation=1)
     response = await submit_photo(api, find_item(cycle, "fiber_diet"))
