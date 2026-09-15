@@ -126,6 +126,7 @@ async def ready(response: Response) -> dict[str, object]:
         await redis_client.ping()
     await connections.get("default").execute_query("SELECT 1")
     from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL
+    from app.vision.food_vision import food_vision_is_configured
 
     future_artifact_available = config.PREDICTION_PROVIDER != "artifact" or Path(config.MODEL_URI).is_file()
     current_artifact_path = (
@@ -134,8 +135,11 @@ async def ready(response: Response) -> dict[str, object]:
         else config.CURRENT_SCREENING_MODEL_URI
     )
     current_artifact_available = bool(current_artifact_path) and Path(current_artifact_path).is_file()
-    operational_ready = (not ACTIVE_MODEL.operational_model_activated or future_artifact_available) and (
-        not CURRENT_SCREENING_MODEL.operational_model_activated or current_artifact_available
+    food_vision_ready = config.FOOD_VISION_PROVIDER != "local_kfood" or food_vision_is_configured()
+    operational_ready = (
+        (not ACTIVE_MODEL.operational_model_activated or future_artifact_available)
+        and (not CURRENT_SCREENING_MODEL.operational_model_activated or current_artifact_available)
+        and food_vision_ready
     )
     if not operational_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -148,6 +152,7 @@ async def ready(response: Response) -> dict[str, object]:
             "prediction_provider": config.PREDICTION_PROVIDER,
             "future_artifact_path_available": future_artifact_available,
             "current_artifact_path_available": current_artifact_available,
+            "food_vision_ready": food_vision_ready,
             "worker_preload_required_for_release": True,
         },
         "active_model": {
