@@ -2772,6 +2772,21 @@ body.dashboard-mode .brand-mark{
   height:28px;
   border-radius:8px;
 }
+
+/* 공통 심볼 로고: 서비스명 글자 대신 투명 배경 엠블럼만 사용한다. */
+.brand:has(.brand-emblem){
+  display:inline-flex;
+  align-items:center;
+  gap:0;
+  line-height:0;
+}
+
+.brand-emblem{
+  display:block;
+  width:50px;
+  height:50px;
+  object-fit:contain;
+}
 body.dashboard-mode .workspace-top-nav ol{
   gap:6px;
 }
