@@ -5496,6 +5496,18 @@ $("#undo-daily-record")?.addEventListener("click", async (event) => {
   }
 });
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
+async function selectDemoPhoto(button) {
+  try {
+    const response = await fetch(button.dataset.demoPhoto);
+    if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
+    $("#v3-photo-file").files = transfer.files;
+    $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
+    $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
+  } catch (error) { showMessage(error.message); }
+}
+$$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });

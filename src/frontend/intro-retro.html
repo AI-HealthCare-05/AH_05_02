@@ -773,6 +773,15 @@
                   <div id="v3-photo-fields" hidden>
                     <label for="v3-photo-file">대표 사진 1장 (JPG·PNG·WEBP, 8MB·1200만 화소 이하)</label>
                     <input id="v3-photo-file" type="file" accept="image/jpeg,image/png,image/webp">
+                    <div class="demo-photo-gallery" aria-label="시연용 사진 선택">
+                      <p>시연용 사진을 눌러 바로 테스트해 보세요.</p>
+                      <div class="demo-photo-grid">
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/vegetable-meal-1.png" data-demo-name="demo-pass.png"><img src="/static/assets/demo/vegetable-meal-1.png" alt="채소가 충분한 식사"><strong>통과 예상</strong><span>음식·채소 충분</span></button>
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/vegetable-meal-low-veg.png" data-demo-name="demo-low-vegetable.png"><img src="/static/assets/demo/vegetable-meal-low-veg.png" alt="채소가 적은 식사"><strong>실패 예상</strong><span>채소 비율 부족</span></button>
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/irrelevant-desk.png" data-demo-name="demo-irrelevant.png"><img src="/static/assets/demo/irrelevant-desk.png" alt="음식이 아닌 책상 사진"><strong>실패 예상</strong><span>음식과 무관</span></button>
+                      </div>
+                      <p id="demo-photo-selection" role="status"></p>
+                    </div>
                     <label for="v3-photo-value" id="v3-photo-value-label">실제 실천량</label>
                     <input id="v3-photo-value" type="number" min="0" max="720" step="1" inputmode="numeric">
                     <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 원본 사진은 저장하지 않습니다.</p>
