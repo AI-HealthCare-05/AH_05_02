@@ -45,3 +45,10 @@
 - [ ] Artifact 해시·모델 버전·입력 스키마 추적
 - [ ] Model Release Gate와 관련 테스트 통과
 
+## ver.5.6 모델 서비스 계약
+
+PR #63의 `REQ-HC-003`, `REQ-PRED-001~005`, `NFR-001/004/006~010`을 구현 기준으로 사용한다.
+Artifact·입력·출력·XAI·배포·롤백의 단일 인계 문서는
+[`docs/model/V56_MODEL_SERVICE_INTEGRATION.md`](../model/V56_MODEL_SERVICE_INTEGRATION.md)다.
+모델 바이너리는 Git 밖에서 SHA-256 검증 후 공급하며, 파일 존재만으로 공개 운영 상태를
+활성화하지 않는다.

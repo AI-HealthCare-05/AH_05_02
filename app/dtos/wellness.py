@@ -71,7 +71,7 @@ class OcrDraftRequest(BaseModel):
 class OcrHealthApplyRequest(BaseModel):
     height_cm: float | None = Field(default=None, ge=120, le=220)
     weight_kg: float | None = Field(default=None, ge=25, le=250)
-    waist_cm: float | None = Field(default=None, ge=45, le=180)
+    waist_cm: float | None = Field(default=None, ge=45, le=160)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
 

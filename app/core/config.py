@@ -50,6 +50,7 @@ class Config(BaseSettings):
     ML_FIRST_INTERVAL_MODEL_URI: str = ""
     ML_RF25_MODEL_URI: str = ""
     PREDICTION_TIMEOUT_SECONDS: int = 30
+    MODEL_PRELOAD_ENABLED: bool = False
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
     PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
     PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
@@ -64,6 +65,7 @@ class Config(BaseSettings):
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
+    PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = False
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
     CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.6.1"
@@ -78,6 +80,9 @@ class Config(BaseSettings):
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
     )
+    CURRENT_SCREENING_RUNTIME: str = "v061"
+    CURRENT_SCREENING_PROMOTION_STATUS: str = "development_only"
+    CURRENT_SCREENING_OPERATIONAL_MODEL_ACTIVATED: bool = False
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.
