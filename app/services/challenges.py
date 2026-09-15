@@ -20,7 +20,7 @@ from app.services.challenge_catalog import (
     recommendation_policy,
 )
 from app.services.challenge_proofs import challenge_today
-from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
+from app.vision.food_vision import FoodVisionError, food_vision_is_configured, get_food_vision_provider, sha256_digest
 
 _DAILY_TARGET_1 = {
     "regular_meals_log",
@@ -429,7 +429,7 @@ class ChallengeService:
     async def _v3_recommendations(self, focus, difficulty, rotation, needs_guidance):
         policy = recommendation_policy(focus, difficulty, rotation)
         codes = recommend_codes(focus, difficulty, rotation)
-        review_available = config.FOOD_VISION_PROVIDER == "openai" and bool(config.OPENAI_API_KEY)
+        review_available = food_vision_is_configured()
         if not review_available and metadata_for(codes[1])["verification_type"] == 1:
             codes[1] = codes[1].replace("vegetable", "wholegrain")
         items = {item.code: item for item in await self.ensure_catalog(CATALOG_VERSION)}
@@ -457,9 +457,7 @@ class ChallengeService:
         for item in selected:
             if item["domain"] != "hydration" and item["difficulty"] != expected[item["domain"]]:
                 raise HTTPException(status_code=422, detail="선호·난이도에 맞는 목록을 다시 받아 주세요.")
-            if item["verification_type"] == 1 and not (
-                config.FOOD_VISION_PROVIDER == "openai" and config.OPENAI_API_KEY
-            ):
+            if item["verification_type"] == 1 and not food_vision_is_configured():
                 raise HTTPException(
                     status_code=503, detail="사진 검토가 아직 연결되지 않았습니다. 후보를 다시 선택해 주세요."
                 )
@@ -684,16 +682,16 @@ class ChallengeService:
         finally:
             del image_bytes  # 분석 후 원본 이미지는 저장하지 않고 즉시 폐기합니다.
 
-        review_status = (
-            "accepted"
-            if result.contains_vegetable is True
-            and (result.vegetable_confidence is None or result.vegetable_confidence >= 0.5)
-            else "needs_review"
-        )
+        review_status = {
+            "valid": "needs_confirmation",
+            "uncertain": "needs_review",
+            "invalid_food_ratio": "rejected",
+            "invalid_vegetable_ratio": "rejected",
+        }.get(result.decision_status, "needs_review")
 
         analysis = await self.wellness_repo.create_food_analysis(
             user_id=user.id,
-            image_name=file.filename or "meal.jpg",
+            image_name="challenge-photo",
             provider=result.provider_kind,
             predicted_category=result.predicted_category,
             confidence=result.vegetable_confidence,
@@ -734,23 +732,19 @@ class ChallengeService:
                 )
 
         return {
-            "analysis_id": analysis.id,
             "verification_id": verification.id,
             "user_challenge_id": verification.user_challenge_id,
             "verification_date": verification.verification_date,
-            "provider": result.provider_kind,
-            "predicted_category": result.predicted_category,
-            "contains_vegetable": result.contains_vegetable,
-            "vegetable_confidence": result.vegetable_confidence,
-            "vegetable_ratio_percent": result.vegetable_ratio_percent,
-            "detected_items": result.detected_items,
             "review_status": review_status,
             "challenge_completed": challenge_completed,
             "notice": (
-                "AI가 사진에서 채소 포함 여부와 대략적인 시각적 비율만 자동으로 판별했습니다. "
-                "칼로리·영양소·치료 효과는 계산하지 않으며, 업로드한 사진 원본은 분석 후 저장하지 않습니다."
+                "인증 사진이 기준을 충족했습니다. 업로드한 사진 원본은 분석 후 저장하지 않습니다."
                 if challenge_completed
-                else "사진에서 채소를 확인하지 못했습니다. 채소가 잘 보이도록 다시 촬영해 주세요."
+                else (
+                    "사진만으로 판정하기 어렵습니다. 음식과 채소가 잘 보이도록 다시 촬영해 주세요."
+                    if review_status == "needs_review"
+                    else "인증 기준을 충족하지 못했습니다. 음식과 채소가 잘 보이도록 다시 촬영해 주세요."
+                )
             ),
         }
 

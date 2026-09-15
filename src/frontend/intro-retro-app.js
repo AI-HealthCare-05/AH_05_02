@@ -3694,8 +3694,18 @@ async function submitV3Photo() {
     form.append("file", file);
     form.append("verification_date", challengeDay());
     form.append("actual_value", String(value));
-    const result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
+    let result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
     if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    if (result.review_status === "needs_confirmation") {
+      if (!window.confirm(result.notice || "사진이 기준을 충족했습니다. 이 결과로 챌린지를 기록할까요?")) {
+        $("#photo-fail-hint").textContent = "최종 확인 전에는 챌린지가 완료되지 않습니다.";
+        showPhotoRecordState("photo-state-fail");
+        return;
+      }
+      form.set("confirmed", "true");
+      result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
+      if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    }
     if (result.challenge_completed !== true || result.review_status !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
     state.dailyCompleted.add(target.id);
     target.saved = true;
