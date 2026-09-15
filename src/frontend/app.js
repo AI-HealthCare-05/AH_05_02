@@ -416,8 +416,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
-  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
+  if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -4180,7 +4179,7 @@ async function loadEducation() {
   const list = $("#education-list");
   list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
-    const contents = isLocalPreview() ? localEducationContents() : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
+    const contents = mapHealthEducationQuizzes(await api("/health-education/quizzes"));
     if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
     state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
     renderEducationList();

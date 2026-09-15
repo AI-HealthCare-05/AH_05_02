@@ -426,7 +426,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value) || !/[a-z]/.test(value)) issues.push("영문 대소문자를 포함해 주세요.");
+  if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -4115,14 +4115,65 @@ function inferredEducationAnswer(question = "") {
   return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
 }
 
+function quizTypeLabel(value) {
+  return value === "ox" ? "참·거짓" : value === "fill_in_blank" ? "빈칸 채우기" : "확인";
+}
+
+function quizOptions(question = {}) {
+  if (Array.isArray(question.options) && question.options.length) return question.options.slice(0, 4);
+  if (question.quiz_type === "ox") return ["참", "거짓"];
+  return ["네", "아니요"];
+}
+
+function mapHealthEducationQuizzes(payload = {}) {
+  const quizzes = (Array.isArray(payload.items) ? payload.items : [])
+    .filter((item) => item?.quiz_id && item?.question)
+    .slice(0, 20);
+  const weekTitles = ["위험 선별 결과 이해하기", "생활습관 근거 확인하기", "식사·활동 실천 점검하기", "다시 시작하는 건강 루틴"];
+  const groups = new Map();
+  quizzes.forEach((quiz, index) => {
+    const week = Number(quiz.week_number) || (index % 4) + 1;
+    if (!groups.has(week)) groups.set(week, []);
+    groups.get(week).push(quiz);
+  });
+  return {
+    medical_notice: "승인된 건강자료 기반 퀴즈입니다. 일반 건강교육 정보이며 진단·처방을 대신하지 않습니다.",
+    items: [...groups.entries()].sort(([a], [b]) => a - b).map(([week, items]) => {
+      const first = items[0];
+      const source = { title: first.source_title || "승인된 건강교육 자료", url: first.source_url || "" };
+      return {
+        content_id: `rag-week-${week}`,
+        source_kind: "health_education_quizzes",
+        week_number: week,
+        locked: items.every((item) => item.locked === true),
+        title: weekTitles[week - 1] || `${week}주차 건강교육`,
+        summary: `${source.title} 등 승인된 자료에서 생성된 ${items.length}개 문항을 확인합니다.`,
+        source,
+        quiz_questions: items.map((quiz) => ({
+          quizId: quiz.quiz_id,
+          prompt: quiz.question,
+          quiz_type: quiz.quiz_type,
+          options: quiz.options,
+          explanation: `${quizTypeLabel(quiz.quiz_type)} 문항입니다. 근거 자료: ${quiz.source_title || source.title}`,
+          source: { title: quiz.source_title || source.title, url: quiz.source_url || source.url },
+        })),
+      };
+    }),
+  };
+}
+
 function educationQuestions(item) {
   const questions = Array.isArray(item.quiz_questions) && item.quiz_questions.length
     ? item.quiz_questions
     : [{ prompt: item.quiz_question, correct_answer: inferredEducationAnswer(item.quiz_question), explanation: item.summary }];
   return questions.filter((question) => question?.prompt).slice(0, 3).map((question) => ({
+    quizId: question.quizId || question.quiz_id || null,
     prompt: question.prompt,
-    correctAnswer: question.correct_answer || question.correctAnswer || inferredEducationAnswer(question.prompt),
+    quiz_type: question.quiz_type,
+    options: quizOptions(question),
+    correctAnswer: question.correct_answer || question.correctAnswer || (item.source_kind === "health_education_quizzes" ? null : inferredEducationAnswer(question.prompt)),
     explanation: question.explanation || item.summary,
+    source: question.source || { title: question.source_title || item.source?.title, url: question.source_url || item.source?.url },
   }));
 }
 
@@ -4207,18 +4258,17 @@ function closeEducationFlow() {
 }
 
 async function loadEducation() {
-  const fallbackContents = setLocalEducationPreviewContents();
-  renderEducationList();
+  const list = $("#education-list");
+  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
-    const contents = isLocalPreview() ? fallbackContents : await api("/education-contents");
-    const items = Array.isArray(contents.items) ? contents.items : [];
-    if (items.length) {
-      state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
-    }
+    const contents = mapHealthEducationQuizzes(await api("/health-education/quizzes"));
+    if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
+    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
     renderEducationList();
   } catch (error) {
     setLocalEducationPreviewContents();
     renderEducationList();
+    showMessage("건강교육을 불러오지 못했어요. 승인된 기본 자료를 표시합니다.");
   }
 }
 async function loadConnections() {
@@ -6024,19 +6074,31 @@ $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
     const result = isLocalPreview()
-      ? { is_correct: answer === question.correctAnswer }
-      : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
+      ? { is_correct: answer === question.correctAnswer, correct_answer: question.correctAnswer, explanation: question.explanation, source: question.source }
+      : question.quizId
+        ? await api(`/health-education/quizzes/${encodeURIComponent(question.quizId)}/answers`, { method: "POST", body: JSON.stringify({ answer }) })
+        : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
     const isCorrect = Boolean(result.is_correct);
     if (isCorrect) state.educationQuizCorrectCount += 1;
     $("#education-quiz-form").hidden = true;
     const feedback = $("#education-feedback-card");
     feedback.hidden = false;
     feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    const correctAnswer = result.correct_answer || question.correctAnswer;
     $("#education-feedback-title").textContent = isCorrect
-      ? `정답입니다 · 정답: ${question.correctAnswer}`
-      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
-    $("#education-feedback-explanation").textContent = question.explanation;
-    $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
+      ? `정답입니다 · 정답: ${correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${correctAnswer}`;
+    $("#education-feedback-explanation").textContent = question.explanation || result.explanation;
+    const source = result.source || question.source || item.source;
+    const sourceRoot = $("#education-feedback-source");
+    sourceRoot.textContent = source?.title ? "근거 및 출처: " : "근거 자료를 확인해 주세요.";
+    const sourceUrl = safeExternalUrl(source?.url);
+    if (source?.title) {
+      const link = document.createElement(sourceUrl ? "a" : "span");
+      link.textContent = source.title;
+      if (sourceUrl) { link.href = sourceUrl; link.target = "_blank"; link.rel = "noopener noreferrer"; }
+      sourceRoot.append(link);
+    }
     const action = $("#education-feedback-action");
     if (!isCorrect) {
       action.dataset.action = "review";
