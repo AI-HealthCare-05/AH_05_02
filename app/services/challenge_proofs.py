@@ -71,7 +71,7 @@ async def _context(service, user, selected_id, proof_date, *, for_update=False):
     return metadata
 
 
-async def _review(photo: bytes, verification_type: int) -> tuple[str, str, object | None]:
+async def _review(photo: bytes, verification_type: int, external_vlm_consent=False) -> tuple[str, str, object | None]:
     if verification_type == 2:
         return "accepted", "사진 제출을 확인했습니다. 활동 시간·섭취량은 본인 기록이며 AI 검증이 아닙니다.", None
     if config.FOOD_VISION_PROVIDER != "local_kfood":
@@ -83,7 +83,11 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
         if provider.provider_kind != "local_kfood_cv":
             raise FoodVisionError("The local Korean-food CV provider is required")
         result = await provider.analyze(photo, "image/jpeg", "challenge.jpg")
-        if result.provider_kind != "local_kfood_cv":
+        if config.OPENAI_VLM_FALLBACK_ENABLED and external_vlm_consent:
+            from app.vision.openai_vlm import supplement_with_vlm
+
+            result = await supplement_with_vlm(result, photo)
+        if result.provider_kind not in {"local_kfood_cv", "local_kfood_openai_vlm"}:
             raise FoodVisionError("The image-review result is not from the local provider")
     except FoodVisionError as exc:
         raise HTTPException(
@@ -138,7 +142,9 @@ async def _accepted_submission(user_id, selected_id, proof_date):
     return None
 
 
-async def verify_photo(service, user, selected_id, proof_date, file, actual_value, confirmed=False):
+async def verify_photo(
+    service, user, selected_id, proof_date, file, actual_value, confirmed=False, external_vlm_consent=False
+):
     metadata = await _context(service, user, selected_id, proof_date)
     target = metadata["goal"]["target_minutes"] or metadata["goal"]["target_count"]
     if not math.isfinite(actual_value) or actual_value < target:
@@ -156,7 +162,7 @@ async def verify_photo(service, user, selected_id, proof_date, file, actual_valu
         existing = await _accepted_submission(user.id, selected_id, proof_date)
         if existing is not None:
             return existing
-        review_status, notice, result = await _review(photo, metadata["verification_type"])
+        review_status, notice, result = await _review(photo, metadata["verification_type"], external_vlm_consent)
     finally:
         del photo
     if review_status == "needs_confirmation" and confirmed and prior_draft is not None:

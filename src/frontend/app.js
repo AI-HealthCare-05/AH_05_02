@@ -3933,6 +3933,7 @@ async function submitV3Photo() {
     form.append("file", file);
     form.append("verification_date", challengeDay());
     form.append("actual_value", String(value));
+    form.append("external_vlm_consent", String(Boolean($("#v3-vlm-consent")?.checked)));
     let result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
     if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
     if (result.review_status === "needs_confirmation") {

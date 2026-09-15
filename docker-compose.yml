@@ -60,6 +60,9 @@ services:
       ML_FIRST_INTERVAL_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib
       ML_RF25_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib
       FOOD_VISION_PROVIDER: local_kfood
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_VLM_MODEL: ${OPENAI_VLM_MODEL:-gpt-4o-mini}
+      OPENAI_VLM_FALLBACK_ENABLED: ${OPENAI_VLM_FALLBACK_ENABLED:-false}
       KFOOD_CLASSIFIER_PATH: /app/models/artifacts/food_vision/kfood/best.pt
       KFOOD_CLASSIFIER_META_PATH: /app/models/artifacts/food_vision/kfood/meta.json
       KFOOD_SEGMENTER_PATH: /app/models/artifacts/food_vision/kfood/1.tflite
