@@ -707,6 +707,55 @@ body.modal-open{overflow:hidden}
 .result-room-screen .age-risk-chart .age-risk-signal-track::before{
   height:184px;
 }
+.future-signal-layout{
+  display:grid;
+  grid-template-columns:minmax(260px,.95fr) minmax(300px,1.05fr);
+  gap:22px;
+  align-items:stretch;
+  margin-top:22px;
+}
+.future-signal-visual{
+  display:grid;
+  place-items:center;
+  min-height:430px;
+  padding:28px;
+  border:2px solid #c8d9d2;
+  border-radius:22px;
+  background:linear-gradient(180deg,#fffaf0,#f6ead0);
+  box-shadow:0 12px 26px rgba(20,33,61,.06);
+}
+.future-signal-board{
+  display:grid;
+  justify-items:center;
+  gap:16px;
+  width:100%;
+  color:var(--ink);
+  text-align:center;
+}
+.future-signal-board strong{
+  font-size:clamp(32px,4vw,54px);
+  line-height:1.12;
+}
+.future-signal-board small{
+  color:var(--ink);
+  font-size:clamp(20px,2vw,28px);
+  font-weight:950;
+}
+.future-signal-board .age-risk-signal-track{
+  width:min(420px,100%);
+  height:240px;
+}
+.future-signal-board .age-risk-signal-track img{
+  width:104px;
+  height:104px;
+}
+.future-signal-board .age-risk-signal-track::before{
+  height:164px;
+}
+.future-signal-layout .forecast-score-placeholder{
+  min-height:430px;
+  margin:0;
+}
 .risk-badge{min-height:160px;border:2px solid var(--green);border-radius:24px;background:var(--mint);display:grid;place-items:center;text-align:center;color:var(--green-dark);padding:20px}
 .risk-badge>span{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;font-size:30px;font-weight:900;margin-bottom:8px}
 .risk-badge strong{display:block;font-size:30px;line-height:1.2}
