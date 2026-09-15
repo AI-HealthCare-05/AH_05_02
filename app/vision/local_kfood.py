@@ -75,9 +75,7 @@ class LocalKFoodVisionProvider:
             import torch
             from ai_edge_litert.interpreter import Interpreter
 
-            classifier = timm.create_model(
-                self._meta["backbone"], pretrained=False, num_classes=len(self._classes)
-            )
+            classifier = timm.create_model(self._meta["backbone"], pretrained=False, num_classes=len(self._classes))
             state = torch.load(self._classifier_path, map_location="cpu", weights_only=True)
             classifier.load_state_dict(state)
             classifier.eval()
