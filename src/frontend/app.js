@@ -4670,9 +4670,11 @@ function closeEducationFlow() {
 async function loadEducation() {
   const fallbackContents = setLocalEducationPreviewContents();
   renderEducationList();
-  if (isLocalPreview()) return;
   try {
-    const contents = fallbackContents;
+    const previewQuizzes = Array.isArray(window.healthQuizPreviewItems) ? window.healthQuizPreviewItems : [];
+    const contents = isLocalPreview()
+      ? (previewQuizzes.length ? mapHealthEducationQuizzes({ items: previewQuizzes }) : fallbackContents)
+      : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
     const items = Array.isArray(contents.items) ? contents.items : [];
     if (items.length) {
       state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
