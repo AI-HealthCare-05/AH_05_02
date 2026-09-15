@@ -71,7 +71,7 @@ async def _context(service, user, selected_id, proof_date, *, for_update=False):
     return metadata
 
 
-async def _review(photo: bytes, verification_type: int, external_vlm_consent=False) -> tuple[str, str, object | None]:
+async def _review(photo: bytes, verification_type: int) -> tuple[str, str, object | None]:
     if verification_type == 2:
         return "accepted", "사진 제출을 확인했습니다. 활동 시간·섭취량은 본인 기록이며 AI 검증이 아닙니다.", None
     if config.FOOD_VISION_PROVIDER != "local_kfood":
@@ -83,7 +83,7 @@ async def _review(photo: bytes, verification_type: int, external_vlm_consent=Fal
         if provider.provider_kind != "local_kfood_cv":
             raise FoodVisionError("The local Korean-food CV provider is required")
         result = await provider.analyze(photo, "image/jpeg", "challenge.jpg")
-        if config.OPENAI_VLM_FALLBACK_ENABLED and external_vlm_consent:
+        if config.OPENAI_VLM_FALLBACK_ENABLED:
             from app.vision.openai_vlm import supplement_with_vlm
 
             result = await supplement_with_vlm(result, photo)
@@ -142,9 +142,7 @@ async def _accepted_submission(user_id, selected_id, proof_date):
     return None
 
 
-async def verify_photo(
-    service, user, selected_id, proof_date, file, actual_value, confirmed=False, external_vlm_consent=False
-):
+async def verify_photo(service, user, selected_id, proof_date, file, actual_value, confirmed=False):
     metadata = await _context(service, user, selected_id, proof_date)
     target = metadata["goal"]["target_minutes"] or metadata["goal"]["target_count"]
     if not math.isfinite(actual_value) or actual_value < target:
@@ -162,7 +160,7 @@ async def verify_photo(
         existing = await _accepted_submission(user.id, selected_id, proof_date)
         if existing is not None:
             return existing
-        review_status, notice, result = await _review(photo, metadata["verification_type"], external_vlm_consent)
+        review_status, notice, result = await _review(photo, metadata["verification_type"])
     finally:
         del photo
     if review_status == "needs_confirmation" and confirmed and prior_draft is not None:
@@ -170,7 +168,7 @@ async def verify_photo(
         notice = "최종 확인이 완료되어 채소 식사 인증을 기록했어요."
     completed = review_status == "accepted"
     async with in_transaction():
-        # The external review can take time. Honor any consent, eligibility or
+        # The external review can take time. Honor eligibility or
         # cycle changes before recording its result, then preserve a concurrent
         # successful submission without changing its evidence or quantity.
         await _context(service, user, selected_id, proof_date, for_update=True)
