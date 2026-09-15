@@ -15,7 +15,7 @@ from app.dtos.wellness import (
     WearableImportRequest,
 )
 from app.models.users import User
-from app.ocr.clova import ClovaOcrProvider
+from app.ocr.providers import get_health_checkup_ocr_provider
 from app.repositories.health_repository import HealthRepository
 from app.repositories.wellness_repository import WellnessRepository
 from src.ocr.health_checkup_2025 import extract_health_checkup_fields
@@ -295,7 +295,8 @@ class WellnessService:
     async def ocr_draft_from_image(
         self, user: User, *, document_name: str, content_type: str | None, content: bytes
     ) -> dict[str, object]:
-        text = await ClovaOcrProvider().extract_text(
+        provider = get_health_checkup_ocr_provider()
+        text = await provider.extract_text(
             file_name=document_name,
             content_type=content_type,
             content=content,
@@ -303,7 +304,7 @@ class WellnessService:
         return await self.ocr_draft(
             user,
             OcrDraftRequest(document_name=document_name, ocr_text=text),
-            provider="clova_ocr",
+            provider=provider.provider_kind,
         )
 
     async def confirm_ocr(self, user: User, draft_id: int) -> dict[str, object]:

@@ -1183,15 +1183,16 @@
                     <p>OCR 처리된 건강검진 텍스트에서 신체계측·혈압 값을 찾아 확인 후 반영할 수 있어요.</p>
                   </div>
                 </div>
-                    <input id="checkup-image-input" class="sr-only" type="file" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,image/jpeg,image/png,application/pdf,image/tiff">
+                <input id="checkup-image-input" class="sr-only" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.tif,.tiff,image/jpeg,image/png,image/webp,application/pdf,image/tiff">
               </div>
               <div class="health-tool-actions health-tool-actions-ocr">
                 <button class="secondary health-tool-inline-action upload-checkup-button" id="upload-checkup-image" type="button">
                   <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
-                  <strong>결과통보서 업로드</strong><small>OCR 텍스트 파일</small>
+                  <strong>결과통보서 업로드</strong><small>JPG·PNG·WebP·PDF·TIFF, 최대 10MB</small>
                 </button>
                 <button class="secondary health-tool-inline-action" id="load-checkup-sample" type="button">2025 합성 예시 보기</button>
               </div>
+              <label class="check-card compact-check-card"><input id="ocr-external-provider-consent" type="checkbox"><span><strong>외부 OCR 처리 동의</strong><small>선택한 검진표는 설정된 외부 OCR 서비스에 전송되어 텍스트를 추출합니다. 원본 이미지는 서비스에 저장하지 않으며, 추출값은 제가 확인한 뒤에만 반영됩니다.</small></span></label>
               <div id="ocr-upload-result" class="notice compact" hidden></div>
               <form id="ocr-confirm-form" class="ocr-confirm-form" hidden>
                 <p><strong id="ocr-file-name">선택한 검진표</strong></p>

@@ -6147,12 +6147,23 @@ async function createOcrImagePreview(file) {
   if (isLocalPreview()) {
     return { draft_id: "local-ocr-demo", provider: "development_mock", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
   }
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    throw new ApiError("검진표를 외부 OCR 서비스에 전송하는 데 동의한 뒤 업로드해 주세요.");
+  }
   const formData = new FormData();
   formData.append("file", file, file.name);
+  formData.append("external_provider_consent", "true");
   return api("/ocr-drafts/from-image", { method: "POST", body: formData });
 }
 
-$("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
+$("#upload-checkup-image")?.addEventListener("click", () => {
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    showMessage("외부 OCR 처리 동의를 확인한 뒤 결과통보서를 업로드해 주세요.");
+    $("#ocr-external-provider-consent")?.focus();
+    return;
+  }
+  $("#checkup-image-input")?.click();
+});
 $("#load-checkup-sample")?.addEventListener("click", async () => {
   const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
   try {
