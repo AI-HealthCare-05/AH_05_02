@@ -8,13 +8,15 @@ from pathlib import Path
 import httpx
 
 from app.core import config
+from app.ocr.providers import OcrProviderError
 
 
-class ClovaOcrError(RuntimeError):
+class ClovaOcrError(OcrProviderError):
     """Clova OCR 요청 또는 응답 처리 실패."""
 
 
 class ClovaOcrProvider:
+    provider_kind = "clova_ocr"
     _FORMAT_BY_CONTENT_TYPE = {
         "image/jpeg": "jpg",
         "image/png": "png",

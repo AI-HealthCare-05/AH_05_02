@@ -119,11 +119,16 @@ class Config(BaseSettings):
     NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 
-    # 건강검진 결과통보서 이미지 OCR. 원본 이미지는 저장하지 않고 추출 초안만 사용자 확인 대상으로 둡니다.
+    # 건강검진 결과통보서 OCR. 원본은 요청 처리 중 메모리에만 두고, 추출 초안은 사용자 확인 후에만 반영합니다.
+    HEALTH_CHECKUP_OCR_PROVIDER: str = "clova"
     CLOVA_OCR_URL: str = ""
     CLOVA_OCR_SECRET: str = ""
     CLOVA_OCR_TIMEOUT_SECONDS: int = 20
     CLOVA_OCR_MAX_BYTES: int = 10 * 1024 * 1024
+    ANTHROPIC_API_KEY: str = ""
+    CLAUDE_OCR_MODEL: str = "claude-haiku-4-5-20251001"
+    CLAUDE_OCR_TIMEOUT_SECONDS: int = 25
+    CLAUDE_OCR_MAX_BYTES: int = 10 * 1024 * 1024
 
     COOKIE_DOMAIN: str = "localhost"
     FRONTEND_BASE_URL: str = "http://localhost:8001"
