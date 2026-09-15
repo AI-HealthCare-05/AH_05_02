@@ -1,8 +1,8 @@
-# 작업 창구 4/5 — 서비스 기반·연동
+# 작업 창구 4/5 — 기반·연동
 
 ## 목적
 
-화면·AI·데이터를 실제 서비스로 연결하는 기반, 배포 및 운영 변경을 한 곳에서 추적한다.
+기획·AI·학습 데이터·고객 화면을 실제 서비스로 연결하고 운영 DB, 배포 및 품질 기준을 관리한다.
 
 ## 담당과 브랜치
 
@@ -11,22 +11,37 @@
 - 병합 대상: `develop`
 - 선행 작업: PR #61·PR #62
 
-## 포함 범위
+## API·인증과 운영 DB
 
-- FastAPI REST API
-- JWT 인증·권한·개인정보 동의 관리
-- 서비스 DB·ORM·마이그레이션
+- FastAPI REST API와 `/api/v1` 공통 경로
+- JWT Access·Refresh Token, 인증·권한·본인 데이터 소유권
+- 동의 상태 확인과 철회 이후 신규 처리 차단
+- 요청·응답 DTO, 표준 성공·오류 응답
+- 사용자·동의·건강정보·예측·챌린지·리포트·게임 운영 DB
+- ORM·Repository·마이그레이션·무결성·중복 요청 방지
+
+> 2번의 DB는 AI 학습용 원천·가공 데이터이고, 이 영역의 DB는 실제 서비스 이용 기록을 저장하는 운영 DB다.
+
+## AI·비동기·외부 연동
+
 - Redis Stream·AI Worker·비동기 예측
-- Model Provider·Artifact 로딩·결과 저장
-- RAG·LLM·근거 문서·건강교육·퀴즈
+- Model Provider·Artifact·전처리기·모델별 작업 분기·결과 저장
+- `queued·running·succeeded·failed`, 재시도·시간초과·중복 방지
+- 승인 문서와 임베딩 검색 기반 RAG·교육·퀴즈·출처 응답
 - OpenAI Vision·Clova OCR·의료기관 검색 등 외부 API
-- 웨어러블·건강검진 업로드 API
-- 챌린지·리포트·게임·당근의 숲 API
+- Apple Health·Android Health Connect·건강검진 업로드
+- 사용자·모델·XAI·챌린지·리포트·게임·당근의 숲 기능별 API
+
+## 실행·배포·품질
+
 - Docker·Docker Compose·Nginx
-- AWS EC2·환경변수·Secret 관리
+- AWS EC2·모델/파일 저장소·환경변수·Secret 관리
+- Windows·macOS와 로컬·고객 재현 환경
 - GitHub Actions·CI/CD
 - 단위·통합·E2E·Smoke·장애 시나리오 테스트
-- 로깅·상태 확인·오류 응답·모니터링
+- Worker 미작동·배포 실패 테스트
+- 로깅·오류 추적·`/health`·`/ready`·민감정보 로그 차단
+- 장애 안내와 모델·서비스 롤백 기준
 
 ## 작업 규칙
 
