@@ -12,6 +12,10 @@
 .education-card-cover-copy{position:absolute;bottom:0;left:0;right:0;padding:40px 16px 20px;background:linear-gradient(transparent,#173d32e8 30%);color:var(--paper);min-height:118px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px}
 .education-card-cover-copy strong{font-size:20px;line-height:1.45;word-break:keep-all;overflow-wrap:anywhere}
 .education-card-cover-copy .education-status-badge{align-self:flex-start;background:#ffffff25;color:var(--paper);padding:4px 8px;font-size:12px}
+.education-question-card .education-card-art img{top:10%;width:240px;height:240px}
+.education-question-card .education-card-cover-copy{min-height:86px;padding:28px 16px 16px;background:linear-gradient(transparent,#173d32e8 42%)}
+.education-question-card .education-card-cover-copy strong{font-size:19px}
+.education-question-card .education-card-week{max-width:calc(100% - 30px);white-space:normal;line-height:1.2}
 .education-overview-card[data-completed=true] .education-card-cover-copy .education-status-badge{background:#d9f4dc;color:#24583c}
 .education-magnetic-track.has-open .education-overview-card:not(.is-open){filter:blur(1px);opacity:.48;width:116px}
 .education-magnetic-track.has-open .education-overview-card:not(.is-open):focus-within{filter:none;opacity:1}

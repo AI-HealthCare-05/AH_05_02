@@ -632,7 +632,7 @@ function syncTopNavigation() {
   });
 }
 
-function showStep(step, { recordHistory = true } = {}) {
+function showStep(step, { recordHistory = true, instant = false } = {}) {
   if (step >= 3 && state.token && state.accountRecovery?.token === state.token) {
     showAccountRecovery(state.accountRecovery, "먼저 계정 설정과 건강정보 동의를 완료해 주세요.");
     return;
@@ -690,7 +690,7 @@ function showStep(step, { recordHistory = true } = {}) {
   const activeHeading = activeScreen?.querySelector("h1, h2, h3");
   if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  window.scrollTo({ top: 0, behavior: instant || reduceMotion ? "auto" : "smooth" });
   window.requestAnimationFrame(() => {
     if (state.step !== targetStep) return;
     const guidance = $("#eligibility-guidance");
@@ -698,6 +698,14 @@ function showStep(step, { recordHistory = true } = {}) {
     const focusTarget = targetStep === 3 && guidance && !guidance.hidden ? guidance : activeHeading;
     focusTarget?.focus({ preventScroll: true });
   });
+}
+
+function showAuthEntry(mode, options = {}) {
+  cancelLandingMotion();
+  document.documentElement.classList.add("auth-entry-instant");
+  showStep(2, { instant: true });
+  showAuthMode(mode, options);
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
 }
 
 async function goStepFromNav(step) {
@@ -3737,7 +3745,7 @@ function renderLocalDemoDashboard() {
   state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
   renderEducationList();
   renderHealthCheckupHistory();
-  $("#education-learning-flow").hidden = true;
+  closeEducationFlow();
   $("#connection-list").innerHTML = renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
 }
 function updateDailyRecordSummary() {
@@ -4116,29 +4124,80 @@ function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
     list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    const toolsList = $("#health-tools-education-list");
+    if (toolsList) toolsList.innerHTML = list.innerHTML;
     return;
   }
-  list.innerHTML = state.educationContents.map((item) => {
+  const educationArt = [
+    ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
+    ["hyeoldangi-challenge-meal.png", "#e5ddec"], ["hyeoldangi-cheer.png", "#d4e7ec"],
+  ];
+  const renderCards = (includeDetails = true) => state.educationContents.map((item) => {
     const completed = Boolean(item.completed && item.is_correct !== false);
     const locked = Boolean(item.locked);
     const questionCount = educationQuestions(item).length;
     return `<article class="education-overview-card" data-completed="${completed}">
-      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
-      <p>${escapeHtml(item.summary)}</p>
-      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${locked ? "준비 중" : completed ? "학습 완료" : "학습 전"}</span></div>
+      ${includeDetails ? `<p>${escapeHtml(item.summary)}</p>` : ""}
+      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${locked ? "미리 보기" : completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
     </article>`;
   }).join("");
+  const renderToolsQuestionCards = () => state.educationContents.flatMap((item) => {
+    const completed = Boolean(item.completed && item.is_correct !== false);
+    const [art, color] = educationArt[(Number(item.week_number) - 1 + educationArt.length) % educationArt.length] || educationArt[0];
+    return educationQuestions(item).map((question, questionIndex) => {
+      const questionNumber = questionIndex + 1;
+      const targetId = `${item.content_id}__question_${questionIndex}`;
+      return `<article class="education-overview-card education-question-card" data-completed="${completed}" data-content-id="${escapeHtml(targetId)}" data-week="${escapeHtml(item.week_number)}" data-question-index="${questionIndex}" style="--education-art:${color}" role="group" aria-roledescription="슬라이드" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber}">
+        <button class="education-card-toggle" type="button" aria-haspopup="dialog" aria-controls="education-learning-flow" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber} 풀기">
+          <span class="education-card-art" aria-hidden="true"><img src="/static/assets/${art}" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">${escapeHtml(item.week_number)}주차 - 문제 ${questionNumber}</span>
+          <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></span>
+        </button>
+        <div class="education-card-details" hidden><p>${escapeHtml(question.prompt)}</p><small>${escapeHtml(quizTypeLabel(question.quiz_type))} · 근거 자료 확인 퀴즈</small></div>
+      </article>`;
+    });
+  }).join("");
+  list.innerHTML = renderCards(true);
+  const toolsList = $("#health-tools-education-list");
+  if (toolsList) {
+    toolsList.innerHTML = renderToolsQuestionCards();
+    window.healthToolsEducationCarouselView?.refresh();
+  }
 }
 
 function activeEducationContent() {
   return state.educationContents.find((item) => String(item.content_id) === String(state.activeEducationId)) || null;
 }
 
-function openEducationFlow(contentId) {
-  const item = state.educationContents.find((entry) => String(entry.content_id) === String(contentId));
+function findEducationContent(contentId) {
+  const baseContentId = String(contentId || "").replace(/__question_\d+$/, "");
+  const exact = state.educationContents.find((entry) => String(entry.content_id) === baseContentId);
+  if (exact) return exact;
+  const previewWeek = baseContentId.match(/^preview-(\d+)$/)?.[1];
+  if (previewWeek) {
+    return state.educationContents.find((entry) => String(entry.week_number) === previewWeek)
+      || state.educationContents[Number(previewWeek) - 1]
+      || null;
+  }
+  return null;
+}
+
+function educationQuestionIndex(targetId) {
+  const value = Number(String(targetId || "").match(/__question_(\d+)$/)?.[1]);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function moveEducationFlow(hostId) {
+  const flow = $("#education-learning-flow");
+  const host = $(hostId);
+  if (flow && host && flow.parentElement !== host) host.append(flow);
+}
+
+function openEducationFlow(contentId, { questionIndex = 0, startQuiz = false } = {}) {
+  const item = findEducationContent(contentId);
   if (!item) return;
   state.activeEducationId = item.content_id;
-  state.educationQuizIndex = 0;
+  state.educationQuizIndex = Math.max(0, Math.min(questionIndex, educationQuestions(item).length - 1));
   state.educationQuizCorrectCount = 0;
   $("#education-flow-week").textContent = `${item.week_number}주차 건강교육`;
   $("#education-flow-title").textContent = item.title;
@@ -4154,9 +4213,13 @@ function openEducationFlow(contentId) {
   $("#education-feedback-card").hidden = true;
   const flow = $("#education-learning-flow");
   flow.hidden = false;
-  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-  $("#education-flow-title").setAttribute("tabindex", "-1");
-  $("#education-flow-title").focus({ preventScroll: true });
+  if (typeof flow.showModal === "function" && !flow.open) flow.showModal();
+  if (startQuiz) renderEducationQuizQuestion();
+  else flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  if (!startQuiz) {
+    $("#education-flow-title").setAttribute("tabindex", "-1");
+    $("#education-flow-title").focus({ preventScroll: true });
+  }
 }
 
 function renderEducationQuizQuestion() {
@@ -4181,10 +4244,18 @@ function renderEducationQuizQuestion() {
 }
 
 function closeEducationFlow() {
-  $("#education-learning-flow").hidden = true;
+  const flow = $("#education-learning-flow");
+  if (flow.open && typeof flow.close === "function") flow.close();
+  flow.hidden = true;
   const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
   state.activeEducationId = null;
   button?.focus();
+}
+
+async function openEducationFlowFromTools(contentId) {
+  moveEducationFlow("#education-flow-host-tools");
+  if (!state.educationContents.length) await loadEducation();
+  openEducationFlow(contentId, { questionIndex: educationQuestionIndex(contentId), startQuiz: true });
 }
 
 async function loadEducation() {
@@ -4264,6 +4335,7 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (name === "together") syncForestOverview();
+  if (name === "tools" && !state.educationContents.length) void loadEducation();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -4510,12 +4582,11 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
   if (state.token) { showStep(8); showWorkspace('together'); }
-  else { showStep(2); showAuthMode('signup'); }
+  else showAuthEntry('signup');
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -4671,13 +4742,11 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("login", { context: "login" });
+  showAuthEntry("login", { context: "login" });
 });
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
@@ -5567,7 +5636,10 @@ $("#barrier-form").addEventListener("submit", async (event) => {
 });
 $("#education-list").addEventListener("click", (event) => {
   const button = event.target.closest(".education-open");
-  if (button) openEducationFlow(button.dataset.id);
+  if (button) {
+    moveEducationFlow("#education-flow-host-challenge");
+    openEducationFlow(button.dataset.id);
+  }
 });
 $("#close-education-flow")?.addEventListener("click", closeEducationFlow);
 $("#start-education-quiz")?.addEventListener("click", () => {
@@ -6276,14 +6348,22 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
-window.lifestyleMapView = window.LifestyleMap.mount($("#lifestyle-map-detail"), {
+const mountEducationCarousel = window.EducationCarousel?.mount;
+window.lifestyleMapView = window.LifestyleMap?.mount?.($("#lifestyle-map-detail"), {
   getData: lifestyleMapSnapshot,
-  mountCarousel: window.EducationCarousel.mount,
+  mountCarousel: mountEducationCarousel,
 });
-window.healthToolsEducationCarouselView = window.EducationCarousel.mount($("#health-tools-education-carousel"), {
+window.healthToolsEducationCarouselView = mountEducationCarousel?.($("#health-tools-education-carousel"), {
   listSelector: "#health-tools-education-list",
   statusSelector: "#health-tools-education-carousel-status",
-  onOpen: openEducationFlow,
+  onOpen: openEducationFlowFromTools,
+});
+$("#health-tools-education-list")?.addEventListener("click", (event) => {
+  if (window.healthToolsEducationCarouselView) return;
+  const card = event.target.closest(".education-overview-card");
+  if (!card?.dataset.contentId) return;
+  event.preventDefault();
+  void openEducationFlowFromTools(card.dataset.contentId).catch((error) => showMessage(error.message));
 });
 $("#daily-log-list").addEventListener("click", event => {
   const link = event.target.closest("[data-lifestyle-topic]");
