@@ -43,3 +43,9 @@ test('server quiz ids and choices reach the grading request model', () => {
 test('the screen loads the server quiz endpoint instead of the legacy catalogue', () => {
   assert.match(source, /api\("\/health-education\/quizzes"\)/);
 });
+
+test('the retro intro auth runtime also loads the server quiz endpoint', () => {
+  const retroSource = fs.readFileSync(path.join(__dirname, '../../src/frontend/intro-retro-app.js'), 'utf8');
+  assert.match(retroSource, /api\("\/health-education\/quizzes"\)/);
+  assert.match(retroSource, /health-education\/quizzes\/\$\{encodeURIComponent\(question\.quizId\)\}\/answers/);
+});
