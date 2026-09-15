@@ -1646,9 +1646,8 @@ function renderHealthReview() {
   const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const detailHealth = detailHealthPayload();
   $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
-  $("#health-review-panel .lead").textContent = state.currentHealthOnly
-    ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
-    : "정보가 정확해야 당뇨병 위험 신호 확인을 요청할 수 있습니다. 수정이 필요하면 각 카드의 수정 버튼을 눌러 주세요.";
+  const healthReviewLead = $("#health-review-panel .lead");
+  if (healthReviewLead) healthReviewLead.hidden = true;
   $("#submit-analysis").textContent = healthSubmitLabel();
   $("#review-eligibility").innerHTML = dlRows([
     ["생년월일", $("#eligibility-birth-date").value || "-"],

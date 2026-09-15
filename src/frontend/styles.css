@@ -4741,13 +4741,13 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 #health-metrics-panel.health-combined-panel,
 #health-vitals-panel.health-combined-panel{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));
   gap:20px;
-  max-width:980px;
+  max-width:none;
 }
-#lifestyle-input-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:980px}
-#health-habits-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:980px}
-#health-activity-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:1040px}
+#lifestyle-input-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:none}
+#health-habits-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:none}
+#health-activity-panel.health-combined-panel{display:grid;grid-template-columns:1fr;gap:20px;max-width:none}
 .health-room-board .health-input-panel .form-row,
 .health-room-board .choice-block{
   padding:18px 20px;
@@ -4839,14 +4839,14 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   margin:0;
 }
 .health-room-board #lifestyle-input-panel .health-combined-lifestyle{
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));
   width:100%;
 }
 .health-room-board .smoking-status-card,
 .health-room-board .self-health-card,
 .health-room-board .meal-count-card{grid-column:auto}
 .health-room-board #health-habits-panel .health-combined-lifestyle{
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));
   align-items:stretch;
   width:100%;
 }
@@ -4881,7 +4881,7 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   border-top:0;
 }
 .health-room-board #health-activity-panel .health-combined-lifestyle{
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));
   width:100%;
 }
 .health-room-board #health-activity-panel .exercise-detail-card{
@@ -4897,18 +4897,19 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:20px;
+  width:100%;
   padding:0;
   border:0;
   background:transparent;
 }
 #health-nutrition-panel .detail-health-group,
 #health-socioeconomic-panel .detail-health-group{
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
 }
 #detail-health-panel,
 #health-nutrition-panel,
 #health-socioeconomic-panel{
-  max-width:980px;
+  max-width:none;
 }
 .health-room-board .health-input-panel .actions{
   display:grid;
@@ -5176,8 +5177,9 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 /* Larger health-entry sign on wide displays; review keeps its own layout. */
 @media(min-width:1200px){
   .health-room-stage:not(:has(#health-review-panel:not([hidden]))){
-    grid-template-columns:minmax(0,clamp(1040px,54vw,1600px));
-    padding-left:clamp(24px,6.5vw,200px);
+    grid-template-columns:minmax(0,min(1600px,calc(100vw - clamp(48px,8vw,160px))));
+    padding-left:clamp(24px,4vw,96px);
+    padding-right:clamp(24px,4vw,96px);
     padding-top:clamp(100px,12svh,190px);
   }
   .health-room-stage:not(:has(#health-review-panel:not([hidden]))) .health-room-board{
@@ -5213,10 +5215,43 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .health-room-board .health-input-panel .actions .primary{min-height:90px;font-size:clamp(26px,1.5vw,42px)}
 }
 
-/* Keep nutrition and socioeconomic detail inputs to two items per row. */
+/* Let family, nutrition, and socioeconomic detail inputs size like the other health cards. */
+#detail-health-panel,
+#health-nutrition-panel,
+#health-socioeconomic-panel{
+  width:100%;
+  justify-self:stretch;
+}
+#detail-health-panel .detail-health-grid,
+#health-nutrition-panel .detail-health-grid,
+#health-socioeconomic-panel .detail-health-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:20px;
+  width:100%;
+}
+#detail-health-panel .detail-health-group,
 #health-nutrition-panel .detail-health-group,
 #health-socioeconomic-panel .detail-health-group{
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  display:contents;
+}
+#detail-health-panel .detail-health-group>.form-row,
+#health-nutrition-panel .detail-health-group>.form-row,
+#health-socioeconomic-panel .detail-health-group>.form-row{
+  min-width:0;
+  width:100%;
+}
+@media(max-width:860px){
+  #detail-health-panel .detail-health-grid,
+  #health-nutrition-panel .detail-health-grid,
+  #health-socioeconomic-panel .detail-health-grid{
+    grid-template-columns:1fr;
+  }
+  #detail-health-panel .detail-health-group,
+  #health-nutrition-panel .detail-health-group,
+  #health-socioeconomic-panel .detail-health-group{
+    display:contents;
+  }
 }
 
 .result-room-screen.medical-guidance-only > :not(#medical-guidance-detail){
