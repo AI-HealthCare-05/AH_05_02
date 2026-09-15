@@ -92,7 +92,7 @@ def needs_vlm(result: FoodVisionResult) -> bool:
     vegetable = result.vegetable_ratio_percent
     if not all(type(value) in (int, float) and math.isfinite(value) for value in (food, vegetable)):
         return True
-    return not result.reliable or 50 <= food < 60 or 20 <= vegetable < 30
+    return not result.reliable or 40 <= food < 50 or 20 <= vegetable < 30
 
 
 async def supplement_with_vlm(result: FoodVisionResult, image_bytes: bytes) -> FoodVisionResult:

@@ -7,8 +7,9 @@ from app.vision.openai_vlm import needs_vlm, supplement_with_vlm
 
 
 def test_ratio_thresholds_require_both_stages() -> None:
-    assert threshold_decision(0.60, 0.30, True) == "valid"
-    assert threshold_decision(0.5999, 0.90, True) == "invalid_food_ratio"
+    assert threshold_decision(0.50, 0.30, True) == "valid"
+    assert threshold_decision(0.4999, 0.90, True) == "invalid_food_ratio"
+    assert threshold_decision(0.60, 0.90, True) == "valid"
     assert threshold_decision(0.90, 0.2999, True) == "invalid_vegetable_ratio"
 
 
@@ -21,8 +22,8 @@ def test_invalid_numeric_result_is_uncertain() -> None:
     assert threshold_decision(0.90, float("inf"), True) == "uncertain"
 
 
-def test_threshold_contract_is_sixty_and_thirty_percent() -> None:
-    assert config.FOOD_COVERAGE_PASS_THRESHOLD == 0.60
+def test_threshold_contract_is_fifty_and_thirty_percent() -> None:
+    assert config.FOOD_COVERAGE_PASS_THRESHOLD == 0.50
     assert config.VEGETABLE_RATIO_PASS_THRESHOLD == 0.30
 
 
@@ -48,11 +49,11 @@ def _result(food: float, vegetable: float, reliable: bool = True) -> FoodVisionR
 
 
 def test_vlm_is_only_used_for_borderline_or_unreliable_results() -> None:
-    assert needs_vlm(_result(55, 40))
+    assert needs_vlm(_result(45, 40))
     assert needs_vlm(_result(70, 25))
     assert needs_vlm(_result(70, 40, False))
     assert not needs_vlm(_result(70, 40))
-    assert not needs_vlm(_result(40, 10))
+    assert not needs_vlm(_result(30, 10))
 
 
 @pytest.mark.asyncio
@@ -69,6 +70,6 @@ async def test_vlm_can_promote_borderline_visible_vegetables(monkeypatch: pytest
 
     monkeypatch.setattr("app.vision.openai_vlm.OpenAIVegetableVerifier.verify", verify)
     monkeypatch.setattr(config, "OPENAI_API_KEY", "test-key")
-    result = await supplement_with_vlm(_result(58, 28), b"image")
+    result = await supplement_with_vlm(_result(48, 28), b"image")
     assert result.decision_status == "valid"
     assert result.provider_kind == "local_kfood_openai_vlm"
