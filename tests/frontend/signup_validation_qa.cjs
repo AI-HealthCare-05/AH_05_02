@@ -19,7 +19,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#personal-consent').check();
       await page.locator('#health-consent').check();
       const before = calls;
-      for (const [value, text] of [['abcdef12!', '대문자'], ['ABCDEF12!', '소문자'], ['Abcdefgh!', '숫자'], ['Abcdef123', '특수문자']]) {
+      for (const [value, text] of [['12345678!', '영문자'], ['Abcdefgh!', '숫자'], ['Abcdef123', '특수문자']]) {
         await page.locator('#password').fill(value);
         await page.locator('#signup-form button[type="submit"]').click();
         assert.match(await page.locator('#password-error').innerText(), new RegExp(text));

@@ -31,7 +31,13 @@ async def create_v3_photo_verification(
 ) -> dict[str, object]:
     return envelope(
         await verify_photo(
-            ChallengeService(), user, user_challenge_id, verification_date, file, actual_value, confirmed
+            ChallengeService(),
+            user,
+            user_challenge_id,
+            verification_date,
+            file,
+            actual_value,
+            confirmed,
         )
     )
 

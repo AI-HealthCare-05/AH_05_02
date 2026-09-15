@@ -19,6 +19,7 @@ from typing import Any
 import joblib
 
 from src.ml.evaluation.diabetes_risk_categories import categorize_risk_score
+from src.ml.inference.artifact_resolver import ArtifactResolverError, resolve_artifact_uri
 from src.ml.preprocessing.diabetes_api_features import (
     STANDARD_MODEL_FEATURES,
     SUPPORTED_AGE_MAXIMUM,
@@ -77,20 +78,29 @@ def _load_candidate_manifest(path: Path) -> dict[str, Any]:
 
 def _resolve_model_path(
     manifest: dict[str, Any],
-    configured_path: Path | None,
+    configured_path: Path | str | None,
 ) -> Path:
     if configured_path is None:
         relative_path = manifest.get("artifact_local_path")
         if not isinstance(relative_path, str):
             raise ModelContractError("candidate manifest has no artifact_local_path")
         configured_path = REPOSITORY_ROOT / relative_path
-    if not configured_path.is_file():
+    try:
+        resolved_path = resolve_artifact_uri(
+            configured_path,
+            expected_sha256=str(manifest.get("artifact_sha256", "")),
+        )
+    except ArtifactResolverError as exc:
+        raise ModelArtifactUnavailableError(
+            "model artifact could not be downloaded from its configured source"
+        ) from exc
+    if not resolved_path.is_file():
         raise ModelArtifactUnavailableError(
             "model artifact is missing; reproduce it with "
             f"`./scripts/ml-experiment.sh run {manifest.get('experiment_id', '<id>')}` "
-            f"or provision the verified artifact at: {configured_path}"
+            f"or provision the verified artifact at: {resolved_path}"
         )
-    return configured_path
+    return resolved_path
 
 
 def _validate_bundle(bundle: Any, manifest: dict[str, Any]) -> Any:
@@ -112,7 +122,7 @@ def _validate_bundle(bundle: Any, manifest: dict[str, Any]) -> Any:
 def load_standard_model(
     *,
     manifest_path: Path = DEFAULT_CANDIDATE_MANIFEST,
-    model_path: Path | None = None,
+    model_path: Path | str | None = None,
 ) -> LoadedDiabetesModel:
     """Load and contract-check the trusted candidate model."""
 

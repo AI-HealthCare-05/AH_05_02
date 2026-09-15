@@ -54,6 +54,8 @@ class Config(BaseSettings):
     ML_SHARED8_MODEL_URI: str = (
         "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
     )
+    ML_RF25_MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
+    TOMORROW_RUNTIME: str = "standard"
     # Explicitly opt-in local S2 research runtime. This never promotes a model
     # or enables public probability display.
     S2_MODEL_RUNTIME_ENABLED: bool = False

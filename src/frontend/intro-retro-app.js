@@ -426,7 +426,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value) || !/[a-z]/.test(value)) issues.push("영문 대소문자를 포함해 주세요.");
+  if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -3648,12 +3648,17 @@ function openPhotoRecordModal(item) {
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
   $("#v3-photo-file").value = "";
-  $("#v3-photo-value").value = "";
+  $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
+  const usesMinutes = Boolean(item.goal.target_minutes);
+  $("#v3-meal-count-field").hidden = usesMinutes;
+  $("#v3-photo-minutes-field").hidden = !usesMinutes;
+  $("#v3-photo-minutes").value = "";
   $("#confirm-photo-record").disabled = false;
   $("#confirm-photo-record").textContent = v3 ? "사진과 실천량 제출하기" : "사진으로 인증하기";
   $("#v3-photo-heading").textContent = v3 ? item.title : "식사 사진을 올려주세요";
   $("#v3-photo-scope").textContent = v3 ? item.verification_scope : "사진 또는 간편 체크로 기록해요.";
-  $("#v3-photo-value-label").textContent = v3 ? `${item.goal.target_minutes ? "실제 활동 시간(분)" : "실제 실천한 끼니 수"} · 목표 ${item.goal.target_minutes || item.goal.target_count}` : "실천량";
+  $("#v3-photo-value-label").textContent = v3 ? `실제 실천한 끼니 수 (설정 목표 = ${item.goal.target_count})` : "실천량";
+  $("#v3-photo-minutes-label").textContent = `실제 활동 시간 (설정 목표 = ${item.goal.target_minutes || 0}분)`;
   $$(".record-fallback").forEach((button) => { button.hidden = v3; });
   $("#record-simple-panel").hidden = true;
   $("#record-photo-panel").hidden = false;
@@ -3677,13 +3682,31 @@ function simulatePhotoAnalysis() {
 async function submitV3Photo() {
   const target = state.recordTarget;
   if (target?.item?.catalog_version !== "evidence-v3" || target.submitting || target.saved) return;
-  if (isLocalPreview()) return showMessage("화면 미리보기에서는 사진 인증을 완료하지 않습니다. 실제 계정으로 로그인해 주세요.");
   const file = $("#v3-photo-file").files[0];
-  const valueText = $("#v3-photo-value").value;
+  const valueText = target.item.goal.target_minutes
+    ? $("#v3-photo-minutes").value
+    : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
   if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
   if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  if (isLocalPreview()) {
+    showPhotoRecordState("photo-state-analyzing");
+    window.setTimeout(() => {
+      if (file.name === "demo-pass.png") {
+        $("#photo-success-title").textContent = "인증을 통과했어요";
+        showPhotoRecordState("photo-state-success");
+        return;
+      }
+      $("#photo-fail-hint").textContent = file.name === "demo-low-vegetable.png"
+        ? "음식은 확인됐지만 채소가 충분히 보이지 않아요."
+        : file.name === "demo-irrelevant.png"
+          ? "음식과 관련된 사진인지 확인하기 어려워요."
+          : "로컬 미리보기에서는 제공된 시연 사진으로 결과를 확인해 주세요.";
+      showPhotoRecordState("photo-state-fail");
+    }, 300);
+    return;
+  }
   const token = state.token;
   const cycleId = state.cycle?.cycle_id;
   target.submitting = true;
@@ -4125,14 +4148,65 @@ function inferredEducationAnswer(question = "") {
   return question.includes("진단") || question.includes("치료") || question.includes("포기") ? "아니요" : "네";
 }
 
+function quizTypeLabel(value) {
+  return value === "ox" ? "참·거짓" : value === "fill_in_blank" ? "빈칸 채우기" : "확인";
+}
+
+function quizOptions(question = {}) {
+  if (Array.isArray(question.options) && question.options.length) return question.options.slice(0, 4);
+  if (question.quiz_type === "ox") return ["참", "거짓"];
+  return ["네", "아니요"];
+}
+
+function mapHealthEducationQuizzes(payload = {}) {
+  const quizzes = (Array.isArray(payload.items) ? payload.items : [])
+    .filter((item) => item?.quiz_id && item?.question)
+    .slice(0, 20);
+  const weekTitles = ["위험 선별 결과 이해하기", "생활습관 근거 확인하기", "식사·활동 실천 점검하기", "다시 시작하는 건강 루틴"];
+  const groups = new Map();
+  quizzes.forEach((quiz, index) => {
+    const week = Number(quiz.week_number) || (index % 4) + 1;
+    if (!groups.has(week)) groups.set(week, []);
+    groups.get(week).push(quiz);
+  });
+  return {
+    medical_notice: "승인된 건강자료 기반 퀴즈입니다. 일반 건강교육 정보이며 진단·처방을 대신하지 않습니다.",
+    items: [...groups.entries()].sort(([a], [b]) => a - b).map(([week, items]) => {
+      const first = items[0];
+      const source = { title: first.source_title || "승인된 건강교육 자료", url: first.source_url || "" };
+      return {
+        content_id: `rag-week-${week}`,
+        source_kind: "health_education_quizzes",
+        week_number: week,
+        locked: items.every((item) => item.locked === true),
+        title: weekTitles[week - 1] || `${week}주차 건강교육`,
+        summary: `${source.title} 등 승인된 자료에서 생성된 ${items.length}개 문항을 확인합니다.`,
+        source,
+        quiz_questions: items.map((quiz) => ({
+          quizId: quiz.quiz_id,
+          prompt: quiz.question,
+          quiz_type: quiz.quiz_type,
+          options: quiz.options,
+          explanation: `${quizTypeLabel(quiz.quiz_type)} 문항입니다. 근거 자료: ${quiz.source_title || source.title}`,
+          source: { title: quiz.source_title || source.title, url: quiz.source_url || source.url },
+        })),
+      };
+    }),
+  };
+}
+
 function educationQuestions(item) {
   const questions = Array.isArray(item.quiz_questions) && item.quiz_questions.length
     ? item.quiz_questions
     : [{ prompt: item.quiz_question, correct_answer: inferredEducationAnswer(item.quiz_question), explanation: item.summary }];
   return questions.filter((question) => question?.prompt).slice(0, 3).map((question) => ({
+    quizId: question.quizId || question.quiz_id || null,
     prompt: question.prompt,
-    correctAnswer: question.correct_answer || question.correctAnswer || inferredEducationAnswer(question.prompt),
+    quiz_type: question.quiz_type,
+    options: quizOptions(question),
+    correctAnswer: question.correct_answer || question.correctAnswer || (item.source_kind === "health_education_quizzes" ? null : inferredEducationAnswer(question.prompt)),
     explanation: question.explanation || item.summary,
+    source: question.source || { title: question.source_title || item.source?.title, url: question.source_url || item.source?.url },
   }));
 }
 
@@ -4217,18 +4291,17 @@ function closeEducationFlow() {
 }
 
 async function loadEducation() {
-  const fallbackContents = setLocalEducationPreviewContents();
-  renderEducationList();
+  const list = $("#education-list");
+  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
-    const contents = isLocalPreview() ? fallbackContents : await api("/education-contents");
-    const items = Array.isArray(contents.items) ? contents.items : [];
-    if (items.length) {
-      state.educationContents = items.map((item) => ({ ...item, medical_notice: contents.medical_notice }));
-    }
+    const contents = mapHealthEducationQuizzes(await api("/health-education/quizzes"));
+    if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
+    state.educationContents = (contents.items || []).map((item) => ({ ...item, medical_notice: contents.medical_notice }));
     renderEducationList();
   } catch (error) {
     setLocalEducationPreviewContents();
     renderEducationList();
+    showMessage("건강교육을 불러오지 못했어요. 승인된 기본 자료를 표시합니다.");
   }
 }
 async function loadConnections() {
@@ -4712,14 +4785,12 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  openAuthEntry("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
-  if (state.token) {
-    window.location.href = "/?resume=together&workspace=together&cache=retro-entry-20260909";
-    return;
-  }
-  openAuthEntry("signup");
+  window.location.href = state.token
+    ? "/?resume=together&workspace=together&cache=retro-entry-20260909"
+    : "/?auth=signup&cache=retro-entry-20260909";
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -5037,19 +5108,21 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  openAuthEntry("signup");
+  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  openAuthEntry("login", { context: "login" });
+  window.location.href = "/?auth=login&cache=retro-entry-20260909";
 });
 $$("[data-intro-signup]").forEach((button) => {
-  button.addEventListener("click", () => openAuthEntry("signup"));
+  button.addEventListener("click", () => {
+    window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  });
 });
 function applyAuthEntryFromUrl() {
   const requestedAuth = new URLSearchParams(window.location.search).get("auth");
   if (requestedAuth !== "signup" && requestedAuth !== "login") return;
-  openAuthEntry(requestedAuth, { context: requestedAuth === "login" ? "login" : "signup", updateUrl: false });
+  openAuthEntry(requestedAuth, { updateUrl: false });
 }
 window.addEventListener("popstate", applyAuthEntryFromUrl);
 applyAuthEntryFromUrl();
@@ -5245,11 +5318,7 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  document.body.classList.remove("account-mode");
-  if (window.location.pathname !== "/" || window.location.search || window.location.hash) {
-    window.history.replaceState({}, "", "/");
-  }
-  showStep(1, { recordHistory: false });
+  window.location.assign("/static/intro-retro.html?v=20260915-brand-retro-v1");
 });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
@@ -5943,6 +6012,22 @@ $("#undo-daily-record").addEventListener("click", async (event) => {
   } finally { if (!state.recordTarget || isCurrent()) releaseBusy(); }
 });
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
+async function selectDemoPhoto(button) {
+  try {
+    const response = await fetch(button.dataset.demoPhoto);
+    if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
+    $("#v3-photo-file").files = transfer.files;
+    $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
+    $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
+  } catch (error) { showMessage(error.message); }
+}
+$$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+}));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
@@ -6038,19 +6123,31 @@ $("#education-quiz-form")?.addEventListener("submit", async (event) => {
   const releaseBusy = setButtonBusy(submitButton, "답 확인 중…");
   try {
     const result = isLocalPreview()
-      ? { is_correct: answer === question.correctAnswer }
-      : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
+      ? { is_correct: answer === question.correctAnswer, correct_answer: question.correctAnswer, explanation: question.explanation, source: question.source }
+      : question.quizId
+        ? await api(`/health-education/quizzes/${encodeURIComponent(question.quizId)}/answers`, { method: "POST", body: JSON.stringify({ answer }) })
+        : await api(`/education-contents/${item.content_id}/progress`, { method: "PUT", body: JSON.stringify({ quiz_answer: answer }) });
     const isCorrect = Boolean(result.is_correct);
     if (isCorrect) state.educationQuizCorrectCount += 1;
     $("#education-quiz-form").hidden = true;
     const feedback = $("#education-feedback-card");
     feedback.hidden = false;
     feedback.dataset.result = isCorrect ? "correct" : "incorrect";
+    const correctAnswer = result.correct_answer || question.correctAnswer;
     $("#education-feedback-title").textContent = isCorrect
-      ? `정답입니다 · 정답: ${question.correctAnswer}`
-      : `다시 확인해 볼까요? · 정답: ${question.correctAnswer}`;
-    $("#education-feedback-explanation").textContent = question.explanation;
-    $("#education-feedback-source").textContent = item.source?.title ? `근거 및 출처: ${item.source.title}` : "근거 자료를 확인해 주세요.";
+      ? `정답입니다 · 정답: ${correctAnswer}`
+      : `다시 확인해 볼까요? · 정답: ${correctAnswer}`;
+    $("#education-feedback-explanation").textContent = question.explanation || result.explanation;
+    const source = result.source || question.source || item.source;
+    const sourceRoot = $("#education-feedback-source");
+    sourceRoot.textContent = source?.title ? "근거 및 출처: " : "근거 자료를 확인해 주세요.";
+    const sourceUrl = safeExternalUrl(source?.url);
+    if (source?.title) {
+      const link = document.createElement(sourceUrl ? "a" : "span");
+      link.textContent = source.title;
+      if (sourceUrl) { link.href = sourceUrl; link.target = "_blank"; link.rel = "noopener noreferrer"; }
+      sourceRoot.append(link);
+    }
     const action = $("#education-feedback-action");
     if (!isCorrect) {
       action.dataset.action = "review";
@@ -6656,6 +6753,31 @@ function renderMvpResultPreview() {
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
 }
 
+function resumeMealPhotoPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "meal-photo" || !isDemoEnvironment()) return;
+  const item = {
+    challenge_id: "local-vegetable-meal",
+    user_challenge_id: "local-meal-photo",
+    catalog_version: "evidence-v3",
+    verification_type: 1,
+    title: "채소가 포함된 한 끼 인증",
+    daily_goal: "하루 1끼",
+    verification_scope: "한 끼 식사에 음식과 채소가 충분히 보이는지 확인해요.",
+    goal: { target_count: 1, target_minutes: null },
+  };
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.cycle = { cycle_id: "local-photo-preview", cycle_number: 1, user_challenges: [item] };
+  state.navigationHistory = [1, 8];
+  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  showStep(8, { recordHistory: false });
+  showWorkspace("challenge", { moveFocus: false });
+  openPhotoRecordModal(item);
+}
+
 function resumeForecastPreview() {
   const params = new URLSearchParams(window.location.search);
   // Preserve existing local QA bookmarks, but show only the two MVP result areas.
@@ -6706,5 +6828,6 @@ $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", (
 showStep(state.step, { recordHistory: false });
 resumeFromForest();
 resumeReturningPreview();
+resumeMealPhotoPreview();
 resumeForecastPreview();
 resumeEmergencyQuestionnairePreview();

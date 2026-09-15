@@ -83,7 +83,11 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
         if provider.provider_kind != "local_kfood_cv":
             raise FoodVisionError("The local Korean-food CV provider is required")
         result = await provider.analyze(photo, "image/jpeg", "challenge.jpg")
-        if result.provider_kind != "local_kfood_cv":
+        if config.OPENAI_VLM_FALLBACK_ENABLED:
+            from app.vision.openai_vlm import supplement_with_vlm
+
+            result = await supplement_with_vlm(result, photo)
+        if result.provider_kind not in {"local_kfood_cv", "local_kfood_openai_vlm"}:
             raise FoodVisionError("The image-review result is not from the local provider")
     except FoodVisionError as exc:
         raise HTTPException(
@@ -164,7 +168,7 @@ async def verify_photo(service, user, selected_id, proof_date, file, actual_valu
         notice = "최종 확인이 완료되어 채소 식사 인증을 기록했어요."
     completed = review_status == "accepted"
     async with in_transaction():
-        # The external review can take time. Honor any consent, eligibility or
+        # The external review can take time. Honor eligibility or
         # cycle changes before recording its result, then preserve a concurrent
         # successful submission without changing its evidence or quantity.
         await _context(service, user, selected_id, proof_date, for_update=True)

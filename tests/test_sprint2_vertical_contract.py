@@ -124,6 +124,7 @@ def test_fastapi_container_applies_migrations_before_serving() -> None:
     start_script = Path("app/start-fastapi.sh").read_text(encoding="utf-8")
     compose = Path("docker-compose.yml").read_text(encoding="utf-8")
     assert "aerich upgrade" in start_script
+    assert "DEMO_MODE:-false" in start_script
     assert "app/start-fastapi.sh" in compose
 
 

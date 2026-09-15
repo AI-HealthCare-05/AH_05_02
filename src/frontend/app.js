@@ -351,6 +351,7 @@ function getRiskCategoryLabel(prediction) {
 
 function showEligibilityGuidance(reasonCodes) {
   state.eligibilityReturnFocus = document.activeElement;
+  $("#eligibility-guidance").dataset.variant = "";
   const priority = [
     "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
@@ -371,7 +372,7 @@ function showEligibilityGuidance(reasonCodes) {
   state.eligibilityGuidanceSecondaryStep = guidance.secondaryStep || null;
   state.modelOutOfRange = reason === "MODEL_AGE_OUT_OF_RANGE";
   state.currentHealthOnly = reason === "MODEL_AGE_OUT_OF_RANGE";
-  $("#eligibility-guidance-code").textContent = guidance.code;
+  $("#eligibility-guidance").dataset.code = guidance.code;
   $("#eligibility-guidance-title").textContent = guidance.title;
   $("#eligibility-guidance-message").textContent = guidance.message;
   $("#eligibility-guidance-reason-title").textContent = guidance.reasonTitle;
@@ -380,9 +381,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
   const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
   const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  const isDiagnosed = reason === "DIAGNOSED_DIABETES";
   $("#urgent-guidance-actions").hidden = !isUrgent;
   $("#same-day-guidance-actions").hidden = !isSameDay;
-  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
+  $("#diagnosed-guidance-actions").hidden = !isDiagnosed;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay || isDiagnosed;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -416,8 +419,7 @@ function togglePasswordVisibility(button) {
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
-  if (!/[A-Z]/.test(value)) issues.push("영문 대문자를 포함해 주세요.");
-  if (!/[a-z]/.test(value)) issues.push("영문 소문자를 포함해 주세요.");
+  if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
@@ -529,6 +531,12 @@ function normalizeRecommendationResult(result = {}, difficulty = "easy") {
     }),
   };
 }
+
+function hasCurrentChallengeCycle(cycle = state.cycle) {
+  return Boolean(cycle?.user_challenges?.length)
+    && !["completed", "cancelled"].includes(cycle?.status);
+}
+
 function recordTypeLabel(type) {
   return type === "photo" ? "사진 인증" : "간편 체크";
 }
@@ -631,7 +639,7 @@ function syncTopNavigation() {
   });
 }
 
-function showStep(step, { recordHistory = true } = {}) {
+function showStep(step, { recordHistory = true, instant = false } = {}) {
   if (step >= 3 && state.token && state.accountRecovery?.token === state.token) {
     showAccountRecovery(state.accountRecovery, "먼저 계정 설정과 건강정보 동의를 완료해 주세요.");
     return;
@@ -689,7 +697,7 @@ function showStep(step, { recordHistory = true } = {}) {
   const activeHeading = activeScreen?.querySelector("h1, h2, h3");
   if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  window.scrollTo({ top: 0, behavior: instant || reduceMotion ? "auto" : "smooth" });
   window.requestAnimationFrame(() => {
     if (state.step !== targetStep) return;
     const guidance = $("#eligibility-guidance");
@@ -697,6 +705,19 @@ function showStep(step, { recordHistory = true } = {}) {
     const focusTarget = targetStep === 3 && guidance && !guidance.hidden ? guidance : activeHeading;
     focusTarget?.focus({ preventScroll: true });
   });
+}
+
+function showAuthEntry(mode, options = {}) {
+  cancelLandingMotion();
+  document.documentElement.classList.add("auth-entry-instant");
+  showStep(2, { instant: true });
+  showAuthMode(mode, options);
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
+}
+
+function suppressAuthTransitionOnce() {
+  document.documentElement.classList.add("auth-entry-instant");
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
 }
 
 async function goStepFromNav(step) {
@@ -870,6 +891,7 @@ function unlockReturningUserRoutes() {
 }
 
 function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
+  suppressAuthTransitionOnce();
   if (mode === "signup" && state.accountRecovery && state.token === state.accountRecovery.token) {
     showAccountRecovery(state.accountRecovery, "이미 가입한 계정의 남은 설정을 완료해 주세요.");
     return;
@@ -884,9 +906,9 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $("#signup-form").hidden = isLogin;
   $("#login-form").hidden = !isLogin;
   $("#auth-title-eyebrow").textContent = isLogin
-    ? context === "mypage" ? "마이페이지 로그인" : "기존 회원 로그인"
-    : "가입 및 건강정보 동의";
-  $("#signup-title").textContent = isLogin ? "기존 계정으로 로그인해 주세요" : "계정과 동의 정보를 입력해 주세요";
+    ? context === "mypage" ? "마이페이지 로그인" : "당근의 숲에 도착했어요"
+    : "당근의 숲에 도착했어요";
+  $("#signup-title").textContent = isLogin ? "우리집 들어가기" : "새로운 집주인을 등록해요";
   if (isLogin) {
     $("#flow-context").textContent = context === "mypage" ? "마이페이지" : "계정 이용";
     $("#progress-bar").style.width = "0";
@@ -901,7 +923,7 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
   $$("[data-auth-entry]").forEach((element) => {
     element.classList.toggle("active", element.dataset.authEntry === (isLogin ? "login" : "signup"));
   });
-  if (moveFocus) (isLogin ? $("#login-email") : $("#email")).focus();
+  if (moveFocus) (isLogin ? $("#login-email") : ($("#signup-nickname") || $("#email"))).focus();
 }
 
 function openProfileEditor() {
@@ -953,12 +975,14 @@ function showAccountRecovery(recovery, message) {
   $("#auth-title-eyebrow").textContent = "가입 후 설정";
   $("#recovery-birthday").value = recovery.birthday || "";
   $("#recovery-gender").value = recovery.gender || "";
+  $("#recovery-name").value = recovery.name || "";
   $("#recovery-health-consent").checked = recovery.healthAgreed === true;
   const needsLogin = !state.token;
   const verifyOnly = recovery.verifyOnly === true;
-  $("#recovery-birthday").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-gender").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-health-consent").disabled = needsLogin || verifyOnly;
+  $("#recovery-name").disabled = verifyOnly;
+  $("#recovery-birthday").disabled = verifyOnly;
+  $("#recovery-gender").disabled = verifyOnly;
+  $("#recovery-health-consent").disabled = verifyOnly;
   $("#recovery-submit").hidden = needsLogin;
   $("#recovery-submit").textContent = verifyOnly ? "저장 상태 다시 확인하기" : "설정 저장하고 계속";
   $("#account-recovery-message").textContent = message;
@@ -977,12 +1001,19 @@ async function saveAccountSetup(recovery) {
   if (!Number.isFinite(age) || age < 14 || !["FEMALE", "MALE"].includes(recovery.gender)) {
     throw new Error("생년월일과 성별을 확인해 주세요. 만 14세 미만은 가입할 수 없습니다.");
   }
-  if (!recovery.profileSaved) {
+  const profileChanged = recovery.name !== state.userProfile?.name
+    || recovery.birthday !== state.userProfile?.birthday
+    || recovery.gender !== state.userProfile?.gender;
+  if (!recovery.profileSaved || profileChanged) {
     recovery.stage = "profile";
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ birthday: recovery.birthday, gender: recovery.gender }) });
+    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      ...(recovery.name ? { name: recovery.name } : {}),
+      birthday: recovery.birthday,
+      gender: recovery.gender,
+    }) });
     checkSession();
     recovery.profileSaved = true;
-    state.userProfile = { ...(state.userProfile || {}), birthday: recovery.birthday, gender: recovery.gender };
+    state.userProfile = { ...(state.userProfile || {}), name: recovery.name, birthday: recovery.birthday, gender: recovery.gender };
   }
   recovery.stage = "consent";
   // A failed response may still have committed. Read before retrying this append-only write.
@@ -1471,6 +1502,18 @@ function closeEmergencyQuestionnaire() {
   $("#emergency-questionnaire-modal").hidden = true;
   document.body.classList.remove("modal-open");
   $("#open-emergency-questionnaire").focus();
+}
+
+function openDiagnosisHelp() {
+  $("#diagnosis-help-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("#diagnosis-help-title").focus?.();
+}
+
+function closeDiagnosisHelp() {
+  $("#diagnosis-help-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  $("#diagnosis-help-toggle").focus();
 }
 
 function applyEmergencyQuestionnaire() {
@@ -2294,12 +2337,20 @@ function currentBrowserPosition() {
   return getCurrentPositionWithRetry();
 }
 
+function showEmergencyAddressForm() {
+  if ($("#emergency-address-form")) {
+    $("#emergency-address-form").hidden = false;
+    return;
+  }
+  $("#emergency-facility-address-form")?.removeAttribute("hidden");
+}
+
 async function confirmEmergencyLocation() {
   const button = $("#confirm-current-location");
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2312,14 +2363,14 @@ async function confirmEmergencyLocation() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
 }
 
 async function findNearbyEmergencyFacilities() {
-  const button = $("#find-nearby-emergency");
+  const button = $('[data-emergency-facility-search]');
   if (!button) return;
   if (state.lastKnownLocation) {
     await requestEmergencyFacilities(state.lastKnownLocation, button);
@@ -2328,7 +2379,7 @@ async function findNearbyEmergencyFacilities() {
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2341,7 +2392,7 @@ async function findNearbyEmergencyFacilities() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
@@ -2351,7 +2402,7 @@ async function findNearbyEmergencyFacilities() {
 async function findEmergencyFacilitiesByAddress(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const input = $("#emergency-address");
+  const input = $("#emergency-address") || $("#emergency-facility-address");
   const submit = form.querySelector('button[type="submit"]');
   const address = input?.value.trim();
   if (!address || !submit) return;
@@ -2420,63 +2471,52 @@ function updateLifestyleSummary() {
 }
 
 function syncLifestyleAvatar() {
-  const isMale = $("#gender").value === "MALE";
   const avatar = $("#lifestyle-avatar");
-  if (!avatar) {
-    updateLifestyleSummary();
-    return;
+  if (avatar) {
+    const gender = ($("#gender")?.value || state.userProfile?.gender || "FEMALE").toString().toLowerCase();
+    const isMale = gender.startsWith("m");
+    const birthDate = new Date(`${$("#eligibility-birth-date")?.value || state.userProfile?.birth_date || "1965-04-12"}T00:00:00`);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
+    if (!Number.isFinite(age)) age = 20;
+    const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
+    const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
+    const height = Number($("#height")?.value || 0);
+    const weight = Number($("#weight")?.value || 0);
+    const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
+    const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
+    const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
+    const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
+    avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
+    avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
+    avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
+    avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
+    $("#avatar-profile-summary").textContent = height && bmi
+      ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
+      : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
   }
-  const birthDate = new Date(`${$("#eligibility-birth-date").value || "1965-04-12"}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
-  if (!Number.isFinite(age)) age = 20;
-  const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
-  const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
-  const height = Number($("#height").value || 0);
-  const weight = Number($("#weight").value || 0);
-  const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
-  const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
-  const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
-  const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
-  avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
-  avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
-  avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
-  avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
-  $("#avatar-profile-summary").textContent = height && bmi
-    ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
-    : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
-}
-
-function lifestyleMapContent(topic) {
-  const height = Number($("#height").value || 0);
-  const weight = Number($("#weight").value || 0);
-  const bmi = height && weight ? (weight / ((height / 100) ** 2)).toFixed(1) : null;
-  const waist = $("#waist").value;
-  return {
-    rhythm: { number: "1", title: "생활 리듬", value: "현재 건강입력에는 수면 정보가 포함되지 않았어요.", action: "웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다." },
-    activity: { number: "2", title: "활동 습관", value: $("#regular-exercise").checked ? "규칙적으로 운동한다고 기록했어요." : "규칙적인 운동을 하지 않는다고 기록했어요.", action: "몸 상태에 맞는 작은 활동 챌린지를 직접 선택할 수 있습니다." },
-    body: { number: "3", title: "체형 기록", value: bmi ? `입력값으로 계산한 BMI는 ${bmi}${waist ? `, 허리둘레는 ${waist}cm` : ""}입니다.` : "키와 몸무게 기록이 필요합니다.", action: "수치는 위험 판정이 아니라 입력한 건강정보를 다시 확인하기 위한 표시입니다." },
-    walking: { number: "4", title: "걷기 습관", value: "아직 걸음 수 기록을 연결하지 않았어요.", action: "챌린지에서 걷기 목표를 고르거나 건강도구에서 워치 기록을 연결해 보세요." },
-  }[topic];
+  window.lifestyleMapView?.refresh();
 }
 
 function updateLifestyleMap(topic) {
-  if (!$("#map-detail-number")) {
-    updateLifestyleSummary();
-    return;
-  }
-  state.mapTopic = topic;
-  const content = lifestyleMapContent(topic);
-  $("#map-detail-number").textContent = content.number;
-  $("#map-detail-title").textContent = content.title;
-  $("#map-detail-value").textContent = content.value;
-  $("#map-detail-action").textContent = content.action;
-  $$(".body-map-point").forEach((button) => {
-    const selected = button.dataset.mapTopic === topic;
-    button.classList.toggle("active", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
+  window.lifestyleMapView?.select(topic);
+}
+
+function lifestyleMapSnapshot() {
+  const saved = state.healthCheckupHistory?.[0] || state.healthCheckupResult || {};
+  return {
+    owner: state.token,
+    health: saved,
+    medicalGuidance: requiresMedicalResultGuidance(),
+    challenges: state.cycle?.user_challenges || [],
+    catalog: [...state.challengeCatalog, ...fallbackChallenges, ...localNotionChallenges],
+    completed: state.dailyCompleted,
+    dailyStatus: state.dailyRecordsStatus,
+    report: state.lifestyleReport?.owner === state.token && state.lifestyleReport?.cycle === state.cycle ? state.lifestyleReport.data : null,
+    reportStatus: state.lifestyleReportStatus,
+    preview: isLocalPreview(),
+  };
 }
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -3727,7 +3767,7 @@ function renderLocalDemoDashboard() {
   state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
   renderEducationList();
   renderHealthCheckupHistory();
-  $("#education-learning-flow").hidden = true;
+  closeEducationFlow();
   $("#connection-list").innerHTML = renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
 }
 function updateDailyRecordSummary() {
@@ -3888,12 +3928,17 @@ function openPhotoRecordModal(item) {
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
   $("#v3-photo-file").value = "";
-  $("#v3-photo-value").value = "";
+  $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
+  const usesMinutes = Boolean(item.goal.target_minutes);
+  $("#v3-meal-count-field").hidden = usesMinutes;
+  $("#v3-photo-minutes-field").hidden = !usesMinutes;
+  $("#v3-photo-minutes").value = "";
   $("#confirm-photo-record").disabled = false;
   $("#confirm-photo-record").textContent = v3 ? "사진과 실천량 제출하기" : "사진으로 인증하기";
   $("#v3-photo-heading").textContent = v3 ? item.title : "식사 사진을 올려주세요";
   $("#v3-photo-scope").textContent = v3 ? item.verification_scope : "사진 또는 간편 체크로 기록해요.";
-  $("#v3-photo-value-label").textContent = v3 ? `${item.goal.target_minutes ? "실제 활동 시간(분)" : "실제 실천한 끼니 수"} · 목표 ${item.goal.target_minutes || item.goal.target_count}` : "실천량";
+  $("#v3-photo-value-label").textContent = v3 ? `실제 실천한 끼니 수 (설정 목표 = ${item.goal.target_count})` : "실천량";
+  $("#v3-photo-minutes-label").textContent = `실제 활동 시간 (설정 목표 = ${item.goal.target_minutes || 0}분)`;
   $$(".record-fallback").forEach((button) => { button.hidden = v3; });
   $("#record-simple-panel").hidden = true;
   $("#record-photo-panel").hidden = false;
@@ -3917,13 +3962,31 @@ function simulatePhotoAnalysis() {
 async function submitV3Photo() {
   const target = state.recordTarget;
   if (target?.item?.catalog_version !== "evidence-v3" || target.submitting || target.saved) return;
-  if (isLocalPreview()) return showMessage("화면 미리보기에서는 사진 인증을 완료하지 않습니다. 실제 계정으로 로그인해 주세요.");
   const file = $("#v3-photo-file").files[0];
-  const valueText = $("#v3-photo-value").value;
+  const valueText = target.item.goal.target_minutes
+    ? $("#v3-photo-minutes").value
+    : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
   if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
   if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  if (isLocalPreview()) {
+    showPhotoRecordState("photo-state-analyzing");
+    window.setTimeout(() => {
+      if (file.name === "demo-pass.png") {
+        $("#photo-success-title").textContent = "인증을 통과했어요";
+        showPhotoRecordState("photo-state-success");
+        return;
+      }
+      $("#photo-fail-hint").textContent = file.name === "demo-low-vegetable.png"
+        ? "음식은 확인됐지만 채소가 충분히 보이지 않아요."
+        : file.name === "demo-irrelevant.png"
+          ? "음식과 관련된 사진인지 확인하기 어려워요."
+          : "로컬 미리보기에서는 제공된 시연 사진으로 결과를 확인해 주세요.";
+      showPhotoRecordState("photo-state-fail");
+    }, 300);
+    return;
+  }
   const token = state.token;
   const cycleId = state.cycle?.cycle_id;
   target.submitting = true;
@@ -4115,30 +4178,81 @@ function educationQuestions(item) {
 function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
-    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    if (list) list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    const toolsList = $("#health-tools-education-list");
+    if (toolsList) toolsList.innerHTML = list?.innerHTML || `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
     return;
   }
-  list.innerHTML = state.educationContents.map((item) => {
+  const educationArt = [
+    ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
+    ["hyeoldangi-challenge-meal.png", "#e5ddec"], ["hyeoldangi-cheer.png", "#d4e7ec"],
+  ];
+  const renderCards = (includeDetails = true) => state.educationContents.map((item) => {
     const completed = Boolean(item.completed && item.is_correct !== false);
     const locked = Boolean(item.locked);
     const questionCount = educationQuestions(item).length;
     return `<article class="education-overview-card" data-completed="${completed}">
-      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
-      <p>${escapeHtml(item.summary)}</p>
-      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${locked ? "준비 중" : completed ? "학습 완료" : "학습 전"}</span></div>
+      ${includeDetails ? `<p>${escapeHtml(item.summary)}</p>` : ""}
+      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${locked ? "미리 보기" : completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
     </article>`;
   }).join("");
+  const renderToolsQuestionCards = () => state.educationContents.flatMap((item) => {
+    const completed = Boolean(item.completed && item.is_correct !== false);
+    const [art, color] = educationArt[(Number(item.week_number) - 1 + educationArt.length) % educationArt.length] || educationArt[0];
+    return educationQuestions(item).map((question, questionIndex) => {
+      const questionNumber = questionIndex + 1;
+      const targetId = `${item.content_id}__question_${questionIndex}`;
+      return `<article class="education-overview-card education-question-card" data-completed="${completed}" data-content-id="${escapeHtml(targetId)}" data-week="${escapeHtml(item.week_number)}" data-question-index="${questionIndex}" style="--education-art:${color}" role="group" aria-roledescription="슬라이드" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber}">
+        <button class="education-card-toggle" type="button" aria-haspopup="dialog" aria-controls="education-learning-flow" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber} 풀기">
+          <span class="education-card-art" aria-hidden="true"><img src="/static/assets/${art}" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">${escapeHtml(item.week_number)}주차 - 문제 ${questionNumber}</span>
+          <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></span>
+        </button>
+        <div class="education-card-details" hidden><p>${escapeHtml(question.prompt)}</p><small>${escapeHtml(quizTypeLabel(question.quiz_type))} · 근거 자료 확인 퀴즈</small></div>
+      </article>`;
+    });
+  }).join("");
+  if (list) list.innerHTML = renderCards(true);
+  const toolsList = $("#health-tools-education-list");
+  if (toolsList) {
+    toolsList.innerHTML = renderToolsQuestionCards();
+    window.healthToolsEducationCarouselView?.refresh();
+  }
 }
 
 function activeEducationContent() {
   return state.educationContents.find((item) => String(item.content_id) === String(state.activeEducationId)) || null;
 }
 
-function openEducationFlow(contentId) {
-  const item = state.educationContents.find((entry) => String(entry.content_id) === String(contentId));
+function findEducationContent(contentId) {
+  const baseContentId = String(contentId || "").replace(/__question_\d+$/, "");
+  const exact = state.educationContents.find((entry) => String(entry.content_id) === baseContentId);
+  if (exact) return exact;
+  const previewWeek = baseContentId.match(/^preview-(\d+)$/)?.[1];
+  if (previewWeek) {
+    return state.educationContents.find((entry) => String(entry.week_number) === previewWeek)
+      || state.educationContents[Number(previewWeek) - 1]
+      || null;
+  }
+  return null;
+}
+
+function educationQuestionIndex(targetId) {
+  const value = Number(String(targetId || "").match(/__question_(\d+)$/)?.[1]);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function moveEducationFlow(hostId) {
+  const flow = $("#education-learning-flow");
+  const host = $(hostId);
+  if (flow && host && flow.parentElement !== host) host.append(flow);
+}
+
+function openEducationFlow(contentId, { questionIndex = 0, startQuiz = false } = {}) {
+  const item = findEducationContent(contentId);
   if (!item) return;
   state.activeEducationId = item.content_id;
-  state.educationQuizIndex = 0;
+  state.educationQuizIndex = Math.max(0, Math.min(questionIndex, educationQuestions(item).length - 1));
   state.educationQuizCorrectCount = 0;
   $("#education-flow-week").textContent = `${item.week_number}주차 건강교육`;
   $("#education-flow-title").textContent = item.title;
@@ -4154,9 +4268,13 @@ function openEducationFlow(contentId) {
   $("#education-feedback-card").hidden = true;
   const flow = $("#education-learning-flow");
   flow.hidden = false;
-  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-  $("#education-flow-title").setAttribute("tabindex", "-1");
-  $("#education-flow-title").focus({ preventScroll: true });
+  if (typeof flow.showModal === "function" && !flow.open) flow.showModal();
+  if (startQuiz) renderEducationQuizQuestion();
+  else flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  if (!startQuiz) {
+    $("#education-flow-title").setAttribute("tabindex", "-1");
+    $("#education-flow-title").focus({ preventScroll: true });
+  }
 }
 
 function renderEducationQuizQuestion() {
@@ -4181,15 +4299,23 @@ function renderEducationQuizQuestion() {
 }
 
 function closeEducationFlow() {
-  $("#education-learning-flow").hidden = true;
+  const flow = $("#education-learning-flow");
+  if (flow.open && typeof flow.close === "function") flow.close();
+  flow.hidden = true;
   const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
   state.activeEducationId = null;
   button?.focus();
 }
 
+async function openEducationFlowFromTools(contentId) {
+  moveEducationFlow("#education-flow-host-tools");
+  if (!state.educationContents.length) await loadEducation();
+  openEducationFlow(contentId, { questionIndex: educationQuestionIndex(contentId), startQuiz: true });
+}
+
 async function loadEducation() {
   const list = $("#education-list");
-  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
+  if (list) list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
     const contents = isLocalPreview() ? localEducationContents() : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
     if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
@@ -4264,6 +4390,7 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (name === "together") syncForestOverview();
+  if (name === "tools" && !state.educationContents.length) void loadEducation();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -4510,12 +4637,11 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
   if (state.token) { showStep(8); showWorkspace('together'); }
-  else { showStep(2); showAuthMode('signup'); }
+  else showAuthEntry('signup');
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -4671,13 +4797,11 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("login", { context: "login" });
+  showAuthEntry("login", { context: "login" });
 });
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
@@ -4804,6 +4928,17 @@ $$('.inner-step-tabs [data-health-tab]').forEach((button) => button.addEventList
   showHealthInputPanel(button.dataset.healthTab);
 }));
 $$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
+$$("[data-tool-target]").forEach((button) => button.addEventListener("click", () => {
+  const targetId = button.dataset.toolTarget;
+  if (targetId === "lifestyle-map-detail") {
+    $("#lifestyle-map-detail").hidden = false;
+    $("#open-lifestyle-map")?.setAttribute("aria-expanded", "true");
+  }
+  const target = document.getElementById(targetId);
+  const section = target?.closest("section") || target;
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  target?.focus?.({ preventScroll: true });
+}));
 $$("[data-report-period]").forEach((button) => button.addEventListener("click", () => setReportPeriod(button.dataset.reportPeriod)));
 $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("keydown", (event) => {
   let nextIndex = null;
@@ -4820,11 +4955,7 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  document.body.classList.remove("account-mode");
-  if (window.location.pathname !== "/" || window.location.search || window.location.hash) {
-    window.history.replaceState({}, "", "/");
-  }
-  showStep(1, { recordHistory: false });
+  window.location.assign("/");
 });
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#open-lifestyle-map")?.addEventListener("click", () => {
@@ -4865,6 +4996,7 @@ $("#signup-form").addEventListener("submit", async (event) => {
   const gender = $("#signup-gender").value;
   let recovery = null;
   try {
+    const name = $("#signup-nickname")?.value.trim() || "";
     const email = $("#email").value;
     const password = $("#password").value;
     const signupAge = getAgeFromBirth(birthDate);
@@ -4886,9 +5018,10 @@ $("#signup-form").addEventListener("submit", async (event) => {
     state.userProfile = {
       ...(state.userProfile || {}),
       id: signup?.user_id ?? signup?.id ?? state.userProfile?.id,
+      name,
       email: signup?.email || email.trim(),
     };
-    recovery = { email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
+    recovery = { name, email: email.trim(), birthday: birthDate, gender, healthAgreed: $("#health-consent").checked, profileSaved: false, stage: "login" };
     state.accountRecovery = recovery;
     state.token = null;
     const login = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
@@ -4917,6 +5050,8 @@ $("#recovery-login").addEventListener("click", () => {
   state.token = null;
   showAuthMode("login");
 });
+$("#signup-login-shortcut")?.addEventListener("click", () => showAuthMode("login", { context: "login" }));
+$("#login-signup-back")?.addEventListener("click", () => showAuthMode("signup"));
 $("#account-recovery-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -4928,6 +5063,7 @@ $("#account-recovery-form").addEventListener("submit", async (event) => {
       await resumeAuthenticatedAccount();
       return;
     }
+    recovery.name = $("#recovery-name")?.value.trim() || recovery.name || "";
     recovery.birthday = $("#recovery-birthday").value;
     recovery.gender = $("#recovery-gender").value;
     recovery.healthAgreed = $("#recovery-health-consent").checked;
@@ -5033,13 +5169,14 @@ $("#emergency-questionnaire-modal").addEventListener("click", (event) => {
   if (event.target.id === "emergency-questionnaire-modal") closeEmergencyQuestionnaire();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
+  if (event.key !== "Escape") return;
+  if (!$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
+  else if (!$("#diagnosis-help-modal").hidden) closeDiagnosisHelp();
 });
-$("#diagnosis-help-toggle").addEventListener("click", (event) => {
-  const help = $("#diagnosis-help");
-  const willOpen = help.hidden;
-  help.hidden = !willOpen;
-  event.currentTarget.setAttribute("aria-expanded", String(willOpen));
+$("#diagnosis-help-toggle").addEventListener("click", openDiagnosisHelp);
+$$('.diagnosis-help-close').forEach((button) => button.addEventListener("click", closeDiagnosisHelp));
+$("#diagnosis-help-modal").addEventListener("click", (event) => {
+  if (event.target.id === "diagnosis-help-modal") closeDiagnosisHelp();
 });
 function closeEligibilityGuidance() {
   $("#eligibility-guidance").hidden = true;
@@ -5111,14 +5248,17 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   }
 });
 $("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
-$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
+$('[data-emergency-facility-search]')?.addEventListener("click", findNearbyEmergencyFacilities);
 $("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
+$("#emergency-facility-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
 $("#find-same-day-medical")?.addEventListener("click", () => {
   showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
 });
 $("#find-phone-consultation")?.addEventListener("click", () => {
   showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
 });
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
@@ -5495,21 +5635,46 @@ $("#undo-daily-record")?.addEventListener("click", async (event) => {
   }
 });
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
+async function selectDemoPhoto(button) {
+  try {
+    const response = await fetch(button.dataset.demoPhoto);
+    if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
+    $("#v3-photo-file").files = transfer.files;
+    $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
+    $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
+  } catch (error) { showMessage(error.message); }
+}
+$$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+}));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
 $("#confirm-photo-record").addEventListener("click", () => {
+  if (state.recordTarget?.item?.catalog_version === "evidence-v3") { void submitV3Photo(); return; }
   state.photoAttempt = 0;
   simulatePhotoAnalysis();
 });
-$("#start-photo-check").addEventListener("click", () => $("#confirm-photo-record").click());
-$("#retake-photo-record").addEventListener("click", simulatePhotoAnalysis);
+$("#start-photo-check").addEventListener("click", () => {
+  if (state.recordTarget?.item?.catalog_version === "evidence-v3") $("#v3-photo-file").click();
+  else $("#confirm-photo-record").click();
+});
+$("#retake-photo-record").addEventListener("click", () => {
+  if (state.recordTarget?.item?.catalog_version === "evidence-v3") showPhotoRecordState("photo-state-upload");
+  else simulatePhotoAnalysis();
+});
 $$(".record-fallback").forEach((button) => button.addEventListener("click", () => {
+  if (state.recordTarget?.item?.catalog_version === "evidence-v3") return;
   state.photoCompletedByFallback = true;
   $("#photo-success-title").textContent = "간편 체크로 완료됐어요!";
   showPhotoRecordState("photo-state-success");
 }));
 $("#close-photo-success").addEventListener("click", async (event) => {
+  if (state.recordTarget?.item?.catalog_version === "evidence-v3") { closeRecordModal(); return; }
   const releaseBusy = setButtonBusy(event.currentTarget, "기록 저장 중…");
   try {
     const target = state.recordTarget;
@@ -5552,9 +5717,12 @@ $("#barrier-form").addEventListener("submit", async (event) => {
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
-$("#education-list").addEventListener("click", (event) => {
+$("#education-list")?.addEventListener("click", (event) => {
   const button = event.target.closest(".education-open");
-  if (button) openEducationFlow(button.dataset.id);
+  if (button) {
+    moveEducationFlow("#education-flow-host-tools");
+    openEducationFlow(button.dataset.id);
+  }
 });
 $("#close-education-flow")?.addEventListener("click", closeEducationFlow);
 $("#start-education-quiz")?.addEventListener("click", () => {
@@ -5713,7 +5881,7 @@ async function resumeAuthenticatedAccount() {
     const profileSaved = Boolean(profile.birthday && ["FEMALE", "MALE"].includes(profile.gender));
     if (!profileSaved || !hasHealthDataConsent(consents)) {
       showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token,
-        birthday: profile.birthday, gender: profile.gender, profileSaved,
+        name: profile.name, birthday: profile.birthday, gender: profile.gender, profileSaved,
         healthAgreed: hasHealthDataConsent(consents), consentSaved: hasHealthDataConsent(consents),
         reconcileConsent: true, stage: profileSaved ? "consent" : "profile" },
       profileSaved ? "프로필은 저장되어 있습니다. 건강정보 수집·이용 동의를 확인하고 계속해 주세요." : "저장되지 않은 프로필과 건강정보 동의를 확인해 주세요.");
@@ -5760,8 +5928,17 @@ async function resumeAuthenticatedAccount() {
   } catch (error) {
     if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
-    showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token, verifyOnly: true },
-      state.token ? "로그인은 완료했지만 계정의 저장 상태를 불러오지 못했습니다. 다시 가입하지 말고 저장 상태를 다시 확인해 주세요." : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
+    if (state.token) {
+      state.accountRecovery = null;
+      $("#account-recovery-form").hidden = true;
+      state.returningUser = true;
+      state.visitedSteps.add(2);
+      showStep(3, { recordHistory: false });
+      showMessage("로그인은 완료했지만 저장된 이용 정보를 불러오지 못했습니다. 건강정보 확인부터 다시 진행해 주세요.");
+      return;
+    }
+    showAccountRecovery({ email: $("#login-email").value.trim(), token: null, verifyOnly: true },
+      "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
   }
 }
 
@@ -6207,6 +6384,31 @@ function renderMvpResultPreview() {
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
 }
 
+function resumeMealPhotoPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "meal-photo" || !isDemoEnvironment()) return;
+  const item = {
+    challenge_id: "local-vegetable-meal",
+    user_challenge_id: "local-meal-photo",
+    catalog_version: "evidence-v3",
+    verification_type: 1,
+    title: "채소가 포함된 한 끼 인증",
+    daily_goal: "하루 1끼",
+    verification_scope: "한 끼 식사에 음식과 채소가 충분히 보이는지 확인해요.",
+    goal: { target_count: 1, target_minutes: null },
+  };
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.cycle = { cycle_id: "local-photo-preview", cycle_number: 1, user_challenges: [item] };
+  state.navigationHistory = [1, 8];
+  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  showStep(8, { recordHistory: false });
+  showWorkspace("challenge", { moveFocus: false });
+  openPhotoRecordModal(item);
+}
+
 function resumeForecastPreview() {
   const params = new URLSearchParams(window.location.search);
   // Preserve existing local QA bookmarks, but show only the two MVP result areas.
@@ -6234,6 +6436,18 @@ function resumeEmergencyQuestionnairePreview() {
   showStep(3, { recordHistory: false });
 }
 
+function resumeAuthEntryFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedAuth = params.get("auth");
+  if (!["login", "signup"].includes(requestedAuth)) return false;
+
+  state.navigationHistory = [2];
+  state.visitedSteps.add(2);
+  showStep(2, { recordHistory: false });
+  showAuthMode(requestedAuth, { moveFocus: false, context: requestedAuth });
+  return true;
+}
+
 configureEnvironmentControls();
 $$('input[name="regular-exercise"]').forEach((input) => input.addEventListener("change", syncExerciseDetails));
 $$('input[name="current-drinker"]').forEach((input) => input.addEventListener("change", syncAlcoholFrequencyDetails));
@@ -6242,7 +6456,32 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
+const mountEducationCarousel = window.EducationCarousel?.mount;
+window.lifestyleMapView = window.LifestyleMap?.mount?.($("#lifestyle-map-detail"), {
+  getData: lifestyleMapSnapshot,
+  mountCarousel: mountEducationCarousel,
+});
+window.healthToolsEducationCarouselView = mountEducationCarousel?.($("#health-tools-education-carousel"), {
+  listSelector: "#health-tools-education-list",
+  statusSelector: "#health-tools-education-carousel-status",
+  onOpen: openEducationFlowFromTools,
+});
+$("#health-tools-education-list")?.addEventListener("click", (event) => {
+  if (window.healthToolsEducationCarouselView) return;
+  const card = event.target.closest(".education-overview-card");
+  if (!card?.dataset.contentId) return;
+  event.preventDefault();
+  void openEducationFlowFromTools(card.dataset.contentId).catch((error) => showMessage(error.message));
+});
+$("#daily-log-list").addEventListener("click", event => {
+  const link = event.target.closest("[data-lifestyle-topic]");
+  if (!link) return;
+  showWorkspace("tools");
+  updateLifestyleMap(link.dataset.lifestyleTopic);
+});
+resumeAuthEntryFromQuery();
 resumeFromForest();
 resumeReturningPreview();
+resumeMealPhotoPreview();
 resumeForecastPreview();
 resumeEmergencyQuestionnairePreview();

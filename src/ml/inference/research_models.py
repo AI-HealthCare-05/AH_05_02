@@ -16,6 +16,7 @@ import pandas as pd
 import sklearn
 from sklearn.exceptions import InconsistentVersionWarning
 
+from src.ml.inference.artifact_resolver import ArtifactResolverError, resolve_artifact_uri
 from src.ml.inference.diabetes_first_interval_survival_ensemble import (
     load_first_interval_ensemble,
     predict_with_loaded_first_interval_ensemble,
@@ -85,7 +86,11 @@ def load_reduced_screening(model_path: str = "", manifest_path: str = "") -> tup
     _runtime()
     manifest_file = Path(manifest_path) if manifest_path else SHARED_MANIFEST
     manifest = json.loads(manifest_file.read_text())
-    path = Path(model_path) if model_path else ROOT / manifest["artifact_local_path"]
+    configured_uri = model_path or str(ROOT / manifest["artifact_local_path"])
+    try:
+        path = resolve_artifact_uri(configured_uri, expected_sha256=manifest["artifact_sha256"])
+    except ArtifactResolverError as exc:
+        raise ResearchArtifactUnavailableError("Reduced screening model could not be downloaded") from exc
     if not path.is_file():
         raise ResearchArtifactUnavailableError("Shared7 model is not provisioned")
     if hashlib.sha256(path.read_bytes()).hexdigest() != manifest["artifact_sha256"]:
@@ -135,7 +140,10 @@ def load_tomorrow_rf25(model_path: str = ""):
 
     from src.ml.inference.diabetes_standard import load_standard_model
 
-    return load_standard_model(model_path=Path(model_path) if model_path else None)
+    # Keep an s3:// URI intact so diabetes_standard can resolve it into the
+    # checksum-verified runtime cache. Converting it to Path first corrupts
+    # the URI on Windows hosts.
+    return load_standard_model(model_path=model_path or None)
 
 
 def predict_shared7(payload: dict, *, as_of_date: date, model_path: str = "") -> dict[str, Any]:

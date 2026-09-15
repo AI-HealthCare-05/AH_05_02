@@ -76,7 +76,7 @@ const output = process.env.QA_OUTPUT_DIR || path.resolve(__dirname, '../../../..
     assert.equal(await page.locator('.record-fallback:visible').count(), 0);
     const synthetic = await page.screenshot({ clip: { x: 0, y: 0, width: 20, height: 20 } });
     await page.locator('#v3-photo-file').setInputFiles({ name: 'synthetic-qa.png', mimeType: 'image/png', buffer: synthetic });
-    await page.locator('#v3-photo-value').fill('1');
+    await page.locator('input[name="v3-photo-value"][value="1"]').check();
     await page.locator('#confirm-photo-record').click();
     await page.waitForFunction(() => state.recordTarget?.saved === true);
     assert.equal(await page.evaluate(() => state.dailyCompleted.size), 1);

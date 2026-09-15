@@ -34,6 +34,12 @@ async def preload_configured_models() -> None:
         )
     else:
         raise RuntimeError(f"지원하지 않는 CURRENT_SCREENING_RUNTIME입니다: {config.CURRENT_SCREENING_RUNTIME}")
+    if config.TOMORROW_RUNTIME == "rf25":
+        from src.ml.inference.research_models import load_tomorrow_rf25
+
+        await asyncio.to_thread(load_tomorrow_rf25, config.ML_RF25_MODEL_URI)
+    elif config.TOMORROW_RUNTIME != "standard":
+        raise RuntimeError(f"지원하지 않는 TOMORROW_RUNTIME입니다: {config.TOMORROW_RUNTIME}")
 
 
 async def run_task_with_timeout(task_type: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
@@ -155,6 +161,43 @@ async def _run_s2_future_model(model_input: dict[str, Any], as_of_date: date) ->
     }
 
 
+async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) -> dict[str, Any]:
+    """Run the checksum-pinned RF25 candidate without publicly activating it."""
+
+    from src.ml.inference.research_models import predict_research_model
+
+    output = await asyncio.to_thread(
+        predict_research_model,
+        "tomorrow-rf25",
+        model_input,
+        as_of_date=as_of_date,
+        model_path=config.ML_RF25_MODEL_URI,
+    )
+    return {
+        "model_key": output["model_key"],
+        "outcome_definition": output["outcome_definition"],
+        "internal_score": output["risk_score_internal"],
+        "risk_category": None,
+        "preview_only": True,
+        "display_allowed": False,
+        "operational_model_activated": False,
+        "model_version": output["model_version"],
+        "feature_schema_version": output["feature_schema_version"],
+        "input_schema_version": output["input_schema_version"],
+        "preprocessing_version": output["preprocessing_version"],
+        "target_definition_version": output["target_definition_version"],
+        "calibration_version": output["calibration_version"],
+        "model_artifact_digest": output["artifact_sha256"],
+        "threshold_version": output["threshold_version"],
+        "decision_threshold": None,
+        "promotion_status": "research_candidate_only",
+        "output_status": "research_candidate_not_operationally_approved",
+        "model_population": "undiagnosed_klosa_age_45_105",
+        "explanation_status": output.get("explanation_status", "not_available"),
+        "medical_notice": output["disclaimer"],
+    }
+
+
 async def _run_reduced_current_model(
     model_input: dict[str, Any],
     as_of_date_raw: Any,
@@ -247,6 +290,8 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             as_of_date = date.fromisoformat(as_of_date_raw)
         except ValueError as exc:
             raise ValueError("as_of_date must use YYYY-MM-DD") from exc
+        if config.TOMORROW_RUNTIME == "rf25":
+            return await _run_rf25_future_model(model_input, as_of_date)
         if config.S2_MODEL_RUNTIME_ENABLED:
             return await _run_s2_future_model(model_input, as_of_date)
         provider = get_prediction_provider()

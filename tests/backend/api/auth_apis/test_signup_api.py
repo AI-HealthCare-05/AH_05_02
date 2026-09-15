@@ -19,6 +19,20 @@ class TestSignupAPI(TestCase):
         assert response.json()["data"]["email"] == "test@example.com"
         assert "meta" in response.json()
 
+    async def test_signup_accepts_retro_form_profile_fields(self):
+        signup_data = {
+            "email": "retro-form@example.com",
+            "password": "Password123!",
+            "birth_date": "1958-05-12",
+            "gender": "FEMALE",
+            "terms_agreed": True,
+        }
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/api/v1/auth/signup", json=signup_data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+
     async def test_signup_invalid_email(self):
         signup_data = {
             "email": "invalid-email",
