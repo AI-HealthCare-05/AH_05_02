@@ -371,7 +371,9 @@ function showEligibilityGuidance(reasonCodes) {
   state.eligibilityGuidanceSecondaryStep = guidance.secondaryStep || null;
   state.modelOutOfRange = reason === "MODEL_AGE_OUT_OF_RANGE";
   state.currentHealthOnly = reason === "MODEL_AGE_OUT_OF_RANGE";
-  $("#eligibility-guidance-code").textContent = guidance.code;
+  $("#eligibility-guidance").dataset.code = guidance.code;
+  $("#eligibility-guidance-code").textContent = "";
+  $("#eligibility-guidance-code").hidden = true;
   $("#eligibility-guidance-title").textContent = guidance.title;
   $("#eligibility-guidance-message").textContent = guidance.message;
   $("#eligibility-guidance-reason-title").textContent = guidance.reasonTitle;
@@ -1481,6 +1483,18 @@ function closeEmergencyQuestionnaire() {
   $("#open-emergency-questionnaire").focus();
 }
 
+function openDiagnosisHelp() {
+  $("#diagnosis-help-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("#diagnosis-help-title").focus?.();
+}
+
+function closeDiagnosisHelp() {
+  $("#diagnosis-help-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  $("#diagnosis-help-toggle").focus();
+}
+
 function applyEmergencyQuestionnaire() {
   const modalMessage = $("#emergency-questionnaire-modal-message");
   const summary = $("#emergency-questionnaire-summary");
@@ -2428,63 +2442,27 @@ function updateLifestyleSummary() {
 }
 
 function syncLifestyleAvatar() {
-  const isMale = $("#gender").value === "MALE";
-  const avatar = $("#lifestyle-avatar");
-  if (!avatar) {
-    updateLifestyleSummary();
-    return;
-  }
-  const birthDate = new Date(`${$("#eligibility-birth-date").value || "1965-04-12"}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age -= 1;
-  if (!Number.isFinite(age)) age = 20;
-  const ageBand = Math.min(70, Math.max(20, Math.floor(age / 10) * 10));
-  const ageLabel = ageBand === 70 ? "70대 이상" : `${ageBand}대`;
-  const height = Number($("#height").value || 0);
-  const weight = Number($("#weight").value || 0);
-  const bmi = height && weight ? weight / ((height / 100) ** 2) : null;
-  const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
-  const heightScale = height ? clamp(0.93, 1 + ((height - 165) * 0.0025), 1.06) : 1;
-  const widthScale = bmi ? clamp(0.90, 0.98 + ((bmi - 22) * 0.009), 1.13) : 1;
-  avatar.src = `/static/assets/lifestyle-avatar-${isMale ? "male" : "female"}-${ageBand}.webp`;
-  avatar.alt = `${isMale ? "남성형" : "여성형"} ${ageLabel} 3D 생활습관 안내 캐릭터 전신`;
-  avatar.style.setProperty("--avatar-width-scale", widthScale.toFixed(3));
-  avatar.style.setProperty("--avatar-height-scale", heightScale.toFixed(3));
-  $("#avatar-profile-summary").textContent = height && bmi
-    ? `만 ${age}세 · ${height}cm · BMI ${bmi.toFixed(1)} 입력값을 반영한 참고 표현`
-    : "키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.";
-}
-
-function lifestyleMapContent(topic) {
-  const height = Number($("#height").value || 0);
-  const weight = Number($("#weight").value || 0);
-  const bmi = height && weight ? (weight / ((height / 100) ** 2)).toFixed(1) : null;
-  const waist = $("#waist").value;
-  return {
-    rhythm: { number: "1", title: "생활 리듬", value: "현재 건강입력에는 수면 정보가 포함되지 않았어요.", action: "웨어러블을 연결하면 주간 리포트에서 수면 기록을 확인할 수 있습니다." },
-    activity: { number: "2", title: "활동 습관", value: $("#regular-exercise").checked ? "규칙적으로 운동한다고 기록했어요." : "규칙적인 운동을 하지 않는다고 기록했어요.", action: "몸 상태에 맞는 작은 활동 챌린지를 직접 선택할 수 있습니다." },
-    body: { number: "3", title: "체형 기록", value: bmi ? `입력값으로 계산한 BMI는 ${bmi}${waist ? `, 허리둘레는 ${waist}cm` : ""}입니다.` : "키와 몸무게 기록이 필요합니다.", action: "수치는 위험 판정이 아니라 입력한 건강정보를 다시 확인하기 위한 표시입니다." },
-    walking: { number: "4", title: "걷기 습관", value: "아직 걸음 수 기록을 연결하지 않았어요.", action: "챌린지에서 걷기 목표를 고르거나 건강도구에서 워치 기록을 연결해 보세요." },
-  }[topic];
+  window.lifestyleMapView?.refresh();
 }
 
 function updateLifestyleMap(topic) {
-  if (!$("#map-detail-number")) {
-    updateLifestyleSummary();
-    return;
-  }
-  state.mapTopic = topic;
-  const content = lifestyleMapContent(topic);
-  $("#map-detail-number").textContent = content.number;
-  $("#map-detail-title").textContent = content.title;
-  $("#map-detail-value").textContent = content.value;
-  $("#map-detail-action").textContent = content.action;
-  $$(".body-map-point").forEach((button) => {
-    const selected = button.dataset.mapTopic === topic;
-    button.classList.toggle("active", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
+  window.lifestyleMapView?.select(topic);
+}
+
+function lifestyleMapSnapshot() {
+  const saved = state.healthCheckupHistory?.[0] || state.healthCheckupResult || {};
+  return {
+    owner: state.token,
+    health: saved,
+    medicalGuidance: requiresMedicalResultGuidance(),
+    challenges: state.cycle?.user_challenges || [],
+    catalog: [...state.challengeCatalog, ...fallbackChallenges, ...localNotionChallenges],
+    completed: state.dailyCompleted,
+    dailyStatus: state.dailyRecordsStatus,
+    report: state.lifestyleReport?.owner === state.token && state.lifestyleReport?.cycle === state.cycle ? state.lifestyleReport.data : null,
+    reportStatus: state.lifestyleReportStatus,
+    preview: isLocalPreview(),
+  };
 }
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -4801,6 +4779,17 @@ $$('.inner-step-tabs [data-health-tab]').forEach((button) => button.addEventList
   showHealthInputPanel(button.dataset.healthTab);
 }));
 $$('.workspace-tab, .workspace-shortcut').forEach((button) => button.addEventListener("click", () => showWorkspace(button.dataset.workspace)));
+$$("[data-tool-target]").forEach((button) => button.addEventListener("click", () => {
+  const targetId = button.dataset.toolTarget;
+  if (targetId === "lifestyle-map-detail") {
+    $("#lifestyle-map-detail").hidden = false;
+    $("#open-lifestyle-map")?.setAttribute("aria-expanded", "true");
+  }
+  const target = document.getElementById(targetId);
+  const section = target?.closest("section") || target;
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  target?.focus?.({ preventScroll: true });
+}));
 $$("[data-report-period]").forEach((button) => button.addEventListener("click", () => setReportPeriod(button.dataset.reportPeriod)));
 $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("keydown", (event) => {
   let nextIndex = null;
@@ -5031,13 +5020,14 @@ $("#emergency-questionnaire-modal").addEventListener("click", (event) => {
   if (event.target.id === "emergency-questionnaire-modal") closeEmergencyQuestionnaire();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
+  if (event.key !== "Escape") return;
+  if (!$("#emergency-questionnaire-modal").hidden) closeEmergencyQuestionnaire();
+  else if (!$("#diagnosis-help-modal").hidden) closeDiagnosisHelp();
 });
-$("#diagnosis-help-toggle").addEventListener("click", (event) => {
-  const help = $("#diagnosis-help");
-  const willOpen = help.hidden;
-  help.hidden = !willOpen;
-  event.currentTarget.setAttribute("aria-expanded", String(willOpen));
+$("#diagnosis-help-toggle").addEventListener("click", openDiagnosisHelp);
+$$('.diagnosis-help-close').forEach((button) => button.addEventListener("click", closeDiagnosisHelp));
+$("#diagnosis-help-modal").addEventListener("click", (event) => {
+  if (event.target.id === "diagnosis-help-modal") closeDiagnosisHelp();
 });
 function closeEligibilityGuidance() {
   $("#eligibility-guidance").hidden = true;
@@ -5758,16 +5748,17 @@ async function resumeAuthenticatedAccount() {
   } catch (error) {
     if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
-    showAccountRecovery({
-      email: $("#login-email").value.trim(),
-      token: state.token,
-      verifyOnly: !state.token,
-      profileSaved: false,
-      healthAgreed: false,
-      stage: state.token ? "profile" : "login",
-    }, state.token
-      ? "로그인은 완료했습니다. 계정 설정을 입력하고 계속 진행해 주세요."
-      : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
+    if (state.token) {
+      state.accountRecovery = null;
+      $("#account-recovery-form").hidden = true;
+      state.returningUser = true;
+      state.visitedSteps.add(2);
+      showStep(3, { recordHistory: false });
+      showMessage("로그인은 완료했지만 저장된 이용 정보를 불러오지 못했습니다. 건강정보 확인부터 다시 진행해 주세요.");
+      return;
+    }
+    showAccountRecovery({ email: $("#login-email").value.trim(), token: null, verifyOnly: true },
+      "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
   }
 }
 
@@ -6260,6 +6251,21 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
+window.lifestyleMapView = window.LifestyleMap.mount($("#lifestyle-map-detail"), {
+  getData: lifestyleMapSnapshot,
+  mountCarousel: window.EducationCarousel.mount,
+});
+window.healthToolsEducationCarouselView = window.EducationCarousel.mount($("#health-tools-education-carousel"), {
+  listSelector: "#health-tools-education-list",
+  statusSelector: "#health-tools-education-carousel-status",
+  onOpen: openEducationFlow,
+});
+$("#daily-log-list").addEventListener("click", event => {
+  const link = event.target.closest("[data-lifestyle-topic]");
+  if (!link) return;
+  showWorkspace("tools");
+  updateLifestyleMap(link.dataset.lifestyleTopic);
+});
 resumeAuthEntryFromQuery();
 resumeFromForest();
 resumeReturningPreview();
