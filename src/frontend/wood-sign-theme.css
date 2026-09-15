@@ -1,0 +1,168 @@
+/* Shared signup-house finish. Layouts, backgrounds and risk-state colors stay local. */
+:root {
+  --sign-edge: #4f3019;
+  --sign-wood: repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 2px,transparent 2px 38px),linear-gradient(135deg,#96613a,#734523 55%,#8a5730);
+  --sign-shadow: inset 0 0 0 3px #bc8551,0 28px 42px rgba(39,27,16,.34);
+  --sign-heading: linear-gradient(90deg,rgba(255,255,255,.12),transparent 24%,rgba(255,255,255,.08) 70%,transparent),linear-gradient(180deg,#c8894f,#ad6f3c);
+  --sign-paper: linear-gradient(180deg,#fff7df,#f7e6c4);
+  --sign-title-ink: #140b05;
+  --sign-body-ink: #302014;
+  --sign-muted-ink: #58432b;
+  --sign-light-ink: #fffdf5;
+}
+
+/* Only the outer boards use dark wood; controls and data cards remain parchment. */
+:is(.signup-house-board,.eligibility-forest-board,
+  .health-room-board:not(:has(#health-review-panel:not([hidden]))),
+  #health-review-panel,.analysis-room-screen .prediction-status-card,
+  .result-room-screen .current-risk-signal-card,.result-room-screen .risk-forecast-panel,
+  .result-room-screen .current-health-result,.challenge-forest-screen #challenge-form,
+  #workspace-panel-home,#workspace-panel-challenge,#workspace-panel-report,#workspace-panel-tools,#workspace-panel-together) {
+  border:8px solid var(--sign-edge) !important;
+  border-radius:14px !important;
+  background:var(--sign-wood) !important;
+  box-shadow:var(--sign-shadow) !important;
+}
+
+/* Match the inset golden nameplate of the registration sign. */
+:is(.signup-house-heading,.eligibility-forest-heading,.health-room-heading,
+  #factors-title,#challenge-title,.screen[data-step="8"] .dashboard-hero:not(.is-tools),
+  #health-review-title,.analysis-room-screen #result-stage) {
+  border:4px solid #5c351b !important;
+  border-radius:10px !important;
+  background:var(--sign-heading) !important;
+  box-shadow:inset 0 0 0 2px #e1b275,0 7px 0 #4d2f18,0 14px 22px rgba(46,26,11,.22) !important;
+  color:var(--sign-title-ink) !important;
+  text-shadow:none !important;
+}
+:is(.signup-house-heading,.eligibility-forest-heading,.health-room-heading,.dashboard-hero) :is(h2,h3,p,.eyebrow,.lead) {
+  color:var(--sign-title-ink) !important;
+  text-shadow:none !important;
+}
+.screen[data-step="8"] .dashboard-hero .lead,
+.screen[data-step="8"] .dashboard-hero .eyebrow {color:var(--sign-title-ink) !important}
+#health-review-title,.analysis-room-screen #result-stage {padding:18px 24px}
+#health-review-panel>.eyebrow {color:#fff7df}
+
+/* Put prose on light paper as well, instead of dark text directly on wood. */
+.analysis-room-screen #result-explain {
+  padding:16px 22px;
+  border:1px solid #c9a574;
+  border-radius:10px;
+  background:var(--sign-paper);
+  color:#3a2c14;
+}
+.analysis-room-screen .prediction-status-message-card #result-stage {
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:var(--sign-title-ink) !important;
+}
+.analysis-room-screen .prediction-status-message-card #result-explain {
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:var(--sign-body-ink) !important;
+}
+.analysis-room-screen .prediction-status-track {border-color:#d9b588}
+.analysis-room-screen .prediction-status-track li,
+.analysis-room-screen .prediction-status-track li.done {color:#fff7df}
+.analysis-room-screen .prediction-status-card::before {border-color:rgba(255,227,183,.35)}
+.result-room-screen :is(.current-risk-signal-heading,.risk-forecast-heading,.current-health-result-heading) {
+  padding:18px;
+  border:1px solid #c9a574;
+  border-radius:10px;
+  background:var(--sign-paper);
+}
+.result-room-screen .current-health-result>p {color:#fff7df}
+.result-room-screen .risk-preview-controls>span {color:#fff7df}
+
+/* Workspace content stays light, framed by the same outer wooden board. */
+:is(#workspace-panel-challenge,#workspace-panel-report,#workspace-panel-tools,#workspace-panel-together) > :is(section,.daily-record-panel) {
+  padding:clamp(16px,2vw,28px);
+  border-radius:10px;
+  background:var(--sign-paper);
+  color:#3a2c14;
+}
+#workspace-panel-home :is(.today-card,.summary-grid>article,.home-feature-card,.dashboard-safety-note),
+#barrier-result {
+  border:4px solid var(--sign-edge);
+  border-radius:14px;
+  background:var(--sign-paper) !important;
+  box-shadow:inset 0 0 0 2px #bc8551,0 7px 0 rgba(79,48,25,.35);
+}
+.challenge-forest-screen #challenge-form > :is(h3,p,fieldset) {
+  padding:16px;
+  border-radius:10px;
+  background:var(--sign-paper);
+  color:#3a2c14;
+}
+
+/* Readable text on parchment. Do not recolor status badges or image-overlay cards. */
+:is(.eligibility-card,.review-card,.choice-block,.signup-house-board .form-row,
+  .health-room-board .form-row,.current-risk-signal-heading,.risk-forecast-heading,
+  .today-card,.report-hero-card,.report-detail-card,.report-insight-card,
+  .forest-invite-card,.forest-invite-summary,.together-empty,.challenge-v3-controls,
+  .challenge-selection-summary,.forecast-score-placeholder) :is(h3,h4,p,dt,dd,label) {
+  color:var(--sign-body-ink) !important;
+  text-shadow:none !important;
+}
+:is(.signup-house-board,.eligibility-forest-board,.health-room-board) :is(input,select,textarea) {
+  color:var(--sign-body-ink);
+  text-shadow:none;
+}
+:is(.signup-house-board,.eligibility-forest-board,.health-room-board) input::placeholder {
+  color:var(--sign-muted-ink);
+  opacity:1;
+}
+.health-room-board .choice-title,
+.health-room-board .segmented-choice span {color:var(--sign-body-ink) !important;text-shadow:none}
+.health-room-board .health-input-carousel button:not(.active),
+.health-room-board .health-input-carousel .carousel-copy small {opacity:1}
+.health-room-board .health-input-carousel .carousel-copy {color:var(--sign-body-ink)}
+.health-room-board .health-input-carousel button.active .carousel-copy {color:#073f32}
+:is(.signup-house-board .consent-card,.review-card,.forest-invite-card,.home-feature-card,
+  .report-summary-stat,.summary-grid>article) :is(small,dt,p) {color:var(--sign-muted-ink) !important}
+.screen[data-step="8"] :is(.dashboard-section>h3,.section-heading,.report-section-heading) {color:var(--sign-body-ink)}
+.analysis-room-screen #result-explain {color:var(--sign-body-ink)}
+.analysis-room-screen .prediction-status-track li,
+.analysis-room-screen .prediction-status-track li.done,
+#health-review-panel>.eyebrow,
+.result-room-screen .risk-preview-controls>span {color:var(--sign-light-ink)}
+@media(max-width:620px) {
+  :is(.signup-house-board,.eligibility-forest-board,.health-room-board,#health-review-panel,
+    #workspace-panel-challenge,#workspace-panel-report,#workspace-panel-tools,#workspace-panel-together) {border-width:6px !important}
+  #health-review-title,.analysis-room-screen #result-stage {padding:14px 16px}
+}
+
+/* Result layout draft: keep the 2x2 signal/XAI cards bright and readable. */
+.result-room-screen .result-signal-grid :is(.current-risk-signal-card,.risk-forecast-panel,.xai-factor-card){
+  border:2px solid #c8d9d2 !important;
+  border-radius:20px !important;
+  background:rgba(255,255,255,.94) !important;
+  box-shadow:0 16px 34px rgba(20,33,61,.08) !important;
+  color:#121b36 !important;
+}
+.result-room-screen .result-signal-grid :is(.current-risk-signal-heading,.risk-forecast-heading){
+  border:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.result-room-screen .result-signal-grid :is(.current-risk-signal-heading,.risk-forecast-heading) :is(h3,p),
+.result-room-screen .result-xai-card :is(h3,p,strong,li){
+  color:#121b36 !important;
+  text-shadow:none !important;
+}
+.result-room-screen .result-signal-grid .eyebrow{
+  color:#0b6b5f !important;
+}
+.result-room-screen .result-signal-grid :is(.current-xai-slot,.forecast-score-placeholder){
+  border:3px dashed #b88950 !important;
+  background:rgba(255,250,240,.78) !important;
+  box-shadow:none !important;
+  color:#6b4424 !important;
+}
