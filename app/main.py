@@ -49,8 +49,8 @@ if FRONTEND_DIR.exists():
 
 @app.get("/", include_in_schema=False)
 async def home(intro: str | None = Query(default=None)) -> FileResponse:
-    """Serve the retro cover by default; retain the current MVP at ?intro=original."""
-    page = "index.html" if intro == "original" else "intro-retro.html"
+    """Serve the current MVP flow by default; keep the retro cover available for review."""
+    page = "intro-retro.html" if intro == "retro" else "index.html"
     response = FileResponse(FRONTEND_DIR / page)
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
