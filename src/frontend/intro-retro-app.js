@@ -4730,7 +4730,6 @@ function openAuthEntry(mode = "signup", { context = "login", updateUrl = true } 
   if (updateUrl) {
     const url = new URL(window.location.href);
     url.searchParams.set("auth", authMode);
-    url.searchParams.set("cache", "retro-entry-20260909");
     history.pushState({ auth: authMode }, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
   }
 }
@@ -4752,14 +4751,14 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  openAuthEntry("signup");
+  navigateToAppAuth("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
   if (state.token) {
-    window.location.href = "/?resume=together&workspace=together&cache=retro-entry-20260909";
+    window.location.href = "/?resume=together&workspace=together";
     return;
   }
-  openAuthEntry("signup");
+  navigateToAppAuth("signup");
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -5075,21 +5074,25 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
   });
 }
 updateLandingPosition();
+function navigateToAppAuth(mode) {
+  const target = mode === "signup" ? "signup" : "login";
+  window.location.assign(`/?auth=${target}&v=login-still-app`);
+}
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  openAuthEntry("signup");
+  navigateToAppAuth("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  openAuthEntry("login", { context: "login" });
+  navigateToAppAuth("login");
 });
 $$("[data-intro-signup]").forEach((button) => {
-  button.addEventListener("click", () => openAuthEntry("signup"));
+  button.addEventListener("click", () => navigateToAppAuth("signup"));
 });
 function applyAuthEntryFromUrl() {
   const requestedAuth = new URLSearchParams(window.location.search).get("auth");
   if (requestedAuth !== "signup" && requestedAuth !== "login") return;
-  openAuthEntry(requestedAuth, { context: requestedAuth === "login" ? "login" : "signup", updateUrl: false });
+  navigateToAppAuth(requestedAuth);
 }
 window.addEventListener("popstate", applyAuthEntryFromUrl);
 applyAuthEntryFromUrl();
