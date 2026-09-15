@@ -1,8 +1,10 @@
+from datetime import date
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, EmailStr, Field, field_validator
+from pydantic import AfterValidator, AliasChoices, BaseModel, EmailStr, Field, field_validator
 
 from app.core.validators import validate_password
+from app.models.users import Gender
 
 
 class SignUpRequest(BaseModel):
@@ -11,6 +13,11 @@ class SignUpRequest(BaseModel):
         Field(None, max_length=40),
     ]
     password: Annotated[str, Field(min_length=8), AfterValidator(validate_password)]
+    birthday: Annotated[
+        date | None,
+        Field(default=None, validation_alias=AliasChoices("birthday", "birth_date")),
+    ]
+    gender: Gender | None = None
     terms_agreed: bool = Field(..., description="서비스 이용약관 동의 여부")
 
     @field_validator("terms_agreed")
