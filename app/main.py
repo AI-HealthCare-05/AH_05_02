@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request, Response, status
+from fastapi import FastAPI, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
@@ -59,13 +59,9 @@ if FRONTEND_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-async def home(request: Request, intro: str | None = Query(default=None)) -> FileResponse:
-    """Serve the retro cover first; explicit app-entry links open the MVP flow."""
-    explicit_app_entry = intro == "original" or any(
-        key in request.query_params for key in ("auth", "preview", "resume", "workspace", "invite_token")
-    )
-    page = "index.html" if explicit_app_entry else "intro-retro.html"
-    response = FileResponse(FRONTEND_DIR / page)
+async def home() -> FileResponse:
+    """Serve the single index-based customer interface."""
+    response = FileResponse(FRONTEND_DIR / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
