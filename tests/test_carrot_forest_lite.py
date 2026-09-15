@@ -5,13 +5,12 @@ from datetime import date, timedelta
 import pytest
 from httpx import ASGITransport, AsyncClient
 from starlette import status
-from tortoise import Tortoise
 
-from app.core.db.databases import TORTOISE_APP_MODELS
 from app.main import app
 from app.models.engagement import SharedChallengeGroup, SharedChallengeMember
 from app.models.health import Challenge, ChallengeCycle, ChallengeLog, UserChallenge
 from app.models.users import User
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 
 async def signup_and_login(client: AsyncClient, email: str) -> tuple[User, dict[str, str]]:
@@ -60,8 +59,7 @@ async def complete_three_challenges(user: User, prefix: str) -> None:
 
 @pytest.mark.asyncio
 async def test_carrot_forest_lite_group_reward_avatar_and_object_flow() -> None:
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": TORTOISE_APP_MODELS}, timezone="Asia/Seoul")
-    await Tortoise.generate_schemas()
+    await init_sqlite_test_db()
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             owner, owner_headers = await signup_and_login(client, "forest-owner@example.com")
@@ -150,14 +148,11 @@ async def test_carrot_forest_lite_group_reward_avatar_and_object_flow() -> None:
             )
             assert duplicate.status_code == status.HTTP_409_CONFLICT
 
-            profile = await client.patch("/api/v1/users/me", headers=owner_headers, json={"name": "세준"})
-            assert profile.status_code == status.HTTP_200_OK
-
             avatar = await client.patch(
                 "/api/v1/forest/avatar",
                 headers=owner_headers,
                 json={
-                    "display_name": "구형 별명",
+                    "display_name": "세준",
                     "hair_code": "midnight_short",
                     "outfit_code": "garden_overall",
                     "accessory_code": reward_data["item_code"],
@@ -180,4 +175,4 @@ async def test_carrot_forest_lite_group_reward_avatar_and_object_flow() -> None:
             assert home_data["objects"][0]["object_code"] == "sunflower"
             assert "prediction" not in str(home_data).lower()
     finally:
-        await Tortoise.close_connections()
+        await reset_tortoise()

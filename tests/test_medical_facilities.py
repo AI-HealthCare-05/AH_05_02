@@ -73,7 +73,7 @@ def test_urgent_guidance_uses_official_emergency_facility_endpoint() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert 'id="emergency-facility-search"' in html
-    assert 'id="find-nearby-emergency"' in html
+    assert 'id="find-nearby-emergency"' not in html
     assert 'const isUrgent = reason === "URGENT_MEDICAL_ATTENTION"' in script
     assert '$("#urgent-guidance-actions").hidden = !isUrgent' in script
     assert "api(`/emergency-facilities/nearby?${params.toString()}`)" in script

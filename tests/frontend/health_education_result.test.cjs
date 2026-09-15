@@ -35,6 +35,13 @@ test('insufficient and medical refusal preserve non-success statuses', () => {
   assert.equal(c.normalizeHealthEducationResult({ answer: 'QA', answer_status: 'insufficient_evidence' }).state, 'insufficient');
   assert.equal(c.normalizeHealthEducationResult({ answer: 'QA', answer_status: 'medical_safety_refusal' }).state, 'refused');
 });
+test('emergency redirect preserves urgent guidance instead of failing as an unknown response', () => {
+  const answer = '즉시 119에 연락하세요.';
+  const result = c.normalizeHealthEducationResult({ answer, answer_status: 'emergency_redirect' });
+  assert.equal(result.state, 'emergency');
+  assert.equal(result.answer, answer);
+  assert.match(result.title, /119/);
+});
 test('either development marker identifies sample facility data', () => {
   assert.equal(c.isSampleFacilityPayload({ provider_kind: 'development' }), true);
   assert.equal(c.isSampleFacilityPayload({ data_source: 'development_mock' }), true);

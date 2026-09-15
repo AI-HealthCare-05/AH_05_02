@@ -515,6 +515,30 @@ function challengeRecordType(item = {}) {
   const title = item.title || "";
   return title.includes("식사") ? "photo" : "simple";
 }
+function recommendationDomain(item = {}) {
+  if (item.domain) return item.domain;
+  if (item.category === "diet") return "fiber_diet";
+  if (item.category === "activity") return "aerobic_activity";
+  if (item.category === "tracking") return "tracking";
+  return "hydration";
+}
+function normalizeRecommendationResult(result = {}, difficulty = "easy") {
+  const items = Array.isArray(result.items) ? result.items : [];
+  if (items.length !== 3) throw new Error("새 챌린지 응답을 확인할 수 없습니다. 통합 서버 버전을 확인해 주세요.");
+  return {
+    ...result,
+    items: items.map((item) => item.catalog_version === "evidence-v3" ? item : {
+      ...item,
+      catalog_version: "evidence-v3",
+      domain: recommendationDomain(item),
+      difficulty,
+      verification_type: item.verification_type || 3,
+      verification_scope: item.verification_scope || item.recommendation_reason || "자가 체크로 실천 여부를 기록합니다.",
+      goal_basis: item.goal_basis || (item.source?.title ? `${item.source.title} 근거 자료 기반 추천입니다.` : "백엔드 추천 규칙으로 제안된 생활습관입니다."),
+      weekly_guidance: item.weekly_guidance || item.recommendation_reason || "",
+    }),
+  };
+}
 function recordTypeLabel(type) {
   return type === "photo" ? "사진 인증" : "간편 체크";
 }
@@ -2824,9 +2848,7 @@ async function loadChallenges() {
       result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
     } else result = await api(`/challenge-recommendations?${query}`);
     if (!isCurrent()) return;
-    if (result.items?.length !== 3 || !result.items.every((item) => item.catalog_version === "evidence-v3")) {
-      throw new Error("새 챌린지 응답을 확인할 수 없습니다. 통합 서버 버전을 확인해 주세요.");
-    }
+    result = normalizeRecommendationResult(result, difficulty);
     Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
     state.challengeRecommendations = result.items;
     state.challengeCatalog = result.items;
@@ -3146,8 +3168,8 @@ async function generateRagChallengeDraft() {
 
 function renderChallengeChoices() {
   if (challengeV3.active) {
-    const labels = { hydration: "음료 선택", fiber_diet: "식이섬유 중심 식사", aerobic_activity: "유산소 활동" };
-    const images = { hydration: "water", fiber_diet: "meal", aerobic_activity: "walking" };
+    const labels = { hydration: "음료 선택", fiber_diet: "식이섬유 중심 식사", aerobic_activity: "유산소 활동", tracking: "기록 습관" };
+    const images = { hydration: "water", fiber_diet: "meal", aerobic_activity: "walking", tracking: "checkup" };
     $("#challenge-list").innerHTML = state.challengeRecommendations.map((item) => {
       const url = safeExternalUrl(item.source?.url);
       return `<article class="challenge-v3-card" data-v3-domain="${escapeHtml(item.domain)}">
@@ -4649,6 +4671,19 @@ function setIntroChallenge(key) {
 $$('.next').forEach((button) => button.addEventListener("click", () => showStep(state.step + 1)));
 $$('.back').forEach((button) => button.addEventListener("click", goBack));
 $$('[data-intro-challenge]').forEach((button) => button.addEventListener("click", () => setIntroChallenge(button.dataset.introChallenge)));
+function openAuthEntry(mode = "signup", { context = "login", updateUrl = true } = {}) {
+  const authMode = mode === "login" ? "login" : "signup";
+  if (typeof cancelLandingMotion === "function") cancelLandingMotion();
+  closeLandingPicker?.();
+  showStep(2);
+  showAuthMode(authMode, { context });
+  if (updateUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("auth", authMode);
+    url.searchParams.set("cache", "retro-entry-20260909");
+    history.pushState({ auth: authMode }, "", `${url.pathname}?${url.searchParams.toString()}${url.hash}`);
+  }
+}
 $$('#step-list li[data-flow-stage]').forEach((element) => {
   const flowStage = Number(element.dataset.flowStage);
   if (element.hasAttribute("data-auth-entry")) return;
@@ -4667,12 +4702,14 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  openAuthEntry("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
-  window.location.href = state.token
-    ? "/?resume=together&workspace=together&cache=retro-entry-20260909"
-    : "/?auth=signup&cache=retro-entry-20260909";
+  if (state.token) {
+    window.location.href = "/?resume=together&workspace=together&cache=retro-entry-20260909";
+    return;
+  }
+  openAuthEntry("signup");
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -4990,12 +5027,22 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  window.location.href = "/?auth=signup&cache=retro-entry-20260909";
+  openAuthEntry("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  window.location.href = "/?auth=login&cache=retro-entry-20260909";
+  openAuthEntry("login", { context: "login" });
 });
+$$("[data-intro-signup]").forEach((button) => {
+  button.addEventListener("click", () => openAuthEntry("signup"));
+});
+function applyAuthEntryFromUrl() {
+  const requestedAuth = new URLSearchParams(window.location.search).get("auth");
+  if (requestedAuth !== "signup" && requestedAuth !== "login") return;
+  openAuthEntry(requestedAuth, { context: requestedAuth === "login" ? "login" : "signup", updateUrl: false });
+}
+window.addEventListener("popstate", applyAuthEntryFromUrl);
+applyAuthEntryFromUrl();
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
     openProfileEditor();

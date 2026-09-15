@@ -13,6 +13,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       });
       await page.goto('http://127.0.0.1:8022/');
       await page.locator('#sidebar-signup').click();
+      await page.locator('#signup-nickname').fill('검증집주인');
       await page.locator('#email').fill('validation-qa@example.com');
       await page.locator('#signup-birth-date').fill('1966-04-12');
       await page.locator('#personal-consent').check();

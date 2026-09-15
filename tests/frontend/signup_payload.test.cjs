@@ -22,6 +22,7 @@ for (const checked of [true, false]) {
       },
       '#eligibility-guidance': { hidden: false },
       '#email': { value: 'payload-fixture@example.com' },
+      '#signup-nickname': { value: '테스트집주인' },
       '#password': { value: 'FixtureOnly123!', removeAttribute() {}, setAttribute() {} },
       '#password-error': { hidden: true, textContent: '' },
       '#signup-birth-date': { value: '1966-04-12' },

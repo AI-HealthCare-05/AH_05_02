@@ -13,13 +13,18 @@ function load(names, data) {
   }
   return context;
 }
-test('unsupported periods and local fixtures never request a mislabeled weekly PDF', async () => {
+test('screen PDF export leaves every report period available in the UI', () => {
+  const context = load(['reportPdfUnavailableReason'], { state: { token: null }, isLocalPreview: () => true });
+  for (const period of ['week', 'four-week', 'all', 'invalid']) assert.equal(context.reportPdfUnavailableReason(period), '');
+});
+
+test('legacy backend PDF fetch stays weekly-only and never relabels extended periods', async () => {
   let calls = 0;
   const state = { token: 'qa-session' };
   const context = load(['reportPdfUnavailableReason', 'fetchWeeklyReportPdf'], {
     state, isLocalPreview: () => state.token === 'local-demo-token', fetch: async () => { calls++; },
   });
-  for (const period of ['four-week', 'all', 'invalid']) await assert.rejects(context.fetchWeeklyReportPdf(period), /연결 준비/);
+  for (const period of ['four-week', 'all', 'invalid']) await assert.rejects(context.fetchWeeklyReportPdf(period), /화면 PDF 저장/);
   state.token = 'local-demo-token';
   await assert.rejects(context.fetchWeeklyReportPdf('week'), /실제 계정/);
   state.token = null;

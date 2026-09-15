@@ -22,6 +22,7 @@ async function noOverflow(page, name) {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     await page.locator('#sidebar-signup').click();
+    await page.locator('#signup-nickname').fill('화면집주인');
     await noOverflow(page, 'desktop signup has no horizontal overflow');
     await page.locator('#password').fill('Example123!');
     await page.locator('[data-password-target="password"]').focus();
@@ -47,6 +48,7 @@ async function noOverflow(page, name) {
     await page.screenshot({ path: path.join(artifacts, 'login-error-mobile.png'), fullPage: true });
     await page.unroute('**/api/v1/auth/login');
     await page.locator('#sidebar-signup').click();
+    await page.locator('#signup-nickname').fill('화면집주인');
     await page.route('**/api/v1/auth/signup', route => route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: [{ loc: ['body', 'password'], msg: 'validation error' }] }) }));
     await page.locator('#email').fill('qa@example.com');
     await page.locator('#signup-birth-date').fill('1966-04-12');

@@ -1,0 +1,34 @@
+name: Production Compose validation
+
+on:
+  pull_request:
+    paths:
+      - "infra/docker/docker-compose.prod.yml"
+      - "infra/nginx/**"
+      - "envs/example.prod.env"
+      - "scripts/preflight-production.sh"
+      - "scripts/prepare-ec2-release.sh"
+      - ".github/workflows/production-compose.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "infra/docker/docker-compose.prod.yml"
+      - "infra/nginx/**"
+      - "envs/example.prod.env"
+      - "scripts/preflight-production.sh"
+      - "scripts/prepare-ec2-release.sh"
+      - ".github/workflows/production-compose.yml"
+
+jobs:
+  validate-production-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render production Compose with the non-secret example environment
+        env:
+          ENV_FILE: ../../envs/example.prod.env
+        run: docker compose --env-file envs/example.prod.env -f infra/docker/docker-compose.prod.yml config --quiet
+
+      - name: Check deployment shell syntax
+        run: bash -n scripts/preflight-production.sh scripts/prepare-ec2-release.sh scripts/build-release-images.sh

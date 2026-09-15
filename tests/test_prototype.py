@@ -77,9 +77,9 @@ def test_emergency_questionnaire_matches_planned_two_stage_branches() -> None:
     assert "현재 위치 확인하기" in html
     assert "주변 응급실 보기" in html
     assert 'id="emergency-facility-search"' in html
-    assert 'id="emergency-address-form"' in html
-    assert 'id="emergency-address"' in html
-    assert 'id="emergency-facility-map"' in html
+    assert 'id="emergency-address-form"' not in html
+    assert 'id="emergency-address"' not in html
+    assert 'id="emergency-facility-map"' not in html
     assert "api(`/emergency-facilities/nearby?" in script
     assert "renderEmergencyFacilities" in script
     assert "국립중앙의료원 응급의료기관 정보" in script

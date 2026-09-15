@@ -64,3 +64,21 @@ def test_current_result_and_medical_guidance_are_not_hidden_with_future_results(
         assert "future-prediction-result" not in parser.parents[element_id]
     assert "future-prediction-result" in parser.parents["future-onset-title"]
     assert "risk-forecast-panel" not in parser.parents
+
+
+def test_retro_intro_auth_entry_opens_forms_without_reload() -> None:
+    source = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
+
+    assert 'function openAuthEntry(mode = "signup"' in source
+    assert 'new URLSearchParams(window.location.search).get("auth")' in source
+    assert 'window.addEventListener("popstate", applyAuthEntryFromUrl)' in source
+    assert 'window.location.href = "/?auth=signup' not in source
+    assert 'window.location.href = "/?auth=login' not in source
+
+
+def test_retro_intro_does_not_show_original_intro_switch() -> None:
+    html = (ROOT / "src/frontend/intro-retro.html").read_text(encoding="utf-8")
+
+    assert "원래 화면 보기" not in html
+    assert "원래 소개 화면 보기" not in html
+    assert "intro=original" not in html
