@@ -14,14 +14,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260915-recovery-consent-copy-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260915-auth-entry-instant-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
-  <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
+  <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260915-health-tools-card-entry-v1" defer></script>
+  <script src="/static/app.js?v=20260915-auth-entry-instant-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -825,7 +825,8 @@
             <div id="education-list" class="challenge-grid" aria-live="polite">
               <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
             </div>
-            <section class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
+            <div id="education-flow-host-challenge">
+            <dialog class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
               <div class="education-flow-heading">
                 <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
                 <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
@@ -848,7 +849,8 @@
                 <p class="education-feedback-source" id="education-feedback-source"></p>
                 <button class="primary" id="education-feedback-action" type="button"></button>
               </article>
-            </section>
+            </dialog>
+            </div>
           </section>
 
         </section>
@@ -1074,33 +1076,34 @@
             <p>매주 필요한 건강정보를 확인하고 간단한 퀴즈로 이해한 내용을 점검해요.</p>
             <div class="education-carousel" id="health-tools-education-carousel" role="region" aria-roledescription="캐러셀" aria-label="주차별 건강교육">
             <div id="health-tools-education-list" class="education-magnetic-track">
-              <article class="education-overview-card" data-content-id="preview-1" data-week="1" style="--education-art:#d5e8df" role="group" aria-roledescription="슬라이드" aria-label="1 / 4 · 1주차">
-                <button class="education-card-toggle" type="button" aria-label="1주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-guide.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">1주차</span>
-                  <span class="education-card-cover-copy"><strong>위험 선별 결과 이해하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-1__question_0" data-week="1" data-question-index="0" style="--education-art:#d5e8df" role="group" aria-roledescription="슬라이드" aria-label="1주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="1주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-guide.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">1주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-2" data-week="2" style="--education-art:#eadfc5" role="group" aria-roledescription="슬라이드" aria-label="2 / 4 · 2주차">
-                <button class="education-card-toggle" type="button" aria-label="2주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">2주차</span>
-                  <span class="education-card-cover-copy"><strong>일상에서 활동 늘리기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-2__question_0" data-week="2" data-question-index="0" style="--education-art:#eadfc5" role="group" aria-roledescription="슬라이드" aria-label="2주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="2주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">2주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-3" data-week="3" style="--education-art:#e5ddec" role="group" aria-roledescription="슬라이드" aria-label="3 / 4 · 3주차">
-                <button class="education-card-toggle" type="button" aria-label="3주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-meal.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">3주차</span>
-                  <span class="education-card-cover-copy"><strong>식사 습관 기록하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-3__question_0" data-week="3" data-question-index="0" style="--education-art:#e5ddec" role="group" aria-roledescription="슬라이드" aria-label="3주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="3주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-meal.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">3주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-4" data-week="4" style="--education-art:#d4e7ec" role="group" aria-roledescription="슬라이드" aria-label="4 / 4 · 4주차">
-                <button class="education-card-toggle" type="button" aria-label="4주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-cheer.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">4주차</span>
-                  <span class="education-card-cover-copy"><strong>중단해도 다시 시작하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-4__question_0" data-week="4" data-question-index="0" style="--education-art:#d4e7ec" role="group" aria-roledescription="슬라이드" aria-label="4주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="4주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-cheer.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">4주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
             </div>
             <div class="education-carousel-controls" hidden><button type="button" data-education-prev aria-label="이전 주차">←</button><span id="health-tools-education-carousel-status" role="status" aria-live="polite"></span><button type="button" data-education-next aria-label="다음 주차">→</button></div>
             </div>
+            <div id="education-flow-host-tools"></div>
           </section>
 
           <div class="health-tools-pending-grid">
