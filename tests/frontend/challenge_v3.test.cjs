@@ -199,3 +199,13 @@ test('missing, insufficient and out-of-contract amounts send no photo request', 
     assert.equal(h.calls(), 0);
   }
 });
+
+test('meal photo preview opens the evidence-v3 upload with three demo cases', () => {
+  for (const file of ['src/frontend/app.js', 'src/frontend/intro-retro-app.js']) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /get\("preview"\) !== "meal-photo"/);
+    assert.match(source, /openPhotoRecordModal\(item\)/);
+  }
+  const html = fs.readFileSync('src/frontend/intro-retro.html', 'utf8');
+  assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
+});
