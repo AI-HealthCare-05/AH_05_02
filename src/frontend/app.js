@@ -2325,12 +2325,20 @@ function currentBrowserPosition() {
   return getCurrentPositionWithRetry();
 }
 
+function showEmergencyAddressForm() {
+  if ($("#emergency-address-form")) {
+    $("#emergency-address-form").hidden = false;
+    return;
+  }
+  $("#emergency-facility-address-form")?.removeAttribute("hidden");
+}
+
 async function confirmEmergencyLocation() {
   const button = $("#confirm-current-location");
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2343,14 +2351,14 @@ async function confirmEmergencyLocation() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
 }
 
 async function findNearbyEmergencyFacilities() {
-  const button = $("#find-nearby-emergency");
+  const button = $('[data-emergency-facility-search]');
   if (!button) return;
   if (state.lastKnownLocation) {
     await requestEmergencyFacilities(state.lastKnownLocation, button);
@@ -2359,7 +2367,7 @@ async function findNearbyEmergencyFacilities() {
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2372,7 +2380,7 @@ async function findNearbyEmergencyFacilities() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
@@ -2382,7 +2390,7 @@ async function findNearbyEmergencyFacilities() {
 async function findEmergencyFacilitiesByAddress(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const input = $("#emergency-address");
+  const input = $("#emergency-address") || $("#emergency-facility-address");
   const submit = form.querySelector('button[type="submit"]');
   const address = input?.value.trim();
   if (!address || !submit) return;
@@ -5194,8 +5202,9 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   }
 });
 $("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
-$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
+$('[data-emergency-facility-search]')?.addEventListener("click", findNearbyEmergencyFacilities);
 $("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
+$("#emergency-facility-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
 $("#find-same-day-medical")?.addEventListener("click", () => {
   showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
 });
