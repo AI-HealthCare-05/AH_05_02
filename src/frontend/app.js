@@ -351,6 +351,7 @@ function getRiskCategoryLabel(prediction) {
 
 function showEligibilityGuidance(reasonCodes) {
   state.eligibilityReturnFocus = document.activeElement;
+  $("#eligibility-guidance").dataset.variant = "";
   const priority = [
     "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
@@ -372,8 +373,6 @@ function showEligibilityGuidance(reasonCodes) {
   state.modelOutOfRange = reason === "MODEL_AGE_OUT_OF_RANGE";
   state.currentHealthOnly = reason === "MODEL_AGE_OUT_OF_RANGE";
   $("#eligibility-guidance").dataset.code = guidance.code;
-  $("#eligibility-guidance-code").textContent = "";
-  $("#eligibility-guidance-code").hidden = true;
   $("#eligibility-guidance-title").textContent = guidance.title;
   $("#eligibility-guidance-message").textContent = guidance.message;
   $("#eligibility-guidance-reason-title").textContent = guidance.reasonTitle;
@@ -382,9 +381,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
   const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
   const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  const isDiagnosed = reason === "DIAGNOSED_DIABETES";
   $("#urgent-guidance-actions").hidden = !isUrgent;
   $("#same-day-guidance-actions").hidden = !isSameDay;
-  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
+  $("#diagnosed-guidance-actions").hidden = !isDiagnosed;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay || isDiagnosed;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -632,7 +633,7 @@ function syncTopNavigation() {
   });
 }
 
-function showStep(step, { recordHistory = true } = {}) {
+function showStep(step, { recordHistory = true, instant = false } = {}) {
   if (step >= 3 && state.token && state.accountRecovery?.token === state.token) {
     showAccountRecovery(state.accountRecovery, "먼저 계정 설정과 건강정보 동의를 완료해 주세요.");
     return;
@@ -690,7 +691,7 @@ function showStep(step, { recordHistory = true } = {}) {
   const activeHeading = activeScreen?.querySelector("h1, h2, h3");
   if (activeHeading) activeHeading.setAttribute("tabindex", "-1");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  window.scrollTo({ top: 0, behavior: instant || reduceMotion ? "auto" : "smooth" });
   window.requestAnimationFrame(() => {
     if (state.step !== targetStep) return;
     const guidance = $("#eligibility-guidance");
@@ -698,6 +699,19 @@ function showStep(step, { recordHistory = true } = {}) {
     const focusTarget = targetStep === 3 && guidance && !guidance.hidden ? guidance : activeHeading;
     focusTarget?.focus({ preventScroll: true });
   });
+}
+
+function showAuthEntry(mode, options = {}) {
+  cancelLandingMotion();
+  document.documentElement.classList.add("auth-entry-instant");
+  showStep(2, { instant: true });
+  showAuthMode(mode, options);
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
+}
+
+function suppressAuthTransitionOnce() {
+  document.documentElement.classList.add("auth-entry-instant");
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
 }
 
 async function goStepFromNav(step) {
@@ -871,6 +885,7 @@ function unlockReturningUserRoutes() {
 }
 
 function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
+  suppressAuthTransitionOnce();
   if (mode === "signup" && state.accountRecovery && state.token === state.accountRecovery.token) {
     showAccountRecovery(state.accountRecovery, "이미 가입한 계정의 남은 설정을 완료해 주세요.");
     return;
@@ -2316,12 +2331,20 @@ function currentBrowserPosition() {
   return getCurrentPositionWithRetry();
 }
 
+function showEmergencyAddressForm() {
+  if ($("#emergency-address-form")) {
+    $("#emergency-address-form").hidden = false;
+    return;
+  }
+  $("#emergency-facility-address-form")?.removeAttribute("hidden");
+}
+
 async function confirmEmergencyLocation() {
   const button = $("#confirm-current-location");
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2334,14 +2357,14 @@ async function confirmEmergencyLocation() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
 }
 
 async function findNearbyEmergencyFacilities() {
-  const button = $("#find-nearby-emergency");
+  const button = $('[data-emergency-facility-search]');
   if (!button) return;
   if (state.lastKnownLocation) {
     await requestEmergencyFacilities(state.lastKnownLocation, button);
@@ -2350,7 +2373,7 @@ async function findNearbyEmergencyFacilities() {
   if (!navigator.geolocation) {
     resetFacilitySearchUi("emergency");
     setEmergencyFacilityStatus("unavailable", "이 브라우저에서 위치를 확인할 수 없어요", "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
     return;
   }
   resetFacilitySearchUi("emergency");
@@ -2363,7 +2386,7 @@ async function findNearbyEmergencyFacilities() {
     resetFacilitySearchUi("emergency");
     const [title] = geolocationFailureCopy(error);
     setEmergencyFacilityStatus(geolocationFailureState(error), title, "주소를 직접 입력하거나 위급하면 119에 연락해 주세요.");
-    $("#emergency-address-form").hidden = false;
+    showEmergencyAddressForm();
   } finally {
     releaseBusy();
   }
@@ -2373,7 +2396,7 @@ async function findNearbyEmergencyFacilities() {
 async function findEmergencyFacilitiesByAddress(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const input = $("#emergency-address");
+  const input = $("#emergency-address") || $("#emergency-facility-address");
   const submit = form.querySelector('button[type="submit"]');
   const address = input?.value.trim();
   if (!address || !submit) return;
@@ -3737,7 +3760,7 @@ function renderLocalDemoDashboard() {
   state.educationContents = education.items.map((item) => ({ ...item, medical_notice: education.medical_notice }));
   renderEducationList();
   renderHealthCheckupHistory();
-  $("#education-learning-flow").hidden = true;
+  closeEducationFlow();
   $("#connection-list").innerHTML = renderTogetherEmpty("아직 연결된 가족·친구가 없습니다.", "초대 코드를 만들어 가족·친구와 챌린지 수행 상태만 공유할 수 있어요.");
 }
 function updateDailyRecordSummary() {
@@ -4115,30 +4138,81 @@ function educationQuestions(item) {
 function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
-    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    if (list) list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    const toolsList = $("#health-tools-education-list");
+    if (toolsList) toolsList.innerHTML = list?.innerHTML || `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
     return;
   }
-  list.innerHTML = state.educationContents.map((item) => {
+  const educationArt = [
+    ["hyeoldangi-guide.png", "#d5e8df"], ["hyeoldangi-challenge-walking.png", "#eadfc5"],
+    ["hyeoldangi-challenge-meal.png", "#e5ddec"], ["hyeoldangi-cheer.png", "#d4e7ec"],
+  ];
+  const renderCards = (includeDetails = true) => state.educationContents.map((item) => {
     const completed = Boolean(item.completed && item.is_correct !== false);
     const locked = Boolean(item.locked);
     const questionCount = educationQuestions(item).length;
     return `<article class="education-overview-card" data-completed="${completed}">
-      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></div>
-      <p>${escapeHtml(item.summary)}</p>
-      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
+      <div class="education-overview-heading"><strong>${escapeHtml(item.week_number)}주차 · ${escapeHtml(item.title)}</strong><span class="education-status-badge">${locked ? "준비 중" : completed ? "학습 완료" : "학습 전"}</span></div>
+      ${includeDetails ? `<p>${escapeHtml(item.summary)}</p>` : ""}
+      <button class="secondary education-open" type="button" data-id="${escapeHtml(item.content_id)}">${locked ? "미리 보기" : completed ? "교육 다시 보기" : `교육 보기 · ${questionCount}문항`}</button>
     </article>`;
   }).join("");
+  const renderToolsQuestionCards = () => state.educationContents.flatMap((item) => {
+    const completed = Boolean(item.completed && item.is_correct !== false);
+    const [art, color] = educationArt[(Number(item.week_number) - 1 + educationArt.length) % educationArt.length] || educationArt[0];
+    return educationQuestions(item).map((question, questionIndex) => {
+      const questionNumber = questionIndex + 1;
+      const targetId = `${item.content_id}__question_${questionIndex}`;
+      return `<article class="education-overview-card education-question-card" data-completed="${completed}" data-content-id="${escapeHtml(targetId)}" data-week="${escapeHtml(item.week_number)}" data-question-index="${questionIndex}" style="--education-art:${color}" role="group" aria-roledescription="슬라이드" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber}">
+        <button class="education-card-toggle" type="button" aria-haspopup="dialog" aria-controls="education-learning-flow" aria-label="${escapeHtml(item.week_number)}주차 문제 ${questionNumber} 풀기">
+          <span class="education-card-art" aria-hidden="true"><img src="/static/assets/${art}" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">${escapeHtml(item.week_number)}주차 - 문제 ${questionNumber}</span>
+          <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">${completed ? "학습 완료" : "학습 전"}</span></span>
+        </button>
+        <div class="education-card-details" hidden><p>${escapeHtml(question.prompt)}</p><small>${escapeHtml(quizTypeLabel(question.quiz_type))} · 근거 자료 확인 퀴즈</small></div>
+      </article>`;
+    });
+  }).join("");
+  if (list) list.innerHTML = renderCards(true);
+  const toolsList = $("#health-tools-education-list");
+  if (toolsList) {
+    toolsList.innerHTML = renderToolsQuestionCards();
+    window.healthToolsEducationCarouselView?.refresh();
+  }
 }
 
 function activeEducationContent() {
   return state.educationContents.find((item) => String(item.content_id) === String(state.activeEducationId)) || null;
 }
 
-function openEducationFlow(contentId) {
-  const item = state.educationContents.find((entry) => String(entry.content_id) === String(contentId));
+function findEducationContent(contentId) {
+  const baseContentId = String(contentId || "").replace(/__question_\d+$/, "");
+  const exact = state.educationContents.find((entry) => String(entry.content_id) === baseContentId);
+  if (exact) return exact;
+  const previewWeek = baseContentId.match(/^preview-(\d+)$/)?.[1];
+  if (previewWeek) {
+    return state.educationContents.find((entry) => String(entry.week_number) === previewWeek)
+      || state.educationContents[Number(previewWeek) - 1]
+      || null;
+  }
+  return null;
+}
+
+function educationQuestionIndex(targetId) {
+  const value = Number(String(targetId || "").match(/__question_(\d+)$/)?.[1]);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function moveEducationFlow(hostId) {
+  const flow = $("#education-learning-flow");
+  const host = $(hostId);
+  if (flow && host && flow.parentElement !== host) host.append(flow);
+}
+
+function openEducationFlow(contentId, { questionIndex = 0, startQuiz = false } = {}) {
+  const item = findEducationContent(contentId);
   if (!item) return;
   state.activeEducationId = item.content_id;
-  state.educationQuizIndex = 0;
+  state.educationQuizIndex = Math.max(0, Math.min(questionIndex, educationQuestions(item).length - 1));
   state.educationQuizCorrectCount = 0;
   $("#education-flow-week").textContent = `${item.week_number}주차 건강교육`;
   $("#education-flow-title").textContent = item.title;
@@ -4154,9 +4228,13 @@ function openEducationFlow(contentId) {
   $("#education-feedback-card").hidden = true;
   const flow = $("#education-learning-flow");
   flow.hidden = false;
-  flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-  $("#education-flow-title").setAttribute("tabindex", "-1");
-  $("#education-flow-title").focus({ preventScroll: true });
+  if (typeof flow.showModal === "function" && !flow.open) flow.showModal();
+  if (startQuiz) renderEducationQuizQuestion();
+  else flow.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  if (!startQuiz) {
+    $("#education-flow-title").setAttribute("tabindex", "-1");
+    $("#education-flow-title").focus({ preventScroll: true });
+  }
 }
 
 function renderEducationQuizQuestion() {
@@ -4181,15 +4259,23 @@ function renderEducationQuizQuestion() {
 }
 
 function closeEducationFlow() {
-  $("#education-learning-flow").hidden = true;
+  const flow = $("#education-learning-flow");
+  if (flow.open && typeof flow.close === "function") flow.close();
+  flow.hidden = true;
   const button = $(`.education-open[data-id="${state.activeEducationId}"]`);
   state.activeEducationId = null;
   button?.focus();
 }
 
+async function openEducationFlowFromTools(contentId) {
+  moveEducationFlow("#education-flow-host-tools");
+  if (!state.educationContents.length) await loadEducation();
+  openEducationFlow(contentId, { questionIndex: educationQuestionIndex(contentId), startQuiz: true });
+}
+
 async function loadEducation() {
   const list = $("#education-list");
-  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
+  if (list) list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
     const contents = isLocalPreview() ? localEducationContents() : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
     if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
@@ -4264,6 +4350,7 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
   if (name === "together") syncForestOverview();
+  if (name === "tools" && !state.educationContents.length) void loadEducation();
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
@@ -4510,12 +4597,11 @@ $$('#step-list li[data-flow-stage]').forEach((element) => {
   });
 });
 $("#intro-start").addEventListener("click", () => {
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $$('[data-story-start]').forEach((button) => button.addEventListener('click', () => {
   if (state.token) { showStep(8); showWorkspace('together'); }
-  else { showStep(2); showAuthMode('signup'); }
+  else showAuthEntry('signup');
 }));
 // Keep firm destinations; ease only the journey between them. Touch and long
 // sections retain native scrolling, and reduced-motion users get no tween.
@@ -4671,13 +4757,11 @@ for (const [selector, direction] of [['#landing-prev', -1], ['#landing-next', 1]
 updateLandingPosition();
 $("#sidebar-signup").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("signup");
+  showAuthEntry("signup");
 });
 $("#sidebar-login").addEventListener("click", (event) => {
   event.stopPropagation();
-  showStep(2);
-  showAuthMode("login", { context: "login" });
+  showAuthEntry("login", { context: "login" });
 });
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
@@ -5124,14 +5208,17 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   }
 });
 $("#confirm-current-location")?.addEventListener("click", confirmEmergencyLocation);
-$("#find-nearby-emergency")?.addEventListener("click", findNearbyEmergencyFacilities);
+$('[data-emergency-facility-search]')?.addEventListener("click", findNearbyEmergencyFacilities);
 $("#emergency-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
+$("#emergency-facility-address-form")?.addEventListener("submit", findEmergencyFacilitiesByAddress);
 $("#find-same-day-medical")?.addEventListener("click", () => {
   showMessage("가까운 의료기관 조회 API가 연결되면 이 위치에 목록을 표시합니다.", "success");
 });
 $("#find-phone-consultation")?.addEventListener("click", () => {
   showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
 });
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
@@ -5565,9 +5652,12 @@ $("#barrier-form").addEventListener("submit", async (event) => {
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
-$("#education-list").addEventListener("click", (event) => {
+$("#education-list")?.addEventListener("click", (event) => {
   const button = event.target.closest(".education-open");
-  if (button) openEducationFlow(button.dataset.id);
+  if (button) {
+    moveEducationFlow("#education-flow-host-tools");
+    openEducationFlow(button.dataset.id);
+  }
 });
 $("#close-education-flow")?.addEventListener("click", closeEducationFlow);
 $("#start-education-quiz")?.addEventListener("click", () => {
@@ -6276,14 +6366,22 @@ syncAlcoholFrequencyDetails();
 syncEmergencyQuestionnaire();
 $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", () => setForecastRiskPreview(button.dataset.riskPreview)));
 showStep(state.step, { recordHistory: false });
-window.lifestyleMapView = window.LifestyleMap.mount($("#lifestyle-map-detail"), {
+const mountEducationCarousel = window.EducationCarousel?.mount;
+window.lifestyleMapView = window.LifestyleMap?.mount?.($("#lifestyle-map-detail"), {
   getData: lifestyleMapSnapshot,
-  mountCarousel: window.EducationCarousel.mount,
+  mountCarousel: mountEducationCarousel,
 });
-window.healthToolsEducationCarouselView = window.EducationCarousel.mount($("#health-tools-education-carousel"), {
+window.healthToolsEducationCarouselView = mountEducationCarousel?.($("#health-tools-education-carousel"), {
   listSelector: "#health-tools-education-list",
   statusSelector: "#health-tools-education-carousel-status",
-  onOpen: openEducationFlow,
+  onOpen: openEducationFlowFromTools,
+});
+$("#health-tools-education-list")?.addEventListener("click", (event) => {
+  if (window.healthToolsEducationCarouselView) return;
+  const card = event.target.closest(".education-overview-card");
+  if (!card?.dataset.contentId) return;
+  event.preventDefault();
+  void openEducationFlowFromTools(card.dataset.contentId).catch((error) => showMessage(error.message));
 });
 $("#daily-log-list").addEventListener("click", event => {
   const link = event.target.closest("[data-lifestyle-topic]");

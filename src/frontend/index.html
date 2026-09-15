@@ -14,14 +14,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260915-recovery-consent-copy-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260915-auth-entry-instant-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
-  <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
+  <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260915-health-tools-card-entry-v1" defer></script>
+  <script src="/static/app.js?v=20260915-auth-entry-instant-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -280,40 +280,62 @@
           </section>
         </div>
         <div id="eligibility-guidance" class="branch-result" role="dialog" aria-modal="true" aria-labelledby="eligibility-guidance-title" tabindex="-1" hidden>
-          <p class="eyebrow" id="eligibility-guidance-code"></p>
           <h3 id="eligibility-guidance-title"></h3>
-          <p id="eligibility-guidance-message"></p>
-          <div class="branch-result-grid">
-            <article>
-              <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
-              <p id="eligibility-guidance-reason"></p>
+          <p class="eligibility-guidance-message" id="eligibility-guidance-message"></p>
+          <div class="eligibility-guidance-sections">
+            <article class="eligibility-guidance-section">
+              <span class="eligibility-guidance-label">사유</span>
+              <div class="eligibility-guidance-copy">
+                <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
+                <p id="eligibility-guidance-reason"></p>
+              </div>
             </article>
-            <article>
-              <strong>다음 행동</strong>
-              <p id="eligibility-guidance-action"></p>
+            <article class="eligibility-guidance-section eligibility-guidance-action">
+              <span class="eligibility-guidance-label">행동 안내</span>
+              <div class="eligibility-guidance-copy">
+                <p id="eligibility-guidance-action"></p>
+              </div>
             </article>
           </div>
-          <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
-          <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
-            <a class="primary" href="tel:119">119에 전화하기</a>
-            <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
-            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요. 주변 응급실 보기는 가까운 의료기관 찾기 안내와 함께 확인합니다.</p>
-            <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내">
-              <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
-                <strong>위급하면 검색을 기다리지 마세요</strong>
-                <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
-              </div>
+          <div class="eligibility-guidance-buttons">
+            <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
+              <a class="primary" href="tel:119">119에 전화하기</a>
+              <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
+              <button class="secondary" data-emergency-facility-search type="button">주변 응급실 보기</button>
+              <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+            </div>
+            <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
+              <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+            </div>
+            <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
+            </div>
+            <div class="actions eligibility-guidance-primary-actions">
+              <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
+              <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
             </div>
           </div>
-          <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
-            <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
-            <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
-            <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+          <p class="branch-safety">간당간당은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
+          <div class="actions eligibility-guidance-close-actions">
+            <button class="secondary" id="eligibility-edit-answer" type="button">닫기</button>
           </div>
-          <div class="actions">
-            <button class="secondary" id="eligibility-edit-answer" type="button">답변 다시 확인하기</button>
-            <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
-            <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
+          <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내" hidden>
+            <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
+              <strong>위급하면 검색을 기다리지 마세요</strong>
+              <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
+            </div>
+            <form id="emergency-facility-address-form" class="facility-address-form" hidden>
+              <label for="emergency-facility-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
+              <div>
+                <input id="emergency-facility-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off">
+                <button class="secondary" type="submit">주소로 찾기</button>
+              </div>
+            </form>
+            <div class="medical-facility-meta" id="emergency-facility-meta" hidden></div>
+            <div class="medical-facility-results" id="emergency-facility-results" hidden></div>
           </div>
         </div>
       </section>
@@ -820,37 +842,6 @@
             <p id="barrier-suggestion-text">목표를 더 작게 나누고, 내일 다시 시작해 보세요.</p>
           </article>
           </section>
-          <section class="dashboard-section" aria-labelledby="education-title">
-            <h3 id="education-title">4주 건강교육·퀴즈</h3>
-            <div id="education-list" class="challenge-grid" aria-live="polite">
-              <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
-            </div>
-            <section class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
-              <div class="education-flow-heading">
-                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
-                <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
-              </div>
-              <article class="education-reading-card" id="education-reading-card">
-                <strong>먼저 교육 내용을 확인해 주세요</strong>
-                <p id="education-flow-summary"></p>
-                <p class="education-medical-notice" id="education-flow-notice"></p>
-                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
-                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
-              </article>
-              <form class="education-quiz-card" id="education-quiz-form" hidden>
-                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
-                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
-                <button class="primary" type="submit">답 확인하기</button>
-              </form>
-              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
-                <strong id="education-feedback-title"></strong>
-                <p id="education-feedback-explanation"></p>
-                <p class="education-feedback-source" id="education-feedback-source"></p>
-                <button class="primary" id="education-feedback-action" type="button"></button>
-              </article>
-            </section>
-          </section>
-
         </section>
 
         <section class="workspace-panel" id="workspace-panel-report" role="region" tabindex="-1" data-workspace-panel="report" aria-label="리포트" hidden>
@@ -1074,32 +1065,58 @@
             <p>매주 필요한 건강정보를 확인하고 간단한 퀴즈로 이해한 내용을 점검해요.</p>
             <div class="education-carousel" id="health-tools-education-carousel" role="region" aria-roledescription="캐러셀" aria-label="주차별 건강교육">
             <div id="health-tools-education-list" class="education-magnetic-track">
-              <article class="education-overview-card" data-content-id="preview-1" data-week="1" style="--education-art:#d5e8df" role="group" aria-roledescription="슬라이드" aria-label="1 / 4 · 1주차">
-                <button class="education-card-toggle" type="button" aria-label="1주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-guide.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">1주차</span>
-                  <span class="education-card-cover-copy"><strong>위험 선별 결과 이해하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-1__question_0" data-week="1" data-question-index="0" style="--education-art:#d5e8df" role="group" aria-roledescription="슬라이드" aria-label="1주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="1주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-guide.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">1주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-2" data-week="2" style="--education-art:#eadfc5" role="group" aria-roledescription="슬라이드" aria-label="2 / 4 · 2주차">
-                <button class="education-card-toggle" type="button" aria-label="2주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">2주차</span>
-                  <span class="education-card-cover-copy"><strong>일상에서 활동 늘리기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-2__question_0" data-week="2" data-question-index="0" style="--education-art:#eadfc5" role="group" aria-roledescription="슬라이드" aria-label="2주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="2주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-walking.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">2주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-3" data-week="3" style="--education-art:#e5ddec" role="group" aria-roledescription="슬라이드" aria-label="3 / 4 · 3주차">
-                <button class="education-card-toggle" type="button" aria-label="3주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-meal.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">3주차</span>
-                  <span class="education-card-cover-copy"><strong>식사 습관 기록하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-3__question_0" data-week="3" data-question-index="0" style="--education-art:#e5ddec" role="group" aria-roledescription="슬라이드" aria-label="3주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="3주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-challenge-meal.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">3주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
-              <article class="education-overview-card" data-content-id="preview-4" data-week="4" style="--education-art:#d4e7ec" role="group" aria-roledescription="슬라이드" aria-label="4 / 4 · 4주차">
-                <button class="education-card-toggle" type="button" aria-label="4주차 건강교육 화면 준비">
-                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-cheer.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">4주차</span>
-                  <span class="education-card-cover-copy"><strong>중단해도 다시 시작하기</strong><span class="education-status-badge">학습 전</span></span>
+              <article class="education-overview-card education-question-card" data-content-id="preview-4__question_0" data-week="4" data-question-index="0" style="--education-art:#d4e7ec" role="group" aria-roledescription="슬라이드" aria-label="4주차 문제 1">
+                <button class="education-card-toggle" type="button" aria-label="4주차 문제 1 풀기">
+                  <span class="education-card-art" aria-hidden="true"><img src="/static/assets/hyeoldangi-cheer.png" alt="" loading="lazy" draggable="false"></span><span class="education-card-week">4주차 - 문제 1</span>
+                  <span class="education-card-cover-copy"><strong>퀴즈 풀기</strong><span class="education-status-badge">학습 전</span></span>
                 </button>
               </article>
             </div>
             <div class="education-carousel-controls" hidden><button type="button" data-education-prev aria-label="이전 주차">←</button><span id="health-tools-education-carousel-status" role="status" aria-live="polite"></span><button type="button" data-education-next aria-label="다음 주차">→</button></div>
+            </div>
+            <div id="education-flow-host-tools">
+            <dialog class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
+              <div class="education-flow-heading">
+                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
+                <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
+              </div>
+              <article class="education-reading-card" id="education-reading-card">
+                <strong>먼저 교육 내용을 확인해 주세요</strong>
+                <p id="education-flow-summary"></p>
+                <p class="education-medical-notice" id="education-flow-notice"></p>
+                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
+                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
+              </article>
+              <form class="education-quiz-card" id="education-quiz-form" hidden>
+                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
+                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
+                <button class="primary" type="submit">답 확인하기</button>
+              </form>
+              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
+                <strong id="education-feedback-title"></strong>
+                <p id="education-feedback-explanation"></p>
+                <p class="education-feedback-source" id="education-feedback-source"></p>
+                <button class="primary" id="education-feedback-action" type="button"></button>
+              </article>
+            </dialog>
             </div>
           </section>
 
