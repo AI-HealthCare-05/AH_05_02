@@ -62,8 +62,7 @@ if FRONTEND_DIR.exists():
 async def home(request: Request, intro: str | None = Query(default=None)) -> FileResponse:
     """Serve the retro cover first; explicit app-entry links open the MVP flow."""
     explicit_app_entry = intro == "original" or any(
-        key in request.query_params
-        for key in ("auth", "preview", "resume", "workspace", "invite_token")
+        key in request.query_params for key in ("auth", "preview", "resume", "workspace", "invite_token")
     )
     page = "index.html" if explicit_app_entry else "intro-retro.html"
     response = FileResponse(FRONTEND_DIR / page)
