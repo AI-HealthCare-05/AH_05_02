@@ -13,14 +13,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260915-pr66-ci-fix-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260915-recovery-consent-copy-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260915-pr66-ci-fix-v1" defer></script>
+  <script src="/static/app.js?v=20260915-recovery-fields-edit-v2" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -139,7 +139,7 @@
           <div class="form-row full"><label for="recovery-name">닉네임</label><input id="recovery-name" type="text" minlength="2" maxlength="20" autocomplete="nickname" required></div>
           <div class="form-row"><label for="recovery-birthday">생년월일</label><input id="recovery-birthday" type="date" autocomplete="bday" required></div>
           <div class="form-row"><label for="recovery-gender">성별</label><select id="recovery-gender" required><option value="">선택해 주세요</option><option value="FEMALE">여성</option><option value="MALE">남성</option></select></div>
-          <label class="check-card consent-card full"><input id="recovery-health-consent" type="checkbox"><span><strong>건강정보 수집·이용에 동의합니다</strong><small>건강정보 입력·위험 확인 기능에 필요합니다. 동의하지 않으면 다음 단계로 진행하지 않습니다.</small></span></label>
+          <label class="check-card consent-card full"><input id="recovery-health-consent" type="checkbox"><span><strong>개인정보 수집·이용에 동의합니다.</strong><small>건강정보 입력·위험 확인 기능에 필요합니다. 동의하지 않으면 다음 단계로 진행하지 않습니다.</small><em>필수</em></span></label>
           <div class="actions full"><button id="recovery-login" class="secondary" type="button">기존 계정으로 로그인</button><button id="recovery-submit" class="primary" type="submit">설정 저장하고 계속</button></div>
         </form>
         <form id="login-form" class="login-form" hidden>

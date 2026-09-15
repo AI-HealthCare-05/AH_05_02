@@ -956,10 +956,10 @@ function showAccountRecovery(recovery, message) {
   $("#recovery-health-consent").checked = recovery.healthAgreed === true;
   const needsLogin = !state.token;
   const verifyOnly = recovery.verifyOnly === true;
-  $("#recovery-name").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-birthday").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-gender").disabled = needsLogin || verifyOnly || recovery.profileSaved;
-  $("#recovery-health-consent").disabled = needsLogin || verifyOnly;
+  $("#recovery-name").disabled = verifyOnly;
+  $("#recovery-birthday").disabled = verifyOnly;
+  $("#recovery-gender").disabled = verifyOnly;
+  $("#recovery-health-consent").disabled = verifyOnly;
   $("#recovery-submit").hidden = needsLogin;
   $("#recovery-submit").textContent = verifyOnly ? "저장 상태 다시 확인하기" : "설정 저장하고 계속";
   $("#account-recovery-message").textContent = message;
@@ -978,7 +978,10 @@ async function saveAccountSetup(recovery) {
   if (!Number.isFinite(age) || age < 14 || !["FEMALE", "MALE"].includes(recovery.gender)) {
     throw new Error("생년월일과 성별을 확인해 주세요. 만 14세 미만은 가입할 수 없습니다.");
   }
-  if (!recovery.profileSaved) {
+  const profileChanged = recovery.name !== state.userProfile?.name
+    || recovery.birthday !== state.userProfile?.birthday
+    || recovery.gender !== state.userProfile?.gender;
+  if (!recovery.profileSaved || profileChanged) {
     recovery.stage = "profile";
     await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
       ...(recovery.name ? { name: recovery.name } : {}),
@@ -5708,7 +5711,7 @@ async function resumeAuthenticatedAccount() {
     const profileSaved = Boolean(profile.birthday && ["FEMALE", "MALE"].includes(profile.gender));
     if (!profileSaved || !hasHealthDataConsent(consents)) {
       showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token,
-        birthday: profile.birthday, gender: profile.gender, profileSaved,
+        name: profile.name, birthday: profile.birthday, gender: profile.gender, profileSaved,
         healthAgreed: hasHealthDataConsent(consents), consentSaved: hasHealthDataConsent(consents),
         reconcileConsent: true, stage: profileSaved ? "consent" : "profile" },
       profileSaved ? "프로필은 저장되어 있습니다. 건강정보 수집·이용 동의를 확인하고 계속해 주세요." : "저장되지 않은 프로필과 건강정보 동의를 확인해 주세요.");
@@ -5755,8 +5758,16 @@ async function resumeAuthenticatedAccount() {
   } catch (error) {
     if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
-    showAccountRecovery({ email: $("#login-email").value.trim(), token: state.token, verifyOnly: true },
-      state.token ? "로그인은 완료했지만 계정의 저장 상태를 불러오지 못했습니다. 다시 가입하지 말고 저장 상태를 다시 확인해 주세요." : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
+    showAccountRecovery({
+      email: $("#login-email").value.trim(),
+      token: state.token,
+      verifyOnly: !state.token,
+      profileSaved: false,
+      healthAgreed: false,
+      stage: state.token ? "profile" : "login",
+    }, state.token
+      ? "로그인은 완료했습니다. 계정 설정을 입력하고 계속 진행해 주세요."
+      : "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
   }
 }
 
