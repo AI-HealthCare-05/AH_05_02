@@ -20,9 +20,7 @@ from app.services.challenges import ChallengeService, challenge_payload
 challenge_router = APIRouter(tags=["Challenges"])
 
 
-@challenge_router.post(
-    "/user-challenges/{user_challenge_id}/photo-verifications", status_code=status.HTTP_201_CREATED
-)
+@challenge_router.post("/user-challenges/{user_challenge_id}/photo-verifications", status_code=status.HTTP_201_CREATED)
 async def create_v3_photo_verification(
     user_challenge_id: int,
     user: Annotated[User, Depends(get_request_user)],
