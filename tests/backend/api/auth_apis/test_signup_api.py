@@ -3,6 +3,7 @@ from starlette import status
 from tortoise.contrib.test import TestCase
 
 from app.main import app
+from app.models.users import Gender, User
 
 
 class TestSignupAPI(TestCase):
@@ -11,6 +12,8 @@ class TestSignupAPI(TestCase):
             "email": "test@example.com",
             "password": "Password123!",
             "terms_agreed": True,
+            "birth_date": "1980-01-01",
+            "gender": "FEMALE",
         }
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -18,6 +21,9 @@ class TestSignupAPI(TestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json()["data"]["email"] == "test@example.com"
         assert "meta" in response.json()
+        user = await User.get(email="test@example.com")
+        assert user.birthday.isoformat() == "1980-01-01"
+        assert user.gender == Gender.FEMALE
 
     async def test_signup_invalid_email(self):
         signup_data = {

@@ -36,8 +36,8 @@ class AuthService:
                 hashed_password=hash_password(data.password),  # 해시화된 비밀번호를 사용
                 name=None,
                 phone_number=None,
-                gender=None,
-                birthday=None,
+                gender=data.gender,
+                birthday=data.birth_date,
             )
 
             return user

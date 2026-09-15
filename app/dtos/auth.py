@@ -1,8 +1,10 @@
+from datetime import date
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, field_validator
 
-from app.core.validators import validate_password
+from app.core.validators import validate_birthday, validate_password
+from app.models.users import Gender
 
 
 class SignUpRequest(BaseModel):
@@ -12,6 +14,12 @@ class SignUpRequest(BaseModel):
     ]
     password: Annotated[str, Field(min_length=8), AfterValidator(validate_password)]
     terms_agreed: bool = Field(..., description="서비스 이용약관 동의 여부")
+    # The first-run web flow sends these values and the current production
+    # schema still requires them when a user row is created.  Keep them
+    # optional here for backward-compatible API clients; the service stores
+    # them whenever the client provides them.
+    birth_date: date | None = Field(None, description="Date Format: YYYY-MM-DD")
+    gender: Gender | None = Field(None, description="'MALE' or 'FEMALE'")
 
     @field_validator("terms_agreed")
     @classmethod
@@ -19,6 +27,11 @@ class SignUpRequest(BaseModel):
         if not value:
             raise ValueError("서비스 이용약관에 동의해야 합니다.")
         return value
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_signup_birth_date(cls, value: date | None) -> date | None:
+        return validate_birthday(value) if value is not None else value
 
 
 class LoginRequest(BaseModel):
