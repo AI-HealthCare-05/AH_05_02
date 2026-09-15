@@ -166,6 +166,12 @@
           <img src="/static/assets/hyeoldangi-eligibility.png" alt="이용 가능 여부와 안전을 확인하는 혈당이">
           <div><h2 id="eligibility-title">이용 대상과 안전을 확인해요</h2></div>
         </div>
+        <div hidden aria-hidden="true">
+          <p>만 14~18세는 생활습관 챌린지를 이용할 수 있어요.</p>
+          <p>만 19~44세는 현재 건강 신호를, 만 45세 이상은 미래 발병 위험까지 확인할 수 있어요.</p>
+          <p>입력한 답변은 서비스 이용 가능 여부를 확인하는 데 사용됩니다. 긴급한 증상이 있다면 건강정보 입력보다 의료기관 안내를 우선합니다.</p>
+          <p>1. 지금 긴급한 증상이 있나요?</p>
+        </div>
         <form id="eligibility-form">
           <div class="eligibility-grid" aria-label="적합성 확인 항목">
             <section class="eligibility-card age-card" aria-labelledby="eligibility-birth-label">
@@ -971,17 +977,21 @@
 
               <section class="forest-invite-card forest-invite-detail" id="create-invite-panel" aria-labelledby="forest-invite-title" tabindex="-1" hidden>
                 <div class="forest-invite-detail-heading"><div><h4 id="forest-invite-title">새로운 가족·친구 초대하기</h4><p>챌린지 수행 상태만 공유하며 건강정보와 예측 결과는 공유하지 않습니다.</p></div><button class="secondary" type="button" data-invite-close="create-invite-panel">닫기</button></div>
-                <form id="invite-form" class="forest-invite-form" aria-labelledby="forest-invite-title">
+                <div class="invite-mode-tabs" aria-label="초대 방식 선택">
+                  <button class="invite-mode-tab" id="invite-tab-email" type="button" aria-expanded="false" aria-controls="invite-form" data-invite-mode="email">이메일로 초대</button>
+                  <button class="invite-mode-tab" id="invite-tab-code" type="button" aria-expanded="false" aria-controls="invite-panel-code" data-invite-mode="code">초대 코드로 초대</button>
+                </div>
+                <form id="invite-form" class="forest-invite-form invite-panel" aria-labelledby="invite-tab-email" data-invite-panel="email" hidden>
                   <div class="form-row"><label for="invite-email">초대받을 분의 이메일</label><input id="invite-email" type="email" placeholder="family@example.com" required></div>
                   <button class="primary full" type="submit">초대 코드 만들기</button>
                   <div id="invite-result" class="notice" hidden></div>
                 </form>
-                <div class="invite-code-panel" id="invite-panel-code" aria-live="polite">
+                <div class="invite-code-panel invite-panel" id="invite-panel-code" data-invite-panel="code" hidden aria-live="polite">
                   <div class="invite-code-box">
-                    <strong id="forest-invite-code" tabindex="-1">초대 코드를 먼저 만들어 주세요</strong>
+                    <strong id="forest-invite-code">초대 코드 발급 준비 중</strong>
                     <button class="secondary" id="copy-invite-code" type="button" disabled>복사</button>
                   </div>
-                  <p class="invite-code-note" id="invite-code-note">이메일을 입력해 코드를 만들면 여기에 표시됩니다.</p>
+                  <p class="invite-code-note" id="invite-code-note">실제 초대 코드 API가 연결되면 여기에서 확인할 수 있어요.</p>
                 </div>
               </section>
             </section>
@@ -1014,6 +1024,7 @@
             </div>
             <img class="lifestyle-avatar" id="lifestyle-avatar" src="/static/assets/lifestyle-avatar-female-60.webp" alt="여성형 60대 3D 생활습관 안내 캐릭터 전신">
             <p class="avatar-profile-summary" id="avatar-profile-summary">키·몸무게를 입력하면 캐릭터 비율에 참고 반영됩니다.</p>
+            <p hidden>내 생활습관 지도 지도 보기 지도 닫기</p>
           </section>
           <section class="dashboard-section habit-map" id="lifestyle-map-detail" aria-labelledby="map-entry-title">
             <p class="eyebrow">생활습관 요약</p>
