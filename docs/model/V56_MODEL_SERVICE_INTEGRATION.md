@@ -25,6 +25,23 @@ python3 scripts/provision-models.py \
   --tomorrow /secure-handoff/tomorrow/model.joblib
 ```
 
+Google Drive 전달 폴더를 사용하는 배포 환경은 저장소 루트에서 다음 명령을 실행한다.
+
+```bash
+python3 scripts/provision-models-google-drive.py
+```
+
+로컬 시작 명령에서만 자동 배치를 원하면 `.env`에
+`MODEL_DELIVERY_GOOGLE_DRIVE_ENABLED=true`를 설정한다. 운영 배포에서는 모델을 먼저
+배치·검증한 다음 컨테이너를 시작하는 두 단계 방식을 권장한다.
+
+- 공유 폴더 ID: `1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18`
+- 다운로드 계약: `configs/model_delivery/google_drive_models.json`
+- Drive Manifest, 저장소 Registry, 실제 바이너리의 SHA-256이 모두 같아야 설치된다.
+- 임시 디렉터리에서 검증한 뒤 원자적으로 교체하므로 불완전한 다운로드는 활성 경로에 남지 않는다.
+- 공유 권한 철회나 네트워크 오류 시 배포를 중단하고 기존 Artifact를 유지한다.
+- Google Drive는 전달 채널일 뿐 운영 승인 수단이 아니다. 설치 후에도 Release Gate와 readiness를 통과해야 한다.
+
 컨테이너에는 `models/`를 읽기 전용으로 마운트한다. 운영 전환 전에는
 `MODEL_PRELOAD_ENABLED=true`로 Worker가 Artifact를 역직렬화·계약 검사한 뒤에만 ready
 파일을 만들게 한다. 누락, 해시 불일치, sklearn 버전 불일치는 시작 실패로 처리하며 다른

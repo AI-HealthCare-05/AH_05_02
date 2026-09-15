@@ -5,9 +5,12 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 
 required_models=(
-  "models/artifacts/candidates/diabetes_current_screening/v050/model.joblib"
+  "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
   "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
 )
+if [[ "${MODEL_DELIVERY_GOOGLE_DRIVE_ENABLED:-false}" == "true" ]]; then
+  python3 scripts/provision-models-google-drive.py
+fi
 for model in "${required_models[@]}"; do
   if [[ ! -f "$model" ]]; then
     echo "필수 모델 파일이 없습니다: $model" >&2
