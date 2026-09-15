@@ -36,6 +36,17 @@ def threshold_decision(food_coverage: float, vegetable_ratio: float, reliable: b
     return "valid"
 
 
+def configured_model_paths() -> tuple[Path, Path, Path]:
+    if config.KFOOD_DRIVE_FILE_ID.strip():
+        bundle_dir = Path(config.KFOOD_BUNDLE_DIR)
+        return bundle_dir / "best.pt", bundle_dir / "meta.json", bundle_dir / "1.tflite"
+    return (
+        Path(config.KFOOD_CLASSIFIER_PATH),
+        Path(config.KFOOD_CLASSIFIER_META_PATH),
+        Path(config.KFOOD_SEGMENTER_PATH),
+    )
+
+
 class LocalKFoodVisionProvider:
     """Korean-food classifier plus a local TFLite food segmenter.
 
@@ -46,12 +57,11 @@ class LocalKFoodVisionProvider:
     provider_kind = "local_kfood_cv"
 
     def __init__(self) -> None:
-        self._classifier_path = Path(config.KFOOD_CLASSIFIER_PATH)
-        self._meta_path = Path(config.KFOOD_CLASSIFIER_META_PATH)
-        self._segmenter_path = Path(config.KFOOD_SEGMENTER_PATH)
+        self._classifier_path, self._meta_path, self._segmenter_path = configured_model_paths()
         self._seg_config_path = Path(config.KFOOD_SEGMENTATION_CONFIG_PATH)
         self._dish_map_path = Path(config.KFOOD_DISH_VEGETABLES_PATH)
         _verify_file(self._classifier_path, config.KFOOD_CLASSIFIER_SHA256, "한식 분류 모델")
+        _verify_file(self._meta_path, config.KFOOD_CLASSIFIER_META_SHA256, "한식 분류 모델 메타데이터")
         _verify_file(self._segmenter_path, config.KFOOD_SEGMENTER_SHA256, "음식 세그멘터")
         try:
             self._meta = json.loads(self._meta_path.read_text(encoding="utf-8"))

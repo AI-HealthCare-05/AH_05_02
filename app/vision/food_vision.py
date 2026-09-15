@@ -197,16 +197,19 @@ def get_food_vision_provider() -> FoodVisionProvider:
 def food_vision_is_configured() -> bool:
     if config.FOOD_VISION_PROVIDER != "local_kfood":
         return False
+    from app.vision.local_kfood import configured_model_paths
+
+    classifier_path, meta_path, segmenter_path = configured_model_paths()
     required = (
-        config.KFOOD_CLASSIFIER_PATH,
-        config.KFOOD_CLASSIFIER_META_PATH,
-        config.KFOOD_SEGMENTER_PATH,
+        classifier_path,
+        meta_path,
+        segmenter_path,
         config.KFOOD_SEGMENTATION_CONFIG_PATH,
         config.KFOOD_DISH_VEGETABLES_PATH,
     )
-    return bool(config.KFOOD_CLASSIFIER_SHA256 and config.KFOOD_SEGMENTER_SHA256) and all(
-        Path(path).is_file() for path in required
-    )
+    return bool(
+        config.KFOOD_CLASSIFIER_SHA256 and config.KFOOD_CLASSIFIER_META_SHA256 and config.KFOOD_SEGMENTER_SHA256
+    ) and all(Path(path).is_file() for path in required)
 
 
 def sha256_digest(image_bytes: bytes) -> str:

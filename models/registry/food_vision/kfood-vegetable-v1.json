@@ -4,6 +4,7 @@
   "classifier": {
     "path": "models/artifacts/food_vision/kfood/best.pt",
     "sha256": "4c4df6ba2b9d3daf77f7ffe107285df17a360342729177d15465ba9872d42726",
+    "meta_sha256": "a193e1faf4e7c266e0ba4481451ded587fcd01cfc7d89c60d834bac63e14e0b3",
     "architecture": "timm-efficientnet-b0",
     "classes": 98,
     "test_top1": 0.81091549,
