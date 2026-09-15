@@ -84,6 +84,8 @@ class Config(BaseSettings):
     FOOD_VISION_PROVIDER: str = "local_kfood"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_VLM_MODEL: str = "gpt-4o-mini"
+    OPENAI_VLM_FALLBACK_ENABLED: bool = False
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
     KFOOD_CLASSIFIER_PATH: Path = Path("models/artifacts/food_vision/kfood/best.pt")

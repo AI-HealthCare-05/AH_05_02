@@ -28,10 +28,18 @@ async def create_v3_photo_verification(
     actual_value: Annotated[float, Form(ge=0, le=720)],
     file: Annotated[UploadFile, File()],
     confirmed: Annotated[bool, Form()] = False,
+    external_vlm_consent: Annotated[bool, Form()] = False,
 ) -> dict[str, object]:
     return envelope(
         await verify_photo(
-            ChallengeService(), user, user_challenge_id, verification_date, file, actual_value, confirmed
+            ChallengeService(),
+            user,
+            user_challenge_id,
+            verification_date,
+            file,
+            actual_value,
+            confirmed,
+            external_vlm_consent,
         )
     )
 
