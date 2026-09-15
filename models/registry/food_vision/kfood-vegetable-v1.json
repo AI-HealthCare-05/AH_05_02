@@ -14,7 +14,7 @@
     "sha256": "edb7df52467afd02a502d7765ca7ac82e63ad86082c72e18135764f1b1817b52"
   },
   "decision": {
-    "food_coverage_min": 0.6,
+    "food_coverage_min": 0.5,
     "vegetable_ratio_min": 0.3,
     "valid_requires_user_confirmation": true
   },
