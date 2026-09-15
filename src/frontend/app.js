@@ -4809,11 +4809,7 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  document.body.classList.remove("account-mode");
-  if (window.location.pathname !== "/" || window.location.search || window.location.hash) {
-    window.history.replaceState({}, "", "/");
-  }
-  showStep(1, { recordHistory: false });
+  window.location.assign("/static/intro-retro.html?v=20260915-brand-retro-v1");
 });
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#open-lifestyle-map")?.addEventListener("click", () => {

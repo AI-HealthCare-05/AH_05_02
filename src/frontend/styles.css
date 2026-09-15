@@ -170,7 +170,7 @@ body.modal-open{overflow:hidden}
 .branch-result-grid strong{display:block;font-size:20px;margin-bottom:8px}
 .branch-result-grid p{color:var(--muted);margin:0}
 .branch-safety{border:1px solid #e0aa1d;border-radius:12px;background:var(--warning-bg);padding:14px 16px;color:#5f4618!important;font-weight:800}
-.challenge-follow-up{align-items:flex-start}.challenge-follow-up>div{flex:1}.challenge-follow-up strong{display:block;font-size:23px;color:var(--ink);margin-bottom:4px}.challenge-follow-up .secondary{margin-top:14px;background:#fff}
+.challenge-follow-up{display:none!important;align-items:flex-start}.challenge-follow-up>div{flex:1}.challenge-follow-up strong{display:block;font-size:23px;color:var(--ink);margin-bottom:4px}.challenge-follow-up .secondary{margin-top:14px;background:#fff}
 .notice>span{width:auto;min-width:32px;padding:0 8px;white-space:nowrap;border-radius:999px}
 .step-panel li{cursor:pointer;transition:background .15s ease,color .15s ease,opacity .15s ease}
 .step-panel li:hover:not(.locked){background:#eef7f4;color:var(--green-dark)}
