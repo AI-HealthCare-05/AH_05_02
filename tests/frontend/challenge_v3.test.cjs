@@ -206,6 +206,8 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.match(source, /get\("preview"\) !== "meal-photo"/);
     assert.match(source, /openPhotoRecordModal\(item\)/);
   }
-  const html = fs.readFileSync('src/frontend/intro-retro.html', 'utf8');
-  assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
+  for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
+    const html = fs.readFileSync(file, 'utf8');
+    assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
+  }
 });

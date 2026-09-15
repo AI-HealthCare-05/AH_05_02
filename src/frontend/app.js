@@ -536,6 +536,12 @@ function normalizeRecommendationResult(result = {}, difficulty = "easy") {
     }),
   };
 }
+
+function hasCurrentChallengeCycle(cycle = state.cycle) {
+  return Boolean(cycle?.user_challenges?.length)
+    && !["completed", "cancelled"].includes(cycle?.status);
+}
+
 function recordTypeLabel(type) {
   return type === "photo" ? "사진 인증" : "간편 체크";
 }
