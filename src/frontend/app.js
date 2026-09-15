@@ -4138,9 +4138,9 @@ function educationQuestions(item) {
 function renderEducationList() {
   const list = $("#education-list");
   if (!state.educationContents.length) {
-    list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
+    if (list) list.innerHTML = `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
     const toolsList = $("#health-tools-education-list");
-    if (toolsList) toolsList.innerHTML = list.innerHTML;
+    if (toolsList) toolsList.innerHTML = list?.innerHTML || `<article class="report-empty"><strong>표시할 건강교육이 아직 없어요</strong><p>검증된 교육 자료가 준비되면 여기에 표시됩니다.</p></article>`;
     return;
   }
   const educationArt = [
@@ -4172,7 +4172,7 @@ function renderEducationList() {
       </article>`;
     });
   }).join("");
-  list.innerHTML = renderCards(true);
+  if (list) list.innerHTML = renderCards(true);
   const toolsList = $("#health-tools-education-list");
   if (toolsList) {
     toolsList.innerHTML = renderToolsQuestionCards();
@@ -4275,7 +4275,7 @@ async function openEducationFlowFromTools(contentId) {
 
 async function loadEducation() {
   const list = $("#education-list");
-  list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
+  if (list) list.innerHTML = `<article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>`;
   try {
     const contents = isLocalPreview() ? localEducationContents() : mapHealthEducationQuizzes(await api("/health-education/quizzes"));
     if (!contents.items?.length) throw new Error("표시할 승인 퀴즈가 없습니다.");
@@ -5652,10 +5652,10 @@ $("#barrier-form").addEventListener("submit", async (event) => {
     await loadWeeklyReport();
   } catch (error) { showMessage(error.message); }
 });
-$("#education-list").addEventListener("click", (event) => {
+$("#education-list")?.addEventListener("click", (event) => {
   const button = event.target.closest(".education-open");
   if (button) {
-    moveEducationFlow("#education-flow-host-challenge");
+    moveEducationFlow("#education-flow-host-tools");
     openEducationFlow(button.dataset.id);
   }
 });

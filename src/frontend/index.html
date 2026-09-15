@@ -842,39 +842,6 @@
             <p id="barrier-suggestion-text">목표를 더 작게 나누고, 내일 다시 시작해 보세요.</p>
           </article>
           </section>
-          <section class="dashboard-section" aria-labelledby="education-title">
-            <h3 id="education-title">4주 건강교육·퀴즈</h3>
-            <div id="education-list" class="challenge-grid" aria-live="polite">
-              <article class="report-empty"><strong>건강교육을 불러오고 있어요</strong><p>잠시만 기다려 주세요.</p></article>
-            </div>
-            <div id="education-flow-host-challenge">
-            <dialog class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
-              <div class="education-flow-heading">
-                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
-                <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
-              </div>
-              <article class="education-reading-card" id="education-reading-card">
-                <strong>먼저 교육 내용을 확인해 주세요</strong>
-                <p id="education-flow-summary"></p>
-                <p class="education-medical-notice" id="education-flow-notice"></p>
-                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
-                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
-              </article>
-              <form class="education-quiz-card" id="education-quiz-form" hidden>
-                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
-                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
-                <button class="primary" type="submit">답 확인하기</button>
-              </form>
-              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
-                <strong id="education-feedback-title"></strong>
-                <p id="education-feedback-explanation"></p>
-                <p class="education-feedback-source" id="education-feedback-source"></p>
-                <button class="primary" id="education-feedback-action" type="button"></button>
-              </article>
-            </dialog>
-            </div>
-          </section>
-
         </section>
 
         <section class="workspace-panel" id="workspace-panel-report" role="region" tabindex="-1" data-workspace-panel="report" aria-label="리포트" hidden>
@@ -1125,7 +1092,32 @@
             </div>
             <div class="education-carousel-controls" hidden><button type="button" data-education-prev aria-label="이전 주차">←</button><span id="health-tools-education-carousel-status" role="status" aria-live="polite"></span><button type="button" data-education-next aria-label="다음 주차">→</button></div>
             </div>
-            <div id="education-flow-host-tools"></div>
+            <div id="education-flow-host-tools">
+            <dialog class="education-learning-flow" id="education-learning-flow" aria-labelledby="education-flow-title" hidden>
+              <div class="education-flow-heading">
+                <div><p class="eyebrow" id="education-flow-week"></p><h4 id="education-flow-title"></h4></div>
+                <button class="text-button" id="close-education-flow" type="button">교육 목록으로</button>
+              </div>
+              <article class="education-reading-card" id="education-reading-card">
+                <strong>먼저 교육 내용을 확인해 주세요</strong>
+                <p id="education-flow-summary"></p>
+                <p class="education-medical-notice" id="education-flow-notice"></p>
+                <a id="education-flow-source" target="_blank" rel="noopener noreferrer">근거 자료 확인</a>
+                <button class="primary" id="start-education-quiz" type="button">퀴즈 시작</button>
+              </article>
+              <form class="education-quiz-card" id="education-quiz-form" hidden>
+                <div class="education-quiz-progress"><span id="education-quiz-progress-text">1/1 문항</span><progress id="education-quiz-progress" value="1" max="1"></progress></div>
+                <fieldset><legend id="education-quiz-question"></legend><div class="education-answer-options"><label><input type="radio" name="education-answer" value="네" required><span>네</span></label><label><input type="radio" name="education-answer" value="아니요" required><span>아니요</span></label></div></fieldset>
+                <button class="primary" type="submit">답 확인하기</button>
+              </form>
+              <article class="education-feedback-card" id="education-feedback-card" role="status" aria-live="polite" hidden>
+                <strong id="education-feedback-title"></strong>
+                <p id="education-feedback-explanation"></p>
+                <p class="education-feedback-source" id="education-feedback-source"></p>
+                <button class="primary" id="education-feedback-action" type="button"></button>
+              </article>
+            </dialog>
+            </div>
           </section>
 
           <div class="health-tools-pending-grid">
