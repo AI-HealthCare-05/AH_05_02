@@ -351,6 +351,7 @@ function getRiskCategoryLabel(prediction) {
 
 function showEligibilityGuidance(reasonCodes) {
   state.eligibilityReturnFocus = document.activeElement;
+  $("#eligibility-guidance").dataset.variant = "";
   const priority = [
     "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "UNDER_MINIMUM_SERVICE_AGE", "DIAGNOSED_DIABETES", "CHALLENGE_ONLY_AGE",
     "MODEL_AGE_OUT_OF_RANGE", "MODEL_POPULATION_OUT_OF_SCOPE", "CONSENT_REQUIRED",
@@ -372,8 +373,6 @@ function showEligibilityGuidance(reasonCodes) {
   state.modelOutOfRange = reason === "MODEL_AGE_OUT_OF_RANGE";
   state.currentHealthOnly = reason === "MODEL_AGE_OUT_OF_RANGE";
   $("#eligibility-guidance").dataset.code = guidance.code;
-  $("#eligibility-guidance-code").textContent = "";
-  $("#eligibility-guidance-code").hidden = true;
   $("#eligibility-guidance-title").textContent = guidance.title;
   $("#eligibility-guidance-message").textContent = guidance.message;
   $("#eligibility-guidance-reason-title").textContent = guidance.reasonTitle;
@@ -382,9 +381,11 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance-primary").textContent = guidance.primaryLabel;
   const isUrgent = reason === "URGENT_MEDICAL_ATTENTION";
   const isSameDay = reason === "SAME_DAY_MEDICAL_ATTENTION";
+  const isDiagnosed = reason === "DIAGNOSED_DIABETES";
   $("#urgent-guidance-actions").hidden = !isUrgent;
   $("#same-day-guidance-actions").hidden = !isSameDay;
-  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay;
+  $("#diagnosed-guidance-actions").hidden = !isDiagnosed;
+  $("#eligibility-guidance-primary").hidden = isUrgent || isSameDay || isDiagnosed;
   const secondary = $("#eligibility-guidance-secondary");
   if (secondary) {
     secondary.textContent = guidance.secondaryLabel || "";
@@ -5201,6 +5202,8 @@ $("#find-same-day-medical")?.addEventListener("click", () => {
 $("#find-phone-consultation")?.addEventListener("click", () => {
   showMessage("전화 상담 가능 기관 정보 연결을 준비하고 있습니다.", "success");
 });
+$("#find-diagnosed-medical")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
+$("#find-diagnosed-phone")?.addEventListener("click", () => openEligibilityMedicalFacilities({ returnToEligibility: true }));
 $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;

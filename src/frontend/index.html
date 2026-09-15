@@ -280,40 +280,62 @@
           </section>
         </div>
         <div id="eligibility-guidance" class="branch-result" role="dialog" aria-modal="true" aria-labelledby="eligibility-guidance-title" tabindex="-1" hidden>
-          <p class="eyebrow" id="eligibility-guidance-code"></p>
           <h3 id="eligibility-guidance-title"></h3>
-          <p id="eligibility-guidance-message"></p>
-          <div class="branch-result-grid">
-            <article>
-              <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
-              <p id="eligibility-guidance-reason"></p>
+          <p class="eligibility-guidance-message" id="eligibility-guidance-message"></p>
+          <div class="eligibility-guidance-sections">
+            <article class="eligibility-guidance-section">
+              <span class="eligibility-guidance-label">사유</span>
+              <div class="eligibility-guidance-copy">
+                <strong id="eligibility-guidance-reason-title">확인한 내용</strong>
+                <p id="eligibility-guidance-reason"></p>
+              </div>
             </article>
-            <article>
-              <strong>다음 행동</strong>
-              <p id="eligibility-guidance-action"></p>
+            <article class="eligibility-guidance-section eligibility-guidance-action">
+              <span class="eligibility-guidance-label">행동 안내</span>
+              <div class="eligibility-guidance-copy">
+                <p id="eligibility-guidance-action"></p>
+              </div>
             </article>
           </div>
-          <p class="branch-safety">[간당간당]은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
-          <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
-            <a class="primary" href="tel:119">119에 전화하기</a>
-            <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
-            <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요. 주변 응급실 보기는 가까운 의료기관 찾기 안내와 함께 확인합니다.</p>
-            <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내">
-              <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
-                <strong>위급하면 검색을 기다리지 마세요</strong>
-                <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
-              </div>
+          <div class="eligibility-guidance-buttons">
+            <div id="urgent-guidance-actions" class="emergency-guidance-actions" hidden>
+              <a class="primary" href="tel:119">119에 전화하기</a>
+              <button class="secondary" id="confirm-current-location" type="button">현재 위치 확인하기</button>
+              <button class="secondary" id="find-nearby-emergency" type="button">주변 응급실 보기</button>
+              <p class="emergency-do-not-feed">의식이 없거나 삼키기 어려운 사람에게 음식이나 음료를 억지로 먹이지 마세요.</p>
+            </div>
+            <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
+              <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+            </div>
+            <div id="diagnosed-guidance-actions" class="emergency-guidance-actions" hidden>
+              <button class="primary" id="find-diagnosed-medical" type="button">가까운 의료기관 찾기</button>
+              <button class="secondary" id="find-diagnosed-phone" type="button">전화 문의 가능한 기관 보기</button>
+            </div>
+            <div class="actions eligibility-guidance-primary-actions">
+              <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
+              <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
             </div>
           </div>
-          <div id="same-day-guidance-actions" class="emergency-guidance-actions" hidden>
-            <button class="primary" id="find-same-day-medical" type="button">가까운 의료기관 찾기</button>
-            <button class="secondary" id="find-phone-consultation" type="button">전화 상담 가능한 기관 보기</button>
-            <a class="secondary danger-link" href="tel:119">증상이 심해졌어요 — 119</a>
+          <p class="branch-safety">간당간당은 당뇨병을 진단하거나 치료·처방하지 않습니다. 의료진의 안내를 우선해 주세요.</p>
+          <div class="actions eligibility-guidance-close-actions">
+            <button class="secondary" id="eligibility-edit-answer" type="button">닫기</button>
           </div>
-          <div class="actions">
-            <button class="secondary" id="eligibility-edit-answer" type="button">답변 다시 확인하기</button>
-            <button class="secondary" id="eligibility-guidance-secondary" type="button" hidden>건강정보 입력 없이 챌린지 보기</button>
-            <button class="primary" id="eligibility-guidance-primary" type="button">안내 확인하기</button>
+          <div id="emergency-facility-search" class="medical-facility-list emergency-facility-search" aria-label="가까운 응급의료기관 안내" hidden>
+            <div class="medical-facility-status" id="emergency-facility-status" role="status" aria-live="polite" data-state="idle">
+              <strong>위급하면 검색을 기다리지 마세요</strong>
+              <p>즉시 119에 연락하고, 주변 응급실 정보는 이동을 돕는 참고 정보로 확인해 주세요.</p>
+            </div>
+            <form id="emergency-facility-address-form" class="facility-address-form" hidden>
+              <label for="emergency-facility-address">현재 위치를 찾지 못하면 주소로 검색할 수 있어요</label>
+              <div>
+                <input id="emergency-facility-address" type="text" placeholder="예: 서울시 중구 세종대로 110" autocomplete="off">
+                <button class="secondary" type="submit">주소로 찾기</button>
+              </div>
+            </form>
+            <div class="medical-facility-meta" id="emergency-facility-meta" hidden></div>
+            <div class="medical-facility-results" id="emergency-facility-results" hidden></div>
           </div>
         </div>
       </section>
