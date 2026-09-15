@@ -41,7 +41,7 @@ class ResearchModelContractError(RuntimeError):
 
 def validated_input(payload: dict, as_of_date: date):
     user_input = parse_diabetes_risk_input(payload)
-    if user_input.education_level not in (None, "code_1", "code_2", "code_3", "code_4"):
+    if user_input.education_level not in (None, "code_1", "code_2", "code_3", "code_4", "code_97"):
         raise ValueError("education_level must be code_1 to code_4 or null")
     frame = build_standard_model_frame(user_input, as_of_date=as_of_date)
     return user_input, frame
@@ -57,7 +57,11 @@ def reduced_screening_frame(payload: dict, *, as_of_date: date, include_waist: b
         "waist_cm": np.nan if user_input.waist_cm is None else float(user_input.waist_cm),
         "sex": 1 if user_input.sex == "male" else 2,
         "current_smoker": int(user_input.smoking_status == "current"),
-        "education": np.nan if user_input.education_level is None else int(user_input.education_level[-1]),
+        # code_97 means unknown/non-response in the shared API.  It is missing,
+        # never an additional education category for the KNHANES model.
+        "education": (
+            np.nan if user_input.education_level in {None, "code_97"} else int(user_input.education_level[-1])
+        ),
     }
     if user_input.waist_cm is not None and not 45 <= float(user_input.waist_cm) <= 160:
         raise ValueError("waist_cm must be between 45 and 160")

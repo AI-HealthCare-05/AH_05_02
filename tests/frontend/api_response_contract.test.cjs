@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../../src/frontend/app.js'), 'utf8');
 function harness(status, body, offline = false) {
-  const context = vm.createContext({ state: {}, fetch: async () => {
+  const context = vm.createContext({ state: {}, FormData: class FormData {}, fetch: async () => {
     if (offline) throw new Error('QA offline');
     return { ok: status < 400, status, json: async () => body };
   } });
@@ -31,7 +31,7 @@ test('legacy string error, validation array, network error remain actionable', a
 });
 test('signal mapping is Korean and unknown signals stay pending', () => {
   const c = harness(200, {});
-  for (const [key, label] of [['low', '낮음'], ['caution', '주의'], ['high', '높음']]) {
+  for (const [key, label] of [['low', '낮음'], ['moderate', '주의'], ['caution', '주의'], ['high', '높음']]) {
     assert.equal(c.forecastSignalLabel(c.normalizeForecastSignal(key)), label);
   }
   assert.equal(c.normalizeForecastSignal('unknown'), null);

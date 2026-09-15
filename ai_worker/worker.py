@@ -12,7 +12,7 @@ from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from ai_worker.core import config, logger
 from ai_worker.db import ensure_schema, persist_prediction, persist_risk_curve, update_job
-from ai_worker.handlers import run_task_with_timeout
+from ai_worker.handlers import preload_configured_models, run_task_with_timeout
 from app.prediction.errors import classify_ml_input_error
 from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
 
@@ -254,6 +254,7 @@ class StreamWorker:
         await self.redis.ping()
         if prepare_schema:
             await ensure_schema()
+        await preload_configured_models()
         await self.ensure_group()
         await self.reclaim_pending()
         Path("/tmp/ai-worker-ready").touch()

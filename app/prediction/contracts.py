@@ -55,10 +55,16 @@ class ActiveModel(BaseModel):
     outcome_definition: str = "next_observation_new_diabetes_diagnosis"
     observation_horizon: str = "approximately_2_years_next_klosa_wave"
     promotion_status: str = "development_only"
+    operational_model_activated: bool = False
 
     @property
     def threshold_is_approved(self) -> bool:
-        return self.threshold_version not in {"", "unapproved"} and self.promotion_status == "approved"
+        return (
+            self.threshold_version not in {"", "unapproved"}
+            and self.promotion_status == "approved"
+            and self.operational_model_activated
+            and self.model_artifact_digest is not None
+        )
 
 
 # v3.0 연령별 당뇨 위험 전망(생존곡선). diabetes_incidence와 달리 아직 승인된
@@ -83,6 +89,7 @@ ACTIVE_MODEL = ActiveModel(
     max_age=config.PREDICTION_MODEL_MAX_AGE,
     model_population=config.PREDICTION_MODEL_POPULATION,
     promotion_status=config.PREDICTION_PROMOTION_STATUS,
+    operational_model_activated=config.PREDICTION_OPERATIONAL_MODEL_ACTIVATED,
 )
 
 CURRENT_SCREENING_MODEL = ActiveModel(
@@ -101,7 +108,8 @@ CURRENT_SCREENING_MODEL = ActiveModel(
     model_population="undiagnosed_knhanes_adults_age_19_plus",
     outcome_definition="current_diabetes_related_signal_screening",
     observation_horizon="current_cross_sectional_screening",
-    promotion_status="development_only",
+    promotion_status=config.CURRENT_SCREENING_PROMOTION_STATUS,
+    operational_model_activated=config.CURRENT_SCREENING_OPERATIONAL_MODEL_ACTIVATED,
 )
 
 
@@ -142,11 +150,15 @@ class PredictionFeatures(BaseModel):
 
 def input_schema_document() -> dict[str, Any]:
     return {
+        "schema_version": "health-checkup-model-input-v5.6",
         "model_key": ACTIVE_MODEL.model_key,
         "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
+        "public_risk_categories": ["low", "moderate", "high"],
+        "public_risk_category_labels": {"low": "낮음", "moderate": "주의", "high": "높음"},
         "fields": [
             {"name": "height_cm", "type": "number", "unit": "cm", "required": True, "min": 120, "max": 220},
             {"name": "weight_kg", "type": "number", "unit": "kg", "required": True, "min": 25, "max": 250},
+            {"name": "waist_cm", "type": "number|null", "unit": "cm", "required": False, "min": 45, "max": 160},
             {
                 "name": "self_rated_health",
                 "type": "enum",
@@ -159,8 +171,76 @@ def input_schema_document() -> dict[str, Any]:
             {"name": "regular_exercise", "type": "boolean", "required": True},
             {"name": "exercise_days_per_week", "type": "number", "required": True, "min": 0, "max": 7},
             {"name": "exercise_minutes", "type": "number", "required": True, "min": 0, "max": 720},
+            {
+                "name": "annual_household_income_10k_krw",
+                "type": "number|null",
+                "unit": "10,000 KRW/year",
+                "required": False,
+                "min": 0,
+                "max": 123500,
+            },
+            {"name": "health_satisfaction_score", "type": "number|null", "required": False, "min": 0, "max": 100},
+            {"name": "economic_satisfaction_score", "type": "number|null", "required": False, "min": 0, "max": 100},
+            {"name": "overall_quality_of_life_score", "type": "number|null", "required": False, "min": 0, "max": 100},
+            {
+                "name": "education_level",
+                "type": "enum|null",
+                "required": False,
+                "values": ["code_1", "code_2", "code_3", "code_4", "code_97"],
+            },
+            {
+                "name": "marital_status",
+                "type": "enum|null",
+                "required": False,
+                "values": ["code_1", "code_2", "code_3", "code_4", "code_5"],
+            },
+            {
+                "name": "household_structure",
+                "type": "enum|null",
+                "required": False,
+                "values": ["single_person", "multi_person"],
+            },
+            {
+                "name": "depressed_feeling_last_week",
+                "type": "enum|null",
+                "required": False,
+                "values": ["code_1", "code_2", "code_3", "code_4"],
+            },
+            {
+                "name": "sleep_difficulty_last_week",
+                "type": "enum|null",
+                "required": False,
+                "values": ["code_1", "code_2", "code_3", "code_4"],
+            },
         ],
         "derived_fields": ["age", "bmi", "sex"],
+        "optional_boolean_diagnosis_fields": [
+            "hypertension_diagnosis",
+            "cancer_diagnosis",
+            "chronic_lung_disease_diagnosis",
+            "liver_disease_diagnosis",
+            "heart_disease_diagnosis",
+            "cerebrovascular_disease_diagnosis",
+            "psychiatric_disease_diagnosis",
+            "arthritis_rheumatism_diagnosis",
+        ],
+        "model_contracts": {
+            "diabetes_current_screening": {
+                "candidate_version": "knhanes-shared8-waist-sk180-research-v1",
+                "features": ["age", "height_cm", "weight_kg", "bmi", "waist_cm", "sex", "current_smoker", "education"],
+                "waist_missing_policy": "train_fitted_estimator",
+                "code_97_policy": "missing",
+                "operational_model_activated": CURRENT_SCREENING_MODEL.operational_model_activated,
+            },
+            "diabetes_incidence": {
+                "candidate_version": ACTIVE_MODEL.version,
+                "features": list(STANDARD_MODEL_FEATURES),
+                "optional_numeric_missing_policy": "train_median_with_missing_indicator",
+                "optional_categorical_missing_policy": "train_mode",
+                "unknown_diagnosis_policy": "missing_not_false",
+                "operational_model_activated": ACTIVE_MODEL.operational_model_activated,
+            },
+        },
         "excluded_leakage_fields": [
             "diabetes_diagnosis_at_followup",
             "glucose_lowering_medication_at_followup",

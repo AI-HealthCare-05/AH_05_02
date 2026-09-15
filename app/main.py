@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
@@ -125,22 +125,45 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/api/v1/ready", tags=["Health"])
-async def ready() -> dict[str, object]:
+async def ready(response: Response) -> dict[str, object]:
     if not config.DEMO_MODE:
         await redis_client.ping()
     await connections.get("default").execute_query("SELECT 1")
-    from app.prediction.contracts import ACTIVE_MODEL
+    from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL
+
+    future_artifact_available = config.PREDICTION_PROVIDER != "artifact" or Path(config.MODEL_URI).is_file()
+    current_artifact_path = (
+        config.ML_SHARED8_MODEL_URI
+        if config.CURRENT_SCREENING_RUNTIME == "shared8-waist"
+        else config.CURRENT_SCREENING_MODEL_URI
+    )
+    current_artifact_available = bool(current_artifact_path) and Path(current_artifact_path).is_file()
+    operational_ready = (not ACTIVE_MODEL.operational_model_activated or future_artifact_available) and (
+        not CURRENT_SCREENING_MODEL.operational_model_activated or current_artifact_available
+    )
+    if not operational_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return {
-        "status": "ready",
+        "status": "ready" if operational_ready else "not_ready",
         "dependencies": {
             "database": "ready",
             "redis": "embedded-demo" if config.DEMO_MODE else "ready",
-            "prediction_provider": "configured",
+            "prediction_provider": config.PREDICTION_PROVIDER,
+            "future_artifact_path_available": future_artifact_available,
+            "current_artifact_path_available": current_artifact_available,
+            "worker_preload_required_for_release": True,
         },
         "active_model": {
             "model_key": ACTIVE_MODEL.model_key,
             "version": ACTIVE_MODEL.version,
             "promotion_status": ACTIVE_MODEL.promotion_status,
+        },
+        "current_screening_model": {
+            "model_key": CURRENT_SCREENING_MODEL.model_key,
+            "version": CURRENT_SCREENING_MODEL.version,
+            "runtime": config.CURRENT_SCREENING_RUNTIME,
+            "promotion_status": CURRENT_SCREENING_MODEL.promotion_status,
+            "operational_model_activated": CURRENT_SCREENING_MODEL.operational_model_activated,
         },
     }

@@ -2701,6 +2701,7 @@ async function pollPrediction(jobId) {
 
 function normalizeForecastSignal(value) {
   const normalized = String(value || "").toLowerCase();
+  if (normalized === "moderate") return "caution";
   return ["low", "caution", "high"].includes(normalized) ? normalized : null;
 }
 
