@@ -5184,6 +5184,13 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   margin:0!important;
 }
 
-.auth-entry-instant .screen.active{
+.auth-entry-instant .screen.active,
+.auth-entry-instant .signup-house-stage,
+.auth-entry-instant .signup-house-board,
+.auth-entry-instant #signup-form,
+.auth-entry-instant #login-form,
+.auth-entry-instant .signup-house-heading,
+.auth-entry-instant .signup-house-visual{
   animation:none!important;
+  transition:none!important;
 }

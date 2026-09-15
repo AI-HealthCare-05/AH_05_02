@@ -709,6 +709,11 @@ function showAuthEntry(mode, options = {}) {
   window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
 }
 
+function suppressAuthTransitionOnce() {
+  document.documentElement.classList.add("auth-entry-instant");
+  window.requestAnimationFrame(() => document.documentElement.classList.remove("auth-entry-instant"));
+}
+
 async function goStepFromNav(step) {
   if (step === 2) {
     showStep(2);
@@ -880,6 +885,7 @@ function unlockReturningUserRoutes() {
 }
 
 function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
+  suppressAuthTransitionOnce();
   if (mode === "signup" && state.accountRecovery && state.token === state.accountRecovery.token) {
     showAccountRecovery(state.accountRecovery, "이미 가입한 계정의 남은 설정을 완료해 주세요.");
     return;
