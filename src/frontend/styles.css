@@ -1176,7 +1176,7 @@ body.modal-open{overflow:hidden}
 .screen[data-step="8"]:has(#workspace-panel-challenge.active) .dashboard-hero,
 .screen[data-step="8"]:has(#workspace-panel-challenge.active) .workspace-nav,
 .screen[data-step="8"]:has(#workspace-panel-challenge.active) #workspace-panel-challenge{
-  width:min(1080px,100%);
+  width:min(980px,100%);
   margin-left:auto;
   margin-right:auto;
 }
@@ -1590,7 +1590,7 @@ body.modal-open{overflow:hidden}
 .result-next-actions .back{justify-self:start}
 .result-next-actions .primary{grid-column:2;width:100%;min-height:74px;border-radius:18px;font-size:25px;box-shadow:0 14px 28px rgba(23,107,91,.18)}
 .challenge-start-actions{justify-content:center;margin-top:14px;width:100%}
-.challenge-start-actions .primary{width:min(1440px,100%);min-height:74px;border-radius:18px;font-size:25px;box-shadow:0 14px 28px rgba(23,107,91,.18)}
+.challenge-start-actions .primary{width:min(980px,100%);min-height:74px;border-radius:18px;font-size:25px;box-shadow:0 14px 28px rgba(23,107,91,.18)}
 .walking-level-picker{border:2px solid var(--green);border-radius:18px;background:#f7fbf9;padding:24px;margin:28px 0}
 .walking-level-picker legend{padding:0 10px;font-size:26px;color:var(--green-dark)}
 .walking-level-picker>p{margin:0 0 20px;color:var(--muted)}
@@ -1643,15 +1643,22 @@ body.modal-open{overflow:hidden}
 .simple-record-emoji svg{display:block;width:62px;height:62px}
 .simple-record-emoji svg{display:block;width:62px;height:62px}
 .simple-record-water{display:none;position:absolute;inset:14px 30px 18px;border:4px solid var(--green);border-top-width:2px;border-radius:12px 12px 28px 28px;overflow:hidden;background:#fff}
-.simple-record-water i{position:absolute;left:0;right:0;bottom:0;height:18%;background:#8bd1e8;transition:height .45s ease}
+.simple-record-water i{position:absolute;left:0;right:0;bottom:0;height:var(--water-level,18%);background:#8bd1e8;transition:height .45s ease}
 .simple-record-water i::before{content:"";position:absolute;top:-8px;left:-10%;width:120%;height:16px;border-radius:50%;background:#a8dfef}
 .simple-record-done{position:absolute;z-index:3;right:8px;bottom:8px;display:grid;place-items:center;min-width:48px;height:30px;padding:0 8px;border-radius:999px;background:var(--green);color:#fff;font-size:14px;font-weight:900;opacity:0;transform:scale(.75);transition:opacity .25s ease,transform .25s ease}
 .simple-record-visual[data-kind="water"] .simple-record-emoji{display:none}
 .simple-record-visual[data-kind="water"] .simple-record-water{display:block}
 .simple-record-visual.completed{border-color:#86bea8;background:#eef8f3}
 .simple-record-visual.completed .simple-record-emoji{transform:translateY(-4px) scale(1.12)}
-.simple-record-visual.completed .simple-record-water i{height:88%}
+.simple-record-visual.completed .simple-record-water i{height:var(--water-level,88%)}
 .simple-record-visual.completed .simple-record-done{opacity:1;transform:scale(1)}
+.water-serving-control{display:grid;gap:14px;margin:0 auto 22px;padding:18px;border:2px solid #b7d6d5;border-radius:18px;background:#f2fbfd;color:var(--ink);text-align:center}
+.water-serving-control[hidden]{display:none!important}
+.water-serving-control label{font-weight:900}
+.water-serving-stepper{display:grid;grid-template-columns:56px minmax(90px,1fr) 56px;align-items:center;gap:10px}
+.water-serving-stepper button{display:grid;place-items:center;width:56px;height:56px;border:2px solid #0b6b74;border-radius:16px;background:#fff;color:#0b5d65;font-size:30px;font-weight:950;cursor:pointer}
+.water-serving-stepper output{min-height:56px;display:grid;place-items:center;border:2px solid #9bcfd3;border-radius:16px;background:#fff;color:#0b4d42;font-size:26px;font-weight:950}
+.water-serving-control input[type="range"]{width:100%;accent-color:#0b6b74}
 .record-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
 .record-modal-actions button,.record-modal-card>section>button{width:100%;min-height:58px}
 .photo-upload-box{display:grid;place-items:center;gap:8px;width:100%;min-height:178px;margin:18px 0 14px;border:2px dashed #b9c5c1;border-radius:18px;background:var(--soft);color:var(--muted);cursor:pointer}
@@ -3660,7 +3667,7 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .home-feature-card:focus-visible,.header-my-page>summary:focus-visible{outline:3px solid var(--green);outline-offset:4px}
 @media(max-width:1000px){.home-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.header-utilities{gap:6px}.header-my-page>summary,.header-utilities #font-toggle{font-size:14px;padding:8px}.home-feature-grid{grid-template-columns:1fr;gap:12px}.home-feature-card{min-height:150px;padding:20px}.home-feature-card strong{font-size:24px}.home-feature-card img{width:96px;height:106px}}
-.challenge-start-reason{max-width:min(1440px,100%);margin:28px auto 0;text-align:center;color:#6b4d13;font-size:17px;font-weight:800;white-space:pre-line}
+.challenge-start-reason{max-width:min(980px,100%);margin:28px auto 0;text-align:center;color:#6b4d13;font-size:17px;font-weight:800;white-space:pre-line}
 .challenge-start-reason[data-state="ready"]{color:var(--green-dark)}
 .challenge-start-actions .primary:disabled{background:#aebbb7;border-color:#aebbb7;box-shadow:none;cursor:not-allowed}
 @media(max-width:860px){
@@ -5040,6 +5047,18 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 .health-room-board #lifestyle-input-panel #alcohol-frequency-row select{
   align-self:end;
 }
+.health-room-board #lifestyle-input-panel .health-combined-lifestyle{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+.health-room-board #lifestyle-input-panel .health-combined-lifestyle>*{
+  min-width:0;
+}
+.health-room-board #lifestyle-input-panel .smoking-status-card{order:1}
+.health-room-board #lifestyle-input-panel .lifestyle-drinking-card{order:2}
+.health-room-board #lifestyle-input-panel #alcohol-frequency-row{order:3}
+.health-room-board #lifestyle-input-panel .form-row:has(#health-satisfaction-score){order:4}
+.health-room-board #lifestyle-input-panel .form-row:has(#economic-satisfaction-score){order:5}
+.health-room-board #lifestyle-input-panel .form-row:has(#overall-quality-of-life-score){order:6}
 .health-room-board .lifestyle-drinking-card{
   grid-column:auto;
   display:grid;
@@ -5268,6 +5287,9 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .health-room-board .lifestyle-activity-card,
   .health-room-board .activity-detail-grid,
   .health-room-board .review-submit-actions{grid-template-columns:1fr}
+  .health-room-board #lifestyle-input-panel .health-combined-lifestyle{
+    grid-template-columns:1fr!important;
+  }
   .health-room-board .health-input-carousel{
     grid-template-columns:1fr;
     padding:8px;
@@ -5311,16 +5333,10 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   .signup-house-board #login-form .actions button{width:100%;min-height:84px;font-size:clamp(24px,1.2vw,34px)}
 }
 
-/* Main workspaces share the registration board's desktop size ceiling.
-   Home stays denser so its key actions fit at 100% browser zoom. */
+/* Main workspaces share the registration board's desktop size ceiling. */
 @media(min-width:1000px){
   .screen[data-step="8"] :is(.dashboard-hero,.workspace-nav,
-    #workspace-panel-challenge,#workspace-panel-report,#workspace-panel-together,#workspace-panel-tools){
-    width:min(1360px,100%) !important;
-    max-width:1360px;
-    margin-inline:auto;
-  }
-  .screen[data-step="8"]:has(#workspace-panel-home.active) :is(.dashboard-hero,.workspace-nav,#workspace-panel-home){
+    #workspace-panel-home,#workspace-panel-challenge,#workspace-panel-report,#workspace-panel-together,#workspace-panel-tools){
     width:min(980px,100%) !important;
     max-width:980px;
     margin-inline:auto;
@@ -5434,6 +5450,9 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 }
 #detail-health-panel .detail-health-grid{
   grid-template-columns:repeat(4,minmax(0,1fr));
+}
+#health-socioeconomic-panel .detail-health-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
 }
 @media(max-width:860px){
   #detail-health-panel .detail-health-grid,

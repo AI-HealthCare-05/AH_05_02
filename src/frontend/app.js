@@ -1,4 +1,4 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, healthConsent: null, healthConsentStatus: "unknown", checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, wearablePreviewItems: [], ocrExtractedFields: {}, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, healthConsent: null, healthConsentStatus: "unknown", checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), waterServingsByChallenge: {}, recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, wearablePreviewItems: [], ocrExtractedFields: {}, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -588,6 +588,31 @@ function simpleRecordPresentation(item = {}) {
     description: "사진 없이 오늘의 실천 여부만 바로 기록해요.", action: "네, 했어요",
   };
 }
+function isHydrationRecord(item = {}) {
+  const title = item.title || "";
+  return item.domain === "hydration" || title.includes("마시") || title.includes("물");
+}
+function clampWaterServings(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 1;
+  return Math.min(8, Math.max(1, Math.round(number)));
+}
+function waterLevelForServings(value) {
+  return `${Math.round(18 + ((clampWaterServings(value) - 1) / 7) * 70)}%`;
+}
+function currentWaterServings() {
+  return clampWaterServings($("#water-serving-count")?.value || state.recordTarget?.value || 1);
+}
+function syncWaterServingControl(value = currentWaterServings()) {
+  const count = clampWaterServings(value);
+  const input = $("#water-serving-count");
+  const output = $("#water-serving-output");
+  const visual = $("#record-simple-visual");
+  if (input) input.value = String(count);
+  if (output) output.textContent = `${count}잔`;
+  if (visual) visual.style.setProperty("--water-level", waterLevelForServings(count));
+  if (state.recordTarget?.item && isHydrationRecord(state.recordTarget.item)) state.recordTarget.value = count;
+}
 function habitRecordIcon(kind = "generic") {
   const common = `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
   if (kind === "walking") return `<svg ${common}><path d="M13 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9.5 21l1.2-6.5-2.8-2.2-2.4 3.2M10.7 14.5l3.3 2.3 2 4.2M8 8.5l3.2-1.7 2.3 3.2 3.5 1"/></svg>`;
@@ -1174,7 +1199,6 @@ function hydrateSavedHealthForm() {
   const fields = {
     height: "height_cm", weight: "weight_kg", waist: "waist_cm",
     systolic: "systolic_bp", diastolic: "diastolic_bp",
-    "self-health": "self_rated_health", "meal-count": "meal_count_yesterday",
     "exercise-days": "exercise_days_per_week", "exercise-minutes": "exercise_minutes",
   };
   Object.entries(fields).forEach(([id, key]) => {
@@ -1457,13 +1481,14 @@ function selectLabel(id) {
 }
 
 function alcoholFrequencyValue() {
-  if (selectedRadioValue("current-drinker") === "false") return "none";
-  return nullableSelectValue("alcohol-frequency");
+  const value = $("#alcohol-frequency")?.value;
+  if (value === "" || value == null) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function detailHealthPayload() {
   return {
-    walking_days: nullableNumber("walking-days"),
     annual_household_income_10k_krw: nullableNumber("annual-household-income"),
     health_satisfaction_score: nullableNumber("health-satisfaction-score"),
     economic_satisfaction_score: nullableNumber("economic-satisfaction-score"),
@@ -1482,6 +1507,9 @@ function detailHealthPayload() {
     cerebrovascular_disease_diagnosis: nullableBooleanSelect("cerebrovascular-disease-diagnosis"),
     psychiatric_disease_diagnosis: nullableBooleanSelect("psychiatric-disease-diagnosis"),
     arthritis_rheumatism_diagnosis: nullableBooleanSelect("arthritis-rheumatism-diagnosis"),
+    region: nullableNumber("region"),
+    diabetes_family_history: nullableBooleanSelect("diabetes-family-history"),
+    hypertension_family_history: nullableBooleanSelect("hypertension-family-history"),
     alcohol_frequency: alcoholFrequencyValue(),
   };
 }
@@ -1490,22 +1518,25 @@ function detailHealthReviewRows() {
   const details = detailHealthPayload();
   return [
     ["고혈압", selectLabel("hypertension-diagnosis")],
+    ["심장질환", selectLabel("heart-disease-diagnosis")],
+    ["관절염·류머티즘", selectLabel("arthritis-rheumatism-diagnosis")],
     ["암", selectLabel("cancer-diagnosis")],
     ["만성 폐질환", selectLabel("chronic-lung-disease-diagnosis")],
     ["간질환", selectLabel("liver-disease-diagnosis")],
-    ["심장질환", selectLabel("heart-disease-diagnosis")],
     ["뇌혈관질환", selectLabel("cerebrovascular-disease-diagnosis")],
     ["정신과 질환", selectLabel("psychiatric-disease-diagnosis")],
-    ["관절염·류머티즘", selectLabel("arthritis-rheumatism-diagnosis")],
+    ["당뇨 가족력", selectLabel("diabetes-family-history")],
+    ["고혈압 가족력", selectLabel("hypertension-family-history")],
+    ["최종 학력", selectLabel("education-level")],
+    ["혼인 상태", selectLabel("marital-status")],
+    ["지난주 우울감", selectLabel("depressed-feeling-last-week")],
+    ["지난주 수면곤란", selectLabel("sleep-difficulty-last-week")],
     ["건강 만족도", details.health_satisfaction_score == null ? "모름" : `${details.health_satisfaction_score}점`],
     ["경제 만족도", details.economic_satisfaction_score == null ? "모름" : `${details.economic_satisfaction_score}점`],
     ["삶의 질", details.overall_quality_of_life_score == null ? "모름" : `${details.overall_quality_of_life_score}점`],
     ["연간 가구소득", details.annual_household_income_10k_krw == null ? "모름" : `${details.annual_household_income_10k_krw}만원/년`],
-    ["최종 학력", selectLabel("education-level")],
-    ["혼인 상태", selectLabel("marital-status")],
     ["가구 형태", selectLabel("household-structure")],
-    ["지난주 우울감", selectLabel("depressed-feeling-last-week")],
-    ["지난주 수면곤란", selectLabel("sleep-difficulty-last-week")],
+    ["거주 지역", selectLabel("region")],
   ];
 }
 
@@ -1563,15 +1594,12 @@ function syncExerciseDetails() {
 }
 
 function syncAlcoholFrequencyDetails() {
-  const drinks = selectedRadioValue("current-drinker") === "true";
   const row = $("#alcohol-frequency-row");
   const select = $("#alcohol-frequency");
   if (!row || !select) return;
   row.hidden = false;
-  select.disabled = !drinks;
-  row.classList.toggle("disabled", !drinks);
-  if (!drinks) select.value = "none";
-  else if (select.value === "none") select.value = "";
+  row.classList.remove("disabled");
+  select.disabled = false;
 }
 
 function currentAgeLabel() {
@@ -1727,7 +1755,6 @@ function renderHealthReview() {
     ["응급상황 사전 문진", emergencyScreeningSummary()],
   ]);
   $("#review-health").innerHTML = dlRows([
-    ["공복혈당", $("#fasting-glucose").value ? `${$("#fasting-glucose").value} mg/dL` : "입력 안 함"],
     ["수축기 혈압", $("#systolic").value ? `${$("#systolic").value} mmHg` : "입력 안 함"],
     ["이완기 혈압", $("#diastolic").value ? `${$("#diastolic").value} mmHg` : "입력 안 함"],
     ["키", `${$("#height").value} cm`],
@@ -1737,12 +1764,10 @@ function renderHealthReview() {
   $("#review-lifestyle").innerHTML = dlRows([
     ["흡연 상태", smokingStatusLabel(selectedRadioValue("smoking-status"))],
     ["현재 음주", boolLabel(selectedRadioValue("current-drinker"))],
-    ["음주 빈도", selectedRadioValue("current-drinker") === "false" ? "최근 1년간 마시지 않음" : selectLabel("alcohol-frequency")],
+    ["최근 1년 음주 빈도", selectLabel("alcohol-frequency")],
     ["규칙적인 운동", boolLabel(selectedRadioValue("regular-exercise"))],
-    ["최근 1주 걷기 일수", detailHealth.walking_days == null ? "모름" : `${detailHealth.walking_days}일`],
     ["주당 운동 일수", `${isRegularExercise ? $("#exercise-days").value : 0}일`],
     ["한 번 운동할 때 시간", `${isRegularExercise ? $("#exercise-minutes").value : 0}분`],
-    ["어제 식사 횟수", `${$("#meal-count").value}회`],
   ]);
   $("#review-detail-health").innerHTML = dlRows(detailHealthReviewRows());
 }
@@ -2576,17 +2601,12 @@ function setForecastRiskPreview(risk) {
 }
 
 function updateLifestyleSummary() {
-  const mealCount = $("#meal-count").value;
   const smokingStatus = selectedRadioValue("smoking-status");
   const drinker = boolLabel(selectedRadioValue("current-drinker"));
   const exercise = boolLabel(selectedRadioValue("regular-exercise"));
   if (!$("#summary-meals")) return;
-  $("#summary-meals").textContent = mealCount
-    ? `어제 식사 횟수는 ${mealCount}회로 기록했어요.`
-    : "식사 횟수는 하루 리듬을 확인하는 참고 정보예요.";
-  $("#summary-meals-action").textContent = mealCount
-    ? "규칙적인 식사 리듬을 챌린지로 이어갈 수 있어요."
-    : "다음 입력 때 식사 리듬을 함께 점검해요.";
+  $("#summary-meals").textContent = `최근 1년 음주 빈도는 ${selectLabel("alcohol-frequency")}로 기록했어요.`;
+  $("#summary-meals-action").textContent = "음주 습관은 오늘이 현재 신호 확인에 필요한 정보예요.";
   $("#summary-activity").textContent = exercise === "예"
     ? "규칙적인 운동을 하고 있다고 기록했어요."
     : "규칙적인 운동을 하지 않는다고 기록했어요.";
@@ -3859,7 +3879,6 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
         <div><dt>BMI</dt><dd>${escapeHtml(healthHistoryValue(item.bmi))}</dd></div>
         <div><dt>허리둘레</dt><dd>${escapeHtml(healthHistoryValue(item.waist_cm, " cm"))}</dd></div>
         <div><dt>혈압</dt><dd>${escapeHtml(bloodPressure)}</dd></div>
-        <div><dt>전날 식사</dt><dd>${escapeHtml(healthHistoryValue(item.meal_count_yesterday, "회"))}</dd></div>
         <div><dt>규칙적 운동</dt><dd>${escapeHtml(healthHistoryBoolean(item.regular_exercise))}</dd></div>
         <div><dt>현재 흡연</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_smoker))}</dd></div>
         <div><dt>현재 음주</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_drinker))}</dd></div>
@@ -3903,8 +3922,6 @@ function localHealthCheckupSnapshot() {
     waist_cm: $("#waist").value ? Number($("#waist").value) : null,
     systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
     diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
-    self_rated_health: $("#self-health").value,
-    meal_count_yesterday: Number($("#meal-count").value),
     regular_exercise: selectedRadioValue("regular-exercise") === "true",
     current_smoker: smokingStatus === "current",
     current_drinker: selectedRadioValue("current-drinker") === "true",
@@ -3986,20 +4003,25 @@ async function maybeOpenDailyReward() {
   }
 }
 
-async function completeDailyRecord(target, source = "self_report") {
+async function completeDailyRecord(target, source = "self_report", value = 1) {
   if (!target?.id || target.completed || state.dailyCompleted.has(String(target.id))) return;
   const token = state.token;
   const cycle = state.cycle;
   if (target.item?.catalog_version === "evidence-v3" && target.item.verification_type !== 3) throw new Error("사진 제출 절차로 완료해 주세요.");
   const today = challengeDay();
+  const recordValue = isHydrationRecord(target.item) ? clampWaterServings(value) : 1;
   if (!isLocalPreview()) {
     await api(`/user-challenges/${target.id}/logs/${today}`, {
       method: "PUT",
-      body: JSON.stringify({ is_completed: true, source, note: null, ...(target.item?.catalog_version === "evidence-v3" ? { value: 1 } : {}) }),
+      body: JSON.stringify({ is_completed: true, source, note: null, ...(target.item?.catalog_version === "evidence-v3" ? { value: recordValue } : {}) }),
     });
   }
   if (state.token !== token || state.cycle !== cycle) return;
   state.dailyCompleted.add(String(target.id));
+  if (isHydrationRecord(target.item)) {
+    state.waterServingsByChallenge ||= {};
+    state.waterServingsByChallenge[String(target.id)] = recordValue;
+  }
   renderDailyRecordList();
   updateDailyRecordSummary();
   if (!isLocalPreview()) void loadWeeklyReport().catch(() => {});
@@ -4026,6 +4048,7 @@ async function undoDailyRecord(target) {
       return true;
     }
     state.dailyCompleted.delete(String(target.id));
+    if (state.waterServingsByChallenge) delete state.waterServingsByChallenge[String(target.id)];
     target.completed = false;
     target.saved = false;
     renderDailyRecordList();
@@ -4041,12 +4064,14 @@ function closeRecordModal() {
   $("#record-modal").hidden = true;
   $("#record-simple-panel").hidden = false;
   $("#record-photo-panel").hidden = true;
+  $("#water-serving-control").hidden = true;
   state.recordTarget = null;
   resetPhotoRecordModal();
 }
 function openSimpleRecordModal(item) {
   const completed = state.dailyCompleted.has(String(item.user_challenge_id));
-  state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "simple", completed, item };
+  const id = String(item.user_challenge_id);
+  state.recordTarget = { id, title: item.title, type: "simple", completed, item, value: (state.waterServingsByChallenge || {})[id] || item.value || 1 };
   const presentation = simpleRecordPresentation(item);
   const visual = $("#record-simple-visual");
   visual.dataset.kind = presentation.kind;
@@ -4062,10 +4087,15 @@ function openSimpleRecordModal(item) {
   $("#undo-daily-record").textContent = "오늘 기록 취소하기";
   $("#record-action-error").hidden = true;
   $("#confirm-simple-record").disabled = false;
+  const waterControl = $("#water-serving-control");
+  const showWaterControl = isHydrationRecord(item);
+  waterControl.hidden = !showWaterControl;
+  visual.style.removeProperty("--water-level");
+  if (showWaterControl) syncWaterServingControl(state.recordTarget.value);
   $("#record-simple-panel").hidden = false;
   $("#record-photo-panel").hidden = true;
   $("#record-modal").hidden = false;
-  $("#confirm-simple-record").focus({ preventScroll: true });
+  (showWaterControl && !completed ? $("#water-serving-count") : $("#confirm-simple-record")).focus({ preventScroll: true });
 }
 function showPhotoRecordState(stateId) {
   const titles = { "photo-state-upload": "v3-photo-heading", "photo-state-analyzing": "photo-analyzing-title", "photo-state-fail": "photo-fail-title", "photo-state-pending": "photo-pending-title", "photo-state-success": "photo-success-title" };
@@ -5198,7 +5228,7 @@ $("#account-delete-form")?.addEventListener("submit", async (event) => {
 });
 $$('.inner-step-tabs [data-health-tab]').forEach((button) => button.addEventListener("click", () => {
   if (["lifestyle", "details", "review"].includes(button.dataset.healthTab)) {
-    const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic"), $("#fasting-glucose")].filter(Boolean);
+    const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic")].filter(Boolean);
     const invalid = fields.filter((input) => !input.checkValidity());
     if (invalid.length) {
       invalid[0].reportValidity();
@@ -5559,7 +5589,7 @@ $("#eligibility-guidance-secondary")?.addEventListener("click", async () => {
   showMessage("예측 없이 일반 생활습관 챌린지를 확인합니다.", "success");
 });
 $("#to-lifestyle-input")?.addEventListener("click", () => {
-  const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic"), $("#fasting-glucose")].filter(Boolean);
+  const fields = [$("#height"), $("#weight"), $("#waist"), $("#systolic"), $("#diastolic")].filter(Boolean);
   const invalid = fields.filter((input) => !input.checkValidity());
   if (invalid.length) {
     invalid[0].reportValidity();
@@ -5633,7 +5663,6 @@ $("#health-form").addEventListener("submit", async (event) => {
         waist_cm: $("#waist").value ? Number($("#waist").value) : null,
         systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
         diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
-        self_rated_health: $("#self-health").value, meal_count_yesterday: Number($("#meal-count").value),
         regular_exercise: selectedRadioValue("regular-exercise") === "true",
         current_smoker: smokingStatus === "current",
         smoking_status: smokingStatus,
@@ -5657,6 +5686,10 @@ $("#health-form").addEventListener("submit", async (event) => {
         household_structure: detailHealth.household_structure,
         depressed_feeling_last_week: detailHealth.depressed_feeling_last_week,
         sleep_difficulty_last_week: detailHealth.sleep_difficulty_last_week,
+        region: detailHealth.region,
+        diabetes_family_history: detailHealth.diabetes_family_history,
+        hypertension_family_history: detailHealth.hypertension_family_history,
+        alcohol_frequency: detailHealth.alcohol_frequency,
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
@@ -5891,8 +5924,8 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       const currentCycle = await api("/challenge-cycles/current");
       renderCycle(currentCycle);
       await refreshDashboard();
-      showWorkspace("home", { moveFocus: false });
       showStep(8);
+      showWorkspace("challenge", { moveFocus: false });
       showMessage("이미 진행 중인 4주 챌린지를 불러왔어요. 오늘의 실천을 이어서 기록해 주세요.", "success");
     } catch (currentCycleError) {
       showMessage(currentCycleError.message || error.message);
@@ -5939,6 +5972,12 @@ $("#daily-log-list").addEventListener("click", (event) => {
   if (card.dataset.recordType === "photo") openPhotoRecordModal(item);
   else openSimpleRecordModal(item);
 });
+$("#water-serving-count")?.addEventListener("input", (event) => {
+  syncWaterServingControl(event.currentTarget.value);
+});
+$$("[data-water-serving-step]").forEach((button) => button.addEventListener("click", () => {
+  syncWaterServingControl(currentWaterServings() + Number(button.dataset.waterServingStep || 0));
+}));
 $("#confirm-simple-record").addEventListener("click", async (event) => {
   if (state.recordTarget?.completed) {
     closeRecordModal();
@@ -5947,10 +5986,12 @@ $("#confirm-simple-record").addEventListener("click", async (event) => {
   const releaseBusy = setButtonBusy(event.currentTarget, "기록 저장 중…");
   try {
     const target = state.recordTarget;
+    const recordValue = isHydrationRecord(target?.item) ? currentWaterServings() : 1;
+    if (isHydrationRecord(target?.item)) syncWaterServingControl(recordValue);
     $("#record-simple-visual").classList.add("completed");
     await sleep(450);
     closeRecordModal();
-    await completeDailyRecord(target, "self_report");
+    await completeDailyRecord(target, "self_report", recordValue);
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
@@ -6706,8 +6747,8 @@ function resumeReturningPreview() {
   });
   state.healthCheckupResult = { checkup_id: state.checkupId };
   state.healthCheckupHistory = [
-    { checkup_id: "local-demo-checkup", checkup_type: "reassessment", checkup_date: "2026-09-03", height_cm: 165, weight_kg: 62, bmi: 22.8, waist_cm: 79, systolic_bp: 128, diastolic_bp: 82, self_rated_health: "good", meal_count_yesterday: 3, regular_exercise: true, current_smoker: false, current_drinker: false },
-    { checkup_id: "local-demo-checkup-previous", checkup_type: "initial", checkup_date: "2026-08-20", height_cm: 165, weight_kg: 64, bmi: 23.5, waist_cm: 82, systolic_bp: 134, diastolic_bp: 86, self_rated_health: "fair", meal_count_yesterday: 2, regular_exercise: false, current_smoker: false, current_drinker: false },
+    { checkup_id: "local-demo-checkup", checkup_type: "reassessment", checkup_date: "2026-09-03", height_cm: 165, weight_kg: 62, bmi: 22.8, waist_cm: 79, systolic_bp: 128, diastolic_bp: 82, regular_exercise: true, current_smoker: false, current_drinker: false },
+    { checkup_id: "local-demo-checkup-previous", checkup_type: "initial", checkup_date: "2026-08-20", height_cm: 165, weight_kg: 64, bmi: 23.5, waist_cm: 82, systolic_bp: 134, diastolic_bp: 86, regular_exercise: false, current_smoker: false, current_drinker: false },
   ];
   state.cycle = createLocalDemoCycle([101, 102, 103]);
   state.navigationHistory = [2];

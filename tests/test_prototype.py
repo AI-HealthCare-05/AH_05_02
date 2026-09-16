@@ -201,18 +201,23 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'min="0" max="720"' in html
     assert "exercise_days_per_week:" in script
     assert "exercise_minutes:" in script
+    assert 'id="fasting-glucose"' not in html
+    assert 'id="meal-count"' not in html
+    assert 'id="walking-days"' not in html
+    assert 'id="alcohol-frequency" required' in html
+    assert 'id="region"' in html
+    assert 'id="diabetes-family-history"' in html
+    assert 'id="hypertension-family-history"' in html
     assert 'days.value = "0"' in script
     assert 'minutes.value = "0"' in script
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
     assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
-    assert "필수" not in lifestyle
     assert (
         lifestyle.index('id="smoking-status-title"')
-        < lifestyle.index('for="self-health"')
-        < lifestyle.index('for="meal-count"')
         < lifestyle.index('id="current-drinker-title"')
-        < lifestyle.index('id="regular-exercise-title"')
+        < lifestyle.index('for="alcohol-frequency"')
+        < lifestyle.index('for="health-satisfaction-score"')
     )
     assert "days.disabled = !isRegularExercise" in script
     assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
@@ -513,14 +518,14 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
     assert script.count("finally { releaseBusy(); }") >= 8
 
 
-def test_active_challenge_conflict_resumes_current_cycle_dashboard() -> None:
+def test_active_challenge_conflict_resumes_current_cycle_recording() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "error.status === 409" in script
     assert 'error.message.includes("진행 중인 4주 챌린지")' in script
     assert 'const currentCycle = await api("/challenge-cycles/current")' in script
     assert "renderCycle(currentCycle)" in script
-    assert 'showWorkspace("home", { moveFocus: false })' in script
+    assert 'showWorkspace("challenge", { moveFocus: false })' in script
     assert "이미 진행 중인 4주 챌린지를 불러왔어요" in script
 
 

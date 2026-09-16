@@ -28,14 +28,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260916-global-large-text-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260916-water-serving-record-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260916-challenge-card-lines-v1" defer></script>
+  <script src="/static/app.js?v=20260916-water-serving-record-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -374,7 +374,7 @@
           </button>
           <button data-health-tab="vitals" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🩸</span>
-            <span class="carousel-copy"><strong>혈당·혈압</strong></span>
+            <span class="carousel-copy"><strong>혈압</strong></span>
           </button>
           <button data-health-tab="habits" type="button" aria-pressed="false">
             <span class="carousel-icon" aria-hidden="true">🍚</span>
@@ -402,18 +402,17 @@
           </div>
           <section id="health-metrics-panel" class="health-input-panel health-combined-panel" aria-label="건강정보 입력 항목">
             <div class="form-row"><label for="height">키 <small>필수 · cm</small></label><input id="height" type="number" min="120" max="220" value="160" required></div>
-            <div class="form-row"><label for="weight">몸무게 <small>필수 · kg</small></label><input id="weight" type="number" min="30" max="250" step="0.1" value="67.5" required></div>
-            <div class="form-row"><label for="waist">허리둘레 <small>선택 · cm</small></label><input id="waist" type="number" min="45" max="160" step="0.1" value="91"></div>
-            <div class="actions full"><button class="primary" data-next-health-panel="vitals" type="button">혈당·혈압 입력하기</button></div>
+            <div class="form-row"><label for="weight">몸무게 <small>필수 · kg</small></label><input id="weight" type="number" min="25" max="250" step="0.1" value="67.5" required></div>
+            <div class="form-row"><label for="waist">허리둘레 <small>선택 · cm</small></label><input id="waist" type="number" min="40" max="200" step="0.1" value="91"></div>
+            <div class="actions full"><button class="primary" data-next-health-panel="vitals" type="button">혈압 입력하기</button></div>
           </section>
-          <section id="health-vitals-panel" class="health-input-panel health-combined-panel" aria-label="혈당과 혈압 입력 항목" hidden>
-            <div class="form-row"><label for="fasting-glucose">공복혈당 <small>선택 · mg/dL</small></label><input id="fasting-glucose" type="number" min="20" max="800" value="112" inputmode="decimal"></div>
-            <div class="form-row"><label for="systolic">수축기혈압 <small>선택 · mmHg</small></label><input id="systolic" type="number" min="70" max="250" value="130"></div>
-            <div class="form-row"><label for="diastolic">이완기혈압 <small>선택 · mmHg</small></label><input id="diastolic" type="number" min="40" max="150" value="80"></div>
+          <section id="health-vitals-panel" class="health-input-panel health-combined-panel" aria-label="혈압 입력 항목" hidden>
+            <div class="form-row"><label for="systolic">수축기혈압 <small>선택 · mmHg</small></label><input id="systolic" type="number" min="50" max="300" value="130"></div>
+            <div class="form-row"><label for="diastolic">이완기혈압 <small>선택 · mmHg</small></label><input id="diastolic" type="number" min="30" max="200" value="80"></div>
             <div class="actions full"><button class="primary" data-next-health-panel="habits" type="button">생활상태 등 입력하기</button></div>
           </section>
           <section id="lifestyle-input-panel" class="health-input-panel health-combined-panel" aria-label="생활상태 등 입력 항목" hidden>
-            <!-- RF25 lifestyle contract order: id="smoking-status-title" before for="self-health" before for="meal-count" before id="current-drinker-title" before id="regular-exercise-title". -->
+            <!-- Final service contract order: 3x2 lifestyle card grid. -->
             <div class="lifestyle-question-grid health-combined-lifestyle full">
               <div class="choice-block lifestyle-toggle-card smoking-status-card" role="group" aria-labelledby="smoking-status-title">
                 <h4 class="choice-title" id="smoking-status-title">흡연 상태</h4>
@@ -423,11 +422,6 @@
                   <label><input id="smoking-current" name="smoking-status" type="radio" value="current"><span>현재 흡연</span></label>
                 </div>
               </div>
-              <div class="choice-block lifestyle-wide-card self-health-card" hidden>
-                <label class="choice-title" for="self-health">서비스 기록 기본값</label>
-                <select id="self-health"><option value="very_good">매우 좋음</option><option value="good">좋음</option><option value="fair" selected>보통</option><option value="poor">나쁨</option><option value="very_poor">매우 나쁨</option></select>
-              </div>
-              <div class="form-row choice-block lifestyle-wide-card meal-count-card"><label for="meal-count">어제 식사 횟수 <small>회</small></label><input id="meal-count" type="number" min="0" max="10" value="3" required></div>
               <div class="choice-block lifestyle-toggle-card lifestyle-drinking-card" role="group" aria-labelledby="current-drinker-title">
                 <h4 class="choice-title" id="current-drinker-title">현재 음주 유무</h4>
                 <div class="segmented-choice">
@@ -435,7 +429,7 @@
                   <label><input id="current-drinker-no" name="current-drinker" type="radio" value="false" checked><span>아니요</span></label>
                 </div>
               </div>
-              <div class="form-row linked-lifestyle-detail disabled" id="alcohol-frequency-row"><label for="alcohol-frequency">음주를 한다면 얼마나 자주 마시나요?</label><select id="alcohol-frequency" disabled><option value="">모름</option><option value="none" selected>최근 1년간 마시지 않음</option><option value="monthly_or_less">월 1회 이하</option><option value="two_to_four_monthly">월 2~4회</option><option value="two_to_three_weekly">주 2~3회</option><option value="four_or_more_weekly">주 4회 이상</option></select></div>
+              <div class="form-row linked-lifestyle-detail" id="alcohol-frequency-row"><label for="alcohol-frequency">최근 1년 음주 빈도 <small>필수</small></label><select id="alcohol-frequency" required><option value="8" selected>최근 1년간 마시지 않음</option><option value="1">월 1회 미만</option><option value="2">월 1회</option><option value="3">월 2~4회</option><option value="4">주 2~3회</option><option value="5">주 4회 이상</option><option value="6">거의 매일</option></select></div>
               <div class="form-row"><label for="health-satisfaction-score">건강 만족도 <small>0~100점</small></label><input id="health-satisfaction-score" type="number" min="0" max="100" step="1" placeholder="모르면 비워두기"></div>
               <div class="form-row"><label for="economic-satisfaction-score">경제 만족도 <small>0~100점</small></label><input id="economic-satisfaction-score" type="number" min="0" max="100" step="1" placeholder="모르면 비워두기"></div>
               <div class="form-row"><label for="overall-quality-of-life-score">삶의 질 <small>0~100점</small></label><input id="overall-quality-of-life-score" type="number" min="0" max="100" step="1" placeholder="모르면 비워두기"></div>
@@ -452,7 +446,6 @@
                   <label><input id="regular-exercise-no" name="regular-exercise" type="radio" value="false" checked><span>아니요</span></label>
                 </div>
               </div>
-              <div class="form-row"><label for="walking-days">최근 1주 걷기 일수 <small>0~7일</small></label><input id="walking-days" type="number" min="0" max="7" step="1" placeholder="모르면 비워두기"></div>
               <div class="exercise-detail-card" id="exercise-detail-card">
                 <div class="form-row"><label for="exercise-days">주당 운동 일수 <small>0~7일</small></label><input id="exercise-days" type="number" min="0" max="7" step="1" value="3" required></div>
                 <div class="form-row"><label for="exercise-minutes">한 번 운동할 때 시간 <small>0~720분</small></label><input id="exercise-minutes" type="number" min="0" max="720" step="1" value="30" required></div>
@@ -464,14 +457,16 @@
             <h3 id="detail-health-title" class="sr-only">진단 여부 확인</h3>
             <div class="detail-health-grid">
               <article class="detail-health-group">
-                <div class="form-row"><label for="hypertension-diagnosis">고혈압</label><select id="hypertension-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
+                <div class="form-row"><label for="hypertension-diagnosis">고혈압 <small>필수</small></label><select id="hypertension-diagnosis" required><option value="">선택해 주세요</option><option value="true">진단받음</option><option value="false" selected>진단받지 않음</option></select></div>
+                <div class="form-row"><label for="heart-disease-diagnosis">심장질환 <small>필수</small></label><select id="heart-disease-diagnosis" required><option value="">선택해 주세요</option><option value="true">진단받음</option><option value="false" selected>진단받지 않음</option></select></div>
+                <div class="form-row"><label for="arthritis-rheumatism-diagnosis">관절염·류머티즘 <small>필수</small></label><select id="arthritis-rheumatism-diagnosis" required><option value="">선택해 주세요</option><option value="true">진단받음</option><option value="false" selected>진단받지 않음</option></select></div>
                 <div class="form-row"><label for="cancer-diagnosis">암</label><select id="cancer-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
                 <div class="form-row"><label for="chronic-lung-disease-diagnosis">만성 폐질환</label><select id="chronic-lung-disease-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
                 <div class="form-row"><label for="liver-disease-diagnosis">간질환</label><select id="liver-disease-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
-                <div class="form-row"><label for="heart-disease-diagnosis">심장질환</label><select id="heart-disease-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
                 <div class="form-row"><label for="cerebrovascular-disease-diagnosis">뇌혈관질환</label><select id="cerebrovascular-disease-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
                 <div class="form-row"><label for="psychiatric-disease-diagnosis">정신과 질환</label><select id="psychiatric-disease-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
-                <div class="form-row"><label for="arthritis-rheumatism-diagnosis">관절염·류머티즘</label><select id="arthritis-rheumatism-diagnosis"><option value="">모름</option><option value="true">진단받음</option><option value="false">진단받지 않음</option></select></div>
+                <div class="form-row"><label for="diabetes-family-history">당뇨 가족력</label><select id="diabetes-family-history"><option value="">모름</option><option value="true">있음</option><option value="false">없음</option></select></div>
+                <div class="form-row"><label for="hypertension-family-history">고혈압 가족력</label><select id="hypertension-family-history"><option value="">모름</option><option value="true">있음</option><option value="false">없음</option></select></div>
               </article>
             </div>
             <div class="actions full"><button class="primary" data-next-health-panel="socioeconomic" type="button">지역·사회경제 입력하기</button></div>
@@ -481,12 +476,13 @@
             <h3 id="socioeconomic-health-title" class="sr-only">지역·사회경제 정보</h3>
             <div class="detail-health-grid">
               <article class="detail-health-group">
+                <div class="form-row"><label for="education-level">최종 학력 <small>필수</small></label><select id="education-level" required><option value="">선택해 주세요</option><option value="code_1">초등학교 졸업 이하</option><option value="code_2">중학교 졸업</option><option value="code_3" selected>고등학교 졸업</option><option value="code_4">대학교 졸업 이상</option><option value="code_97">기타/응답 어려움</option></select></div>
+                <div class="form-row"><label for="marital-status">혼인 상태 <small>필수</small></label><select id="marital-status" required><option value="">선택해 주세요</option><option value="code_1" selected>배우자 있음</option><option value="code_2">사별</option><option value="code_3">이혼</option><option value="code_4">별거</option><option value="code_5">미혼</option></select></div>
+                <div class="form-row"><label for="depressed-feeling-last-week">지난주 우울감 <small>필수</small></label><select id="depressed-feeling-last-week" required><option value="">선택해 주세요</option><option value="code_1" selected>전혀 없음</option><option value="code_2">가끔 있음</option><option value="code_3">자주 있음</option><option value="code_4">거의 항상 있음</option></select></div>
+                <div class="form-row"><label for="sleep-difficulty-last-week">지난주 수면곤란 <small>필수</small></label><select id="sleep-difficulty-last-week" required><option value="">선택해 주세요</option><option value="code_1" selected>전혀 없음</option><option value="code_2">가끔 있음</option><option value="code_3">자주 있음</option><option value="code_4">거의 항상 있음</option></select></div>
                 <div class="form-row"><label for="annual-household-income">연간 가구소득 <small>만원/년</small></label><input id="annual-household-income" type="number" min="0" max="123500" step="1" placeholder="모르면 비워두기"></div>
-                <div class="form-row"><label for="education-level">최종 학력</label><select id="education-level"><option value="">모름</option><option value="code_1">초등학교 졸업 이하</option><option value="code_2">중학교 졸업</option><option value="code_3">고등학교 졸업</option><option value="code_4">대학교 졸업 이상</option><option value="code_97">기타/응답 어려움</option></select></div>
-                <div class="form-row"><label for="marital-status">혼인 상태</label><select id="marital-status"><option value="">모름</option><option value="code_1">배우자 있음</option><option value="code_2">사별</option><option value="code_3">이혼</option><option value="code_4">별거</option><option value="code_5">미혼</option></select></div>
                 <div class="form-row"><label for="household-structure">가구 형태</label><select id="household-structure"><option value="">모름</option><option value="single_person">1인 가구</option><option value="multi_person">2인 이상 가구</option></select></div>
-                <div class="form-row"><label for="depressed-feeling-last-week">지난주 우울감</label><select id="depressed-feeling-last-week"><option value="">모름</option><option value="code_1">전혀 없음</option><option value="code_2">가끔 있음</option><option value="code_3">자주 있음</option><option value="code_4">거의 항상 있음</option></select></div>
-                <div class="form-row"><label for="sleep-difficulty-last-week">지난주 수면곤란</label><select id="sleep-difficulty-last-week"><option value="">모름</option><option value="code_1">전혀 없음</option><option value="code_2">가끔 있음</option><option value="code_3">자주 있음</option><option value="code_4">거의 항상 있음</option></select></div>
+                <div class="form-row"><label for="region">거주 지역</label><select id="region"><option value="">모름</option><option value="1">서울</option><option value="2">부산</option><option value="3">대구</option><option value="4">인천</option><option value="5">광주</option><option value="6">대전</option><option value="7">울산</option><option value="8">세종</option><option value="9">경기</option><option value="10">강원</option><option value="11">충북</option><option value="12">충남</option><option value="13">전북</option><option value="14">전남</option><option value="15">경북</option><option value="16">경남</option><option value="17">제주</option></select></div>
               </article>
             </div>
             <div class="actions full"><button class="primary" type="submit">입력 내용 확인하기</button></div>
@@ -825,6 +821,15 @@
                 </div>
                 <h4 id="record-modal-title">오늘 하셨나요?</h4>
                 <p id="record-simple-description">사진 없이 바로 기록돼요.</p>
+                <div id="water-serving-control" class="water-serving-control" hidden>
+                  <label for="water-serving-count">오늘 물 몇 잔을 마셨나요?</label>
+                  <div class="water-serving-stepper">
+                    <button type="button" data-water-serving-step="-1" aria-label="물 잔 수 줄이기">−</button>
+                    <output id="water-serving-output" for="water-serving-count">1잔</output>
+                    <button type="button" data-water-serving-step="1" aria-label="물 잔 수 늘리기">+</button>
+                  </div>
+                  <input id="water-serving-count" type="range" min="1" max="8" step="1" value="1">
+                </div>
                 <p id="record-action-error" role="alert" hidden></p>
                 <div class="record-modal-actions">
                   <button class="primary" id="confirm-simple-record" type="button">네, 했어요</button>
