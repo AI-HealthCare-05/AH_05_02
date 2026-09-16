@@ -112,7 +112,7 @@ test('six numbered portrait aliases are detached copies of the exact current off
   const before = JSON.stringify(input);
   const output = memories.portraitPresets(input.reverse());
   assert.deepEqual(output.map(item => item.nickname), memories.NICKNAMES);
-  assert.equal(output[1].nickname, '꾸준한 상균');
+  assert.equal(output[1].nickname, '꾸준한 실천');
   output.forEach((item, index) => {
     assert.equal(item.avatar.cosmetics.lpcOutfit, `actual-outfit-${index}`);
     assert.equal(item.avatar.cosmetics.outfitColor, `actual-color-${index}`);
@@ -294,7 +294,7 @@ test('house-front framing keeps gathering feet at fixed heights away from pond w
     assert.deepEqual([renders[0].camera.x, renders[0].camera.y], [320, 180]);
     assert.deepEqual([renders[0].config.width, renders[0].config.height], [2560, 1440]);
     assert.ok(renders[0].objects.includes(scene.background));
-    assert.deepEqual(Array.from(session.people, person => person.label.text), ['성실한 당근', '꾸준한 상균', '달빛의 빛샘', '숲속의 수인', '발명의 준혁', '해결의 세준']);
+    assert.deepEqual(Array.from(session.people, person => person.label.text), ['성실한 당근', '꾸준한 실천', '달빛의 빛샘', '숲속의 수인', '발명의 준혁', '해결의 세준']);
     controller.cancel();
   }
 });
@@ -316,7 +316,7 @@ test('moving the portrait and renaming its second label never mutates original s
   await controller.start({ requestId: 'source-outfits', presets: input });
   const session = controller.session;
   controller.update(session.stagedAt + 1800);
-  assert.equal(session.people[1].label.text, '꾸준한 상균');
+  assert.equal(session.people[1].label.text, '꾸준한 실천');
   assert.equal(session.people[1].avatar.name, input[1].avatar.name);
   assert.ok(calls.length >= 12);
   session.people.forEach((person, index) => {
