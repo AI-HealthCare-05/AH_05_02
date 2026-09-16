@@ -50,6 +50,7 @@ class Config(BaseSettings):
     ML_FIRST_INTERVAL_MODEL_URI: str = ""
     ML_RF25_MODEL_URI: str = ""
     PREDICTION_TIMEOUT_SECONDS: int = 30
+    MODEL_PRELOAD_ENABLED: bool = False
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
     PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
     PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
@@ -64,6 +65,7 @@ class Config(BaseSettings):
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
+    PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = False
     MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
     MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
     CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.6.1"
@@ -78,14 +80,33 @@ class Config(BaseSettings):
     CURRENT_SCREENING_MANIFEST_URI: str = (
         "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
     )
+    CURRENT_SCREENING_RUNTIME: str = "v061"
+    CURRENT_SCREENING_PROMOTION_STATUS: str = "development_only"
+    CURRENT_SCREENING_OPERATIONAL_MODEL_ACTIVATED: bool = False
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.
-    FOOD_VISION_PROVIDER: str = "development"
+    FOOD_VISION_PROVIDER: str = "local_kfood"
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_VLM_MODEL: str = "gpt-4o-mini"
+    OPENAI_VLM_FALLBACK_ENABLED: bool = False
     FOOD_VISION_TIMEOUT_SECONDS: int = 20
     FOOD_PHOTO_MAX_BYTES: int = 8 * 1024 * 1024
+    KFOOD_CLASSIFIER_PATH: Path = Path("models/artifacts/food_vision/kfood/best.pt")
+    KFOOD_CLASSIFIER_META_PATH: Path = Path("models/artifacts/food_vision/kfood/meta.json")
+    KFOOD_CLASSIFIER_META_SHA256: str = "a193e1faf4e7c266e0ba4481451ded587fcd01cfc7d89c60d834bac63e14e0b3"
+    KFOOD_CLASSIFIER_SHA256: str = "4c4df6ba2b9d3daf77f7ffe107285df17a360342729177d15465ba9872d42726"
+    KFOOD_SEGMENTER_PATH: Path = Path("models/artifacts/food_vision/kfood/1.tflite")
+    KFOOD_SEGMENTER_SHA256: str = "edb7df52467afd02a502d7765ca7ac82e63ad86082c72e18135764f1b1817b52"
+    KFOOD_SEGMENTATION_CONFIG_PATH: Path = Path("configs/food_vision/seg_config.json")
+    KFOOD_DISH_VEGETABLES_PATH: Path = Path("configs/food_vision/dish_vegetables.json")
+    KFOOD_DRIVE_FILE_ID: str = ""
+    KFOOD_BUNDLE_SHA256: str = ""
+    KFOOD_BUNDLE_DIR: Path = Path("models/artifacts/food_vision/kfood")
+    KFOOD_BUNDLE_DOWNLOAD_TIMEOUT_SECONDS: int = 120
+    FOOD_COVERAGE_PASS_THRESHOLD: float = 0.50
+    VEGETABLE_RATIO_PASS_THRESHOLD: float = 0.30
 
     HEALTH_EDUCATION_EMBEDDING_PROVIDER: str = "development"
     HEALTH_EDUCATION_EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -119,11 +140,16 @@ class Config(BaseSettings):
     NEMC_EMERGENCY_TIMEOUT_SECONDS: int = 10
     EMERGENCY_FACILITY_MAX_RESULTS: int = 10
 
-    # 건강검진 결과통보서 이미지 OCR. 원본 이미지는 저장하지 않고 추출 초안만 사용자 확인 대상으로 둡니다.
+    # 건강검진 결과통보서 OCR. 원본은 요청 처리 중 메모리에만 두고, 추출 초안은 사용자 확인 후에만 반영합니다.
+    HEALTH_CHECKUP_OCR_PROVIDER: str = "clova"
     CLOVA_OCR_URL: str = ""
     CLOVA_OCR_SECRET: str = ""
     CLOVA_OCR_TIMEOUT_SECONDS: int = 20
     CLOVA_OCR_MAX_BYTES: int = 10 * 1024 * 1024
+    ANTHROPIC_API_KEY: str = ""
+    CLAUDE_OCR_MODEL: str = "claude-haiku-4-5-20251001"
+    CLAUDE_OCR_TIMEOUT_SECONDS: int = 25
+    CLAUDE_OCR_MAX_BYTES: int = 10 * 1024 * 1024
 
     COOKIE_DOMAIN: str = "localhost"
     FRONTEND_BASE_URL: str = "http://localhost:8001"

@@ -648,3 +648,4 @@ def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
     assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
     assert ACTIVE_MODEL.threshold_is_approved is False
+    assert ACTIVE_MODEL.operational_model_activated is False

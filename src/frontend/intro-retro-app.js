@@ -3648,12 +3648,17 @@ function openPhotoRecordModal(item) {
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
   $("#v3-photo-file").value = "";
-  $("#v3-photo-value").value = "";
+  $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
+  const usesMinutes = Boolean(item.goal.target_minutes);
+  $("#v3-meal-count-field").hidden = usesMinutes;
+  $("#v3-photo-minutes-field").hidden = !usesMinutes;
+  $("#v3-photo-minutes").value = "";
   $("#confirm-photo-record").disabled = false;
   $("#confirm-photo-record").textContent = v3 ? "사진과 실천량 제출하기" : "사진으로 인증하기";
   $("#v3-photo-heading").textContent = v3 ? item.title : "식사 사진을 올려주세요";
   $("#v3-photo-scope").textContent = v3 ? item.verification_scope : "사진 또는 간편 체크로 기록해요.";
-  $("#v3-photo-value-label").textContent = v3 ? `${item.goal.target_minutes ? "실제 활동 시간(분)" : "실제 실천한 끼니 수"} · 목표 ${item.goal.target_minutes || item.goal.target_count}` : "실천량";
+  $("#v3-photo-value-label").textContent = v3 ? `실제 실천한 끼니 수 (설정 목표 = ${item.goal.target_count})` : "실천량";
+  $("#v3-photo-minutes-label").textContent = `실제 활동 시간 (설정 목표 = ${item.goal.target_minutes || 0}분)`;
   $$(".record-fallback").forEach((button) => { button.hidden = v3; });
   $("#record-simple-panel").hidden = true;
   $("#record-photo-panel").hidden = false;
@@ -3677,13 +3682,31 @@ function simulatePhotoAnalysis() {
 async function submitV3Photo() {
   const target = state.recordTarget;
   if (target?.item?.catalog_version !== "evidence-v3" || target.submitting || target.saved) return;
-  if (isLocalPreview()) return showMessage("화면 미리보기에서는 사진 인증을 완료하지 않습니다. 실제 계정으로 로그인해 주세요.");
   const file = $("#v3-photo-file").files[0];
-  const valueText = $("#v3-photo-value").value;
+  const valueText = target.item.goal.target_minutes
+    ? $("#v3-photo-minutes").value
+    : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
   if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
   if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  if (isLocalPreview()) {
+    showPhotoRecordState("photo-state-analyzing");
+    window.setTimeout(() => {
+      if (file.name === "demo-pass.png") {
+        $("#photo-success-title").textContent = "인증을 통과했어요";
+        showPhotoRecordState("photo-state-success");
+        return;
+      }
+      $("#photo-fail-hint").textContent = file.name === "demo-low-vegetable.png"
+        ? "음식은 확인됐지만 채소가 충분히 보이지 않아요."
+        : file.name === "demo-irrelevant.png"
+          ? "음식과 관련된 사진인지 확인하기 어려워요."
+          : "로컬 미리보기에서는 제공된 시연 사진으로 결과를 확인해 주세요.";
+      showPhotoRecordState("photo-state-fail");
+    }, 300);
+    return;
+  }
   const token = state.token;
   const cycleId = state.cycle?.cycle_id;
   target.submitting = true;
@@ -3694,8 +3717,18 @@ async function submitV3Photo() {
     form.append("file", file);
     form.append("verification_date", challengeDay());
     form.append("actual_value", String(value));
-    const result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
+    let result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
     if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    if (result.review_status === "needs_confirmation") {
+      if (!window.confirm(result.notice || "사진이 기준을 충족했습니다. 이 결과로 챌린지를 기록할까요?")) {
+        $("#photo-fail-hint").textContent = "최종 확인 전에는 챌린지가 완료되지 않습니다.";
+        showPhotoRecordState("photo-state-fail");
+        return;
+      }
+      form.set("confirmed", "true");
+      result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
+      if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    }
     if (result.challenge_completed !== true || result.review_status !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
     state.dailyCompleted.add(target.id);
     target.saved = true;
@@ -5979,6 +6012,22 @@ $("#undo-daily-record").addEventListener("click", async (event) => {
   } finally { if (!state.recordTarget || isCurrent()) releaseBusy(); }
 });
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
+async function selectDemoPhoto(button) {
+  try {
+    const response = await fetch(button.dataset.demoPhoto);
+    if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
+    $("#v3-photo-file").files = transfer.files;
+    $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
+    $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
+  } catch (error) { showMessage(error.message); }
+}
+$$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
+  if (!input.checked) return;
+  $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+}));
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
@@ -6444,27 +6493,91 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
     releaseBusy();
   }
 });
-$("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
-$("#checkup-image-input")?.addEventListener("change", (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+function showOcrPreview(result, label) {
+  const fields = result.extracted_fields || {};
+  state.ocrDraftId = result.draft_id;
+  state.ocrExtractedFields = fields;
+  $("#ocr-file-name").textContent = label;
+  $("#ocr-height-confirm").value = fields.height_cm ?? "";
+  $("#ocr-weight-confirm").value = fields.weight_kg ?? "";
+  $("#ocr-waist-confirm").value = fields.waist_cm ?? "";
+  $("#ocr-systolic-confirm").value = fields.systolic_bp ?? "";
+  $("#ocr-diastolic-confirm").value = fields.diastolic_bp ?? "";
+  $("#ocr-confirm-form").hidden = false;
+  const labels = [
+    ["신장", fields.height_cm, "cm"], ["체중", fields.weight_kg, "kg"], ["허리둘레", fields.waist_cm, "cm"],
+    ["혈압", fields.systolic_bp != null && fields.diastolic_bp != null ? `${fields.systolic_bp}/${fields.diastolic_bp}` : null, "mmHg"],
+    ["공복혈당", fields.fasting_glucose_mg_dl, "mg/dL"],
+  ].filter(([, value]) => value != null).map(([name, value, unit]) => `${name} ${value}${unit}`).join(", ");
   const box = $("#ocr-upload-result");
   box.hidden = false;
-  box.innerHTML = "<div><strong>검진표를 선택했습니다.</strong><p>인식된 값이 맞는지 확인한 뒤 업데이트해 주세요.</p></div>";
-  $("#ocr-file-name").textContent = file.name;
-  $("#ocr-systolic-confirm").value = $("#systolic")?.value || "";
-  $("#ocr-diastolic-confirm").value = $("#diastolic")?.value || "";
-  $("#ocr-confirm-form").hidden = false;
+  box.innerHTML = `<div><strong>${escapeHtml(label)}에서 건강정보를 찾았습니다.</strong><p>${escapeHtml(labels)}. 확인하기 전에는 갱신되지 않습니다.</p></div>`;
+}
+
+async function createOcrPreview(documentName, ocrText) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  return api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: documentName, ocr_text: ocrText }) });
+}
+
+async function createOcrImagePreview(file) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", provider: "development_mock", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    throw new ApiError("검진표를 외부 OCR 서비스에 전송하는 데 동의한 뒤 업로드해 주세요.");
+  }
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("external_provider_consent", "true");
+  return api("/ocr-drafts/from-image", { method: "POST", body: formData });
+}
+
+$("#upload-checkup-image")?.addEventListener("click", () => {
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    showMessage("외부 OCR 처리 동의를 확인한 뒤 결과통보서를 업로드해 주세요.");
+    $("#ocr-external-provider-consent")?.focus();
+    return;
+  }
+  $("#checkup-image-input")?.click();
 });
-$("#ocr-confirm-form")?.addEventListener("submit", (event) => {
+$("#load-checkup-sample")?.addEventListener("click", async () => {
+  const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
+  try {
+    showOcrPreview(await createOcrPreview("2025-general-health-checkup-synthetic.txt", sampleText), "2025 일반건강검진 합성 예시");
+  } catch (error) { showMessage(error.message); }
+});
+$("#checkup-image-input")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    showOcrPreview(await createOcrImagePreview(file), file.name);
+  } catch (error) { showMessage(error.message); }
+  finally { event.target.value = ""; }
+});
+$("#ocr-confirm-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const systolic = Number($("#ocr-systolic-confirm").value);
-  const diastolic = Number($("#ocr-diastolic-confirm").value);
-  if (!Number.isFinite(systolic) || !Number.isFinite(diastolic)) return;
-  $("#systolic").value = String(systolic);
-  $("#diastolic").value = String(diastolic);
-  $("#ocr-upload-result").innerHTML = "<div><strong>혈압 값을 반영했습니다.</strong><p>다음 건강정보 제출 때 확인한 값이 저장됩니다.</p></div>";
-  $("#ocr-confirm-form").hidden = true;
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "건강정보 갱신 중…");
+  const candidate = (id) => $(id).value === "" ? null : Number($(id).value);
+  const updates = {
+    height_cm: candidate("#ocr-height-confirm"), weight_kg: candidate("#ocr-weight-confirm"),
+    waist_cm: candidate("#ocr-waist-confirm"), systolic_bp: candidate("#ocr-systolic-confirm"),
+    diastolic_bp: candidate("#ocr-diastolic-confirm"),
+  };
+  try {
+    if (isLocalPreview()) {
+      $("#ocr-upload-result").innerHTML = "<div><strong>건강정보가 갱신되었습니다.</strong><p>확인한 값은 다음 건강정보 제출 때 저장됩니다.</p></div>";
+    } else {
+      if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
+      const result = await api(`/ocr-drafts/${state.ocrDraftId}/health-checkups/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(updates) });
+      await loadHealthCheckupHistory();
+      const changed = Object.keys(result.updated_fields).join(", ");
+      $("#ocr-upload-result").innerHTML = `<div><strong>${escapeHtml(result.message)}</strong><p>갱신 항목: ${escapeHtml(changed)}</p></div>`;
+    }
+    $("#ocr-confirm-form").hidden = true;
+  } catch (error) { showMessage(error.message); }
+  finally { releaseBusy(); }
 });
 $("#food-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -6704,6 +6817,31 @@ function renderMvpResultPreview() {
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
 }
 
+function resumeMealPhotoPreview() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("preview") !== "meal-photo" || !isDemoEnvironment()) return;
+  const item = {
+    challenge_id: "local-vegetable-meal",
+    user_challenge_id: "local-meal-photo",
+    catalog_version: "evidence-v3",
+    verification_type: 1,
+    title: "채소가 포함된 한 끼 인증",
+    daily_goal: "하루 1끼",
+    verification_scope: "한 끼 식사에 음식과 채소가 충분히 보이는지 확인해요.",
+    goal: { target_count: 1, target_minutes: null },
+  };
+  state.token = "local-demo-token";
+  state.returningUser = true;
+  state.cycle = { cycle_id: "local-photo-preview", cycle_number: 1, user_challenges: [item] };
+  state.navigationHistory = [1, 8];
+  [1, 7, 8].forEach((step) => state.visitedSteps.add(step));
+  renderCycle(state.cycle);
+  renderLocalDemoDashboard();
+  showStep(8, { recordHistory: false });
+  showWorkspace("challenge", { moveFocus: false });
+  openPhotoRecordModal(item);
+}
+
 function resumeForecastPreview() {
   const params = new URLSearchParams(window.location.search);
   // Preserve existing local QA bookmarks, but show only the two MVP result areas.
@@ -6754,5 +6892,6 @@ $$('[data-risk-preview]').forEach((button) => button.addEventListener("click", (
 showStep(state.step, { recordHistory: false });
 resumeFromForest();
 resumeReturningPreview();
+resumeMealPhotoPreview();
 resumeForecastPreview();
 resumeEmergencyQuestionnairePreview();

@@ -59,11 +59,25 @@ services:
       ML_SHARED8_MODEL_URI: /app/models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib
       ML_FIRST_INTERVAL_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib
       ML_RF25_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib
+      FOOD_VISION_PROVIDER: local_kfood
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_VLM_MODEL: ${OPENAI_VLM_MODEL:-gpt-4o-mini}
+      OPENAI_VLM_FALLBACK_ENABLED: ${OPENAI_VLM_FALLBACK_ENABLED:-false}
+      KFOOD_CLASSIFIER_PATH: ${KFOOD_CLASSIFIER_PATH:-/app/models/artifacts/food_vision/kfood/best.pt}
+      KFOOD_CLASSIFIER_META_PATH: ${KFOOD_CLASSIFIER_META_PATH:-/app/models/artifacts/food_vision/kfood/meta.json}
+      KFOOD_SEGMENTER_PATH: ${KFOOD_SEGMENTER_PATH:-/app/models/artifacts/food_vision/kfood/1.tflite}
+      KFOOD_SEGMENTATION_CONFIG_PATH: /app/configs/food_vision/seg_config.json
+      KFOOD_DISH_VEGETABLES_PATH: /app/configs/food_vision/dish_vegetables.json
+      KFOOD_DRIVE_FILE_ID: ${KFOOD_DRIVE_FILE_ID:-1KvCX9bU9GwZvcvZSl0eYHlZ-yg4UbAjQ}
+      KFOOD_BUNDLE_SHA256: ${KFOOD_BUNDLE_SHA256:-753d7c4d3a7d9f9e074565cda0233179243466129a48830fd299a07a9bf0b96c}
+      KFOOD_BUNDLE_DIR: ${KFOOD_BUNDLE_DIR:-/app/storage/food_vision/kfood}
     command: ["sh", "app/start-fastapi.sh", "--reload"]
     volumes:
       - ./app:/app/app
       - ./src/frontend:/app/src/frontend:ro
       - ./models:/app/models:ro
+      - food_vision_cache:/app/storage/food_vision
+      - ./configs:/app/configs:ro
       - ./src/ocr:/app/src/ocr:ro
       - ./src/wearables:/app/src/wearables:ro
       - ./src/quiz:/app/src/quiz:ro
@@ -78,7 +92,7 @@ services:
         - --no-sync
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3)"
       interval: 10s
       timeout: 5s
       retries: 10
@@ -140,6 +154,7 @@ volumes:
   mysql_data:
   redis_data:
   model_cache:
+  food_vision_cache:
 
 networks:
   healthcare:

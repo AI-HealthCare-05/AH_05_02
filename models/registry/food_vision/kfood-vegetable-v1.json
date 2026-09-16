@@ -1,0 +1,23 @@
+{
+  "model_key": "kfood-vegetable-v1",
+  "status": "candidate",
+  "classifier": {
+    "path": "models/artifacts/food_vision/kfood/best.pt",
+    "sha256": "4c4df6ba2b9d3daf77f7ffe107285df17a360342729177d15465ba9872d42726",
+    "meta_sha256": "a193e1faf4e7c266e0ba4481451ded587fcd01cfc7d89c60d834bac63e14e0b3",
+    "architecture": "timm-efficientnet-b0",
+    "classes": 98,
+    "test_top1": 0.81091549,
+    "test_top5": 0.95457746
+  },
+  "segmenter": {
+    "path": "models/artifacts/food_vision/kfood/1.tflite",
+    "sha256": "edb7df52467afd02a502d7765ca7ac82e63ad86082c72e18135764f1b1817b52"
+  },
+  "decision": {
+    "food_coverage_min": 0.5,
+    "vegetable_ratio_min": 0.3,
+    "valid_requires_user_confirmation": true
+  },
+  "artifact_policy": "Binary files are supplied to the deployment artifact path and verified before loading; they are excluded from Git."
+}

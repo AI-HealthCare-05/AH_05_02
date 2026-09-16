@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": {
+    "provider": "google_drive",
+    "folder_id": "1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18",
+    "folder_url": "https://drive.google.com/drive/folders/1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18"
+  },
+  "models": [
+    {
+      "name": "today",
+      "manifest_file_id": "16lktNGh-FsqhkoJUg5U2t6yiFhCzSX3C",
+      "artifact_file_id": "1ld2sWVRm-eWymsDvwQHfmkprKDSNsWi3",
+      "artifact_sha256": "aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc",
+      "registry_manifest": "models/registry/diabetes_current_screening/candidates/knhanes-shared8-waist-sk180-v1.json"
+    },
+    {
+      "name": "tomorrow",
+      "manifest_file_id": "1v6Nb0WCeiwGZBc2NWSDyoK6PlpT4NMBN",
+      "artifact_file_id": "1tDjBGCSo57Y31GBktkBgEBE0zKrjXcdW",
+      "artifact_sha256": "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8",
+      "registry_manifest": "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+    }
+  ]
+}

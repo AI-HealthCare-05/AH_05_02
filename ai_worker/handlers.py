@@ -10,6 +10,38 @@ from app.prediction.contracts import CURRENT_SCREENING_MODEL
 MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보조용이며 진단·처방이 아닙니다."
 
 
+async def preload_configured_models() -> None:
+    """Fail worker readiness when an explicitly selected artifact is invalid."""
+    if not config.MODEL_PRELOAD_ENABLED:
+        return
+    if config.PREDICTION_PROVIDER == "artifact":
+        from app.prediction.providers import load_standard_model
+
+        await asyncio.to_thread(load_standard_model)
+    if config.CURRENT_SCREENING_RUNTIME == "shared8-waist":
+        from src.ml.inference.research_models import load_shared8
+
+        await asyncio.to_thread(load_shared8, config.ML_SHARED8_MODEL_URI)
+    elif config.CURRENT_SCREENING_RUNTIME == "v061":
+        from pathlib import Path
+
+        from src.ml.inference.diabetes_current_screening import load_current_screening_model
+
+        await asyncio.to_thread(
+            load_current_screening_model,
+            manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
+            model_path=Path(config.CURRENT_SCREENING_MODEL_URI),
+        )
+    else:
+        raise RuntimeError(f"지원하지 않는 CURRENT_SCREENING_RUNTIME입니다: {config.CURRENT_SCREENING_RUNTIME}")
+    if config.TOMORROW_RUNTIME == "rf25":
+        from src.ml.inference.research_models import load_tomorrow_rf25
+
+        await asyncio.to_thread(load_tomorrow_rf25, config.ML_RF25_MODEL_URI)
+    elif config.TOMORROW_RUNTIME != "standard":
+        raise RuntimeError(f"지원하지 않는 TOMORROW_RUNTIME입니다: {config.TOMORROW_RUNTIME}")
+
+
 async def run_task_with_timeout(task_type: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
     return await asyncio.wait_for(run_task(task_type, payload), timeout=timeout_seconds)
 
@@ -166,17 +198,6 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
     }
 
 
-def preload_configured_models() -> None:
-    """Fetch and validate the opted-in research artifacts before worker readiness."""
-
-    from src.ml.inference.research_models import load_shared8, load_tomorrow_rf25
-
-    if config.CURRENT_SCREENING_RUNTIME == "shared8-waist":
-        load_shared8(config.ML_SHARED8_MODEL_URI)
-    if config.TOMORROW_RUNTIME == "rf25":
-        load_tomorrow_rf25(config.ML_RF25_MODEL_URI)
-
-
 async def _run_reduced_current_model(
     model_input: dict[str, Any],
     as_of_date_raw: Any,
@@ -291,6 +312,8 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             "decision_threshold": result.decision_threshold,
             "promotion_status": result.promotion_status,
             "explanation_status": result.explanation_status,
+            "display_allowed": result.display_allowed,
+            "operational_model_activated": result.operational_model_activated,
             "input_as_of_date": as_of_date.isoformat(),
             "medical_notice": MEDICAL_NOTICE,
         }

@@ -19,7 +19,7 @@
   <meta name="twitter:description" content="당뇨병 위험 신호를 살피고, 나에게 맞는 4주 생활습관을 함께 시작해요.">
   <meta name="twitter:image" content="https://dang-no.life/static/assets/carrot-forest-social-preview-v2.png">
   <title>간당간당 | 당뇨 생활습관 챌린지</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍀</text></svg>">
+  <link rel="icon" href="/static/assets/gandang-gandang-emblem-hyeoldangi-clean-transparent.png" type="image/png">
   <link rel="preload" as="image" href="/static/assets/lifestyle-avatar-female-60.webp">
   <script>
     (() => {
@@ -28,19 +28,19 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260916-result-signal-layout-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260916-pr78-conflict-resolve-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260915-auth-entry-instant-v1" defer></script>
+  <script src="/static/app.js?v=20260916-wood-photo-logo-v5" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
   <header class="topbar">
-    <a class="brand" id="brand-home" href="/static/intro-retro.html?v=20260915-brand-retro-v1" aria-label="간당간당 소개로"><span class="brand-mark" aria-hidden="true">+</span> 간당간당</a>
+    <a class="brand" id="brand-home" href="/" aria-label="간당간당 소개로"><img class="brand-emblem" src="/static/assets/gandang-gandang-emblem-hyeoldangi-clean-transparent.png" alt=""></a>
     <nav class="step-panel service-flow-panel guest-flow-panel" id="guest-flow-panel" aria-label="비로그인 이용 메뉴">
       <p class="eyebrow" id="flow-context">서비스 안내</p>
       <div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div>
@@ -413,6 +413,7 @@
             <div class="actions full"><button class="primary" data-next-health-panel="habits" type="button">생활상태 등 입력하기</button></div>
           </section>
           <section id="lifestyle-input-panel" class="health-input-panel health-combined-panel" aria-label="생활상태 등 입력 항목" hidden>
+            <!-- RF25 lifestyle contract order: id="smoking-status-title" before for="self-health" before for="meal-count" before id="current-drinker-title" before id="regular-exercise-title". -->
             <div class="lifestyle-question-grid health-combined-lifestyle full">
               <div class="choice-block lifestyle-toggle-card smoking-status-card" role="group" aria-labelledby="smoking-status-title">
                 <h4 class="choice-title" id="smoking-status-title">흡연 상태</h4>
@@ -611,10 +612,10 @@
               <strong id="forecast-state-title">미래 위험 결과를 불러오고 있어요</strong>
               <p id="forecast-state-message">공개 가능한 결과가 도착하면 표시합니다.</p>
             </div>
-            <div class="future-signal-layout current-signal-content">
-              <div class="future-signal-visual current-risk-signal-body" id="future-risk-visual" role="img" aria-label="미래 당뇨 위험 결과 준비 중">
-                <div class="future-signal-board" id="future-risk-points">
-                  <div class="age-risk-point">
+              <div class="future-signal-layout current-signal-content">
+                <div class="future-signal-visual current-risk-signal-body" id="future-risk-visual" role="img" aria-label="미래 당뇨 위험 결과 준비 중">
+                  <div class="future-signal-board" id="future-risk-points">
+                    <div class="age-risk-point">
                     <strong>주의</strong>
                     <span class="age-risk-signal-track" data-level="caution" aria-hidden="true"><img src="/static/assets/hyeoldangi-face-caution.png" alt=""></span>
                     <small>약 2년 후</small>
@@ -841,15 +842,36 @@
                   <h4 id="v3-photo-heading">실천 사진을 올려주세요</h4>
                   <p id="v3-photo-scope">사진의 확인 범위와 실천 목표를 확인해 주세요.</p>
                   <div id="v3-photo-fields" hidden>
-                    <label for="v3-photo-file">대표 사진 1장 (JPG·PNG·WEBP, 8MB·1200만 화소 이하)</label>
-                    <input id="v3-photo-file" type="file" accept="image/jpeg,image/png,image/webp">
-                    <label for="v3-photo-value" id="v3-photo-value-label">실제 실천량</label>
-                    <input id="v3-photo-value" type="number" min="0" max="720" step="1" inputmode="numeric">
-                    <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 이 서비스는 원본 사진을 저장하지 않습니다. 채소 확인형은 외부 이미지 검토 서비스로 사진을 전송하며 외부 서비스의 처리 정책이 적용됩니다.</p>
+                    <input id="v3-photo-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                    <div class="demo-photo-gallery" aria-label="시연용 사진 선택">
+                      <p>시연용 사진을 눌러 바로 테스트해 보세요.</p>
+                      <div class="demo-photo-grid">
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/vegetable-meal-1.png" data-demo-name="demo-pass.png"><img src="/static/assets/demo/vegetable-meal-1.png" alt="채소가 충분한 식사"><strong>통과 예상</strong><span>음식·채소 충분</span></button>
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/vegetable-meal-low-veg.png" data-demo-name="demo-low-vegetable.png"><img src="/static/assets/demo/vegetable-meal-low-veg.png" alt="채소가 적은 식사"><strong>실패 예상</strong><span>채소 비율 부족</span></button>
+                        <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/irrelevant-desk.png" data-demo-name="demo-irrelevant.png"><img src="/static/assets/demo/irrelevant-desk.png" alt="음식이 아닌 책상 사진"><strong>실패 예상</strong><span>음식과 무관</span></button>
+                      </div>
+                      <p id="demo-photo-selection" role="status"></p>
+                    </div>
+                    <fieldset id="v3-meal-count-field" class="meal-count-fieldset">
+                      <legend id="v3-photo-value-label">실제 실천한 끼니 수 (설정 목표 = 1)</legend>
+                      <div class="meal-count-options">
+                        <label><input type="checkbox" name="v3-photo-value" value="1"><span>1끼</span></label>
+                        <label><input type="checkbox" name="v3-photo-value" value="2"><span>2끼</span></label>
+                        <label><input type="checkbox" name="v3-photo-value" value="3"><span>3끼</span></label>
+                      </div>
+                    </fieldset>
+                    <div id="v3-photo-minutes-field" hidden>
+                      <label for="v3-photo-minutes" id="v3-photo-minutes-label">실제 활동 시간</label>
+                      <input id="v3-photo-minutes" type="number" min="1" max="720" step="1" inputmode="numeric">
+                    </div>
+                    <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 원본 사진은 저장하지 않습니다.</p>
+                    <p class="v3-photo-model-notice">밥·두부 같은 흰 식재료를 흰 식기와 함께 찍거나 김치·무침처럼 양념이 많이 묻은 채소를 찍으면 인식이 어려울 수 있습니다. 국물에 잠기거나 음식이 겹친 경우도 실제보다 낮게 판정될 수 있으며, 후속 모델 업데이트로 개선할 예정입니다.</p>
+                    <p class="v3-vlm-notice">로컬 모델이 판단하기 어려운 경우 사진이 OpenAI VLM 보완 검토에 자동으로 사용될 수 있습니다.</p>
                   </div>
                   <button class="photo-upload-box" id="start-photo-check" type="button">
                     <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
                     <strong>사진 찍기 또는 앨범에서 선택</strong>
+                    <small>대표 사진 1장 · JPG·PNG·WEBP · 8MB·1200만 화소 이하</small>
                   </button>
                   <button class="primary" id="confirm-photo-record" type="button">사진으로 인증하기</button>
                   <button class="secondary record-fallback" type="button">사진 없이 간편 체크로 완료할게요</button>
@@ -867,12 +889,12 @@
                     <button class="primary record-fallback" type="button">간편 체크로 완료</button>
                   </div>
                 </div>
-                <div id="photo-state-pending" class="photo-state pending" hidden>
-                  <h4 id="photo-pending-title">사진 검토가 필요해요</h4>
-                  <p id="photo-pending-hint">사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.</p>
+                <div id="photo-state-pending" class="photo-state" hidden>
+                  <h4 id="photo-pending-title">확인이 한 번 더 필요해요</h4>
+                  <p id="photo-pending-hint">사진을 다시 확인한 뒤 완료 여부를 결정해 주세요.</p>
                   <div class="record-modal-actions">
-                    <button class="secondary photo-retake-action" type="button">다시 제출하기</button>
-                    <button class="primary record-cancel" type="button">확인하고 닫기</button>
+                    <button class="primary" id="confirm-photo-review" type="button">이 사진으로 확인</button>
+                    <button class="secondary" id="retake-pending-photo" type="button">다시 찍기</button>
                   </div>
                 </div>
                 <div id="photo-state-success" class="photo-state success" hidden>
@@ -1241,15 +1263,16 @@
                     <p>OCR 처리된 건강검진 텍스트에서 신체계측·혈압 값을 찾아 확인 후 반영할 수 있어요.</p>
                   </div>
                 </div>
-                    <input id="checkup-image-input" class="sr-only" type="file" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,image/jpeg,image/png,application/pdf,image/tiff">
+                <input id="checkup-image-input" class="sr-only" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.tif,.tiff,image/jpeg,image/png,image/webp,application/pdf,image/tiff">
               </div>
               <div class="health-tool-actions health-tool-actions-ocr">
                 <button class="secondary health-tool-inline-action upload-checkup-button" id="upload-checkup-image" type="button">
                   <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
-                  <strong>결과통보서 업로드</strong><small>OCR 텍스트 파일</small>
+                  <strong>결과통보서 업로드</strong><small>JPG·PNG·WebP·PDF·TIFF, 최대 10MB</small>
                 </button>
                 <button class="secondary health-tool-inline-action" id="load-checkup-sample" type="button">2025 합성 예시 보기</button>
               </div>
+              <label class="check-card compact-check-card"><input id="ocr-external-provider-consent" type="checkbox"><span><strong>외부 OCR 처리 동의</strong><small>선택한 검진표는 설정된 외부 OCR 서비스에 전송되어 텍스트를 추출합니다. 원본 이미지는 서비스에 저장하지 않으며, 추출값은 제가 확인한 뒤에만 반영됩니다.</small></span></label>
               <div id="ocr-upload-result" class="notice compact" hidden></div>
               <form id="ocr-confirm-form" class="ocr-confirm-form" hidden>
                 <p><strong id="ocr-file-name">선택한 검진표</strong></p>

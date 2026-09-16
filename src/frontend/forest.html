@@ -17,7 +17,7 @@
     #forest-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;overflow:hidden;isolation:isolate;background:#dcecc3 url('/static/assets/carrot-forest-loading-v2.png?v=20260907-1') center/cover no-repeat;color:#155528;font:800 18px/1.5 Pretendard,"Noto Sans KR",system-ui,sans-serif}
     #forest-boot::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(238,247,213,.18),transparent 58%);pointer-events:none}
     .forest-boot-panel{width:min(650px,47vw);margin-left:clamp(24px,6vw,112px);padding:24px 0;transform:translateY(-5vh);text-align:left}
-    .forest-boot-brand{display:flex;align-items:center;gap:8px;margin:0 0 20px;color:#28653b;font-size:clamp(16px,1.6vw,22px);font-weight:950;letter-spacing:-.03em}.forest-boot-brand b{color:#e47927}
+    .forest-boot-brand{display:flex;align-items:center;margin:0 0 20px}.forest-boot-emblem{display:block;width:clamp(42px,4vw,64px);height:clamp(42px,4vw,64px);object-fit:contain}
     .forest-boot-title{margin:0;font-size:clamp(48px,6.5vw,116px);font-weight:950;line-height:1.12;letter-spacing:-.07em;white-space:nowrap;text-shadow:0 3px 0 #f6f7d9,3px 0 0 #f6f7d9,-3px 0 0 #f6f7d9,0 -3px 0 #f6f7d9,0 6px 18px rgba(45,86,37,.1)}
     .forest-boot-copy{max-width:500px;margin:22px 0 34px;color:#235b32;font-size:clamp(15px,1.5vw,23px);font-weight:800;line-height:1.7;letter-spacing:-.035em;text-wrap:balance;text-shadow:0 1px 8px #f7f9dc}
     .forest-boot-progress{width:min(400px,100%);height:9px;overflow:hidden;border:1px solid rgba(46,95,42,.24);border-radius:999px;background:rgba(255,255,237,.8);box-shadow:0 2px 8px rgba(36,80,37,.08)}
@@ -27,8 +27,8 @@
     html:not(.forest-style-ready) body>:not(#forest-boot),html:not(.forest-script-ready) body>:not(#forest-boot){visibility:hidden}
     html.forest-style-ready.forest-script-ready #forest-boot{display:none}
     @keyframes forestBootPulse{to{opacity:.48;transform:scale(.84)}}@keyframes forestBootLoad{0%{transform:translateX(-105%)}85%,100%{transform:translateX(285%)}}
-    @media(max-aspect-ratio:1/1){#forest-boot{align-items:flex-end;background-position:73% center}#forest-boot::after{background:linear-gradient(0deg,rgba(243,248,219,.98) 0%,rgba(237,246,213,.96) 21%,rgba(237,246,213,.6) 37%,transparent 61%)}.forest-boot-panel{width:100%;margin:0;padding:28px 26px max(30px,env(safe-area-inset-bottom));transform:none}.forest-boot-brand{margin-bottom:10px;font-size:17px}.forest-boot-title{font-size:clamp(48px,11vw,80px)}.forest-boot-copy{max-width:420px;margin:14px 0 22px;font-size:16px}}
-    @media(max-height:500px) and (min-aspect-ratio:1/1){.forest-boot-panel{transform:none;padding:12px 0}.forest-boot-brand{margin-bottom:8px;font-size:14px}.forest-boot-title{font-size:clamp(36px,6vw,58px)}.forest-boot-copy{margin:10px 0 16px;font-size:14px}.forest-boot-status{margin-top:8px;font-size:11px}}
+    @media(max-aspect-ratio:1/1){#forest-boot{align-items:flex-end;background-position:73% center}#forest-boot::after{background:linear-gradient(0deg,rgba(243,248,219,.98) 0%,rgba(237,246,213,.96) 21%,rgba(237,246,213,.6) 37%,transparent 61%)}.forest-boot-panel{width:100%;margin:0;padding:28px 26px max(30px,env(safe-area-inset-bottom));transform:none}.forest-boot-brand{margin-bottom:10px}.forest-boot-emblem{width:46px;height:46px}.forest-boot-title{font-size:clamp(48px,11vw,80px)}.forest-boot-copy{max-width:420px;margin:14px 0 22px;font-size:16px}}
+    @media(max-height:500px) and (min-aspect-ratio:1/1){.forest-boot-panel{transform:none;padding:12px 0}.forest-boot-brand{margin-bottom:8px}.forest-boot-emblem{width:38px;height:38px}.forest-boot-title{font-size:clamp(36px,6vw,58px)}.forest-boot-copy{margin:10px 0 16px;font-size:14px}.forest-boot-status{margin-top:8px;font-size:11px}}
     @media(prefers-reduced-motion:reduce){.forest-boot-progress i,.forest-boot-status span{animation:none}.forest-boot-progress i{width:72%}}
   </style>
   <script>
@@ -50,7 +50,7 @@
       }).catch(() => {});
     })();
   </script>
-  <link rel="stylesheet" href="/static/forest-game.css?v=20260910-5" onload="document.documentElement.classList.add('forest-style-ready')">
+  <link rel="stylesheet" href="/static/forest-game.css?v=20260915-logo-emblem-v1" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
   <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
   <script src="/static/lpc-avatar-engine.js?v=20260908-2" defer></script>
@@ -73,11 +73,11 @@
   <script src="/static/challenge-v2.js?v=2.1.10" defer></script>
 </head>
 <body>
-  <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand"><span>간당<b>간당</b></span></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">함께 실천하고, 같이 성장하는 모두의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲을 준비하고 있어요</div></div></div>
+  <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand"><img class="forest-boot-emblem" src="/static/assets/gandang-gandang-emblem-hyeoldangi-clean-transparent.png" alt="간당간당"></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">함께 실천하고, 같이 성장하는 모두의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲을 준비하고 있어요</div></div></div>
   <a class="skip-link" href="#forest-main">게임 내용으로 바로가기</a>
 
   <header class="studio-topbar">
-    <a class="forest-brand" href="/"><span class="brand-mark" aria-hidden="true">🥕</span><span>간당간당</span></a>
+    <a class="forest-brand" href="/" aria-label="간당간당 홈으로"><img class="forest-brand-emblem" src="/static/assets/gandang-gandang-emblem-hyeoldangi-clean-transparent.png" alt=""></a>
     <div class="breadcrumb" aria-label="현재 위치"><strong>당근의 숲</strong></div>
     <div class="topbar-actions">
       <span class="sync-state" aria-label="오늘 기록 연결됨" title="오늘 기록 연결됨"><i aria-hidden="true"></i></span>

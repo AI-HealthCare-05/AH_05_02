@@ -624,7 +624,7 @@
 | 퀴즈 조회 | GET | `/api/v1/health-education/quizzes` | 승인 문서에서 규칙 기반(rule-based) 자동 생성, OX·빈칸 채우기 2종, 조회 응답에는 정답·해설 미포함(제출 API는 후속) |
 | 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
 | 채소 식사 사진 자동 인증 | POST | `/api/v1/user-challenges/{id}/meal-photo-verifications` | multipart 사진 업로드, 채소 포함 여부·시각적 비율(%)만 자동 판별해 챌린지 인증·기록, 칼로리·영양·치료 판정 금지, 원본 이미지 미저장(SHA-256 다이제스트만 보관) |
-| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 구조화 필드 또는 OCR 텍스트에서 허용 필드만 반환, 신원정보 제외·건강검진 기록 자동 저장 금지 |
+| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 이미지 업로드 시 `external_provider_consent=true`가 필수이며, Claude Vision 또는 CLOVA OCR 설정에서 허용 필드만 초안으로 반환한다. 신원정보 제외·원본 이미지 미저장·건강검진 기록 자동 저장 금지 |
 | OCR 건강정보 적용 | PATCH | `/api/v1/ocr-drafts/{draft_id}/health-checkups/{checkup_id}` | 사용자가 확인한 신체계측·혈압만 기존 건강정보에 부분 갱신 |
 | 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
 | 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
