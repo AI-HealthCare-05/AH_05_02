@@ -92,13 +92,16 @@ class CurrentScreeningInputCreateRequest(BaseModel):
     household_income_quartile: Literal["1", "2", "3", "4"] | None = None
     hypertension_family_history: bool | None = None
     diabetes_family_history: bool | None = None
-    alcohol_frequency: Literal[
-        "none",
-        "monthly_or_less",
-        "two_to_four_monthly",
-        "two_to_three_weekly",
-        "four_or_more_weekly",
-    ] | None = None
+    alcohol_frequency: (
+        Literal[
+            "none",
+            "monthly_or_less",
+            "two_to_four_monthly",
+            "two_to_three_weekly",
+            "four_or_more_weekly",
+        ]
+        | None
+    ) = None
 
 
 class PredictionJobCreateRequest(BaseModel):
