@@ -31,11 +31,31 @@ async def test_sqlite_repair_adds_missing_height_cm() -> None:
 async def test_sqlite_repair_is_idempotent() -> None:
     database = FakeDatabase("sqlite", [{"name": "id"}, {"name": "height_cm"}])
 
-    assert await repair.upgrade(database) == ""
+    assert await repair.upgrade(database) == repair.NO_OP_SQL
+
+
+@pytest.mark.asyncio
+async def test_mysql_repair_adds_missing_height_cm() -> None:
+    database = FakeDatabase("mysql", [])
+
+    sql = await repair.upgrade(database)
+
+    assert sql == "ALTER TABLE `users` ADD COLUMN `height_cm` DOUBLE NULL;"
+    assert len(database.queries) == 1
+    assert "INFORMATION_SCHEMA" in database.queries[0]
+    assert "`TABLE_NAME` = 'users'" in database.queries[0]
+    assert "`COLUMN_NAME` = 'height_cm'" in database.queries[0]
 
 
 @pytest.mark.asyncio
 async def test_mysql_repair_is_idempotent() -> None:
     database = FakeDatabase("mysql", [{"COLUMN_NAME": "height_cm"}])
 
-    assert await repair.upgrade(database) == ""
+    assert await repair.upgrade(database) == repair.NO_OP_SQL
+
+
+@pytest.mark.asyncio
+async def test_repair_downgrade_is_safe_no_op() -> None:
+    database = FakeDatabase("mysql", [])
+
+    assert await repair.downgrade(database) == repair.NO_OP_SQL
