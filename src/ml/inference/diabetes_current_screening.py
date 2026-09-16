@@ -90,7 +90,9 @@ def load_current_screening_model(
     """Load a locally provisioned artifact and verify its immutable contract."""
 
     manifest = _load_manifest(manifest_path)
-    configured_uri = str(model_path) if model_path is not None else str(REPOSITORY_ROOT / manifest["artifact_local_path"])
+    configured_uri = (
+        str(model_path) if model_path is not None else str(REPOSITORY_ROOT / manifest["artifact_local_path"])
+    )
     try:
         model_path = resolve_artifact_uri(configured_uri, expected_sha256=manifest.get("artifact_sha256"))
     except ArtifactResolverError as exc:
