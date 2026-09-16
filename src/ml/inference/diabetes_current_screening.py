@@ -17,6 +17,7 @@ from typing import Any
 import joblib
 import pandas as pd
 
+from src.ml.inference.artifact_resolver import ArtifactResolverError, resolve_artifact_uri
 from src.ml.modeling.knhanes_current_screening import predict_artifact
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -84,13 +85,16 @@ def _validate_artifact(artifact: Any, manifest: dict[str, Any]) -> dict[str, Any
 def load_current_screening_model(
     *,
     manifest_path: Path = DEFAULT_MANIFEST,
-    model_path: Path | None = None,
+    model_path: str | Path | None = None,
 ) -> LoadedCurrentScreeningModel:
     """Load a locally provisioned artifact and verify its immutable contract."""
 
     manifest = _load_manifest(manifest_path)
-    if model_path is None:
-        model_path = REPOSITORY_ROOT / manifest["artifact_local_path"]
+    configured_uri = str(model_path) if model_path is not None else str(REPOSITORY_ROOT / manifest["artifact_local_path"])
+    try:
+        model_path = resolve_artifact_uri(configured_uri, expected_sha256=manifest.get("artifact_sha256"))
+    except ArtifactResolverError as exc:
+        raise CurrentScreeningArtifactUnavailableError("current-screening artifact could not be provisioned") from exc
     if not model_path.is_file():
         raise CurrentScreeningArtifactUnavailableError(
             f"current-screening artifact is missing; reproduce or provision it at {model_path}"
