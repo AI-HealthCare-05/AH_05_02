@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
@@ -59,13 +59,9 @@ if FRONTEND_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-async def home(request: Request, intro: str | None = Query(default=None)) -> FileResponse:
-    """Serve the retro cover first; explicit app-entry links open the MVP flow."""
-    explicit_app_entry = intro == "original" or any(
-        key in request.query_params for key in ("auth", "preview", "resume", "workspace", "invite_token")
-    )
-    page = "index.html" if explicit_app_entry else "intro-retro.html"
-    response = FileResponse(FRONTEND_DIR / page)
+async def home() -> FileResponse:
+    """Serve the single index-based customer interface."""
+    response = FileResponse(FRONTEND_DIR / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
@@ -125,22 +121,50 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/api/v1/ready", tags=["Health"])
-async def ready() -> dict[str, object]:
+async def ready(response: Response) -> dict[str, object]:
     if not config.DEMO_MODE:
         await redis_client.ping()
     await connections.get("default").execute_query("SELECT 1")
-    from app.prediction.contracts import ACTIVE_MODEL
+    from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL
+    from app.vision.food_vision import food_vision_is_configured
+
+    future_artifact_available = config.PREDICTION_PROVIDER != "artifact" or Path(config.MODEL_URI).is_file()
+    current_artifact_path = (
+        config.ML_SHARED8_MODEL_URI
+        if config.CURRENT_SCREENING_RUNTIME == "shared8-waist"
+        else config.CURRENT_SCREENING_MODEL_URI
+    )
+    current_artifact_available = bool(current_artifact_path) and Path(current_artifact_path).is_file()
+    food_vision_ready = config.FOOD_VISION_PROVIDER != "local_kfood" or food_vision_is_configured()
+    operational_ready = (
+        (not ACTIVE_MODEL.operational_model_activated or future_artifact_available)
+        and (not CURRENT_SCREENING_MODEL.operational_model_activated or current_artifact_available)
+        and food_vision_ready
+    )
+    if not operational_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return {
-        "status": "ready",
+        "status": "ready" if operational_ready else "not_ready",
         "dependencies": {
             "database": "ready",
             "redis": "embedded-demo" if config.DEMO_MODE else "ready",
-            "prediction_provider": "configured",
+            "prediction_provider": config.PREDICTION_PROVIDER,
+            "future_artifact_path_available": future_artifact_available,
+            "current_artifact_path_available": current_artifact_available,
+            "food_vision_ready": food_vision_ready,
+            "worker_preload_required_for_release": True,
         },
         "active_model": {
             "model_key": ACTIVE_MODEL.model_key,
             "version": ACTIVE_MODEL.version,
             "promotion_status": ACTIVE_MODEL.promotion_status,
+        },
+        "current_screening_model": {
+            "model_key": CURRENT_SCREENING_MODEL.model_key,
+            "version": CURRENT_SCREENING_MODEL.version,
+            "runtime": config.CURRENT_SCREENING_RUNTIME,
+            "promotion_status": CURRENT_SCREENING_MODEL.promotion_status,
+            "operational_model_activated": CURRENT_SCREENING_MODEL.operational_model_activated,
         },
     }

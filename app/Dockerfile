@@ -25,6 +25,7 @@ COPY ./app ./app
 COPY ./src/frontend ./src/frontend
 COPY ./src/rag ./src/rag
 COPY ./src/ml ./src/ml
+COPY ./configs ./configs
 COPY ./models/registry ./models/registry
 
 # 5. 해당 이미지를 활용하여 도커컨테이너 실행시 실행되는 명령어입니다.

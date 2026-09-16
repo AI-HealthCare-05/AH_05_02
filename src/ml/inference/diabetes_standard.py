@@ -137,6 +137,13 @@ def load_standard_model(
     except Exception as exc:  # joblib may surface several deserialization errors
         raise ModelContractError("model artifact could not be deserialized") from exc
     pipeline = _validate_bundle(bundle, manifest)
+    # Tree probability aggregation can differ at the last bit when joblib
+    # reduces parallel workers in a different order.  The caution boundary is
+    # close to an observed validation score, so serving always uses one stable
+    # reduction order without refitting or changing any tree.
+    classifier = getattr(pipeline, "named_steps", {}).get("classifier")
+    if classifier is not None and hasattr(classifier, "set_params"):
+        classifier.set_params(n_jobs=1)
     return LoadedDiabetesModel(pipeline=pipeline, manifest=manifest)
 
 

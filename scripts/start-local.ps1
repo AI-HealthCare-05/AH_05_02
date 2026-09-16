@@ -3,9 +3,13 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 
 $requiredModels = @(
-    "models\artifacts\candidates\diabetes_current_screening\v050\model.joblib",
+    "models\artifacts\candidates\diabetes_current_screening\knhanes-shared8-waist-sk180-v1\model.joblib",
     "models\artifacts\candidates\diabetes_incidence\rf25-tuned-spec40-v1\model.joblib"
 )
+if ($env:MODEL_DELIVERY_GOOGLE_DRIVE_ENABLED -eq "true") {
+    & python scripts/provision-models-google-drive.py
+    if ($LASTEXITCODE -ne 0) { throw "Google Drive 모델 배치에 실패했습니다." }
+}
 foreach ($model in $requiredModels) {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $model))) {
         throw "필수 모델 파일이 없습니다: $model`n docs\MODEL_LOCAL_SETUP.md에 따라 scripts\provision-models.py를 먼저 실행하세요."

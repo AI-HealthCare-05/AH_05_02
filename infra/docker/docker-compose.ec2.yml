@@ -56,6 +56,7 @@ services:
     # Model files are provisioned separately on the EC2 host and are never committed.
     volumes:
       - ../../models:/app/models:ro
+      - food_vision_cache:/app/storage/food_vision
     networks:
       - healthcare
     depends_on:
@@ -64,7 +65,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "uv", "run", "--no-sync", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      test: ["CMD", "uv", "run", "--no-sync", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -117,6 +118,7 @@ volumes:
   mysql_data:
   redis_data:
   model_cache:
+  food_vision_cache:
 
 networks:
   healthcare:

@@ -67,6 +67,8 @@ docker compose --env-file .env -f infra/docker/docker-compose.prod.yml logs --ta
 ```
 
 - [ ] `fastapi`, `mysql`, `redis`, `ai-worker`, `nginx` 상태가 정상이다.
+- [ ] 운영 `.env`의 Drive 파일 ID·번들 SHA-256이 배포 대상과 일치하고 `/api/v1/ready`의 `food_vision_ready`가 `true`다.
+- [ ] 첫 다운로드 이후 모델이 `food_vision_cache` 볼륨에서 재사용되며 요청 처리 중 Drive를 다시 호출하지 않는다.
 - [ ] 외부에서 `https://도메인/health`와 `https://도메인/api/v1/ready`가 정상 응답한다.
 - [ ] 회원가입 → 동의 → 적합성 → 건강정보 입력 → 예측 작업 생성/조회 → 챌린지 기록 흐름을 테스트 계정으로 확인한다.
 - [ ] 기진단자 차단, 의료 안내 문구, RAG 출처 표기, 실패 작업 오류 응답을 확인한다.
