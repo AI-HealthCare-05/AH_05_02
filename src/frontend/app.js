@@ -556,6 +556,15 @@ function recordTypeLabel(type) {
 function recordActionLabel(type) {
   return type === "photo" ? "사진 올리기" : "체크하기";
 }
+function challengeCardTitle(title = "") {
+  return escapeHtml(title)
+    .replace("당 음료 대신 물 · 개인 수분 지침 확인", "당분이 든 음료 대신 물<br>개인 수분 지침 확인")
+    .replace("정제 곡물 일부를 통곡물·콩류로 바꾸기", "정제 곡물 일부를<br>통곡물·콩류로 바꾸기");
+}
+function challengeCardGoal(goal = "") {
+  return escapeHtml(goal)
+    .replace("오늘 음료 선택 또는 개인 수분 지침 준수 1회 확인", "오늘 음료 선택 또는<br>개인 수분 지침 준수 1회 확인");
+}
 function simpleRecordPresentation(item = {}) {
   const title = item.title || "";
   if (title.includes("걷")) return {
@@ -3576,14 +3585,12 @@ function renderChallengeChoices() {
     const labels = { hydration: "음료 선택", fiber_diet: "식이섬유 중심 식사", aerobic_activity: "유산소 활동", tracking: "기록 습관" };
     const images = { hydration: "water", fiber_diet: "meal", aerobic_activity: "walking", tracking: "checkup" };
     $("#challenge-list").innerHTML = state.challengeRecommendations.map((item) => {
-      const url = safeExternalUrl(item.source?.url);
       return `<article class="challenge-v3-card" data-v3-domain="${escapeHtml(item.domain)}">
         <img src="/static/assets/hyeoldangi-challenge-${images[item.domain]}.png" alt="">
-        <p class="eyebrow">${labels[item.domain]} · ${item.always_include ? "항상 포함 / 공통 목표" : challengeLevelLabel(item.difficulty)}</p>
-        <h4>${escapeHtml(item.title)}</h4><strong>${escapeHtml(item.daily_goal)}</strong>
+        <p class="eyebrow">${labels[item.domain]} · ${item.always_include ? "공통 목표" : challengeLevelLabel(item.difficulty)}</p>
+        <h4>${challengeCardTitle(item.title)}</h4><strong>${challengeCardGoal(item.daily_goal)}</strong>
         <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${challengeProofLabel(item.verification_type)}</span>
         <p class="challenge-v3-safety">${escapeHtml(item.safety)}</p>
-        <details><summary>근거와 인증 범위</summary><p>${escapeHtml(item.verification_scope)}</p><p>${escapeHtml(item.goal_basis)}</p>${item.weekly_guidance ? `<p>${escapeHtml(item.weekly_guidance)}</p>` : ""}${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.source.title)}</a>` : ""}</details>
       </article>`;
     }).join("");
     $("#challenge-category-panel").hidden = true;
@@ -3628,7 +3635,7 @@ function renderChallengeDetails() {
 
 function updateChallengeSelectionCount() {
   const count = state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0);
-  $("#challenge-selection-count").textContent = `${count}/3 선택`;
+  if ($("#challenge-selection-count")) $("#challenge-selection-count").textContent = `${count}/3 선택`;
   updateChallengeStartState();
 }
 
@@ -3653,7 +3660,7 @@ function updateChallengeStartState() {
   if (!reason) return;
   if (loading) reason.textContent = "챌린지 후보를 불러오고 있어요.";
   else if (failed) reason.textContent = "후보를 불러오지 못했습니다. 다시 시도해 주세요.";
-  else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다. 무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.";
+  else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다.\n무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.";
   else if (count < 1) reason.textContent = "세부 챌린지를 하나 이상 선택해 주세요.";
   else reason.textContent = `${count}개 챌린지를 선택했습니다.`;
 }
@@ -5857,6 +5864,7 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       renderCycle(createLocalDemoCycle(ids, customSelected ? state.customChallenge : null));
       renderLocalDemoDashboard();
       showStep(8);
+      showWorkspace("challenge", { moveFocus: false });
       return;
     }
     if (customSelected) {
@@ -5866,7 +5874,10 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
       start_date: new Date().toISOString().slice(0, 10), challenge_ids: ids, prediction_id: state.predictionId,
     }) });
-    renderCycle(cycle); await refreshDashboard(); showStep(8);
+    renderCycle(cycle);
+    await refreshDashboard();
+    showStep(8);
+    showWorkspace("challenge", { moveFocus: false });
   } catch (error) {
     const hasActiveCycle = error.status === 409 && (
       error.code === "ACTIVE_CHALLENGE_CYCLE_EXISTS"

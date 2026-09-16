@@ -28,14 +28,14 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260916-pr78-conflict-resolve-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260916-challenge-card-lines-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260916-wood-photo-logo-v5" defer></script>
+  <script src="/static/app.js?v=20260916-challenge-card-lines-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -675,19 +675,19 @@
         </div>
         <form id="challenge-form">
           <section class="challenge-v3-controls" aria-labelledby="challenge-v3-heading">
-            <p class="eyebrow">자료 기반 생활습관 챌린지</p>
+            <p class="eyebrow">생활습관 챌린지</p>
             <h3 id="challenge-v3-heading">매일 음료·식단·운동, 한 가지씩</h3>
             <p>하루 3개 구성은 유지하고, 관심 있는 영역에 더 집중해요. 난이도와 사진 인증 방식은 서로 달라요.</p>
-            <div class="two-column">
+            <div class="challenge-v3-control-row">
               <div class="form-row"><label for="challenge-v3-focus">중점 영역</label><select id="challenge-v3-focus"><option value="balanced">균형 있게</option><option value="diet">식단 위주</option><option value="activity">운동 위주</option></select></div>
-              <div class="form-row"><label for="challenge-v3-difficulty">실천 난이도</label><select id="challenge-v3-difficulty"><option value="easy">쉬움 · 작게 시작</option><option value="moderate">보통 · 꾸준히 실천</option><option value="advanced">도전 · 무리 없는 범위에서</option></select></div>
+              <div class="form-row"><label for="challenge-v3-difficulty">실천 난이도</label>
+              <select id="challenge-v3-difficulty"><option value="easy">쉬움 · 작게 시작</option><option value="moderate">보통 · 꾸준히 실천</option><option value="advanced">도전 · 무리 없는 범위에서</option></select></div>
+              <button class="secondary" id="challenge-v3-refresh" type="button" title="횟수 제한 없이 다시 볼 수 있어요. 준비된 후보가 반복될 수 있으며 기존 기록·보상은 바뀌지 않아요.">다른 후보 보기</button>
             </div>
-            <p id="challenge-v3-policy" role="status">선호 영역은 선택한 단계, 다른 영역은 한 단계 가볍게 제안합니다.</p>
-            <button class="secondary" id="challenge-v3-refresh" type="button">다른 후보 보기</button>
-            <small>횟수 제한 없이 다시 볼 수 있어요. 준비된 후보가 반복될 수 있으며 기존 기록·보상은 바뀌지 않아요.</small>
+            <p class="sr-only" id="challenge-v3-policy" role="status">챌린지 후보를 확인할 수 있습니다.</p>
             <p class="medical-notice">수분·식사·운동에 대한 의료진 지침이 있다면 우선하세요. 물을 많이 마시거나 목표를 억지로 채우는 과제가 아닙니다.</p>
           </section>
-          <div class="challenge-selection-summary"><p>확인한 3개로 새 4주 챌린지를 시작해요.</p><strong id="challenge-selection-count" role="status" aria-live="polite">0/3 선택</strong></div>
+          <div class="challenge-selection-summary sr-only"><strong id="challenge-selection-count" role="status" aria-live="polite">0/3 선택</strong></div>
           <div class="challenge-grid" id="challenge-list"></div>
           <button class="secondary" id="retry-challenges" type="button" hidden>챌린지 목록 다시 불러오기</button>
           <section class="challenge-category-panel" id="challenge-category-panel" aria-labelledby="challenge-category-title" hidden>
@@ -737,8 +737,8 @@
             </div>
             <p class="walking-level-safety">운동 중 통증·어지럼·심한 호흡곤란이 생기면 즉시 중단하고 의료진의 안내를 확인해 주세요.</p>
           </fieldset>
-          <div class="actions challenge-start-actions"><button class="primary" id="start-challenge" type="submit">4주 챌린지 시작</button></div>
           <p class="challenge-start-reason" id="challenge-start-reason" role="status" aria-live="polite">세부 챌린지를 하나 이상 선택해 주세요.</p>
+          <div class="actions challenge-start-actions"><button class="primary" id="start-challenge" type="submit">4주 챌린지 시작</button></div>
         </form>
       </section>
       <section class="screen" data-step="8" aria-labelledby="dashboard-title">
