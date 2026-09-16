@@ -303,7 +303,8 @@ const eligibilityGuidance = {
     reason: "입력한 생년월일 기준으로 만 14~18세에 해당합니다.",
     action: "걷기·물 마시기처럼 부담이 적은 생활습관 챌린지를 선택할 수 있어요.",
     primaryLabel: "생활습관 챌린지 보기",
-    primaryStep: 7,
+    primaryStep: 8,
+    primaryWorkspace: "challenge",
   },
   MODEL_AGE_OUT_OF_RANGE: {
     code: "A19", title: "현재 건강 신호를 확인할 수 있어요",
@@ -343,7 +344,6 @@ const jobStatusLabels = {
 };
 const riskCategoryLabels = {
   low: "낮음",
-  moderate: "주의",
   caution: "주의",
   high: "높음",
   diabetes_screening_advised: "높음",
@@ -351,6 +351,14 @@ const riskCategoryLabels = {
 
 function getRiskCategoryLabel(prediction) {
   return prediction?.risk_category_label || riskCategoryLabels[prediction?.risk_category] || "확인 필요";
+}
+
+function normalizeCurrentSignalRisk(prediction = state.currentScreeningPrediction) {
+  const raw = prediction?.risk_category || prediction?.risk_category_label || "";
+  if (raw === "pending") return "pending";
+  const risk = normalizeRiskKey(prediction);
+  if (risk === "low") return "low";
+  return "high";
 }
 
 function showEligibilityGuidance(reasonCodes) {
@@ -753,17 +761,17 @@ function goBack() {
 
 function showHealthInputPanel(panel) {
   const canonicalPanel = {
-    lifestyle: "drinking",
+    lifestyle: "habits",
+    drinking: "habits",
+    nutrition: "habits",
     details: "family",
   }[panel] || panel;
   const panelMap = {
     metrics: "health-metrics-panel",
     vitals: "health-vitals-panel",
-    drinking: "lifestyle-input-panel",
-    habits: "health-habits-panel",
+    habits: "lifestyle-input-panel",
     activity: "health-activity-panel",
     family: "detail-health-panel",
-    nutrition: "health-nutrition-panel",
     socioeconomic: "health-socioeconomic-panel",
     review: "health-review-panel",
   };
@@ -1441,18 +1449,24 @@ function alcoholFrequencyValue() {
 function detailHealthPayload() {
   return {
     walking_days: nullableNumber("walking-days"),
-    energy_kcal: nullableNumber("energy-kcal"),
-    protein_g: nullableNumber("protein-g"),
-    fat_g: nullableNumber("fat-g"),
-    carbohydrate_g: nullableNumber("carbohydrate-g"),
-    sodium_mg: nullableNumber("sodium-mg"),
-    region: nullableSelectValue("region-type"),
-    urban: nullableSelectValue("urban-type"),
+    annual_household_income_10k_krw: nullableNumber("annual-household-income"),
+    health_satisfaction_score: nullableNumber("health-satisfaction-score"),
+    economic_satisfaction_score: nullableNumber("economic-satisfaction-score"),
+    overall_quality_of_life_score: nullableNumber("overall-quality-of-life-score"),
     education: nullableSelectValue("education-level"),
-    income_quartile: nullableSelectValue("income-quartile"),
-    household_income_quartile: nullableSelectValue("household-income-quartile"),
-    hypertension_family_history: nullableBooleanSelect("hypertension-family-history"),
-    diabetes_family_history: nullableBooleanSelect("diabetes-family-history"),
+    education_level: nullableSelectValue("education-level"),
+    marital_status: nullableSelectValue("marital-status"),
+    household_structure: nullableSelectValue("household-structure"),
+    depressed_feeling_last_week: nullableSelectValue("depressed-feeling-last-week"),
+    sleep_difficulty_last_week: nullableSelectValue("sleep-difficulty-last-week"),
+    hypertension_diagnosis: nullableBooleanSelect("hypertension-diagnosis"),
+    cancer_diagnosis: nullableBooleanSelect("cancer-diagnosis"),
+    chronic_lung_disease_diagnosis: nullableBooleanSelect("chronic-lung-disease-diagnosis"),
+    liver_disease_diagnosis: nullableBooleanSelect("liver-disease-diagnosis"),
+    heart_disease_diagnosis: nullableBooleanSelect("heart-disease-diagnosis"),
+    cerebrovascular_disease_diagnosis: nullableBooleanSelect("cerebrovascular-disease-diagnosis"),
+    psychiatric_disease_diagnosis: nullableBooleanSelect("psychiatric-disease-diagnosis"),
+    arthritis_rheumatism_diagnosis: nullableBooleanSelect("arthritis-rheumatism-diagnosis"),
     alcohol_frequency: alcoholFrequencyValue(),
   };
 }
@@ -1460,18 +1474,23 @@ function detailHealthPayload() {
 function detailHealthReviewRows() {
   const details = detailHealthPayload();
   return [
-    ["하루 섭취 열량", details.energy_kcal == null ? "모름" : `${details.energy_kcal} kcal`],
-    ["하루 단백질", details.protein_g == null ? "모름" : `${details.protein_g} g`],
-    ["하루 지방", details.fat_g == null ? "모름" : `${details.fat_g} g`],
-    ["하루 탄수화물", details.carbohydrate_g == null ? "모름" : `${details.carbohydrate_g} g`],
-    ["하루 나트륨", details.sodium_mg == null ? "모름" : `${details.sodium_mg} mg`],
-    ["거주 지역", selectLabel("region-type")],
-    ["도시/읍면 구분", selectLabel("urban-type")],
+    ["고혈압", selectLabel("hypertension-diagnosis")],
+    ["암", selectLabel("cancer-diagnosis")],
+    ["만성 폐질환", selectLabel("chronic-lung-disease-diagnosis")],
+    ["간질환", selectLabel("liver-disease-diagnosis")],
+    ["심장질환", selectLabel("heart-disease-diagnosis")],
+    ["뇌혈관질환", selectLabel("cerebrovascular-disease-diagnosis")],
+    ["정신과 질환", selectLabel("psychiatric-disease-diagnosis")],
+    ["관절염·류머티즘", selectLabel("arthritis-rheumatism-diagnosis")],
+    ["건강 만족도", details.health_satisfaction_score == null ? "모름" : `${details.health_satisfaction_score}점`],
+    ["경제 만족도", details.economic_satisfaction_score == null ? "모름" : `${details.economic_satisfaction_score}점`],
+    ["삶의 질", details.overall_quality_of_life_score == null ? "모름" : `${details.overall_quality_of_life_score}점`],
+    ["연간 가구소득", details.annual_household_income_10k_krw == null ? "모름" : `${details.annual_household_income_10k_krw}만원/년`],
     ["최종 학력", selectLabel("education-level")],
-    ["개인 소득 분위", selectLabel("income-quartile")],
-    ["가구 소득 분위", selectLabel("household-income-quartile")],
-    ["고혈압 가족력", selectLabel("hypertension-family-history")],
-    ["당뇨병 가족력", selectLabel("diabetes-family-history")],
+    ["혼인 상태", selectLabel("marital-status")],
+    ["가구 형태", selectLabel("household-structure")],
+    ["지난주 우울감", selectLabel("depressed-feeling-last-week")],
+    ["지난주 수면곤란", selectLabel("sleep-difficulty-last-week")],
   ];
 }
 
@@ -1680,7 +1699,6 @@ function dlRows(rows) {
 }
 
 function renderHealthReview() {
-  const selfHealthLabel = $("#self-health").selectedOptions[0]?.textContent || "-";
   const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const detailHealth = detailHealthPayload();
   $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
@@ -1709,7 +1727,6 @@ function renderHealthReview() {
     ["최근 1주 걷기 일수", detailHealth.walking_days == null ? "모름" : `${detailHealth.walking_days}일`],
     ["주당 운동 일수", `${isRegularExercise ? $("#exercise-days").value : 0}일`],
     ["한 번 운동할 때 시간", `${isRegularExercise ? $("#exercise-minutes").value : 0}분`],
-    ["주관적 건강상태", selfHealthLabel],
     ["어제 식사 횟수", `${$("#meal-count").value}회`],
   ]);
   $("#review-detail-health").innerHTML = dlRows(detailHealthReviewRows());
@@ -1995,10 +2012,9 @@ function renderCurrentHealthResult(checkup = state.healthCheckupResult, { standa
 function showFuturePredictionResult() {
   $("#future-prediction-result").hidden = false;
   $("#result-confirmation-eyebrow").textContent = "결과 확인";
-  $("#factors-title").textContent = "현재 위험 신호와 미래 신규 발병 위험을 구분해서 확인해 주세요";
-  $("#result-confirmation-lead").innerHTML = "<p>현재 위험 신호 선별은 지금 확인이 필요한 신호를, 미래 신규 발병 위험은 앞으로의 위험 신호를 살펴봅니다.</p><p>두 결과는 서로 다른 기준으로 계산되므로 점수를 직접 비교하거나 합산하지 않습니다.</p>";
-  if (getCurrentHealthSignal()) renderCurrentHealthResult(state.currentScreeningPrediction || state.healthCheckupResult, { standalone: false });
-  else $("#current-health-result").hidden = true;
+  $("#factors-title").textContent = "현재 당뇨 신호와 미래 당뇨 위험 확인해주세요";
+  $("#result-confirmation-lead").innerHTML = "<p><strong>현재 위험 신호</strong> 지금 건강정보에서 위험 신호가 있는지 확인해요.</p><p><strong>미래의 당뇨 위험</strong> 앞으로 약 2년 동안 조심할 위험 신호예요.</p>";
+  $("#current-health-result").hidden = true;
 }
 
 function updateResultConfirmation(prediction = state.currentScreeningPrediction || {}, approvedOverride = null) {
@@ -2010,19 +2026,18 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
   const previewRisk = isDemoEnvironment() && prediction?.preview_only === true
     ? normalizeForecastSignal(prediction.preview_signal_level)
     : null;
-  const risk = isApprovedRisk ? normalizeRiskKey(prediction) : previewRisk || "pending";
+  const currentSignalRisk = (value = {}) => {
+    const raw = value?.risk_category || value?.risk_category_label || "";
+    if (raw === "pending") return "pending";
+    return normalizeRiskKey(value) === "low" ? "low" : "high";
+  };
+  const risk = isApprovedRisk ? currentSignalRisk(prediction) : currentSignalRisk({ risk_category: previewRisk || "pending" });
   const content = {
     low: {
       label: "낮음",
       next: "다음: 챌린지 보기",
       mascot: "/static/assets/hyeoldangi-risk-low.png",
       mascotAlt: "좋은 습관을 이어가자고 응원하는 간당간당 캐릭터 혈당이",
-    },
-    caution: {
-      label: "주의",
-      next: "다음: 챌린지 보기",
-      mascot: "/static/assets/hyeoldangi-risk-caution.png",
-      mascotAlt: "확인할 요인을 살펴보자고 안내하는 간당간당 캐릭터 혈당이",
     },
     high: {
       label: "높음",
@@ -2539,7 +2554,7 @@ function setForecastRiskPreview(risk) {
   if (!controls || controls.hidden || !isDemoEnvironment()) return;
   updateResultConfirmation({ risk_category: risk }, true);
   $$('[data-risk-preview]').forEach((button) => {
-    const selected = button.dataset.riskPreview === risk;
+    const selected = normalizeCurrentSignalRisk({ risk_category: button.dataset.riskPreview }) === normalizeCurrentSignalRisk({ risk_category: risk });
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
@@ -2700,8 +2715,11 @@ async function pollPrediction(jobId) {
 
 
 function normalizeForecastSignal(value) {
-  const normalized = String(value || "").toLowerCase();
-  return ["low", "caution", "high"].includes(normalized) ? normalized : null;
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["low", "낮음"].includes(normalized)) return "low";
+  if (["caution", "moderate", "medium", "주의", "보통"].includes(normalized)) return "caution";
+  if (["high", "높음", "위험"].includes(normalized)) return "high";
+  return null;
 }
 
 function forecastSignalLabel(level) {
@@ -2725,8 +2743,8 @@ function selectTwoYearForecastPoint(prediction = {}, fallbackLevel = null) {
 }
 
 function renderTwoYearRiskForecast(prediction = {}, options = {}) {
-  const chart = $("#age-risk-chart");
-  const pointContainer = $("#age-risk-chart-points");
+  const chart = $("#future-risk-visual");
+  const pointContainer = $("#future-risk-points");
   const stateBox = $("#forecast-state");
   const statusBadge = $("#forecast-status-badge");
   if (!chart || !pointContainer || !stateBox || !statusBadge) return;
@@ -2811,13 +2829,13 @@ function renderPrediction(prediction, factors, currentFactors = null) {
   });
   $("#risk-confirm-card").hidden = false;
   $("#risk-preview-controls").hidden = !isDemoEnvironment();
-  $("#result-unavailable").hidden = canDisplayRisk;
+  $("#result-unavailable").hidden = true;
   $("#development-preview-notice").hidden = true;
   $("#medical-guidance-detail").hidden = true;
   // A future-model result must never populate the current-screening traffic light.
   const futureRiskLabel = canDisplayRisk
     ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
-    : "현재 공개할 수 있는 예측 결과가 없습니다";
+    : "결과 준비 중";
   $("#future-risk-category").textContent = futureRiskLabel;
   renderTwoYearRiskForecast(prediction, {
     canDisplayRisk,
@@ -2919,13 +2937,13 @@ function renderPrediction(prediction, factors) {
     : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   $("#risk-confirm-card").hidden = false;
   $("#risk-preview-controls").hidden = !isDemoEnvironment();
-  $("#result-unavailable").hidden = canDisplayRisk;
-  $("#development-preview-notice").hidden = !developmentPreviewRisk;
+  $("#result-unavailable").hidden = true;
+  $("#development-preview-notice").hidden = true;
   $("#medical-guidance-detail").hidden = true;
   // A future-model result must never populate the current-screening traffic light.
   $("#future-risk-category").textContent = canDisplayRisk
     ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
-    : "현재 공개할 수 있는 예측 결과가 없습니다";
+    : "결과 준비 중";
   updateResultConfirmation();
   updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
@@ -3605,6 +3623,37 @@ function renderChallengeDetails() {
 function updateChallengeSelectionCount() {
   const count = state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0);
   $("#challenge-selection-count").textContent = `${count}/3 선택`;
+  updateChallengeStartState();
+}
+
+function hasCurrentChallengeCycle() {
+  return Array.isArray(state.cycle?.user_challenges) && state.cycle.user_challenges.length > 0;
+}
+
+function showChallengeSelectionView() {
+  const form = $("#challenge-form");
+  const list = $("#challenge-list");
+  if (form) form.hidden = false;
+  if (list) list.hidden = false;
+  renderChallengeDetails();
+  updateChallengeStartState();
+}
+
+function updateChallengeStartState() {
+  const startButton = $("#start-challenge");
+  const reason = $("#challenge-start-reason");
+  const count = state.selectedChallengeIds.size + (state.customChallengeSelected ? 1 : 0);
+  const followUpBlocked = $("#challenge-follow-up") && !$("#challenge-follow-up").hidden;
+  const loading = state.challengeListStatus === "loading";
+  const failed = state.challengeListStatus === "failed";
+  if ($("#challenge-selection-count")) $("#challenge-selection-count").textContent = `${count}/3 선택`;
+  if (startButton) startButton.disabled = loading || failed || followUpBlocked || count < 1 || state.challengeStartSafetyBlocked === true;
+  if (!reason) return;
+  if (loading) reason.textContent = "챌린지 후보를 불러오고 있어요.";
+  else if (failed) reason.textContent = "후보를 불러오지 못했습니다. 다시 시도해 주세요.";
+  else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지를 시작하기 전에 안전 안내를 먼저 확인해 주세요.";
+  else if (count < 1) reason.textContent = "세부 챌린지를 하나 이상 선택해 주세요.";
+  else reason.textContent = `${count}개 챌린지를 선택했습니다.`;
 }
 function renderCycle(cycle) {
   state.cycle = cycle;
@@ -3674,7 +3723,7 @@ function renderDailyRecordList() {
       ? workspaceHeroCopy.challenge.lead : "실천할 챌린지를 선택하면 오늘의 기록을 남길 수 있어요.";
   }
   if (!challenges.length) {
-    list.innerHTML = `<article class="daily-record-empty daily-record-empty-selection"><strong>기록할 챌린지가 없습니다</strong><p>챌린지를 선택하고 오늘의 실천을 시작해 보세요.</p><button type="button" class="primary daily-record-select">챌린지 선택하러 가기</button></article>`;
+    list.innerHTML = `<article class="daily-record-empty daily-record-empty-selection"><strong>기록할 챌린지가 없습니다</strong><p>챌린지를 선택하고 오늘의 실천을 시작해 보세요.</p><button type="button" class="primary daily-record-select">생활습관 챌린지 선택하기</button></article>`;
     return;
   }
   if (["loading", "error"].includes(state.dailyRecordsStatus)) {
@@ -3801,7 +3850,6 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
         <div><dt>BMI</dt><dd>${escapeHtml(healthHistoryValue(item.bmi))}</dd></div>
         <div><dt>허리둘레</dt><dd>${escapeHtml(healthHistoryValue(item.waist_cm, " cm"))}</dd></div>
         <div><dt>혈압</dt><dd>${escapeHtml(bloodPressure)}</dd></div>
-        <div><dt>주관적 건강</dt><dd>${escapeHtml(selfRatedLabels[item.self_rated_health] || healthHistoryValue(item.self_rated_health))}</dd></div>
         <div><dt>전날 식사</dt><dd>${escapeHtml(healthHistoryValue(item.meal_count_yesterday, "회"))}</dd></div>
         <div><dt>규칙적 운동</dt><dd>${escapeHtml(healthHistoryBoolean(item.regular_exercise))}</dd></div>
         <div><dt>현재 흡연</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_smoker))}</dd></div>
@@ -4469,6 +4517,18 @@ function showWorkspace(name, { moveFocus = true } = {}) {
   syncSidebarChallengeEntry();
   syncTopNavigation();
   if (moveFocus && selectedPanel) selectedPanel.focus({ preventScroll: true });
+}
+
+function focusChallengeSelectionEntry() {
+  const entry = $(".daily-record-select") || $("#workspace-panel-challenge");
+  if (!entry) return;
+  entry.scrollIntoView({ behavior: "smooth", block: "center" });
+  entry.focus?.({ preventScroll: true });
+}
+
+async function openChallengeSelectionScreen() {
+  await loadChallenges();
+  showStep(7);
 }
 
 function compactChallengeV2() {
@@ -5421,10 +5481,16 @@ $("#eligibility-guidance-primary").addEventListener("click", async () => {
   $("#eligibility-guidance").hidden = true;
   state.returningDestination = null;
   state.signupGuidanceField = null;
+  const isChallengeOnlyGuidance = state.eligibilityGuidanceReason === "CHALLENGE_ONLY_AGE";
   if (state.eligibilityGuidanceStep === 7) await loadChallenges();
   if (state.eligibilityGuidanceStep === 4) showHealthInputPanel("metrics");
   showStep(state.eligibilityGuidanceStep);
   if (state.eligibilityGuidanceWorkspace) showWorkspace(state.eligibilityGuidanceWorkspace, { moveFocus: true });
+  if (isChallengeOnlyGuidance) {
+    if (!state.cycle?.user_challenges?.length) renderDailyRecords();
+    focusChallengeSelectionEntry();
+    showMessage("생활습관 챌린지 선택하기에서 4주 챌린지를 고를 수 있어요.", "success");
+  }
   if (state.modelOutOfRange && state.eligibilityGuidanceStep === 4) {
     $("#submit-analysis").textContent = "저장하고 현재 건강 신호 확인";
     showMessage("현재 건강 신호 확인으로 이동합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다.", "success");
@@ -5518,6 +5584,7 @@ $("#health-form").addEventListener("submit", async (event) => {
       renderHealthCheckupHistory();
     } else {
       const smokingStatus = selectedRadioValue("smoking-status");
+      const detailHealth = detailHealthPayload();
       const checkup = await api("/health-checkups", { method: "POST", body: JSON.stringify({
         checkup_type: state.returningUser ? "reassessment" : "initial", checkup_date: new Date().toISOString().slice(0, 10),
         height_cm: Number($("#height").value), weight_kg: Number($("#weight").value),
@@ -5531,6 +5598,23 @@ $("#health-form").addEventListener("submit", async (event) => {
         exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
         exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
         current_drinker: selectedRadioValue("current-drinker") === "true",
+        annual_household_income_10k_krw: detailHealth.annual_household_income_10k_krw,
+        health_satisfaction_score: detailHealth.health_satisfaction_score,
+        economic_satisfaction_score: detailHealth.economic_satisfaction_score,
+        overall_quality_of_life_score: detailHealth.overall_quality_of_life_score,
+        hypertension_diagnosis: detailHealth.hypertension_diagnosis,
+        cancer_diagnosis: detailHealth.cancer_diagnosis,
+        chronic_lung_disease_diagnosis: detailHealth.chronic_lung_disease_diagnosis,
+        liver_disease_diagnosis: detailHealth.liver_disease_diagnosis,
+        heart_disease_diagnosis: detailHealth.heart_disease_diagnosis,
+        cerebrovascular_disease_diagnosis: detailHealth.cerebrovascular_disease_diagnosis,
+        psychiatric_disease_diagnosis: detailHealth.psychiatric_disease_diagnosis,
+        arthritis_rheumatism_diagnosis: detailHealth.arthritis_rheumatism_diagnosis,
+        education_level: detailHealth.education_level,
+        marital_status: detailHealth.marital_status,
+        household_structure: detailHealth.household_structure,
+        depressed_feeling_last_week: detailHealth.depressed_feeling_last_week,
+        sleep_difficulty_last_week: detailHealth.sleep_difficulty_last_week,
       }) });
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
@@ -5584,6 +5668,10 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
 $("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
+$("#close-medical-guidance")?.addEventListener("click", () => {
+  $("#medical-guidance-detail").hidden = true;
+  $("#to-challenges")?.focus({ preventScroll: true });
+});
 $("#lifestyle-summary-grid")?.addEventListener("click", (event) => {
   const toggle = event.target.closest(".lifestyle-summary-toggle");
   if (!toggle) return;
@@ -6163,6 +6251,10 @@ $("#return-challenges")?.addEventListener("click", async () => {
   }
   await loadChallenges();
   showStep(7);
+});
+$("#daily-log-list")?.addEventListener("click", async (event) => {
+  if (!event.target.closest(".daily-record-select")) return;
+  await openChallengeSelectionScreen();
 });
 $("#return-health")?.addEventListener("click", () => {
   if (state.requiresEligibility) {

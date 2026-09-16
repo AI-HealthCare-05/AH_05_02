@@ -118,7 +118,7 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="risk-confirm-message"' not in html
     assert 'id="risk-preview-controls"' in html
     assert 'data-risk-preview="low"' in html
-    assert 'data-risk-preview="caution"' in html
+    assert 'data-risk-preview="caution"' not in html
     assert 'data-risk-preview="high"' in html
     assert "function setForecastRiskPreview(risk)" in script
     assert "normalizeRiskKey(prediction)" in script
