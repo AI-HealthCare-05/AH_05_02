@@ -1,17 +1,17 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v178-16";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v179-sit-toggle";
 const CORE_SHELL = [
   "/forest",
   "/manifest.webmanifest",
-  "/static/forest-game.css?v=20260910-5",
+  "/static/forest-game.css?v=20260915-logo-emblem-v1",
   "/static/forest-atmosphere.css?v=20260903-2",
   "/static/forest-atmosphere.js?v=20260907-4",
   "/static/forest-hud.js?v=20260908-4",
   "/static/vendor/phaser-3.90.0.min.js",
   "/static/avatar-compositor.js?v=20260827-10",
-  "/static/lpc-avatar-engine.js?v=20260908-2",
+  "/static/lpc-avatar-engine.js?v=20260917-1",
   "/static/forest-objects.js?v=20260910-3",
   "/static/forest-fire.js?v=20260907-3",
   "/static/forest-animals.js?v=20260908-5",
@@ -20,9 +20,9 @@ const CORE_SHELL = [
   "/static/forest-riverduck-art.js?v=20260910-2",
   "/static/forest-memories.js?v=20260910-2",
   "/static/forest-garden.js?v=20260908-1",
-  "/static/forest-phaser.js?v=20260910-9",
+  "/static/forest-phaser.js?v=20260917-1",
   "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260910-11",
+  "/static/forest-game.js?v=20260917-1",
   "/static/challenge-v2.js?v=2.1.10",
   "/static/challenge-v2.css?v=2.1.3",
   "/static/suin/design-tokens.css?v=20260908-1",

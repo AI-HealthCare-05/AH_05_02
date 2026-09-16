@@ -770,7 +770,7 @@
   function defaultState() {
     const generatedNickname = generateNickname();
     const femaleDefault = createGenderDefaultAvatar("female");
-    const avatar = { name: generatedNickname, gender: "female", engine: "lpc", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...femaleDefault.cosmetics }, tuning: { ...femaleDefault.tuning }, sitting: false, mounted: false };
+    const avatar = { name: generatedNickname, gender: "female", engine: "lpc", x: 384, y: 352, direction: "down", equipped: null, cosmetics: { ...femaleDefault.cosmetics }, tuning: { ...femaleDefault.tuning }, sitting: false, sitVariant: "field", mounted: false };
     return {
       dateKey: TODAY,
       profileVersion: 1,
@@ -2203,6 +2203,7 @@
   function switchScene(scene) {
     currentScene = scene;
     state.avatar.sitting = false;
+    state.avatar.sitVariant = scene === "home" ? "home" : "field";
     state.avatar.mounted = false;
     state.fishing = false;
     const positions = { world: [384, 352], home: [384, 410], garden: [384, 410] };
@@ -3670,6 +3671,17 @@
 
   async function toggleSit() {
     if (state.avatar.mounted) { setStatus("탈것에서 내린 뒤 앉을 수 있어요."); return; }
+    if (!["world", "home"].includes(currentScene)) {
+      setStatus("앉기는 메인 필드와 집 안에서 이용할 수 있어요.");
+      return;
+    }
+    if (state.avatar.sitting) {
+      state.avatar.sitting = false;
+      playSfx("sit-cloth", { volume: 0.24 });
+      renderCanvas();
+      await persist("자리에서 일어났습니다.");
+      return;
+    }
     if (!state.avatar.sitting && currentScene === "world") {
       const chair = state.placed
         .map((placed, index) => ({ ...placed, index, distance: Math.hypot(state.avatar.x - placed.x, state.avatar.y - placed.y) }))
@@ -3681,10 +3693,13 @@
         return;
       }
     }
-    state.avatar.sitting = !state.avatar.sitting;
+    state.avatar.sitting = true;
+    state.avatar.sitVariant = currentScene === "home" ? "home" : "field";
     playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
-    await persist(state.avatar.sitting ? "가까운 자리에서 잠시 쉬고 있어요. X를 다시 누르면 일어납니다." : "자리에서 일어났습니다.");
+    await persist(currentScene === "home"
+      ? "집 안에서 편안하게 앉았습니다. X를 다시 누르면 일어납니다."
+      : "메인 필드에 앉았습니다. X를 다시 누르면 일어납니다.");
   }
 
   async function sitAtPlacedObject(index) {
@@ -3695,6 +3710,7 @@
     state.avatar.y = seat.y + 4;
     state.avatar.direction = "down";
     state.avatar.sitting = true;
+    state.avatar.sitVariant = "field";
     playSfx("sit-cloth", { volume: 0.24 });
     renderCanvas();
     await persist(`${itemCatalog[seat.code].name}에 앉았습니다. X를 누르면 일어납니다.`);
@@ -3998,6 +4014,7 @@
       state.avatar.x = 292;
       state.avatar.y = 232;
       state.avatar.sitting = true;
+      state.avatar.sitVariant = "home";
       state.avatar.mounted = false;
       state.fishing = false;
       $("#world-dialog").close();
@@ -4043,6 +4060,7 @@
       state.avatar.x = 305;
       state.avatar.y = 390;
       state.avatar.sitting = true;
+      state.avatar.sitVariant = "field";
       state.avatar.mounted = false;
       state.fishing = true;
       state.fishCaught = true;
