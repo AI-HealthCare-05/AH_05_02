@@ -6,8 +6,13 @@ from math import log1p
 from fastapi import HTTPException, status
 
 from app.core import config
-from app.dtos.health import ConsentCreateRequest, EligibilityCreateRequest, HealthCheckupCreateRequest
-from app.models.health import Consent, EligibilityCheck, FollowUpAction, HealthCheckup
+from app.dtos.health import (
+    ConsentCreateRequest,
+    CurrentScreeningInputCreateRequest,
+    EligibilityCreateRequest,
+    HealthCheckupCreateRequest,
+)
+from app.models.health import Consent, CurrentScreeningInput, EligibilityCheck, FollowUpAction, HealthCheckup
 from app.models.users import Gender, User
 from app.prediction.contracts import ACTIVE_MODEL, PredictionFeatures, input_schema_document
 from app.repositories.health_repository import HealthRepository
@@ -114,6 +119,16 @@ class HealthService:
             await consent.save(update_fields=["is_agreed", "withdrawn_at", "updated_at"])
             await self.repo.stop_active_cycles(user.id, "CONSENT_WITHDRAWN")
         return consent
+
+    async def create_current_screening_input(
+        self, user: User, request: CurrentScreeningInputCreateRequest
+    ) -> CurrentScreeningInput:
+        if await self.repo.active_consent(user.id) is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CONSENT_REQUIRED")
+        checkup = await self.repo.get_checkup(request.health_checkup_id, user.id)
+        if checkup is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="건강정보 기록을 찾을 수 없습니다.")
+        return await self.repo.create_current_screening_input(user_id=user.id, **request.model_dump())
 
     async def check_eligibility(self, user: User, request: EligibilityCreateRequest) -> EligibilityCheck:
         if user.birthday is None:
@@ -394,7 +409,10 @@ class HealthService:
         }
 
     @staticmethod
-    def current_screening_payload(checkup: HealthCheckup) -> dict[str, object | None]:
+    def current_screening_payload(
+        checkup: HealthCheckup,
+        screening_input: CurrentScreeningInput | None = None,
+    ) -> dict[str, object | None]:
         """Map stored user inputs to the KNHANES screening contract.
 
         Fields not collected by the MVP remain missing and are handled by the
@@ -407,23 +425,37 @@ class HealthService:
             "weight_kg": checkup.weight_kg,
             "waist_cm": checkup.waist_cm,
             "bmi": checkup.bmi,
-            "walking_days": checkup.exercise_days_per_week,
-            "energy_kcal": None,
-            "protein_g": None,
-            "fat_g": None,
-            "carbohydrate_g": None,
-            "sodium_mg": None,
+            "walking_days": (
+                screening_input.walking_days if screening_input is not None else checkup.exercise_days_per_week
+            ),
+            "energy_kcal": screening_input.energy_kcal if screening_input is not None else None,
+            "protein_g": screening_input.protein_g if screening_input is not None else None,
+            "fat_g": screening_input.fat_g if screening_input is not None else None,
+            "carbohydrate_g": screening_input.carbohydrate_g if screening_input is not None else None,
+            "sodium_mg": screening_input.sodium_mg if screening_input is not None else None,
             "sex": checkup.sex,
-            "region": None,
-            "urban": None,
+            "region": screening_input.region if screening_input is not None else None,
+            "urban": screening_input.urban if screening_input is not None else None,
             "education": checkup.education_level,
             "income_quartile": None,
             "household_income_quartile": None,
-            "hypertension_family_history": None,
-            "diabetes_family_history": None,
+            "hypertension_family_history": (
+                screening_input.hypertension_family_history if screening_input is not None else None
+            ),
+            "diabetes_family_history": (
+                screening_input.diabetes_family_history if screening_input is not None else None
+            ),
             "current_smoker": checkup.current_smoker,
-            "alcohol_frequency": "current" if checkup.current_drinker else "none",
+            "alcohol_frequency": (
+                screening_input.alcohol_frequency
+                if screening_input is not None and screening_input.alcohol_frequency is not None
+                else "none"
+                if not checkup.current_drinker
+                else None
+            ),
             "aerobic_activity": checkup.regular_exercise,
+            "systolic_bp": getattr(checkup, "systolic_bp", None),
+            "diastolic_bp": getattr(checkup, "diastolic_bp", None),
         }
 
     @staticmethod

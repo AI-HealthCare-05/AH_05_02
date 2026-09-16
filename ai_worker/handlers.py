@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, date, datetime
+from pathlib import Path
 from typing import Any
 
 from ai_worker.core import config
@@ -23,14 +24,12 @@ async def preload_configured_models() -> None:
 
         await asyncio.to_thread(load_shared8, config.ML_SHARED8_MODEL_URI)
     elif config.CURRENT_SCREENING_RUNTIME == "v061":
-        from pathlib import Path
-
         from src.ml.inference.diabetes_current_screening import load_current_screening_model
 
         await asyncio.to_thread(
             load_current_screening_model,
             manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
-            model_path=Path(config.CURRENT_SCREENING_MODEL_URI),
+            model_path=config.CURRENT_SCREENING_MODEL_URI,
         )
     else:
         raise RuntimeError(f"지원하지 않는 CURRENT_SCREENING_RUNTIME입니다: {config.CURRENT_SCREENING_RUNTIME}")
@@ -333,8 +332,17 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             predict_with_loaded_current_model,
         )
 
-        loaded = await asyncio.to_thread(load_current_screening_model)
-        output = await asyncio.to_thread(predict_with_loaded_current_model, loaded, model_input)
+        loaded = await asyncio.to_thread(
+            load_current_screening_model,
+            manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
+            model_path=config.CURRENT_SCREENING_MODEL_URI,
+        )
+        # The service payload is a versioned superset shared by Today and
+        # Tomorrow.  Select the immutable manifest contract at the worker
+        # boundary so adding optional service inputs never breaks an older
+        # artifact and a new 14-feature artifact receives all declared fields.
+        contracted_input = {name: model_input.get(name) for name in loaded.manifest["features"]}
+        output = await asyncio.to_thread(predict_with_loaded_current_model, loaded, contracted_input)
         operational = (
             loaded.manifest.get("operational_model_activated") is True
             and loaded.manifest.get("promotion_status") == "approved"

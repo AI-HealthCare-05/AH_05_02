@@ -74,8 +74,36 @@ class HealthCheckupCreateRequest(BaseModel):
         return self
 
 
+class CurrentScreeningInputCreateRequest(BaseModel):
+    """Optional KNHANES-aligned inputs stored separately from account data."""
+
+    health_checkup_id: int = Field(gt=0)
+    input_as_of_date: date
+    walking_days: float | None = Field(default=None, ge=0, le=7)
+    energy_kcal: float | None = Field(default=None, ge=0, le=8000)
+    protein_g: float | None = Field(default=None, ge=0, le=500)
+    fat_g: float | None = Field(default=None, ge=0, le=500)
+    carbohydrate_g: float | None = Field(default=None, ge=0, le=1000)
+    sodium_mg: float | None = Field(default=None, ge=0, le=20000)
+    region: Literal["capital", "metro", "province"] | None = None
+    urban: Literal["urban", "rural"] | None = None
+    education: Literal["elementary_or_less", "middle", "high", "college_or_more"] | None = None
+    income_quartile: Literal["1", "2", "3", "4"] | None = None
+    household_income_quartile: Literal["1", "2", "3", "4"] | None = None
+    hypertension_family_history: bool | None = None
+    diabetes_family_history: bool | None = None
+    alcohol_frequency: Literal[
+        "none",
+        "monthly_or_less",
+        "two_to_four_monthly",
+        "two_to_three_weekly",
+        "four_or_more_weekly",
+    ] | None = None
+
+
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
+    current_screening_input_id: int | None = Field(default=None, gt=0)
     model_key: Literal["diabetes_current_screening", "diabetes_incidence", "diabetes_lifetime_risk"] = (
         "diabetes_incidence"
     )
@@ -90,6 +118,8 @@ class PredictionJobCreateRequest(BaseModel):
             raise ValueError("diabetes_incidence does not accept prediction_type")
         if self.model_key == "diabetes_current_screening" and self.prediction_type is not None:
             raise ValueError("diabetes_current_screening does not accept prediction_type")
+        if self.model_key != "diabetes_current_screening" and self.current_screening_input_id is not None:
+            raise ValueError("current_screening_input_id is only valid for diabetes_current_screening")
         return self
 
 
