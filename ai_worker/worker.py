@@ -12,7 +12,7 @@ from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from ai_worker.core import config, logger
 from ai_worker.db import ensure_schema, persist_prediction, persist_risk_curve, update_job
-from ai_worker.handlers import run_task_with_timeout
+from ai_worker.handlers import preload_configured_models, run_task_with_timeout
 from app.prediction.errors import classify_ml_input_error
 from src.ml.inference.diabetes_standard import ModelArtifactUnavailableError, ModelContractError
 
@@ -43,7 +43,7 @@ class StreamWorker:
 
     async def set_status(self, job_id: str, mapping: dict[str, Any]) -> None:
         safe_mapping = {
-            key: json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)
+            key: json.dumps(value, ensure_ascii=False) if isinstance(value, dict | list) else str(value)
             for key, value in mapping.items()
             if value is not None
         }
@@ -245,15 +245,10 @@ class StreamWorker:
             await self.handle_message(message_id, fields)
 
     async def run(self, *, prepare_schema: bool = True) -> None:
-        # A worker is not ready until every explicitly enabled model is both
-        # downloaded and checksum-validated. Candidate-only safety flags are
-        # retained by the result handlers.
-        from ai_worker.handlers import preload_configured_models
-
-        await asyncio.to_thread(preload_configured_models)
         await self.redis.ping()
         if prepare_schema:
             await ensure_schema()
+        await preload_configured_models()
         await self.ensure_group()
         await self.reclaim_pending()
         Path("/tmp/ai-worker-ready").touch()

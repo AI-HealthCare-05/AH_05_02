@@ -33,6 +33,8 @@ class ProviderResult:
     decision_threshold: float | None
     promotion_status: str
     explanation_status: str = "not_available"
+    display_allowed: bool = False
+    operational_model_activated: bool = False
 
 
 class PredictionProvider(Protocol):
@@ -91,6 +93,8 @@ class DevelopmentPredictionProvider:
             threshold_version=ACTIVE_MODEL.threshold_version,
             decision_threshold=None,
             promotion_status="development_only",
+            display_allowed=False,
+            operational_model_activated=False,
         )
 
     async def predict_curve(
@@ -129,7 +133,13 @@ class ArtifactPredictionProvider:
             model_artifact_digest=loaded.manifest["artifact_sha256"],
             threshold_version=output["threshold_version"],
             decision_threshold=float(output["decision_threshold"]),
-            promotion_status=loaded.manifest["promotion_status"],
+            promotion_status=(
+                "approved"
+                if loaded.manifest["promotion_status"] == "approved" and ACTIVE_MODEL.threshold_is_approved
+                else "candidate_only"
+            ),
+            display_allowed=ACTIVE_MODEL.threshold_is_approved,
+            operational_model_activated=ACTIVE_MODEL.threshold_is_approved,
         )
 
     async def predict_curve(

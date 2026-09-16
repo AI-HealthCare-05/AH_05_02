@@ -52,7 +52,7 @@ def _item(code, title, category, domain, difficulty, count, minutes, verificatio
         "goal": {"target_count": count, "target_minutes": minutes, "period": "day"},
         "goal_basis": "서비스의 단계별 실천 목표이며 연구에서 검증된 개인별 처방량이 아닙니다.",
         "verification_scope": (
-            "대표 사진의 채소 포함 여부만 확인합니다. 끼니 횟수·섭취량·실제 섭취는 본인 기록입니다."
+            "대표 사진에서 음식이 충분히 보이고 채소가 포함됐는지만 확인합니다. 끼니 횟수·섭취량·실제 섭취는 본인 기록입니다."
             if verification == 1
             else "사진 제출 여부만 확인합니다. 통곡물·영양성분·운동 시간의 진위를 자동 판정하지 않습니다."
             if verification == 2
@@ -105,7 +105,7 @@ def _build_catalog() -> tuple[dict, ...]:
                     index,
                     None,
                     1,
-                    "평소 식사 구성 안에 비전분 채소를 포함해요. 실천한 끼니 수를 적고 대표 식사 사진을 제출해요. 사진은 채소 포함 여부만 확인해요.",
+                    "평소 식사 구성 안에 비전분 채소를 포함해요. 실천한 끼니 수를 적고 대표 식사 사진을 제출해요. 사진은 음식이 충분히 보이고 채소가 포함됐는지만 확인해요.",
                     "fiber",
                 ),
                 _item(

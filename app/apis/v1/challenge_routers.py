@@ -20,16 +20,25 @@ from app.services.challenges import ChallengeService, challenge_payload
 challenge_router = APIRouter(tags=["Challenges"])
 
 
-@challenge_router.post("/user-challenges/{user_challenge_id}/photo-verifications")
+@challenge_router.post("/user-challenges/{user_challenge_id}/photo-verifications", status_code=status.HTTP_201_CREATED)
 async def create_v3_photo_verification(
     user_challenge_id: int,
     user: Annotated[User, Depends(get_request_user)],
     verification_date: Annotated[date, Form()],
     actual_value: Annotated[float, Form(ge=0, le=720)],
     file: Annotated[UploadFile, File()],
+    confirmed: Annotated[bool, Form()] = False,
 ) -> dict[str, object]:
     return envelope(
-        await verify_photo(ChallengeService(), user, user_challenge_id, verification_date, file, actual_value)
+        await verify_photo(
+            ChallengeService(),
+            user,
+            user_challenge_id,
+            verification_date,
+            file,
+            actual_value,
+            confirmed,
+        )
     )
 
 

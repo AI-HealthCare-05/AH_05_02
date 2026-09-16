@@ -127,7 +127,7 @@ test('V3 photo card states proof scope, not simple-check fallback', () => {
 function photoHarness(response) {
   const target = { id: '9', item: { catalog_version: 'evidence-v3', verification_type: 2, goal: { target_minutes: 20 } } };
   const state = { token: 'session-A', cycle: { cycle_id: 1 }, recordTarget: target, dailyCompleted: new Set() };
-  const nodes = { '#v3-photo-file': { files: [{ size: 1200 }] }, '#v3-photo-value': { value: '20' } };
+  const nodes = { '#v3-photo-file': { files: [{ size: 1200 }] }, '#v3-photo-minutes': { value: '20' } };
   const $ = key => nodes[key] ||= {};
   let calls = 0;
   let photoState;
@@ -194,8 +194,28 @@ test('late photo responses cannot mark a new account or a new cycle done', async
 test('missing, insufficient and out-of-contract amounts send no photo request', async () => {
   for (const amount of ['', '0', '19', '721', 'Infinity']) {
     const h = photoHarness(async () => { throw new Error('must not submit'); });
-    h.$('#v3-photo-value').value = amount;
+    h.$('#v3-photo-minutes').value = amount;
     await h.submitV3Photo();
     assert.equal(h.calls(), 0);
   }
+});
+
+test('meal photo preview opens the evidence-v3 upload with three demo cases', () => {
+  for (const file of ['src/frontend/app.js', 'src/frontend/intro-retro-app.js']) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /get\("preview"\) !== "meal-photo"/);
+    assert.match(source, /openPhotoRecordModal\(item\)/);
+    assert.match(source, /file\.name === "demo-pass\.png"/);
+    assert.match(source, /인증을 통과했어요/);
+  }
+  for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
+    const html = fs.readFileSync(file, 'utf8');
+    assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
+    assert.equal((html.match(/name="v3-photo-value"/g) || []).length, 3);
+    assert.doesNotMatch(html, /external_vlm_consent/);
+    assert.match(html, /OpenAI VLM 보완 검토에 자동으로 사용/);
+  }
+  const indexHtml = fs.readFileSync('src/frontend/index.html', 'utf8');
+  assert.doesNotMatch(indexHtml, /id="v3-vlm-consent"/);
+  assert.doesNotMatch(indexHtml, /OpenAI VLM으로 보완 검토하는 데 동의/);
 });
