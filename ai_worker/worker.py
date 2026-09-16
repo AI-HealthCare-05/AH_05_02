@@ -245,13 +245,10 @@ class StreamWorker:
             await self.handle_message(message_id, fields)
 
     async def run(self, *, prepare_schema: bool = True) -> None:
-        # A worker is not ready until every explicitly enabled model is both
-        # downloaded and checksum-validated. Candidate-only safety flags are
-        # retained by the result handlers.
-        await preload_configured_models()
         await self.redis.ping()
         if prepare_schema:
             await ensure_schema()
+        await preload_configured_models()
         await self.ensure_group()
         await self.reclaim_pending()
         Path("/tmp/ai-worker-ready").touch()
