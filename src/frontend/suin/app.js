@@ -573,8 +573,9 @@ function syncTopNavigation() {
   const hasChallengeAccess = Boolean(state.cycle || state.capabilities.challenge || state.step >= 7);
   const needsAccountSetup = Boolean(state.accountRecovery);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
-  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess);
-  const showOnboardingNav = isLoggedIn && !needsAccountSetup && !showWorkspaceNav;
+  const isOnboardingFlow = state.step >= 3 && state.step <= 6;
+  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || isOnboardingFlow);
+  const showOnboardingNav = false;
   const guestNav = $("#guest-flow-panel");
   const workspaceNav = $("#workspace-top-nav");
   const onboardingNav = $("#onboarding-top-nav");
@@ -1347,9 +1348,8 @@ function renderHealthReview() {
   const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const detailHealth = detailHealthPayload();
   $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
-  $("#health-review-panel .lead").textContent = state.currentHealthOnly
-    ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
-    : "정보가 정확해야 당뇨병 위험 신호 확인을 요청할 수 있습니다. 수정이 필요하면 각 카드의 수정 버튼을 눌러 주세요.";
+  const healthReviewLead = $("#health-review-panel .lead");
+  if (healthReviewLead) healthReviewLead.hidden = true;
   $("#submit-analysis").textContent = healthSubmitLabel();
   $("#review-eligibility").innerHTML = dlRows([
     ["생년월일", $("#eligibility-birth-date").value || "-"],
@@ -1452,7 +1452,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 중",
       icon: "◌",
       mascot: "/static/suin/assets/hyeoldangi-analyzing.png",
-      message: "진행률 숫자는 위험 확률로 오해될 수 있어 표시하지 않습니다.",
+      message: "진행률 숫자는 위험 확률로 오해될 수 있어\n표시하지 않습니다.",
       policy: "이 결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1462,7 +1462,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "결과 준비 완료",
       icon: "✓",
       mascot: "/static/suin/assets/hyeoldangi-complete.png",
-      message: "결과 화면에서 위험 범주와 다음 행동을 확인해 주세요.",
+      message: "결과 화면에서 위험 범주와\n다음 행동을 확인해 주세요.",
       policy: "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1472,7 +1472,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 실패",
       icon: "×",
       mascot: "/static/suin/assets/hyeoldangi-guide.png",
-      message: "가짜 결과를 표시하지 않으며, 다시 시도할 수 있습니다.",
+      message: "분석을 완료하지 못했습니다.\n다시 시도해 주세요.",
       policy: "반복해서 실패하면 잠시 후 다시 시도하거나 입력정보를 확인해 주세요.",
       showRetry: true,
     },

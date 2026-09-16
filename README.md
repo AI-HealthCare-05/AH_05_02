@@ -15,7 +15,7 @@
 ### 선택 구현
 
 - 공식 건강지침 RAG 기반 예방 행동 추천
-- CLOVA OCR 또는 이미지 모델을 활용한 식단 분석
+- Claude Vision 또는 CLOVA OCR을 활용한 건강검진 OCR·이미지 모델을 활용한 식단 분석
 - 챌린지 및 건강기록 알림
 - sLLM과 vLLM 기반 자체 추론 서버 실험
 
@@ -85,7 +85,7 @@ API 문서 확인: `GET http://localhost:8000/api/docs`
 - 애플리케이션: Docker
 - 서버: Amazon EC2
 - 생성형 AI: OpenAI API
-- OCR: CLOVA OCR
+- OCR: Claude Vision 또는 CLOVA OCR(환경변수 선택)
 - CI: GitHub Actions
 
 운영 배포는 [EC2 운영 배포 체크리스트](docs/EC2_PRODUCTION_DEPLOYMENT_CHECKLIST.md)의 릴리스 게이트와 HTTPS 전환 절차를 따른다. 운영 Compose는 Nginx의 `80/443`만 외부에 공개하며 DB·Redis·FastAPI·AI Worker는 내부 네트워크로 제한한다.

@@ -620,8 +620,9 @@ function syncTopNavigation() {
   const hasChallengeAccess = Boolean(state.cycle || state.capabilities.challenge || state.step >= 7);
   const needsAccountSetup = Boolean(state.accountRecovery);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
-  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess);
-  const showOnboardingNav = isLoggedIn && !needsAccountSetup && !showWorkspaceNav;
+  const isOnboardingFlow = state.step >= 3 && state.step <= 6;
+  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || isOnboardingFlow);
+  const showOnboardingNav = false;
   const guestNav = $("#guest-flow-panel");
   const workspaceNav = $("#workspace-top-nav");
   const onboardingNav = $("#onboarding-top-nav");
@@ -1645,9 +1646,8 @@ function renderHealthReview() {
   const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const detailHealth = detailHealthPayload();
   $("#health-review-title").textContent = "입력한 내용을 확인해 주세요";
-  $("#health-review-panel .lead").textContent = state.currentHealthOnly
-    ? "입력한 건강정보를 저장하고 현재 건강 신호를 확인합니다. 미래 발병 위험 예측은 만 45세 이상에서만 진행합니다."
-    : "정보가 정확해야 당뇨병 위험 신호 확인을 요청할 수 있습니다. 수정이 필요하면 각 카드의 수정 버튼을 눌러 주세요.";
+  const healthReviewLead = $("#health-review-panel .lead");
+  if (healthReviewLead) healthReviewLead.hidden = true;
   $("#submit-analysis").textContent = healthSubmitLabel();
   $("#review-eligibility").innerHTML = dlRows([
     ["생년월일", $("#eligibility-birth-date").value || "-"],
@@ -1750,7 +1750,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 중",
       icon: "◌",
       mascot: "/static/assets/hyeoldangi-analyzing.png",
-      message: "진행률 숫자는 위험 확률로 오해될 수 있어 표시하지 않습니다.",
+      message: "진행률 숫자는 위험 확률로 오해될 수 있어\n표시하지 않습니다.",
       policy: "이 결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1760,7 +1760,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "결과 준비 완료",
       icon: "✓",
       mascot: "/static/assets/hyeoldangi-complete.png",
-      message: "결과 화면에서 위험 범주와 다음 행동을 확인해 주세요.",
+      message: "결과 화면에서 위험 범주와\n다음 행동을 확인해 주세요.",
       policy: "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다.",
       showRetry: false,
     },
@@ -1770,7 +1770,7 @@ function renderPredictionStatus(status, options = {}) {
       stage: "분석 실패",
       icon: "×",
       mascot: "/static/assets/hyeoldangi-guide.png",
-      message: "가짜 결과를 표시하지 않으며, 다시 시도할 수 있습니다.",
+      message: "분석을 완료하지 못했습니다.\n다시 시도해 주세요.",
       policy: "반복해서 실패하면 잠시 후 다시 시도하거나 입력정보를 확인해 주세요.",
       showRetry: true,
     },
@@ -6493,27 +6493,91 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
     releaseBusy();
   }
 });
-$("#upload-checkup-image")?.addEventListener("click", () => $("#checkup-image-input")?.click());
-$("#checkup-image-input")?.addEventListener("change", (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+function showOcrPreview(result, label) {
+  const fields = result.extracted_fields || {};
+  state.ocrDraftId = result.draft_id;
+  state.ocrExtractedFields = fields;
+  $("#ocr-file-name").textContent = label;
+  $("#ocr-height-confirm").value = fields.height_cm ?? "";
+  $("#ocr-weight-confirm").value = fields.weight_kg ?? "";
+  $("#ocr-waist-confirm").value = fields.waist_cm ?? "";
+  $("#ocr-systolic-confirm").value = fields.systolic_bp ?? "";
+  $("#ocr-diastolic-confirm").value = fields.diastolic_bp ?? "";
+  $("#ocr-confirm-form").hidden = false;
+  const labels = [
+    ["신장", fields.height_cm, "cm"], ["체중", fields.weight_kg, "kg"], ["허리둘레", fields.waist_cm, "cm"],
+    ["혈압", fields.systolic_bp != null && fields.diastolic_bp != null ? `${fields.systolic_bp}/${fields.diastolic_bp}` : null, "mmHg"],
+    ["공복혈당", fields.fasting_glucose_mg_dl, "mg/dL"],
+  ].filter(([, value]) => value != null).map(([name, value, unit]) => `${name} ${value}${unit}`).join(", ");
   const box = $("#ocr-upload-result");
   box.hidden = false;
-  box.innerHTML = "<div><strong>검진표를 선택했습니다.</strong><p>인식된 값이 맞는지 확인한 뒤 업데이트해 주세요.</p></div>";
-  $("#ocr-file-name").textContent = file.name;
-  $("#ocr-systolic-confirm").value = $("#systolic")?.value || "";
-  $("#ocr-diastolic-confirm").value = $("#diastolic")?.value || "";
-  $("#ocr-confirm-form").hidden = false;
+  box.innerHTML = `<div><strong>${escapeHtml(label)}에서 건강정보를 찾았습니다.</strong><p>${escapeHtml(labels)}. 확인하기 전에는 갱신되지 않습니다.</p></div>`;
+}
+
+async function createOcrPreview(documentName, ocrText) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  return api("/ocr-drafts", { method: "POST", body: JSON.stringify({ document_name: documentName, ocr_text: ocrText }) });
+}
+
+async function createOcrImagePreview(file) {
+  if (isLocalPreview()) {
+    return { draft_id: "local-ocr-demo", provider: "development_mock", extracted_fields: { height_cm: 168.2, weight_kg: 72.4, waist_cm: 86, systolic_bp: 132, diastolic_bp: 84, fasting_glucose_mg_dl: 108 } };
+  }
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    throw new ApiError("검진표를 외부 OCR 서비스에 전송하는 데 동의한 뒤 업로드해 주세요.");
+  }
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("external_provider_consent", "true");
+  return api("/ocr-drafts/from-image", { method: "POST", body: formData });
+}
+
+$("#upload-checkup-image")?.addEventListener("click", () => {
+  if (!$("#ocr-external-provider-consent")?.checked) {
+    showMessage("외부 OCR 처리 동의를 확인한 뒤 결과통보서를 업로드해 주세요.");
+    $("#ocr-external-provider-consent")?.focus();
+    return;
+  }
+  $("#checkup-image-input")?.click();
 });
-$("#ocr-confirm-form")?.addEventListener("submit", (event) => {
+$("#load-checkup-sample")?.addEventListener("click", async () => {
+  const sampleText = "검진일: 2025-06-18\n신장: 168.2 cm\n체중: 72.4 kg\n허리둘레: 86.0 cm\n체질량지수 BMI: 25.6\n혈압: 132 / 84 mmHg\n공복혈당: 108 mg/dL";
+  try {
+    showOcrPreview(await createOcrPreview("2025-general-health-checkup-synthetic.txt", sampleText), "2025 일반건강검진 합성 예시");
+  } catch (error) { showMessage(error.message); }
+});
+$("#checkup-image-input")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    showOcrPreview(await createOcrImagePreview(file), file.name);
+  } catch (error) { showMessage(error.message); }
+  finally { event.target.value = ""; }
+});
+$("#ocr-confirm-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const systolic = Number($("#ocr-systolic-confirm").value);
-  const diastolic = Number($("#ocr-diastolic-confirm").value);
-  if (!Number.isFinite(systolic) || !Number.isFinite(diastolic)) return;
-  $("#systolic").value = String(systolic);
-  $("#diastolic").value = String(diastolic);
-  $("#ocr-upload-result").innerHTML = "<div><strong>혈압 값을 반영했습니다.</strong><p>다음 건강정보 제출 때 확인한 값이 저장됩니다.</p></div>";
-  $("#ocr-confirm-form").hidden = true;
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "건강정보 갱신 중…");
+  const candidate = (id) => $(id).value === "" ? null : Number($(id).value);
+  const updates = {
+    height_cm: candidate("#ocr-height-confirm"), weight_kg: candidate("#ocr-weight-confirm"),
+    waist_cm: candidate("#ocr-waist-confirm"), systolic_bp: candidate("#ocr-systolic-confirm"),
+    diastolic_bp: candidate("#ocr-diastolic-confirm"),
+  };
+  try {
+    if (isLocalPreview()) {
+      $("#ocr-upload-result").innerHTML = "<div><strong>건강정보가 갱신되었습니다.</strong><p>확인한 값은 다음 건강정보 제출 때 저장됩니다.</p></div>";
+    } else {
+      if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
+      const result = await api(`/ocr-drafts/${state.ocrDraftId}/health-checkups/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(updates) });
+      await loadHealthCheckupHistory();
+      const changed = Object.keys(result.updated_fields).join(", ");
+      $("#ocr-upload-result").innerHTML = `<div><strong>${escapeHtml(result.message)}</strong><p>갱신 항목: ${escapeHtml(changed)}</p></div>`;
+    }
+    $("#ocr-confirm-form").hidden = true;
+  } catch (error) { showMessage(error.message); }
+  finally { releaseBusy(); }
 });
 $("#food-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();

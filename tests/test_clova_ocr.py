@@ -92,11 +92,13 @@ async def test_clova_provider_rejects_unsupported_file(monkeypatch: pytest.Monke
         )
 
 
-def test_frontend_uploads_image_as_multipart_to_clova_endpoint() -> None:
+def test_frontend_uploads_supported_file_to_ocr_endpoint_with_consent() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert 'accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff' in html
+    assert 'accept=".jpg,.jpeg,.png,.webp,.pdf' in html
+    assert 'id="ocr-external-provider-consent"' in html
     assert 'formData.append("file", file, file.name)' in script
+    assert 'formData.append("external_provider_consent", "true")' in script
     assert 'api("/ocr-drafts/from-image", { method: "POST", body: formData })' in script
     assert "await file.text()" not in script

@@ -19,7 +19,7 @@ from app.dtos.wellness import (
     WearableImportRequest,
 )
 from app.models.users import User
-from app.ocr.clova import ClovaOcrError
+from app.ocr.providers import OcrProviderError
 from app.services.engagement import EngagementService
 from app.services.wellness import WellnessService
 from src.quiz.curriculum import week_number_for_document
@@ -208,8 +208,14 @@ async def create_ocr_draft(request: OcrDraftRequest, user: Annotated[User, Depen
 @wellness_router.post("/ocr-drafts/from-image", status_code=status.HTTP_201_CREATED)
 async def create_ocr_draft_from_image(
     file: Annotated[UploadFile, File()],
+    external_provider_consent: Annotated[bool, Form()],
     user: Annotated[User, Depends(get_request_user)],
 ):
+    if not external_provider_consent:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="외부 OCR provider로 검진표를 전송하는 데 동의해야 합니다.",
+        )
     raw = await file.read()
     await file.close()
     try:
@@ -219,7 +225,7 @@ async def create_ocr_draft_from_image(
             content_type=file.content_type,
             content=raw,
         )
-    except ClovaOcrError as exc:
+    except OcrProviderError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return envelope(result)
 
