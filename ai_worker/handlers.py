@@ -34,6 +34,10 @@ async def preload_configured_models() -> None:
         )
     else:
         raise RuntimeError(f"지원하지 않는 CURRENT_SCREENING_RUNTIME입니다: {config.CURRENT_SCREENING_RUNTIME}")
+    if config.TOMORROW_RUNTIME == "rf25":
+        from src.ml.inference.research_models import load_tomorrow_rf25
+
+        await asyncio.to_thread(load_tomorrow_rf25, config.ML_RF25_MODEL_URI)
 
 
 async def run_task_with_timeout(task_type: str, payload: dict[str, Any], timeout_seconds: float) -> dict[str, Any]:
@@ -190,17 +194,6 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
         "explanation_status": output.get("explanation_status", "not_available"),
         "medical_notice": output["disclaimer"],
     }
-
-
-def preload_configured_models() -> None:
-    """Fetch and validate the opted-in research artifacts before worker readiness."""
-
-    from src.ml.inference.research_models import load_shared8, load_tomorrow_rf25
-
-    if config.CURRENT_SCREENING_RUNTIME == "shared8-waist":
-        load_shared8(config.ML_SHARED8_MODEL_URI)
-    if config.TOMORROW_RUNTIME == "rf25":
-        load_tomorrow_rf25(config.ML_RF25_MODEL_URI)
 
 
 async def _run_reduced_current_model(
