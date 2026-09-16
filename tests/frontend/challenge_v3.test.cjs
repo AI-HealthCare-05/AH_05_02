@@ -215,4 +215,7 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.doesNotMatch(html, /external_vlm_consent/);
     assert.match(html, /OpenAI VLM 보완 검토에 자동으로 사용/);
   }
+  const indexHtml = fs.readFileSync('src/frontend/index.html', 'utf8');
+  assert.doesNotMatch(indexHtml, /id="v3-vlm-consent"/);
+  assert.doesNotMatch(indexHtml, /OpenAI VLM으로 보완 검토하는 데 동의/);
 });
