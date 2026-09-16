@@ -1,0 +1,47 @@
+﻿dataset,canonical_name,source_column,role,unit,applicable_period,missing_rule,model_input,review_status,notes
+KNHANES,age,age,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,sex,sex,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,region,region,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,urban,town_t,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,education,edu,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,income_quartile,incm,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,household_income_quartile,ho_incm,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,height_cm,HE_ht,feature,cm,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,weight_kg,HE_wt,feature,kg,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,waist_cm,HE_wc,feature,cm,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,bmi,HE_BMI,feature,kg/m2,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,hypertension_family_history,HE_HPfh1|HE_HPfh2|HE_HPfh3,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,diabetes_family_history,HE_DMfh1|HE_DMfh2|HE_DMfh3,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,current_smoker,sm_presnt,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,alcohol_frequency,BD1_11,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,aerobic_activity,pa_aerobic,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,walking_days,BE3_31,feature,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,energy_kcal,N_EN,feature,kcal/day,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,protein_g,N_PROT,feature,g/day,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,fat_g,N_FAT,feature,g/day,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,carbohydrate_g,N_CHO,feature,g/day,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,sodium_mg,N_NA,feature,mg/day,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,yes,approved,공식 코드북 확인; 변수별 허용값·범위 적용
+KNHANES,target_hypertension_clinical,HE_HP,target,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,공식 파생 질환상태 변수; 모델 입력 금지
+KNHANES,target_diabetes_clinical,HE_DM (2016-2018)|HE_DM_HbA1c (2019-2024),target,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,공식 파생 질환상태 변수; 모델 입력 금지
+KNHANES,hypertension_diagnosed,DI1_dg,target_component,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KNHANES,diabetes_diagnosed,DE1_dg,target_component,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KNHANES,survey_weight,wt_itvex,survey_design,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,복합표본 설계·가중 평가용
+KNHANES,survey_stratum,kstrata,survey_design,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,복합표본 설계·가중 평가용
+KNHANES,survey_cluster,psu,survey_design,code,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,복합표본 설계·가중 평가용
+KNHANES,systolic_bp,HE_sbp,target_component,mmHg,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KNHANES,diastolic_bp,HE_dbp,target_component,mmHg,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KNHANES,fasting_glucose,HE_glu,target_component,mg/dL,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KNHANES,hba1c,HE_HbA1c,target_component,%,2016-2024,공식 무응답/비해당 및 허용범위 밖 값을 NA로 변환,no,approved,타깃 정의/적합성 확인 전용; 모델 입력 금지
+KLoSA,age,w01A001_age; w02-10A002_age; w05_newA001_age,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,sex,wXXgender1,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,bmi,"wXXC105,wXXC107 (계산)",feature,kg/m2,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,self_rated_health,wXXC001,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,regular_exercise,wXXC108,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,current_smoker,wXXC116+wXXC117,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,current_drinker,wXXC122,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,meal_count_yesterday,wXXC114m01-m03,feature,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",yes,approved,차수별 공식 변수명 확인; -8/-9 및 비허용 코드를 NA로 변환
+KLoSA,hypertension_event,wXXC006,target_component,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",no,approved,과거 진단 배제·다음 차수 발생 타깃 생성 전용
+KLoSA,diabetes_event,wXXC011,target_component,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",no,approved,과거 진단 배제·다음 차수 발생 타깃 생성 전용
+KLoSA,panel_weight,wXXwgt_p,survey_design,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",no,approved,패널 가중 평가용
+KLoSA,target_hypertension_incident_next_wave,다음 인접 차수 wXXC006,target,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",no,approved,인접한 다음 조사차수의 신규 진단; 모델 입력 금지
+KLoSA,target_diabetes_incident_next_wave,다음 인접 차수 wXXC011,target,code,1-10차 (2006-2024),"-8 거절, -9 모름 및 비허용 코드를 NA로 변환",no,approved,인접한 다음 조사차수의 신규 진단; 모델 입력 금지

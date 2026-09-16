@@ -1,2 +1,1 @@
 """Chronic disease modeling package."""
-

@@ -1,0 +1,33 @@
+{
+  "experiment_id": "age-stratified-thresholds-20260821",
+  "knhanes_policy": {
+    "model": "stacking__sigmoid_threshold_tuned",
+    "global_threshold": 0.027911241464998716,
+    "age_thresholds": {
+      "19-44": 0.011474698236283679,
+      "45-64": 0.05,
+      "65+": 0.085
+    },
+    "risk_band_cutoffs": {
+      "19-44": {
+        "low_cutoff": 0.01851276475917726,
+        "high_cutoff": 0.024175401758845395
+      },
+      "45-64": {
+        "low_cutoff": 0.027000000000000003,
+        "high_cutoff": 0.092
+      },
+      "65+": {
+        "low_cutoff": 0.036000000000000004,
+        "high_cutoff": 0.125
+      }
+    },
+    "threshold_source": "validation_age_groups_only",
+    "test_used_for_selection": false
+  },
+  "klosa_policy": {
+    "policy": "global_threshold_only_age_audit",
+    "reason": "KLoSA has no observed 19-44 group and incident events are sparse; do not operationalize age-specific thresholds yet."
+  },
+  "promotion_status": "experimental_internal_not_for_personal_probability_display"
+}

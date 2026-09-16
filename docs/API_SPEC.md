@@ -1,0 +1,657 @@
+# 만성질환 생활습관 챌린지 웹서비스 API 명세서
+
+| 항목 | 내용 |
+|---|---|
+| 문서 버전 | v2.2 |
+| 작성일 | 2026-08-19 |
+| 최종 갱신일 | 2026-09-10 |
+| 상태 | Sprint 2 구현 기준선 (인증 보안·비밀번호 재설정 API 반영) |
+| API Base URL | `/api/v1` |
+| 인증 방식 | Bearer Access Token |
+| 데이터 형식 | `application/json`, `snake_case` |
+| 기준 산출물 | 요구사항 정의서 v2.0, 서비스 대상·제외 범위 및 의료 안전 문구 v1.0, Figma 와이어프레임, ERD v2 |
+
+> 본 서비스의 결과는 의료진의 진단·처방이 아닌 위험 선별 및 건강교육 정보이다. 약물의 시작·중단·용량 변경을 안내하지 않는다.
+
+## 1. 작성 기준과 확인 필요 사항
+
+### 1.1 API 작성 기준
+
+- 만 19세 이상 서비스 이용 가능 여부, 만 45세 이상 핵심 타깃 여부, 활성 모델 적용 가능 여부를 각각 반환한다.
+- Sprint 2 활성 예측은 당뇨병 미래 신규 발병 이진분류 하나로 제한한다.
+- KLoSA 단독 모델은 검증 근거가 없는 40~44세에 적용하지 않으며, 실제 예측 범위는 활성 모델 카드의 `min_age`·`max_age`·모집단 조건으로 통제한다.
+- 건강검진 1건에 여러 모델 버전의 예측 결과를 허용한다.
+- 원시 확률과 변화값은 내부 감사·분석용으로 저장하거나 계산할 수 있으나, 사용자에게 건강 개선율로 노출하지 않는다.
+- 예측은 비동기 작업으로 접수하여 `job_id`를 먼저 반환한다.
+- 알림 기능과 이미지 식단 분석은 MVP에서 제외한다.
+
+### 1.2 산출물 간 확인 필요 사항
+
+| ID | 항목 | 현재 차이 | API 명세 적용안 |
+|---|---|---|---|
+| DEC-001 | 이용 범위 | 이용 자격·핵심 타깃·모델 검증 범위가 서로 다름 | `service_eligible`·`target_segment`·`model_eligible` 분리 |
+| DEC-002 | 질환 범위 | 고혈압은 후속 확장 대상 | Sprint 2는 `diabetes_incidence`만 활성화 |
+| DEC-003 | 예측 출력 | 미래 발병 이진분류와 사용자 표시를 구분해야 함 | 내부 확률은 저장하고 공개 화면은 `낮음·주의·높음` 범주 표시 |
+| DEC-004 | 예측 작업 | 비동기 상태와 영속 이력을 분리해야 함 | Redis는 최소 작업 상태, DB는 요청·완료·실패·모델 버전 최소 이력 |
+| DEC-005 | AI 작업 라우터 | `app/apis/v1/ai_job_routers.py`가 구현돼 있으나 `v1_routers`에 등록되지 않아 비활성 상태 | 실제 사용 여부를 확정한 뒤 등록하거나 코드 정리, 확정 전까지 API 명세에서 제외 |
+
+## 2. 공통 규칙
+
+### 2.1 인증과 권한
+
+- 공개 API를 제외한 모든 API는 `Authorization: Bearer {access_token}` 헤더가 필요하다.
+- 사용자는 본인의 건강정보·예측·챌린지 기록만 조회하거나 변경할 수 있다.
+- 다른 사용자의 자원에 접근하면 `404`를 반환하여 자원 존재 여부를 노출하지 않는다.
+- 비밀번호·토큰·이메일 원문·건강 수치는 애플리케이션 로그에 기록하지 않는다.
+- 비밀번호는 8자 이상이며 영문자(대·소문자 구분 없음), 숫자, 특수문자를 각각 1자 이상 포함해야 한다.
+- 로그인 실패는 계정과 IP별로 제한한다. 계정은 연속 5회 실패 시 5분, 다음 5회 실패 시 30분 동안 제한하며 로그인 성공 시 계정·IP 실패 상태를 초기화한다.
+- 존재하지 않는 이메일도 일반 로그인 실패와 같은 문구 및 비밀번호 검증 과정을 사용하여 계정 존재 여부와 처리 시간 차이를 노출하지 않는다.
+- 비밀번호 변경 또는 재설정이 완료되면 기존 Access Token과 Refresh Token을 모두 무효화한다.
+
+### 2.2 시간·목록·멱등성
+
+- 서버 저장 시각은 UTC, 응답은 ISO 8601 형식으로 반환한다. 예: `2026-08-13T03:20:00Z`.
+- 목록 API는 `page`, `size`, `sort`를 사용한다. 기본값은 `page=1`, `size=20`, 최대 `size=100`이다.
+- 같은 날짜의 챌린지 기록은 `PUT`으로 생성 또는 수정하여 중복을 방지한다.
+- 예측 요청은 `Idempotency-Key` 헤더를 지원하여 중복 작업 생성을 방지한다.
+
+### 2.3 공통 성공 응답
+
+```json
+{
+  "data": {},
+  "meta": {
+    "request_id": "req_01J...",
+    "timestamp": "2026-08-13T03:20:00Z"
+  }
+}
+```
+
+### 2.4 공통 오류 응답
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "입력값을 확인해 주세요.",
+    "fields": [
+      {"field": "systolic_bp", "reason": "허용 범위를 벗어났습니다."}
+    ],
+    "request_id": "req_01J..."
+  }
+}
+```
+
+| 상태 코드 | 사용 기준 |
+|---|---|
+| `200` | 조회·수정 성공 |
+| `201` | 자원 생성 성공 |
+| `202` | 비동기 예측 작업 접수 |
+| `204` | 로그아웃·철회 등 응답 본문 없는 성공 |
+| `400` | 처리할 수 없는 요청 |
+| `401` | 인증 실패 또는 토큰 만료 |
+| `403` | 동의 누락·기진단 등 정책상 실행 불가 |
+| `404` | 자원 없음 또는 소유권 없음 |
+| `409` | 이메일·검진일·챌린지 기록 중복 |
+| `422` | 필드 형식·단위·범위 오류 |
+| `429` | 로그인·비밀번호 재설정 요청 횟수 초과. `Retry-After` 헤더와 `retry_after_seconds` 반환 |
+| `500` | 서버 내부 오류 |
+| `503` | DB·모델 서버 준비되지 않음 |
+| `504` | 작업 접수 전 동기식 게이트웨이·모델 준비 확인의 시간 초과. `202` 접수 후 시간초과에는 사용하지 않음 |
+
+### 2.5 데모 모드
+
+- `DEMO_MODE` 활성화 시 `/api/v1/health`, `/api/v1/ready` 응답의 `redis` 값이 `embedded-demo`로 표시되며 외부 Redis 연결 없이 동작한다.
+- 데모 모드는 시연·로컬 개발 전용이며 운영 환경 적용 여부는 별도로 확정한다.
+
+## 3. API 목록
+
+### 3.1 시스템·인증·회원
+
+| Method | URI | 설명 | 인증 | 관련 요구사항 |
+|---|---|---|---|---|
+| GET | `/health` | 웹 서버 생존 확인 | 불필요 | NFR-OPS-001 |
+| GET | `/ready` | DB·모델 서버 준비 상태 확인 | 불필요 | NFR-OPS-001 |
+| POST | `/auth/signup` | 이메일 회원가입 | 불필요 | REQ-USER-001 |
+| POST | `/auth/login` | 로그인 및 토큰 발급 | 불필요 | REQ-USER-002 |
+| POST | `/auth/refresh` | Access Token 재발급 | Refresh Token | REQ-USER-002 |
+| POST | `/auth/logout` | Refresh Token 폐기 | 필요 | REQ-USER-002 |
+| PATCH | `/auth/password` | 현재 비밀번호 확인 후 비밀번호 변경 | 필요 | REQ-USER-002 |
+| POST | `/auth/password-reset/request` | 비밀번호 재설정 요청 | 불필요 | REQ-USER-002 |
+| POST | `/auth/password-reset/confirm` | 일회용 토큰으로 비밀번호 재설정 | 불필요 | REQ-USER-002 |
+| GET | `/users/me` | 내 계정·프로필 조회 | 필요 | REQ-HEALTH-001 |
+| PATCH | `/users/me/profile` | 성별·생년월일·키 수정 | 필요 | REQ-HEALTH-001 |
+| DELETE | `/users/me` | 재인증 후 탈퇴 요청 | 필요 | REQ-USER-004 |
+
+### 3.2 동의·적합성 확인
+
+| Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
+|---|---|---|---|---|
+| GET | `/consents` | 현재 동의 상태·버전 조회 | `consents` | REQ-USER-003 |
+| POST | `/consents` | 건강정보 처리 동의 저장 | `consents` | REQ-USER-003 |
+| PATCH | `/consents/{consent_id}/withdraw` | 동의 철회 | `consents` | NFR-SEC-003 |
+| POST | `/eligibility-checks` | 이용 연령·동의·기진단·경고 증상·모델 범위 판정 | `eligibility_checks` | REQ-USER-003~004 |
+| GET | `/eligibility-checks/latest` | 최근 적합성 결과 조회 | `eligibility_checks` | REQ-USER-004 |
+
+### 3.3 건강정보
+
+| Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
+|---|---|---|---|---|
+| POST | `/health-checkups` | 건강검진·생활습관 기록 생성 | `health_checkups` | REQ-HEALTH-002~004 |
+| GET | `/health-checkups` | 건강검진 이력 목록 | `health_checkups` | REQ-HEALTH-003 |
+| GET | `/health-checkups/{checkup_id}` | 건강검진 상세 조회 | `health_checkups` | REQ-HEALTH-003 |
+| PATCH | `/health-checkups/{checkup_id}` | 예측 전 기록 정정 | `health_checkups` | REQ-HEALTH-003~004 |
+| GET | `/health-checkups/input-schema` | 입력 필드·단위·허용 범위·필수 여부 조회 | 설정/메타데이터 | REQ-HEALTH-002~004 |
+
+예측과 연결된 검진은 수정하지 않는다. 정정값은 새로운 검진 레코드로 저장한다.
+
+### 3.4 AI 예측
+
+| Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
+|---|---|---|---|---|
+| GET | `/models/active` | 활성 모델 버전·연령·모집단·출력 정의 조회 | 모델 레지스트리 | NFR-ML-003 |
+| POST | `/prediction-jobs` | 예측 작업 접수, `202`와 `job_id` 반환 | `prediction_jobs`·Redis | REQ-PRED-001~002 |
+| GET | `/prediction-jobs/{job_id}` | 작업 상태·완료된 `prediction_id` 조회 | `prediction_jobs`·Redis | REQ-PRED-001 |
+| GET | `/predictions/{prediction_id}` | 미래 발병 위험 범주·모델 버전 조회 | `predictions` | REQ-PRED-002~004 |
+| GET | `/predictions/{prediction_id}/risk-factors` | 위험·보호 요인 조회 | `risk_factors` | REQ-PRED-005 |
+| POST | `/feedback` | 예측·추천·서비스 의견 저장 | `feedbacks` | REQ-FEED-001 |
+| GET | `/feedback` | 본인 의견 이력 조회 | `feedbacks` | REQ-FEED-001, NFR-FEED-001 |
+| POST | `/user-challenges/{user_challenge_id}/barriers` | 미실천 원인·목표 조정안 기록 | `challenge_barriers` | REQ-BEH-001 |
+| GET | `/weekly-reports/current` | 최근 7일 수행 요약과 다음 목표 | 집계 조회 | REQ-BEH-002 |
+| GET | `/education-contents` | 4주 교육 콘텐츠·진행 상태 | `education_contents`, `content_progress` | REQ-EDU-001 |
+| PUT | `/education-contents/{content_id}/progress` | 퀴즈 답변·완료 기록 | `content_progress` | REQ-EDU-002 |
+| POST | `/invitations` | 가족·친구 일회용 초대 생성 | `invitations` | REQ-SOC-001 |
+| GET | `/invitations` | 보낸·받은 초대 조회 | `invitations` | REQ-SOC-001 |
+| POST | `/invitations/accept` | 초대 수락·연결 생성 | `invitations`, `connections` | REQ-SOC-002 |
+| GET | `/connections` | 연결 관계·공유 범위 조회 | `connections` | REQ-SOC-003 |
+| POST | `/shared-challenge-groups` | 공동 챌린지 참여 초대 | `shared_challenge_groups`, `shared_challenge_members` | REQ-SOC-004 |
+| POST | `/shared-challenge-groups/{group_id}/accept` | 공동 챌린지 참여 수락 | `shared_challenge_members` | REQ-SOC-004 |
+| GET | `/shared-challenge-groups` | 공동 챌린지 진행 현황 | 공동 챌린지·개인 로그 집계 | REQ-SOC-005 |
+| POST | `/shared-challenge-groups/{group_id}/encouragements` | 검토된 응원 전송 | `encouragements` | REQ-SOC-006 |
+| GET | `/predictions/latest` | 최신 유효 예측 조회 | `predictions` | REQ-PRED-004 |
+| GET | `/predictions` | 질환·검진·기간별 예측 이력 조회 | `predictions` | REQ-DASH-003 |
+| GET | `/predictions/changes` | 내부 분석용 최초·최신 결과 비교 | `predictions` | REQ-DASH-003 |
+
+`/predictions/latest`는 `predicted_at DESC, id DESC` 순으로 최신값을 판별한다. 변화값은 같은 질환과 같은 점수 정의끼리만 비교한다.
+
+예측 작업 상태는 `queued`, `running`, `succeeded`, `failed`로 통일한다. 작업 생성 시각은 DB와 API 모두 `created_at`을 사용한다. `202` 접수 후 추론 시간초과가 발생하면 상태 조회는 HTTP `200`과 함께 `status: failed`, `error_code: TIMEOUT`, `retryable`, `retry_after_seconds`를 반환한다.
+
+위험 범주는 승인된 `threshold_version`이 있을 때만 공개한다. 임계값 숫자는 검증 세트의 판별력·보정·민감도와 의료 안전 문구 검토를 통과한 모델 카드에 기록하며 API 코드에 임의로 고정하지 않는다.
+
+### 3.5 챌린지
+
+| Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
+|---|---|---|---|---|
+| GET | `/challenges` | 질환·카테고리·난이도별 챌린지 조회 | `challenges` | REQ-CHAL-001 |
+| GET | `/challenge-recommendations` | 예측 결과에 맞는 후보와 추천 이유 조회 | 규칙·`recommendations` | REQ-CHAL-001, REQ-RECO-001 |
+| POST | `/challenge-cycles` | 최대 3개 챌린지로 28일 사이클 시작 | `challenge_cycles`, `user_challenges` | REQ-CHAL-002~003 |
+| GET | `/challenge-cycles/current` | 현재 진행 중 사이클 조회 | `challenge_cycles` | REQ-DASH-002 |
+| GET | `/challenge-cycles/{cycle_id}` | 사이클·참여 챌린지·달성률 조회 | `challenge_cycles`, `user_challenges` | REQ-CHAL-002~004 |
+| PATCH | `/challenge-cycles/{cycle_id}/status` | 사용자 중단 또는 기진단 확인에 따른 상태 변경 | `challenge_cycles` | REQ-CHAL-005 |
+| PUT | `/user-challenges/{user_challenge_id}/logs/{log_date}` | 날짜별 수행 여부·측정값 생성 또는 정정 | `challenge_logs` | REQ-CHAL-004~005 |
+| GET | `/user-challenges/{user_challenge_id}/logs` | 기간별 수행 기록 조회 | `challenge_logs` | REQ-CHAL-004~006 |
+| POST | `/user-challenges/{user_challenge_id}/verifications` | 사진·위치 등 인증 유형별 증빙 등록 | `challenge_verifications` | REQ-CHAL-004~006 |
+| GET | `/daily-challenge-rewards/{reward_date}` | 해당 날짜 일일 보상 지급 대상·수령 여부 조회 | `daily_challenge_rewards` | REQ-CHAL-006 |
+| POST | `/daily-challenge-rewards/{reward_date}/claim` | 선택한 챌린지 완료 후 일일 보상 수령(멱등, 중복 지급 방지) | `daily_challenge_rewards`, `reward_transactions` | REQ-CHAL-006 |
+
+### 3.6 대시보드·후속조치·추천·피드백
+
+| Method | URI | 설명 | 주요 엔터티 | 관련 요구사항 |
+|---|---|---|---|---|
+| GET | `/dashboard/summary` | 최신 위험 범주·현재 챌린지 통합 요약 | 조회 집계 | REQ-DASH-001~003 |
+| GET | `/dashboard/challenge-progress` | 최근 7일·4주 달성률 | 챌린지 엔터티 | REQ-DASH-002 |
+| GET | `/dashboard/reassessment-trend` | 재평가 이력·챌린지 수행 변화 조회 (설계 확정, 구현 대기) | 예측·검진·챌린지 집계 | REQ-DASH-003 |
+| GET | `/follow-up-actions` | 의료기관 상담 권고 이력 조회 | `follow_up_actions` | REQ-PRED-006 |
+| PATCH | `/follow-up-actions/{action_id}/acknowledge` | 권고 확인 시각 저장 | `follow_up_actions` | REQ-PRED-006 |
+| GET | `/recommendations` | 검토된 예방 행동·챌린지 설명과 출처 조회 | `recommendations` | REQ-RECO-001 |
+
+`/dashboard/reassessment-trend`는 4주 챌린지 사이클이 끝날 때마다 생성되는 재평가 검진(`checkup_type=reassessment`)을 기준으로, 최초 검진부터 현재까지의 재평가 이력과 그 사이 챌린지 수행률 변화를 보여준다. `/predictions/changes`가 계산하는 내부 확률 변화값은 그대로 노출하지 않으며, 응답은 시점별 `checkup_type`, `checkup_date`, 승인된 위험 범주(`risk_category`, 미승인 시 `모델 검증 중`), 해당 구간 챌린지 수행률만 포함한다. 화면 문구는 `SERVICE_SCOPE_AND_SAFETY_COPY.md` 5절의 대체 표현("4주간 챌린지 수행률과 건강정보 입력 변화를 보여드립니다")을 따르며, "위험이 O% 감소했습니다"처럼 원시 확률 변화를 개선율로 표현하지 않는다. 2026-08-28 기준 설계만 확정됐고 구현은 아직 진행되지 않았다.
+
+의료기관 권고 생성은 적합성 또는 예측 서비스 내부에서 수행한다. `trigger_source`는 `eligibility_check` 또는 `prediction`, `trigger_entity_id`는 해당 레코드 ID로 저장한다.
+
+## 4. 핵심 요청·응답 예시
+
+### 4.1 회원가입
+
+`POST /api/v1/auth/signup`
+
+```json
+{
+  "email": "user@example.com",
+  "password": "********",
+  "terms_agreed": true
+}
+```
+
+```json
+{
+  "data": {
+    "user_id": 101,
+    "email": "user@example.com",
+    "created_at": "2026-08-13T03:20:00Z"
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
+}
+```
+
+비밀번호는 8자 이상이며 영문자(대·소문자 구분 없음), 숫자, 특수문자를 각각 1자 이상 포함해야 한다. 예를 들어 `health123!`는 허용되며 대문자는 필수가 아니다.
+
+### 4.2 로그인 제한
+
+`POST /api/v1/auth/login`
+
+```json
+{
+  "email": "user@example.com",
+  "password": "health123!"
+}
+```
+
+인증 실패 시 이메일 존재 여부와 관계없이 `400`과 동일한 메시지를 반환한다.
+
+```json
+{
+  "detail": "이메일 또는 비밀번호가 올바르지 않습니다."
+}
+```
+
+계정별 연속 5회 실패 시 5분간 제한하고, 제한 해제 후 다시 연속 5회 실패하면 30분간 제한한다. 공유 네트워크 공격을 막기 위해 IP별 연속 30회 실패 시에도 15분간 제한한다. 제한 중에는 `429 Too Many Requests`, `Retry-After` 응답 헤더와 다음 본문을 반환한다.
+
+```json
+{
+  "detail": {
+    "message": "로그인을 여러 번 시도했습니다. 잠시 후 다시 시도해 주세요.",
+    "retry_after_seconds": 300
+  }
+}
+```
+
+로그인 성공 시 해당 계정과 IP의 실패 횟수 및 잠금 단계를 초기화한다.
+
+### 4.3 비밀번호 변경
+
+`PATCH /api/v1/auth/password`
+
+```json
+{
+  "current_password": "health123!",
+  "new_password": "health456!",
+  "new_password_confirmation": "health456!"
+}
+```
+
+현재 비밀번호가 맞고 새 비밀번호와 확인 값이 일치하면 `204 No Content`를 반환한다. 기존 비밀번호와 같은 값은 허용하지 않는다. 변경 즉시 사용자의 인증 버전을 증가시켜 기존 Access Token과 Refresh Token을 무효화하며, 다시 로그인해야 한다.
+
+### 4.4 비밀번호 재설정 요청·확정
+
+`POST /api/v1/auth/password-reset/request`
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+계정 존재 여부와 관계없이 `202 Accepted`와 같은 안내 문구를 반환한다.
+
+```json
+{
+  "message": "가입된 이메일이라면 비밀번호 재설정 안내를 보냈습니다."
+}
+```
+
+로컬·개발 환경에서는 이메일 발송 없이 응답에 `development_reset_token`이 추가될 수 있다. 운영 환경에서는 이 값을 절대 반환하지 않고 SMTP로 재설정 링크를 발송한다. 토큰 유효기간은 30분이며 새 요청이 생성되면 이전 미사용 토큰은 폐기한다. 이메일별 연속 5회 또는 IP별 연속 20회 요청 시 15분간 제한하며 `429`와 재시도 시간을 반환한다.
+
+`POST /api/v1/auth/password-reset/confirm`
+
+```json
+{
+  "token": "one-time-reset-token",
+  "new_password": "health456!",
+  "new_password_confirmation": "health456!"
+}
+```
+
+성공하면 `204 No Content`를 반환한다. 재설정 토큰은 한 번만 사용할 수 있고 만료되거나 이미 사용한 토큰은 거부한다. 기존 비밀번호와 같은 값은 허용하지 않으며, 완료 즉시 기존 Access Token과 Refresh Token을 무효화한다.
+
+### 4.5 적합성 확인
+
+`POST /api/v1/eligibility-checks`
+
+```json
+{
+  "birth_date": "1975-04-12",
+  "has_diabetes_diagnosis": false,
+  "has_urgent_warning_sign": false
+}
+```
+
+```json
+{
+  "data": {
+    "eligibility_check_id": 31,
+    "service_eligible": true,
+    "target_segment": "primary_45_plus",
+    "model_eligible": true,
+    "reason_codes": [],
+    "next_action": "health_checkup_input",
+    "active_model": {
+      "model_key": "diabetes_incidence",
+      "version": "v1.0.0",
+      "min_age": 45,
+      "max_age": null
+    }
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
+}
+```
+
+적합성 판정 API는 판정이 완료되면 `200`을 반환한다. 기진단·경고 증상·미동의·모델 검증 범위 밖이면 `model_eligible=false`, 표준 `reason_codes`, 적절한 `next_action`을 반환하고 이후 예측 작업 생성을 허용하지 않는다.
+
+### 4.6 건강검진 입력
+
+`POST /api/v1/health-checkups`
+
+```json
+{
+  "checkup_type": "initial",
+  "checkup_date": "2026-08-31",
+  "height_cm": 160.0,
+  "weight_kg": 67.5,
+  "waist_cm": 91.0,
+  "systolic_bp": 120,
+  "diastolic_bp": 80,
+  "self_rated_health": "good",
+  "meal_count_yesterday": 3,
+  "smoking_status": "never",
+  "regular_exercise": true,
+  "current_drinker": false,
+  "exercise_days_per_week": 3,
+  "exercise_minutes": 30,
+  "annual_household_income_10k_krw": null,
+  "health_satisfaction_score": null,
+  "economic_satisfaction_score": null,
+  "overall_quality_of_life_score": null,
+  "hypertension_diagnosis": null,
+  "cancer_diagnosis": null,
+  "chronic_lung_disease_diagnosis": null,
+  "liver_disease_diagnosis": null,
+  "heart_disease_diagnosis": null,
+  "cerebrovascular_disease_diagnosis": null,
+  "psychiatric_disease_diagnosis": null,
+  "arthritis_rheumatism_diagnosis": null,
+  "education_level": null,
+  "marital_status": null,
+  "household_structure": null,
+  "depressed_feeling_last_week": null,
+  "sleep_difficulty_last_week": null,
+  "feature_schema_version": "klosa_stage3_25features_v1"
+}
+```
+
+필수 필드는 `checkup_date`, `height_cm`, `weight_kg`, `self_rated_health`, `meal_count_yesterday`, `smoking_status`, `regular_exercise`, `current_drinker`, `exercise_days_per_week`, `exercise_minutes`이다. `checkup_type`과 `feature_schema_version`은 생략하면 서버 기본값을 사용한다. 나머지 검진·질환·사회인구학 필드는 선택 입력이며 `null`을 허용한다.
+
+검증 규칙은 다음과 같다.
+
+- `height_cm`: 120~220cm, `weight_kg`: 25~250kg, `waist_cm`: 45~180cm
+- `systolic_bp`: 70~250mmHg, `diastolic_bp`: 40~150mmHg. 두 값을 모두 보내면 수축기 혈압이 이완기 혈압보다 커야 한다.
+- `meal_count_yesterday`: 0~10회, `exercise_days_per_week`: 0~7일, `exercise_minutes`: 0~720분
+- `regular_exercise=false`이면 서버가 운동 일수와 시간을 0으로 저장한다.
+- 라벨을 직접 결정하거나 기준 시점 이후에 관측된 값은 모델 입력에서 제외한다.
+
+`201 Created` 응답은 생성된 `checkup_id`, 서버가 계산한 `bmi`, 적용된 `feature_schema_version`, `created_at`, `validation.status=valid`를 포함한다.
+
+### 4.7 비동기 예측 요청
+
+`POST /api/v1/prediction-jobs`
+
+```json
+{
+  "checkup_id": 501,
+  "model_key": "diabetes_incidence"
+}
+```
+
+`202 Accepted`
+
+```json
+{
+  "data": {
+    "job_id": "predjob_01J...",
+    "status": "queued",
+    "model_key": "diabetes_incidence",
+    "model_version": "v1.0.0",
+    "status_url": "/api/v1/prediction-jobs/predjob_01J..."
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
+}
+```
+
+`GET /api/v1/prediction-jobs/{job_id}` 완료 응답:
+
+```json
+{
+  "data": {
+    "job_id": "predjob_01J...",
+    "status": "succeeded",
+    "prediction_id": 901,
+    "finished_at": "2026-08-13T03:20:04Z"
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
+}
+```
+
+시간초과 실패 응답은 최초 요청을 `504`로 되돌리지 않고 다음과 같이 상태 조회 결과로 제공한다.
+
+```json
+{
+  "data": {
+    "job_id": "predjob_01J...",
+    "status": "failed",
+    "error_code": "TIMEOUT",
+    "retryable": true,
+    "retry_after_seconds": 30,
+    "finished_at": "2026-08-13T03:20:14Z"
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:14Z"}
+}
+```
+
+`GET /api/v1/predictions/{prediction_id}/risk-factors` 승인 전 응답:
+
+```json
+{
+  "data": {
+    "prediction_id": 901,
+    "status": "not_available",
+    "items": [],
+    "message": "검증된 설명 방법이 준비되기 전에는 위험·보호 요인을 표시하지 않습니다.",
+    "shap_claimed": false
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
+}
+```
+
+설명 방법과 원변수 메타데이터가 검토·승인되기 전에는 `risk_factors` 레코드를 생성하지 않는다.
+
+### 4.8 예측 결과
+
+`GET /api/v1/predictions/901`
+
+```json
+{
+  "data": {
+    "prediction_id": 901,
+    "checkup_id": 501,
+    "model_key": "diabetes_incidence",
+    "outcome_definition": "next_observation_new_diabetes_diagnosis",
+    "result_status": "approved",
+    "promotion_status": "approved",
+    "risk_category": "caution",
+    "risk_category_label": "주의",
+    "model_version": "v1.0.0",
+    "model_population": "baseline_undiagnosed_age_45_plus",
+    "predicted_at": "2026-08-13T03:20:04Z",
+    "disclaimer": "이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다."
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:04Z"}
+}
+```
+
+`risk_category`와 결과 화면 CTA는 `result_status`, `promotion_status`가 모두 `approved`이고
+`risk_category`가 존재할 때만 공개한다. 그 전에는 `모델 검증 중`으로 표시하며 내부 점수와
+위험 범주를 공개하지 않는다.
+
+### 4.9 4주 챌린지 시작
+
+`POST /api/v1/challenge-cycles`
+
+```json
+{
+  "start_date": "2026-08-17",
+  "challenge_ids": [11, 24, 37]
+}
+```
+
+```json
+{
+  "data": {
+    "cycle_id": 71,
+    "cycle_number": 1,
+    "start_date": "2026-08-17",
+    "end_date": "2026-09-13",
+    "status": "scheduled",
+    "user_challenges": [
+      {"user_challenge_id": 301, "challenge_id": 11},
+      {"user_challenge_id": 302, "challenge_id": 24},
+      {"user_challenge_id": 303, "challenge_id": 37}
+    ]
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
+}
+```
+
+### 4.10 일일 수행 기록
+
+`PUT /api/v1/user-challenges/301/logs/2026-08-17`
+
+```json
+{
+  "is_completed": true,
+  "value": 30,
+  "source": "self_report"
+}
+```
+
+미래 날짜는 `422`, 같은 날짜의 재요청은 새 레코드를 만들지 않고 기존 기록을 정정한다.
+
+### 4.11 대시보드 요약
+
+`GET /api/v1/dashboard/summary`
+
+```json
+{
+  "data": {
+    "risk_cards": [
+      {
+        "model_key": "diabetes_incidence",
+        "risk_category": "caution",
+        "risk_category_label": "주의",
+        "model_version": "v1.0.0",
+        "predicted_at": "2026-08-13T03:20:04Z"
+      }
+    ],
+    "current_cycle": {
+      "cycle_id": 71,
+      "day": 4,
+      "completion_rate": 66.7,
+      "recent_7_days": {"completed": 8, "planned": 12}
+    },
+    "next_action": null,
+    "disclaimer": "위험 범주와 챌린지 수행률은 진단, 질병의 호전 또는 치료 효과를 의미하지 않습니다."
+  },
+  "meta": {"request_id": "req_01J...", "timestamp": "2026-08-13T03:20:00Z"}
+}
+```
+
+## 5. 화면·요구사항·DB 추적표
+
+| 화면 | 요구사항 | API | DB |
+|---|---|---|---|
+| 서비스 소개 | NFR-SAFE-001 | 없음 | 없음 |
+| 회원가입·로그인·비밀번호 관리 | REQ-USER-001~002 | `/auth/*` | `users`, `auth_throttles`, `password_reset_tokens` |
+| 건강정보 동의 | REQ-USER-003 | `/consents` | `consents` |
+| 적합성·안전 확인 | REQ-USER-003~004 | `/eligibility-checks` | `eligibility_checks`, `user_profiles` |
+| 검진 결과 입력 | REQ-HEALTH-001~004 | `/health-checkups` | `health_checkups` |
+| 예측 진행·결과 | REQ-PRED-001~006 | `/prediction-jobs`, `/predictions` | `prediction_jobs`, `predictions`, `risk_factors` |
+| 챌린지 선택 | REQ-CHAL-001~003 | `/challenge-recommendations`, `/challenge-cycles` | 챌린지 관련 4개 엔터티 |
+| 일일 챌린지 기록 | REQ-CHAL-004 | `/user-challenges/*/logs` | `challenge_logs` |
+| 추적 대시보드 | REQ-DASH-001~003 | `/dashboard/*` | 예측·검진·챌린지 집계 |
+| 의료기관 안내 | REQ-PRED-006, REQ-CHAL-005 | `/follow-up-actions` | `follow_up_actions` |
+| 추천 설명 | REQ-RECO-001 | `/recommendations` | `recommendations` |
+
+## 6. 구현·검수 기준
+
+- FastAPI의 `/docs`와 `/openapi.json`에서 요청·응답 스키마와 모든 공통 오류 예시를 확인할 수 있어야 한다.
+- 일반 사용자 API는 배포 환경에서 P95 3초 이내, 예측 요청 접수는 1초 이내를 목표로 한다.
+- 모델 추론은 준비 완료 상태에서 P95 5초 이내를 목표로 하고 10초 초과 시 `504`를 반환한다.
+- 다른 사용자의 ID를 사용한 접근, 동의 없는 건강정보 입력, 기진단자의 예측 실행을 통합 테스트한다.
+- 동일 모델 버전과 동일 입력은 반복 실행에서 같은 결과를 반환해야 한다.
+- 고위험·경고 증상 응답에는 생활습관 안내보다 의료기관 안내를 우선 포함한다.
+
+## 7. 2026-08-21 구현 상태
+
+- 정식 실행 기준은 `app/main.py`이며 `/api/v1/prediction-jobs`를 포함한 핵심 사용자 흐름(End-to-End)을 구현했다.
+- 작업 상태는 `queued/running/succeeded/failed`, 생성 시각은 `created_at`으로 통일했다.
+- `klosa_stage3_25features_v1` 특징 스키마와 교체 가능한 `PredictionProvider`를 적용했다. 실제 값은 배포 환경의 `PREDICTION_FEATURE_SCHEMA_VERSION`과 `/api/v1/models/active`를 기준으로 한다.
+- 기본 `development` provider는 시스템 연결만 검증하며 위험 범주·내부 점수·확률을 생성하거나 공개하지 않는다.
+- 승인 전 위험요인 API는 `not_available`과 빈 목록을 반환한다.
+- 챌린지·4주 사이클·일일 기록·기본 대시보드와 의료기관 후속조치 API를 연결했다.
+- 구현·테스트 상세는 `SPRINT2_IMPLEMENTATION_REPORT_20260821.md`를 따른다.
+- 예측 실패 시 임의 결과를 생성하거나 실패한 예측 레코드를 저장하지 않는다.
+- OpenAPI 스키마, 요구사항 ID, Figma 화면, ERD 엔터티 간 추적표를 Sprint 종료 전 다시 점검한다.
+
+## 8. 2026-08-24 서비스 확장 API
+
+| 영역 | Method | Endpoint | 핵심 안전 기준 |
+|---|---|---|---|
+| 웨어러블 연결 | POST/GET | `/api/v1/wearables/connections` | 제조사 OAuth 대신 `apple_health_export`, `android_health_connect` 파일 정제 방식으로 표시 |
+| 일일 요약 | POST/GET | `/api/v1/wearables/daily-summaries/import`, `/daily-summaries` | 최대 31건, 미래값 차단, 명확히 대응되는 챌린지만 자동 기록 |
+| 웨어러블 건강정보 후보 | GET | `/api/v1/wearables/health-candidates` | 확인된 최대 7일 기록으로 운동 빈도·시간 후보 생성, 자동 저장 금지 |
+| 웨어러블 파일 미리보기 | POST | `/api/v1/wearables/file-previews` | Apple XML·Android JSON을 원본 저장 없이 일일 요약으로 변환 |
+| 웨어러블 건강정보 적용 | PATCH | `/api/v1/wearables/health-candidates/{checkup_id}` | 사용자 확인 후 운동 여부·일수·시간만 부분 갱신 |
+| 근거형 Q&A | POST | `/api/v1/health-education/questions` | 승인 문서 검색, 원문 출처, 근거 부족 상태, 복약 변경 질문 거절 |
+| 퀴즈 조회 | GET | `/api/v1/health-education/quizzes` | 승인 문서에서 규칙 기반(rule-based) 자동 생성, OX·빈칸 채우기 2종, 조회 응답에는 정답·해설 미포함(제출 API는 후속) |
+| 식단 분류 초안 | POST/PATCH | `/api/v1/food-analyses`, `/{id}/confirm` | 개발용 어댑터, 사용자 확인 전 확정 금지, 영양·치료 판정 금지 |
+| 채소 식사 사진 자동 인증 | POST | `/api/v1/user-challenges/{id}/meal-photo-verifications` | multipart 사진 업로드, 채소 포함 여부·시각적 비율(%)만 자동 판별해 챌린지 인증·기록, 칼로리·영양·치료 판정 금지, 원본 이미지 미저장(SHA-256 다이제스트만 보관) |
+| OCR 입력 초안 | POST/POST | `/api/v1/ocr-drafts`, `/{id}/confirm` | 이미지 업로드 시 `external_provider_consent=true`가 필수이며, Claude Vision 또는 CLOVA OCR 설정에서 허용 필드만 초안으로 반환한다. 신원정보 제외·원본 이미지 미저장·건강검진 기록 자동 저장 금지 |
+| OCR 건강정보 적용 | PATCH | `/api/v1/ocr-drafts/{draft_id}/health-checkups/{checkup_id}` | 사용자가 확인한 신체계측·혈압만 기존 건강정보에 부분 갱신 |
+| 웹 알림 | GET/PUT | `/api/v1/notification-preferences`, `/api/v1/notifications` | 웹 내부 생활기록 알림만 제공, 의료 경고로 표현 금지 |
+| 가족 연결 관리 | PATCH/DELETE/POST | `/api/v1/connections/{id}/sharing-scope`, `/{id}`, `/{id}/block` | 챌린지 수행 상태만 공유, 건강정보·예측 결과 공유 금지 |
+| 리포트 PDF | GET | `/api/v1/weekly-reports/current/pdf` | 수행률을 위험 감소·치료 효과로 해석하지 않는 문구 포함 |
+
+주간 리포트의 `record_summary`는 생성형 모델이 사실을 보충하는 방식이 아니라 저장된 수행률과 장벽 기록만 사용하는 `deterministic_template_v1`이다.
+
+## 9. 2026-08-28 당근의 숲(Carrot Forest) 게임 API
+
+Sprint 2 이후 추가된 공동 아바타·보상 게임 기능이다. 예측·챌린지 판정과는 별개로 동작하며, 진단·치료 관련 판단에는 사용하지 않는다.
+
+| 영역 | Method | Endpoint | 설명 |
+|---|---|---|---|
+| 지갑·인벤토리 | GET | `/api/v1/wallet` | 보유 당근 잔액 조회 |
+| 지갑·인벤토리 | GET | `/api/v1/inventory-items` | 구매 가능한 아이템 카탈로그 조회 |
+| 지갑·인벤토리 | GET | `/api/v1/inventory` | 보유 아이템·수량 조회 |
+| 지갑·인벤토리 | POST | `/api/v1/inventory/items/{item_id}/purchase` | 당근으로 아이템 구매 |
+| 아바타 | GET | `/api/v1/avatar` | 아바타 구성·장착 상태 조회 |
+| 아바타 | PUT | `/api/v1/avatar/equipment` | 보유 아이템만 장착 가능하도록 장비 구성 변경 |
+| 숲 공간 | GET | `/api/v1/forest/catalog` | 배치 가능한 오브젝트 카탈로그 조회 |
+| 숲 공간 | POST | `/api/v1/forest/spaces` | 공동 챌린지 그룹의 숲 공간 생성 |
+| 숲 공간 | GET | `/api/v1/forest/spaces/{group_id}` | 숲 공간·배치된 오브젝트·진행도 조회 |
+| 숲 공간 | PATCH | `/api/v1/forest/avatar` | 숲에 표시되는 아바타 저장 |
+| 숲 공간 | POST | `/api/v1/forest/spaces/{group_id}/rewards/group-daily` | 공동 목표 달성 시 일일 공동 보상 상자 지급 |
+| 숲 공간 | POST | `/api/v1/forest/spaces/{group_id}/objects` | 보유 오브젝트를 숲에 배치 |
+| 숲 공간 | DELETE | `/api/v1/forest/spaces/{group_id}/objects/{object_id}` | 본인이 배치한 오브젝트 회수. 본인 소유만 가능하며 반복 요청은 이미 회수된 상태로 성공 처리(멱등), 당근은 환불하지 않는다 |
+
+메인 화면에서 `/forest` 진입 시 인증 토큰과 활성 공동 챌린지가 있으면 위 Live API를 사용하고, 조건이 없거나 초기 연결에 실패하면 프론트엔드 Demo Adapter로 전환한다. 상세 구현·검증 근거는 `CARROT_FOREST_PIXEL_GAME_MVP.md`, `DAILY_QUEST_API_FIELD_MAPPING_20260827.md`, `REWARD_IDEMPOTENCY_RULES_20260827.md`, `MENTORING_DEMO_INTEGRATION_CHECK_20260828.md`를 따른다.
+
+미확정 사항: 게임 아이템 카탈로그 등록·가격 변경 담당자, Live API 연결 실패 시 Demo fallback을 운영 환경에서도 허용할지 여부.

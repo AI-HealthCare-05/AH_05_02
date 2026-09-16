@@ -1,0 +1,3 @@
+﻿dataset,target_definition,inclusion_criteria,exclusion_criteria,full_observation_n,full_unique_entity_n,positive_n,positive_rate,observed_age_min,observed_age_max
+KLoSA,t0 미진단자의 다음 인접 조사(약 2년) 신규 당뇨 진단,기준시점까지 당뇨 진단 이력이 없고 바로 다음 인접 차수의 타깃이 관측된 패널 행,기준시점 이전 진단; 인접 다음 차수 미응답; 타깃 결측,51807,8730,1299,0.025073831721582025,45.0,105.0
+KNHANES,현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부,만 19세 이상; 의사진단 문항이 명시적으로 아니오; 공식 당뇨 상태 타깃 관측,만 19세 미만; 진단 이력 있음 또는 진단 문항 불명; 타깃 결측,44828,44828,1945,0.04338806103328277,19.0,80.0

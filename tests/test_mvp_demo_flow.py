@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+from datetime import date
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from starlette import status
+
+from app.core import config
+from app.main import app
+from app.prediction import ACTIVE_MODEL
+from tests.db_utils import init_sqlite_test_db, reset_tortoise
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
+    previous_demo_mode = config.DEMO_MODE
+    config.DEMO_MODE = True
+    await init_sqlite_test_db()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            signup = {
+                "email": "mvp-flow@example.com",
+                "password": "Password123!",
+                "terms_agreed": True,
+            }
+            assert (await client.post("/api/v1/auth/signup", json=signup)).status_code == status.HTTP_201_CREATED
+            login = await client.post(
+                "/api/v1/auth/login", json={"email": signup["email"], "password": signup["password"]}
+            )
+            headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+            birth_date = "1965-04-12"
+            profile = await client.patch(
+                "/api/v1/users/me/profile",
+                headers=headers,
+                json={"birthday": birth_date, "gender": "FEMALE"},
+            )
+            assert profile.status_code == status.HTTP_200_OK
+
+            consent = await client.post(
+                "/api/v1/consents",
+                headers=headers,
+                json={"consent_item": "health_data", "version": "1.0", "is_agreed": True},
+            )
+            assert consent.status_code == status.HTTP_201_CREATED
+
+            eligibility = await client.post(
+                "/api/v1/eligibility-checks",
+                headers=headers,
+                json={
+                    "birth_date": birth_date,
+                    "has_diabetes_diagnosis": False,
+                    "has_urgent_warning_sign": False,
+                    "population_in_scope": True,
+                },
+            )
+            assert eligibility.json()["data"]["model_eligible"] is True
+
+            checkup = await client.post(
+                "/api/v1/health-checkups",
+                headers=headers,
+                json={
+                    "checkup_type": "initial",
+                    "checkup_date": date.today().isoformat(),
+                    "height_cm": 160,
+                    "weight_kg": 62,
+                    "waist_cm": 78,
+                    "systolic_bp": 128,
+                    "diastolic_bp": 78,
+                    "self_rated_health": "fair",
+                    "meal_count_yesterday": 3,
+                    "smoking_status": "never",
+                    "regular_exercise": False,
+                    "current_drinker": False,
+                    "exercise_days_per_week": 0,
+                    "exercise_minutes": 0,
+                    "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
+                },
+            )
+            assert checkup.status_code == status.HTTP_201_CREATED
+
+            job = await client.post(
+                "/api/v1/prediction-jobs",
+                headers=headers,
+                json={"checkup_id": checkup.json()["data"]["checkup_id"], "model_key": "diabetes_incidence"},
+            )
+            assert job.status_code == status.HTTP_202_ACCEPTED
+            assert job.json()["data"]["status"] == "succeeded"
+            prediction_id = job.json()["data"]["prediction_id"]
+
+            prediction = await client.get(f"/api/v1/predictions/{prediction_id}", headers=headers)
+            assert prediction.json()["data"]["raw_probability_exposed"] is False
+            assert prediction.json()["data"]["risk_category"] is None
+
+            recommendations = await client.get(
+                f"/api/v1/challenge-recommendations?prediction_id={prediction_id}", headers=headers
+            )
+            challenge_id = recommendations.json()["data"]["items"][0]["challenge_id"]
+            cycle = await client.post(
+                "/api/v1/challenge-cycles",
+                headers=headers,
+                json={
+                    "start_date": date.today().isoformat(),
+                    "challenge_ids": [challenge_id],
+                    "prediction_id": prediction_id,
+                },
+            )
+            user_challenge_id = cycle.json()["data"]["user_challenges"][0]["user_challenge_id"]
+            log = await client.put(
+                f"/api/v1/user-challenges/{user_challenge_id}/logs/{date.today().isoformat()}",
+                headers=headers,
+                json={"is_completed": True, "value": 1, "source": "self_report", "note": None},
+            )
+            assert log.status_code == status.HTTP_200_OK
+
+            dashboard = await client.get("/api/v1/dashboard/summary", headers=headers)
+            assert dashboard.status_code == status.HTTP_200_OK
+            weekly = await client.get("/api/v1/weekly-reports/current", headers=headers)
+            weekly_data = weekly.json()["data"]
+            assert weekly_data["status"] == "ready"
+            assert weekly_data["summary_method"] == "deterministic_template_v1"
+            assert weekly_data["completion"]["completed"] == 1
+            assert weekly_data["challenge_details"][0]["completed"] == 1
+            assert "recent_risk_category" not in weekly_data
+
+            pdf = await client.get("/api/v1/weekly-reports/current/pdf", headers=headers)
+            assert pdf.status_code == status.HTTP_200_OK
+            assert pdf.headers["content-type"] == "application/pdf"
+            assert pdf.content.startswith(b"%PDF")
+            assert len(pdf.content) > 1000
+    finally:
+        config.DEMO_MODE = previous_demo_mode
+        await reset_tortoise()

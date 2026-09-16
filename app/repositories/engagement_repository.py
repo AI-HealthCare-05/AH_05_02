@@ -1,0 +1,172 @@
+from __future__ import annotations
+
+from datetime import date
+from typing import Any
+
+from tortoise.expressions import Q
+
+from app.models.engagement import (
+    ChallengeBarrier,
+    Connection,
+    ContentProgress,
+    EducationContent,
+    Encouragement,
+    HealthQuizAttempt,
+    Invitation,
+    SharedChallengeGroup,
+    SharedChallengeMember,
+)
+from app.models.health import ChallengeLog, UserChallenge
+
+
+class EngagementRepository:
+    async def create_barrier(self, **values: Any) -> ChallengeBarrier:
+        return await ChallengeBarrier.create(**values)
+
+    async def list_barriers(
+        self,
+        user_id: int,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        user_challenge_ids: list[int] | None = None,
+    ) -> list[ChallengeBarrier]:
+        query = ChallengeBarrier.filter(user_id=user_id)
+        if start_date is not None:
+            query = query.filter(log_date__gte=start_date)
+        if end_date is not None:
+            query = query.filter(log_date__lte=end_date)
+        if user_challenge_ids is not None:
+            if not user_challenge_ids:
+                return []
+            query = query.filter(user_challenge_id__in=user_challenge_ids)
+        items = await query.order_by("-log_date", "-id")
+        if user_challenge_ids is None:
+            return items
+        latest_by_key: dict[tuple[int, date], ChallengeBarrier] = {}
+        for item in items:
+            key = (item.user_challenge_id, item.log_date)
+            existing = latest_by_key.get(key)
+            if existing is None or item.id > existing.id:
+                latest_by_key[key] = item
+        return sorted(latest_by_key.values(), key=lambda item: (item.log_date, item.id), reverse=True)
+
+    async def content_catalog(self) -> list[EducationContent]:
+        return await EducationContent.filter(is_active=True).order_by("week_number")
+
+    async def content_progress(self, user_id: int) -> dict[int, ContentProgress]:
+        items = await ContentProgress.filter(user_id=user_id)
+        return {item.content_id: item for item in items}
+
+    async def get_content(self, content_id: int) -> EducationContent | None:
+        return await EducationContent.get_or_none(id=content_id, is_active=True)
+
+    async def complete_content(self, **values: Any) -> ContentProgress:
+        item, _ = await ContentProgress.update_or_create(
+            defaults={key: value for key, value in values.items() if key not in {"user_id", "content_id"}},
+            user_id=values["user_id"],
+            content_id=values["content_id"],
+        )
+        return item
+
+    async def record_quiz_attempt(self, **values: Any) -> HealthQuizAttempt:
+        return await HealthQuizAttempt.create(**values)
+
+    async def correct_quiz_ids(self, user_id: int) -> set[str]:
+        """이 사용자가 정답을 맞힌 적 있는 quiz_id 집합. 회차가 바뀌어도 이미 맞힌 문항을
+        새 문항보다 뒤로 미루는 데 쓴다(퀴즈 노출 우선순위 결정용, 접근 제한 용도 아님)."""
+        rows = await HealthQuizAttempt.filter(user_id=user_id, is_correct=True).values_list("quiz_id", flat=True)
+        return set(rows)
+
+    async def create_invitation(self, **values: Any) -> Invitation:
+        return await Invitation.create(**values)
+
+    async def pending_invitation_for(self, inviter_user_id: int, invitee_email: str) -> Invitation | None:
+        return await Invitation.filter(
+            inviter_user_id=inviter_user_id, invitee_email=invitee_email, status="pending"
+        ).first()
+
+    async def invitation_by_hash(self, token_hash: str) -> Invitation | None:
+        return await Invitation.get_or_none(token_hash=token_hash)
+
+    async def list_invitations(self, user_id: int, email: str) -> tuple[list[Invitation], list[Invitation]]:
+        sent = await Invitation.filter(inviter_user_id=user_id).order_by("-created_at")
+        received = await Invitation.filter(invitee_email=email).order_by("-created_at")
+        return sent, received
+
+    async def create_connection(self, **values: Any) -> Connection:
+        item, _ = await Connection.update_or_create(
+            defaults={
+                "relation_type": values["relation_type"],
+                "status": "active",
+                "sharing_scope": ["challenge_status"],
+                "disconnected_at": None,
+            },
+            user_a_id=values["user_a_id"],
+            user_b_id=values["user_b_id"],
+        )
+        return item
+
+    async def active_connection(self, first_user_id: int, second_user_id: int) -> Connection | None:
+        user_a_id, user_b_id = sorted((first_user_id, second_user_id))
+        return await Connection.get_or_none(user_a_id=user_a_id, user_b_id=user_b_id, status="active")
+
+    async def list_connections(self, user_id: int) -> list[Connection]:
+        return await Connection.filter(Q(user_a_id=user_id) | Q(user_b_id=user_id), status="active").order_by(
+            "-created_at"
+        )
+
+    async def connection_for_user(self, connection_id: int, user_id: int) -> Connection | None:
+        return await Connection.filter(
+            Q(user_a_id=user_id) | Q(user_b_id=user_id), id=connection_id, status="active"
+        ).first()
+
+    async def create_shared_group(self, **values: Any) -> SharedChallengeGroup:
+        return await SharedChallengeGroup.create(**values)
+
+    async def add_shared_member(self, **values: Any) -> SharedChallengeMember:
+        return await SharedChallengeMember.create(**values)
+
+    async def get_shared_member(self, group_id: int, user_id: int) -> SharedChallengeMember | None:
+        return await SharedChallengeMember.get_or_none(group_id=group_id, user_id=user_id)
+
+    async def get_shared_group_for_user(self, group_id: int, user_id: int) -> SharedChallengeGroup | None:
+        member = await self.get_shared_member(group_id, user_id)
+        if member is None:
+            return None
+        return await SharedChallengeGroup.get_or_none(id=group_id, status="active")
+
+    async def list_shared_groups(self, user_id: int) -> list[SharedChallengeGroup]:
+        memberships = await SharedChallengeMember.filter(user_id=user_id)
+        ids = [item.group_id for item in memberships]
+        return (
+            []
+            if not ids
+            # "-id" breaks ties among rows with an identical created_at (e.g. groups created
+            # in the same second) so "most recent group" resolves the same way on every call —
+            # without it, a user in >1 active group could get a different group back from one
+            # request to the next, which is exactly what happened here.
+            else await SharedChallengeGroup.filter(id__in=ids, status="active").order_by("-created_at", "-id")
+        )
+
+    async def shared_members(self, group_id: int) -> list[SharedChallengeMember]:
+        return await SharedChallengeMember.filter(group_id=group_id).order_by("id")
+
+    async def completed_days(self, user_id: int, challenge_id: int, start_date: date, end_date: date) -> int:
+        selected = await UserChallenge.filter(user_id=user_id, challenge_id=challenge_id)
+        ids = [item.id for item in selected]
+        if not ids:
+            return 0
+        logs = await ChallengeLog.filter(
+            user_id=user_id,
+            user_challenge_id__in=ids,
+            log_date__gte=start_date,
+            log_date__lte=end_date,
+            is_completed=True,
+        )
+        return len({item.log_date for item in logs})
+
+    async def create_encouragement(self, **values: Any) -> Encouragement:
+        return await Encouragement.create(**values)
+
+    async def list_encouragements(self, group_id: int) -> list[Encouragement]:
+        return await Encouragement.filter(group_id=group_id).order_by("-created_at", "-id")

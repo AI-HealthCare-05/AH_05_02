@@ -1,0 +1,87 @@
+"""Run frontend behavioral regressions without browser or external API access."""
+
+import shutil
+import subprocess
+from html.parser import HTMLParser
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is required for frontend runtime tests")
+def test_frontend_integration_runtime() -> None:
+    result = subprocess.run(
+        [shutil.which("node"), "--test", "tests/frontend/integration_refresh.test.cjs"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_current_result_and_medical_guidance_are_not_hidden_with_future_results() -> None:
+    class ParentIds(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack = []
+            self.parents = {}
+
+        def handle_starttag(self, tag, attrs):
+            element_id = dict(attrs).get("id")
+            if element_id:
+                assert element_id not in self.parents, f"Duplicate HTML id: {element_id}"
+                self.parents[element_id] = [item[1] for item in self.stack]
+            if tag not in {
+                "area",
+                "base",
+                "br",
+                "col",
+                "embed",
+                "hr",
+                "img",
+                "input",
+                "link",
+                "meta",
+                "param",
+                "source",
+                "track",
+                "wbr",
+            }:
+                self.stack.append((tag, element_id))
+
+        def handle_endtag(self, tag):
+            assert self.stack and self.stack[-1][0] == tag, f"Unbalanced HTML closing tag: {tag}"
+            self.stack.pop()
+
+    parser = ParentIds()
+    parser.feed((ROOT / "src/frontend/index.html").read_text(encoding="utf-8"))
+    assert not parser.stack
+    for element_id in ["risk-confirm-card", "medical-guidance-detail"]:
+        assert "future-prediction-result" not in parser.parents[element_id]
+    assert "future-prediction-result" in parser.parents["future-onset-title"]
+    assert "risk-forecast-panel" not in parser.parents
+
+
+def test_retro_intro_auth_entry_routes_to_cached_app_forms() -> None:
+    source = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
+    app_source = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'window.location.href = "/?auth=signup&cache=retro-entry-20260909"' in source
+    assert 'window.location.href = "/?auth=login&cache=retro-entry-20260909"' in source
+    assert "window.location.href = state.token" in source
+    assert "function resumeAuthEntryFromQuery()" in app_source
+    assert 'params.get("auth")' in app_source
+    assert "showStep(2, { recordHistory: false })" in app_source
+    assert "showAuthMode(requestedAuth" in app_source
+
+
+def test_retro_intro_does_not_show_original_intro_switch() -> None:
+    html = (ROOT / "src/frontend/intro-retro.html").read_text(encoding="utf-8")
+
+    assert "원래 화면 보기" not in html
+    assert "원래 소개 화면 보기" not in html
+    assert "intro=original" not in html
