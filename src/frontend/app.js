@@ -3406,7 +3406,7 @@ function previewV3Recommendations(items, focus, difficulty, rotation) {
   const index = levels.indexOf(difficulty);
   const diet = levels[Math.max(0, index - Number(focus === "activity"))];
   const exercise = levels[Math.max(0, index - Number(focus === "diet"))];
-  const codes = ["v3_hydration_choice", `v3_wholegrain_${diet}`, `v3_${["walk", "indoor_aerobic"][Math.floor(rotation / 2) % 2]}_${exercise}`];
+  const codes = ["v3_hydration_choice", `v3_wholegrain_${diet}`, `v3_${["walk", "indoor_aerobic"][rotation % 2]}_${exercise}`];
   return {
     items: codes.map((code) => items.find((item) => item.code === code)).filter(Boolean),
     medical_guidance_required_first: false,
@@ -3653,7 +3653,7 @@ function updateChallengeStartState() {
   if (!reason) return;
   if (loading) reason.textContent = "챌린지 후보를 불러오고 있어요.";
   else if (failed) reason.textContent = "후보를 불러오지 못했습니다. 다시 시도해 주세요.";
-  else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지를 시작하기 전에 안전 안내를 먼저 확인해 주세요.";
+  else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다. 무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.";
   else if (count < 1) reason.textContent = "세부 챌린지를 하나 이상 선택해 주세요.";
   else reason.textContent = `${count}개 챌린지를 선택했습니다.`;
 }
@@ -5694,6 +5694,10 @@ $("#health-form").addEventListener("submit", async (event) => {
 $("#retry-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-partial-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-challenges").addEventListener("click", loadChallenges);
+$("#challenge-v3-refresh")?.addEventListener("click", async () => {
+  challengeV3.rotation += 1;
+  await loadChallenges();
+});
 $$("[data-demo-status]").forEach((button) => button.addEventListener("click", () => {
   renderPredictionStatus(button.dataset.demoStatus);
   showStep(5);
