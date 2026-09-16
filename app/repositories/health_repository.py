@@ -56,9 +56,7 @@ class HealthRepository:
     async def create_current_screening_input(self, **values: Any) -> CurrentScreeningInput:
         return await CurrentScreeningInput.create(**values)
 
-    async def get_current_screening_input(
-        self, input_id: int, user_id: int
-    ) -> CurrentScreeningInput | None:
+    async def get_current_screening_input(self, input_id: int, user_id: int) -> CurrentScreeningInput | None:
         return await CurrentScreeningInput.get_or_none(id=input_id, user_id=user_id)
 
     async def checkup_has_prediction(self, checkup_id: int, user_id: int) -> bool:
