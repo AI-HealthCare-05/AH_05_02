@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
-from app.dtos.health import ConsentCreateRequest, EligibilityCreateRequest, HealthCheckupCreateRequest
+from app.dtos.health import (
+    ConsentCreateRequest,
+    CurrentScreeningInputCreateRequest,
+    EligibilityCreateRequest,
+    HealthCheckupCreateRequest,
+)
 from app.models.users import User
 from app.repositories.health_repository import HealthRepository
 from app.services.health import HealthService, eligibility_payload
@@ -81,6 +86,22 @@ async def latest_eligibility(user: Annotated[User, Depends(get_request_user)]) -
 @health_router.get("/health-checkups/input-schema")
 async def health_input_schema() -> dict[str, object]:
     return envelope(HealthService.input_schema())
+
+
+@health_router.post("/current-screening-inputs", status_code=status.HTTP_201_CREATED)
+async def create_current_screening_input(
+    request: CurrentScreeningInputCreateRequest,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    item = await HealthService().create_current_screening_input(user, request)
+    return envelope(
+        {
+            "current_screening_input_id": item.id,
+            "health_checkup_id": item.health_checkup_id,
+            "input_as_of_date": item.input_as_of_date,
+            "created_at": item.created_at,
+        }
+    )
 
 
 @health_router.post("/health-checkups", status_code=status.HTTP_201_CREATED)
