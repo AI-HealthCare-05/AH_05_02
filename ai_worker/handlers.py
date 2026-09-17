@@ -6,7 +6,7 @@ from typing import Any
 from ai_worker.core import config
 from ai_worker.model_loader import load_model
 from app.prediction import get_prediction_provider
-from app.prediction.contracts import CURRENT_SCREENING_MODEL
+from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL
 
 MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보조용이며 진단·처방이 아닙니다."
 
@@ -23,7 +23,7 @@ async def preload_configured_models() -> None:
         from src.ml.inference.research_models import load_shared8
 
         await asyncio.to_thread(load_shared8, config.ML_SHARED8_MODEL_URI)
-    elif config.CURRENT_SCREENING_RUNTIME == "v061":
+    elif config.CURRENT_SCREENING_RUNTIME in {"v061", "today14"}:
         from src.ml.inference.diabetes_current_screening import load_current_screening_model
 
         await asyncio.to_thread(
@@ -161,7 +161,7 @@ async def _run_s2_future_model(model_input: dict[str, Any], as_of_date: date) ->
 
 
 async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) -> dict[str, Any]:
-    """Run the checksum-pinned RF25 candidate without publicly activating it."""
+    """Run RF25 and expose categories only through the explicit release gate."""
 
     from src.ml.inference.research_models import predict_research_model
 
@@ -172,25 +172,36 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
         as_of_date=as_of_date,
         model_path=config.ML_RF25_MODEL_URI,
     )
+    operational = (
+        ACTIVE_MODEL.threshold_is_approved
+        and output.get("promotion_status") == "approved"
+        and output.get("operational_model_activated") is True
+        and output["model_version"] == ACTIVE_MODEL.version
+        and output["artifact_sha256"] == ACTIVE_MODEL.model_artifact_digest
+    )
     return {
-        "model_key": output["model_key"],
-        "outcome_definition": output["outcome_definition"],
-        "internal_score": output["risk_score_internal"],
-        "risk_category": None,
-        "preview_only": True,
-        "display_allowed": False,
-        "operational_model_activated": False,
+        "model_key": ACTIVE_MODEL.model_key,
+        "task_type": "future_incidence_risk_screening",
+        "threshold_scope": "future_incidence_2y",
+        "outcome_definition": ACTIVE_MODEL.outcome_definition,
+        "internal_score": (output["risk_score_internal"] if "risk_score_internal" in output else output["risk_score"]),
+        "risk_category": output["risk_category"] if operational else None,
+        "preview_only": not operational,
+        "display_allowed": operational,
+        "operational_model_activated": operational,
         "model_version": output["model_version"],
         "feature_schema_version": output["feature_schema_version"],
         "input_schema_version": output["input_schema_version"],
-        "preprocessing_version": output["preprocessing_version"],
-        "target_definition_version": output["target_definition_version"],
-        "calibration_version": output["calibration_version"],
+        "preprocessing_version": ACTIVE_MODEL.preprocessing_version,
+        "target_definition_version": ACTIVE_MODEL.target_definition_version,
+        "calibration_version": ACTIVE_MODEL.calibration_version,
         "model_artifact_digest": output["artifact_sha256"],
         "threshold_version": output["threshold_version"],
-        "decision_threshold": None,
-        "promotion_status": "research_candidate_only",
-        "output_status": "research_candidate_not_operationally_approved",
+        "decision_threshold": output.get("decision_threshold") if operational else None,
+        "promotion_status": "approved" if operational else "research_candidate_only",
+        "output_status": (
+            "screening_not_diagnosis" if operational else "research_candidate_not_operationally_approved"
+        ),
         "model_population": "undiagnosed_klosa_age_45_105",
         "explanation_status": output.get("explanation_status", "not_available"),
         "medical_notice": output["disclaimer"],
@@ -344,8 +355,10 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
         contracted_input = {name: model_input.get(name) for name in loaded.manifest["features"]}
         output = await asyncio.to_thread(predict_with_loaded_current_model, loaded, contracted_input)
         operational = (
-            loaded.manifest.get("operational_model_activated") is True
-            and loaded.manifest.get("promotion_status") == "approved"
+            CURRENT_SCREENING_MODEL.threshold_is_approved
+            and loaded.manifest.get("operational_model_activated") is True
+            and output["model_version"] == CURRENT_SCREENING_MODEL.version
+            and loaded.manifest.get("artifact_sha256") == CURRENT_SCREENING_MODEL.model_artifact_digest
         )
         signal = bool(output["screening_signal_detected"])
         return {
@@ -365,6 +378,8 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             "decision_threshold": loaded.manifest.get("threshold") if operational else None,
             "promotion_status": "approved" if operational else "development_only",
             "output_status": "screening_not_diagnosis" if operational else "screening_model_pending_approval",
+            "display_allowed": operational,
+            "operational_model_activated": operational,
             "model_population": CURRENT_SCREENING_MODEL.model_population,
             "explanation_status": "not_available",
             "medical_notice": "현재 당뇨 관련 위험 신호 선별 결과이며 진단·처방이 아닙니다.",

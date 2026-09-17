@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_current_screening",
+  "task_type": "current_cross_sectional_screening",
+  "model_version": "knhanes-today14-sk180-service-v3",
+  "feature_schema_version": "knhanes-today-14features-missing-indicator-v2",
+  "input_schema_version": "today-api-required-alcohol-optional-education-v2",
+  "threshold_version": "today14-missing-indicator-validation-spec042-v2",
+  "preprocessing_version": "train-median-indicator-mode-onehot-categorical-indicator-waist-estimator-v2",
+  "calibration_version": "train-year-oof-platt-lr-rf-blend-v1",
+  "promotion_status": "approved",
+  "operational_model_activated": true,
+  "artifact_local_path": "models/artifacts/candidates/diabetes_current_screening/knhanes-today14-sk180-service-v3/model.joblib",
+  "artifact_source_path": "outputs/ml/knhanes_today_14features_sk180_v001/service_v3/model.joblib",
+  "artifact_filename": "model.joblib",
+  "artifact_sha256": "2189257587690adfcdf74702f69b516c0a8559cef6059ebd90d003e008c079b1",
+  "artifact_git_policy": "external_delivery_only_do_not_commit_model_binary",
+  "threshold": 0.022445685526736606,
+  "threshold_scope": "current_cross_sectional_screening",
+  "features": [
+    "age",
+    "height_cm",
+    "weight_kg",
+    "waist_cm",
+    "bmi",
+    "systolic_bp",
+    "diastolic_bp",
+    "sex",
+    "current_smoker",
+    "education",
+    "region",
+    "diabetes_family_history",
+    "hypertension_family_history",
+    "alcohol_frequency"
+  ],
+  "required_api_fields": [
+    "birth_date",
+    "sex",
+    "height_cm",
+    "weight_kg",
+    "smoking_status",
+    "alcohol_frequency",
+    "previously_diagnosed_diabetes"
+  ],
+  "optional_api_fields": [
+    "education_level",
+    "waist_cm",
+    "systolic_bp",
+    "diastolic_bp",
+    "region",
+    "diabetes_family_history",
+    "hypertension_family_history"
+  ],
+  "missing_value_policy": {
+    "required_api_fields": "reject_missing",
+    "optional_numeric": "NaN_then_train_median_and_missing_indicator",
+    "optional_categorical": "NaN_then_train_mode_and_per_feature_missing_indicator",
+    "region": "NaN_then_train_mode_code_9_and_region_missing_indicator",
+    "education_nonresponse_common_api": "null",
+    "education_outside_code_1_to_code_4": "NaN_then_train_mode",
+    "waist_cm": "NaN_then_train_fold_anthropometric_estimator",
+    "unknown_family_history": "missing_never_assume_no",
+    "preprocessing_fit_scope": "train_only"
+  },
+  "metrics": {
+    "recall": 0.9435897435897436,
+    "specificity": 0.4188796903558757,
+    "ppv": 0.06374501992031872,
+    "npv": 0.9943848902501277,
+    "positive_rate": 0.5957073573418635,
+    "auroc": 0.7812465712261433,
+    "auprc": 0.12123461621632364,
+    "brier_score": 0.03729417514935165,
+    "confusion_matrix": {
+      "true_positive": 368,
+      "false_positive": 5405,
+      "true_negative": 3896,
+      "false_negative": 22
+    }
+  },
+  "supported_population": {
+    "age_minimum": 19,
+    "age_maximum": 120,
+    "previous_diabetes_diagnosis": false,
+    "source": "KNHANES 2016-2024 eligible undiagnosed adults"
+  },
+  "intended_use": "current diabetes-related signal screening and health education",
+  "prohibited_use": [
+    "diagnosis",
+    "prescription",
+    "medication_start_stop_or_dose_change",
+    "future_incidence_probability",
+    "emergency_triage"
+  ],
+  "medical_review_required": false,
+  "release_approval": {
+    "status": "approved",
+    "approved_at": "2026-09-17",
+    "scope": "risk_screening_and_health_education_only"
+  }
+}

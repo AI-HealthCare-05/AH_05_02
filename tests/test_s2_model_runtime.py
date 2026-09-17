@@ -33,6 +33,7 @@ async def test_s2_current_worker_returns_safe_real_model_shape(
     from src.ml.inference import research_models
 
     monkeypatch.setattr(config, "S2_MODEL_RUNTIME_ENABLED", True)
+    monkeypatch.setattr(config, "TOMORROW_RUNTIME", "standard")
     monkeypatch.setattr(
         research_models,
         "predict_research_model",
@@ -71,6 +72,7 @@ async def test_s2_future_worker_exposes_only_signal_horizons(
     from src.ml.inference import research_models
 
     monkeypatch.setattr(config, "S2_MODEL_RUNTIME_ENABLED", True)
+    monkeypatch.setattr(config, "TOMORROW_RUNTIME", "standard")
     monkeypatch.setattr(
         research_models,
         "load_ensemble",
@@ -116,6 +118,51 @@ async def test_s2_future_worker_exposes_only_signal_horizons(
         "6",
     ]
     assert all("display_percent" not in point for point in result["age_risk_forecast"]["points"])
+
+
+@pytest.mark.asyncio
+async def test_approved_rf25_worker_exposes_moderate_category(
+    monkeypatch: pytest.MonkeyPatch,
+    common_input: dict,
+) -> None:
+    from app.prediction.contracts import ACTIVE_MODEL
+    from src.ml.inference import research_models
+
+    monkeypatch.setattr(config, "S2_MODEL_RUNTIME_ENABLED", False)
+    monkeypatch.setattr(config, "TOMORROW_RUNTIME", "rf25")
+    monkeypatch.setattr(
+        research_models,
+        "predict_research_model",
+        lambda *_args, **_kwargs: {
+            "model_key": ACTIVE_MODEL.model_key,
+            "outcome_definition": ACTIVE_MODEL.outcome_definition,
+            "risk_score_internal": 0.02,
+            "risk_category": "moderate",
+            "model_version": ACTIVE_MODEL.version,
+            "feature_schema_version": ACTIVE_MODEL.feature_schema_version,
+            "input_schema_version": ACTIVE_MODEL.input_schema_version,
+            "preprocessing_version": ACTIVE_MODEL.preprocessing_version,
+            "target_definition_version": ACTIVE_MODEL.target_definition_version,
+            "calibration_version": ACTIVE_MODEL.calibration_version,
+            "artifact_sha256": ACTIVE_MODEL.model_artifact_digest,
+            "threshold_version": ACTIVE_MODEL.threshold_version,
+            "decision_threshold": ACTIVE_MODEL.decision_threshold,
+            "promotion_status": "approved",
+            "operational_model_activated": True,
+            "explanation_status": "not_available",
+            "disclaimer": "위험 선별 결과이며 진단이 아닙니다.",
+        },
+    )
+
+    result = await run_task(
+        "diabetes_incidence",
+        {"input": common_input, "as_of_date": "2026-09-17"},
+    )
+
+    assert result["risk_category"] == "moderate"
+    assert result["promotion_status"] == "approved"
+    assert result["display_allowed"] is True
+    assert result["operational_model_activated"] is True
 
 
 def test_frontend_accepts_backend_marked_preview_without_enabling_public_display() -> None:

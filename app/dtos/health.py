@@ -38,8 +38,8 @@ class HealthCheckupCreateRequest(BaseModel):
     waist_cm: float | None = Field(default=None, ge=45, le=160)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
-    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
-    meal_count_yesterday: int = Field(ge=0, le=10)
+    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"] | None = None
+    meal_count_yesterday: int | None = Field(default=None, ge=0, le=10)
     smoking_status: Literal["never", "former", "current"]
     regular_exercise: bool
     current_drinker: bool
@@ -68,9 +68,10 @@ class HealthCheckupCreateRequest(BaseModel):
     def validate_blood_pressure(self) -> HealthCheckupCreateRequest:
         if self.systolic_bp is not None and self.diastolic_bp is not None and self.systolic_bp <= self.diastolic_bp:
             raise ValueError("수축기 혈압은 이완기 혈압보다 커야 합니다.")
-        if not self.regular_exercise:
-            self.exercise_days_per_week = 0
-            self.exercise_minutes = 0
+        if not self.regular_exercise and (self.exercise_days_per_week != 0 or self.exercise_minutes != 0):
+            raise ValueError("규칙적 운동을 하지 않으면 운동 일수와 시간은 0이어야 합니다.")
+        if self.regular_exercise and (self.exercise_days_per_week == 0 or self.exercise_minutes == 0):
+            raise ValueError("규칙적 운동을 하면 운동 일수와 시간은 0보다 커야 합니다.")
         return self
 
 
@@ -85,23 +86,14 @@ class CurrentScreeningInputCreateRequest(BaseModel):
     fat_g: float | None = Field(default=None, ge=0, le=500)
     carbohydrate_g: float | None = Field(default=None, ge=0, le=1000)
     sodium_mg: float | None = Field(default=None, ge=0, le=20000)
-    region: Literal["capital", "metro", "province"] | None = None
+    region: int | None = Field(default=None, ge=1, le=17)
     urban: Literal["urban", "rural"] | None = None
-    education: Literal["elementary_or_less", "middle", "high", "college_or_more"] | None = None
+    education: Literal["code_1", "code_2", "code_3", "code_4", "code_97"] | None = None
     income_quartile: Literal["1", "2", "3", "4"] | None = None
     household_income_quartile: Literal["1", "2", "3", "4"] | None = None
     hypertension_family_history: bool | None = None
     diabetes_family_history: bool | None = None
-    alcohol_frequency: (
-        Literal[
-            "none",
-            "monthly_or_less",
-            "two_to_four_monthly",
-            "two_to_three_weekly",
-            "four_or_more_weekly",
-        ]
-        | None
-    ) = None
+    alcohol_frequency: Literal[1, 2, 3, 4, 5, 6, 8]
 
 
 class PredictionJobCreateRequest(BaseModel):

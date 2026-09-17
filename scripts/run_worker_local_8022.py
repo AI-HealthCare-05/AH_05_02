@@ -32,25 +32,24 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parents[1]
     os.chdir(root)
     sys.path.insert(0, str(root))
-    os.environ.update(database_environment(root.parent / "AH_05_02" / ".env"))
+    private_env = Path(os.environ.get("LOCAL_PRIVATE_ENV_FILE", root / ".env"))
+    os.environ.update(database_environment(private_env))
     os.environ.update(local_queue_environment())
     os.environ["WORKER_NAME"] = "local8022-matching-worker"
-    # Use the hash-verified shared8 current model and the standard RF25 future model.
-    # Both remain research candidates and never enable public probability display.
+    # Use the final checksum-pinned Today v3 and Tomorrow v2 artifacts.
     os.environ["S2_MODEL_RUNTIME_ENABLED"] = "false"
-    os.environ["CURRENT_SCREENING_RUNTIME"] = "shared8-waist"
-    os.environ["ML_SHARED8_MODEL_URI"] = str(
-        root / "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
+    os.environ["CURRENT_SCREENING_RUNTIME"] = "today14"
+    os.environ["CURRENT_SCREENING_MODEL_URI"] = str(
+        root / "models/artifacts/candidates/diabetes_current_screening/knhanes-today14-sk180-service-v3/model.joblib"
     )
-    os.environ["ML_SHARED7_MODEL_URI"] = str(
-        root / "models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib"
+    os.environ["CURRENT_SCREENING_MANIFEST_URI"] = str(
+        root / "models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json"
     )
-    os.environ["ML_FIRST_INTERVAL_MODEL_URI"] = str(
-        root / "models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib"
+    os.environ["TOMORROW_RUNTIME"] = "rf25"
+    os.environ["ML_RF25_MODEL_URI"] = str(
+        root / "models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib"
     )
-    os.environ["MODEL_URI"] = str(
-        root / "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
-    )
+    os.environ["MODEL_PRELOAD_ENABLED"] = "true"
     try:
         asyncio.run(main())
     except Exception as error:

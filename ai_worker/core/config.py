@@ -29,33 +29,35 @@ class Config(BaseSettings):
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
-    PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
-    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
-    PREDICTION_THRESHOLD_VERSION: str = "validation-spec043-caution-recall090-v1"
+    PREDICTION_MODEL_VERSION: str = "rf25-tuned-education4-v2"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_education4_v2"
+    PREDICTION_THRESHOLD_VERSION: str = "education4-validation-spec043-caution-recall090-v2"
     PREDICTION_MODEL_MIN_AGE: int = 45
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
-    PREDICTION_PROMOTION_STATUS: str = "candidate_only"
-    PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = False
-    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-25features-v1"
-    PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-v1"
+    PREDICTION_PROMOTION_STATUS: str = "approved"
+    PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = True
+    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-education4-v2"
+    PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-education4-v2"
     PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
-    PREDICTION_CALIBRATION_VERSION: str = "unapproved"
-    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8"
-    PREDICTION_DECISION_THRESHOLD: float | None = 0.021153602801262862
+    PREDICTION_CALIBRATION_VERSION: str = "not_probability_calibrated-v1"
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e"
+    PREDICTION_DECISION_THRESHOLD: float | None = 0.02113653615781283
 
-    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
-    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
-    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
-    CURRENT_SCREENING_MANIFEST_URI: str = (
-        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
+    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib"
+    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json"
+    CURRENT_SCREENING_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/knhanes-today14-sk180-service-v3/model.joblib"
     )
-    CURRENT_SCREENING_RUNTIME: str = "v061"
+    CURRENT_SCREENING_MANIFEST_URI: str = (
+        "models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json"
+    )
+    CURRENT_SCREENING_RUNTIME: str = "today14"
     ML_SHARED8_MODEL_URI: str = (
         "models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib"
     )
-    ML_RF25_MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
-    TOMORROW_RUNTIME: str = "standard"
+    ML_RF25_MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib"
+    TOMORROW_RUNTIME: str = "rf25"
     # Explicitly opt-in local S2 research runtime. This never promotes a model
     # or enables public probability display.
     S2_MODEL_RUNTIME_ENABLED: bool = False

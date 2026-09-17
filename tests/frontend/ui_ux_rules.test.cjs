@@ -20,6 +20,24 @@ function loadMany(names, data = {}) {
   }
   return context;
 }
+test('pending future result shows only the gauge and clears a previous risk marker', () => {
+  const element = () => ({ dataset: {}, children: [], setAttribute() {}, append(...children) { this.children.push(...children); }, replaceChildren() { this.children = []; } });
+  const elements = new Map();
+  const context = loadMany(['normalizeForecastSignal', 'forecastSignalLabel', 'selectTwoYearForecastPoint', 'renderTwoYearRiskForecast'], {
+    $: id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
+    document: { createElement: element },
+    isDemoEnvironment: () => true,
+  });
+  context.renderTwoYearRiskForecast({}, { canDisplayRisk: true, fallbackLevel: 'moderate' });
+  assert.equal(elements.get('#future-risk-points').children[0].children[0].textContent, '주의');
+  context.renderTwoYearRiskForecast({}, { canDisplayRisk: false, fallbackLevel: 'moderate' });
+  const pending = elements.get('#future-risk-points').children[0].children;
+  assert.equal(pending.length, 2);
+  assert.equal(pending[0].dataset.level, 'pending');
+  assert.equal(pending[0].children.length, 0);
+  assert.equal(elements.get('#future-risk-visual').hidden, false);
+  assert.equal(elements.get('#forecast-status-badge').textContent, '결과 준비 중');
+});
 test('medical continuation requires challenge permission and preserves every safety exclusion', () => {
   const state = { capabilities: { challenge: true }, eligibility: { reason_codes: [] }, medicalGuidanceRequired: false };
   const allowed = load('canContinueAfterMedicalGuidance', { state });
@@ -75,13 +93,23 @@ test('missing snapshot endpoint is explicit and cannot reuse stale snapshot ID',
   assert.equal(state.currentScreeningInputSaveUnavailable, true);
   assert.equal(state.currentScreeningInputId, null);
 });
+test('snapshot contract mismatch remains non-blocking for reanalysis', async () => {
+  const state = { checkupId: 3, currentScreeningInputId: 99 };
+  const save = load('saveCurrentScreeningInputSnapshot', {
+    state, detailHealthPayload: () => ({}), isLocalPreview: () => false,
+    api: async () => { throw { status: 422 }; },
+  });
+  await save();
+  assert.equal(state.currentScreeningInputSaveUnavailable, true);
+  assert.equal(state.currentScreeningInputId, null);
+});
 test('XAI explanation cards show only approved returned factors with safe labels', () => {
   const nodes = {
     '#current-factor-list': { innerHTML: '' },
     '#factor-list': { innerHTML: '' },
   };
   const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
-  const context = loadMany(['factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),

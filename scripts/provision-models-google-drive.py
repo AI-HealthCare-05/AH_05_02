@@ -1,4 +1,4 @@
-"""Download Google Drive model deliveries and install only verified artifacts."""
+"""Google Drive에서 SHA-256 고정 모델을 내려받아 원자적으로 설치한다."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def sha256(path: Path) -> str:
 def download(file_id: str, destination: Path) -> None:
     request = urllib.request.Request(
         DOWNLOAD_URL.format(file_id=file_id),
-        headers={"User-Agent": "AH-05-02-model-provisioner/1.0"},
+        headers={"User-Agent": "AH-05-02-model-provisioner/2.0"},
     )
     with urllib.request.urlopen(request, timeout=120) as response, destination.open("wb") as target:
         shutil.copyfileobj(response, target)

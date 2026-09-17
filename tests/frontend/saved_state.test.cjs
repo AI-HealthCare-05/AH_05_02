@@ -17,7 +17,7 @@ function load(names, data) {
 test('saved health restores nullable values, radio choices and exercise; reopening keeps draft', () => {
   const state = { healthCheckupHistory: [{ checkup_id: 4, height_cm: 170, weight_kg: 70, waist_cm: null,
     smoking_status: 'former', current_drinker: false, regular_exercise: true,
-    exercise_days_per_week: 5, exercise_minutes: 45, meal_count_yesterday: 0 }] };
+    exercise_days_per_week: 5, exercise_minutes: 45 }] };
   const nodes = {};
   const $ = key => nodes[key] ||= { value: 'default', dataset: {}, disabled: true, classList: { toggle() {} } };
   const radios = Object.fromEntries(['smoking-status', 'current-drinker', 'regular-exercise'].map(name =>
@@ -30,7 +30,6 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   context.hydrateSavedHealthForm();
   assert.equal($('#height').value, 170);
   assert.equal($('#waist').value, '');
-  assert.equal($('#meal-count').value, 0);
   assert.equal($('#exercise-days').value, 5);
   assert.equal($('#exercise-minutes').value, 45);
   assert.equal($('#exercise-days').disabled, false);
@@ -42,7 +41,13 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   state.healthCheckupHistory[0] = { checkup_id: 5, weight_kg: 74, regular_exercise: false };
   context.hydrateSavedHealthForm();
   assert.equal($('#weight').value, 74);
-  assert.equal($('#exercise-days').disabled, true);
+  assert.equal($('#exercise-days').disabled, false);
+  assert.equal($('#exercise-minutes').disabled, false);
+  $('#exercise-days').value = '2';
+  $('#exercise-minutes').value = '15';
+  context.syncExerciseDetails();
+  assert.equal($('#exercise-days').value, '2');
+  assert.equal($('#exercise-minutes').value, '15');
   state.healthCheckupHistory[0] = { checkup_id: 6, regular_exercise: true };
   context.hydrateSavedHealthForm();
   assert.equal($('#exercise-days').value, '');
