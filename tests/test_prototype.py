@@ -217,8 +217,8 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert '<option value="code_1" selected>잠깐 또는 없음(하루 미만)</option>' in html
     assert '<option value="code_4">항상(5~7일)</option>' in html
     assert 'moderate: "주의"' in script
-    assert 'days.disabled = false' in script
-    assert 'minutes.disabled = false' in script
+    assert "days.disabled = false" in script
+    assert "minutes.disabled = false" in script
     assert '<select id="smoking-status" name="smoking-status" required>' in html
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
     assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
@@ -237,39 +237,57 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
 
 def test_login_resume_syncs_active_health_consent_before_health_gates() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-    resume = script.split("async function resumeAuthenticatedAccount()", 1)[1].split('$("#login-form").addEventListener("submit"', 1)[0]
+    resume = script.split("async function resumeAuthenticatedAccount()", 1)[1].split(
+        '$("#login-form").addEventListener("submit"', 1
+    )[0]
 
     assert 'const consents = await api("/consents")' in resume
-    assert resume.index("syncHealthConsentState(consents)") < resume.index("if (!profileSaved || !hasHealthDataConsent(consents))")
+    assert resume.index("syncHealthConsentState(consents)") < resume.index(
+        "if (!profileSaved || !hasHealthDataConsent(consents))"
+    )
     assert 'state.healthConsentStatus === "active"' in script
 
 
 def test_health_submit_refreshes_consent_before_blocking_reanalysis() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-    consent_guard = script.split("async function ensureActiveHealthConsent", 1)[1].split("function showAccountRecovery", 1)[0]
-    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split('$("#retry-analysis").addEventListener', 1)[0]
+    consent_guard = script.split("async function ensureActiveHealthConsent", 1)[1].split(
+        "function showAccountRecovery", 1
+    )[0]
+    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split(
+        '$("#retry-analysis").addEventListener', 1
+    )[0]
     onboarding_handler = script.split('$$("[data-onboarding-step]").forEach', 1)[1].split('$("#profile-edit")', 1)[0]
 
     assert "await refreshHealthConsentState()" in consent_guard
     assert 'if (state.healthConsentStatus === "active") return true;' in consent_guard
-    assert 'openHealthConsentSettings({ blockedAction: actionLabel });' in consent_guard
+    assert "openHealthConsentSettings({ blockedAction: actionLabel });" in consent_guard
     assert 'if (!await ensureActiveHealthConsent("건강정보 저장")) return;' in submit_handler
     assert 'if (targetStep >= 4 && !await ensureActiveHealthConsent("건강정보 입력")) return;' in onboarding_handler
 
 
 def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
-    dashboard_edit = script.split("async function openDashboardHealthEdit()", 1)[1].split("function hydrateSavedHealthForm", 1)[0]
-    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split('$("#retry-analysis").addEventListener', 1)[0]
+    dashboard_edit = script.split("async function openDashboardHealthEdit()", 1)[1].split(
+        "function hydrateSavedHealthForm", 1
+    )[0]
+    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split(
+        '$("#retry-analysis").addEventListener', 1
+    )[0]
     local_save = submit_handler.split("if (isLocalPreview())", 1)[1].split("} else {", 1)[0]
-    remote_save = submit_handler.split('const checkup = await api("/health-checkups"', 1)[1].split("if (state.currentHealthOnly)", 1)[0]
+    remote_save = submit_handler.split('const checkup = await api("/health-checkups"', 1)[1].split(
+        "if (state.currentHealthOnly)", 1
+    )[0]
 
     assert "state.returningUser = true;" in dashboard_edit
     assert 'api("/eligibility-checks/latest")' in dashboard_edit
     assert "syncReturningEligibilityState(latestEligibility)" in dashboard_edit
     assert "openReturningUserHealthEdit();" in dashboard_edit
-    assert local_save.index("if (shouldRequestPrediction) showStep(5);") < local_save.index("await saveCurrentScreeningInputSnapshot();")
-    assert remote_save.index("if (shouldRequestPrediction) showStep(5);") < remote_save.index("await saveCurrentScreeningInputSnapshot();")
+    assert local_save.index("if (shouldRequestPrediction) showStep(5);") < local_save.index(
+        "await saveCurrentScreeningInputSnapshot();"
+    )
+    assert remote_save.index("if (shouldRequestPrediction) showStep(5);") < remote_save.index(
+        "await saveCurrentScreeningInputSnapshot();"
+    )
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:

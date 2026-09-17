@@ -30,7 +30,7 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
             INSERT INTO "health_checkups_legacy_nullable" ({names}) SELECT {names} FROM "health_checkups";
             DROP TABLE "health_checkups";
             ALTER TABLE "health_checkups_legacy_nullable" RENAME TO "health_checkups";
-            {''.join(index['sql'] + ';' for index in indexes)}
+            {"".join(index["sql"] + ";" for index in indexes)}
         """
     raise RuntimeError("Unsupported database dialect for optional legacy health fields")
 
