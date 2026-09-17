@@ -2964,8 +2964,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 점수를 높인 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 점수를 낮춘 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 당뇨 위험을 높인 방향";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 당뇨 위험을 낮춘 방향";
   return "";
 }
 
@@ -2980,7 +2980,8 @@ function renderFactorItems(items = []) {
     const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
     const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
     const meta = [factorDirectionLabel(item), factorModifiableLabel(item)].filter(Boolean).join(" · ");
-    return `<li><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></li>`;
+    const icon = factorDirectionLabel(item).startsWith("↑") ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
+    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></div></li>`;
   }).join("");
 }
 
@@ -3007,6 +3008,9 @@ function renderXaiExplanationLists(
   );
   const futureList = $("#factor-list");
   if (currentList) {
+    currentList.closest?.(".result-xai-card")?.classList.toggle(
+      "xai-ready", currentApproved && currentFactors?.display_allowed === true && currentItems.length > 0,
+    );
     currentList.innerHTML = currentApproved && currentFactors?.display_allowed === true && currentItems.length
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
@@ -3015,6 +3019,9 @@ function renderXaiExplanationLists(
   const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
     ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
+  futureList.closest?.(".result-xai-card")?.classList.toggle(
+    "xai-ready", approved && factors?.display_allowed === true && factorItems.length > 0,
+  );
   futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;

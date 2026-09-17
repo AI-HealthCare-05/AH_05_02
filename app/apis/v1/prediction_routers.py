@@ -11,6 +11,7 @@ from app.dtos.ai_jobs import prediction_job_response
 from app.dtos.health import PredictionJobCreateRequest
 from app.models.health import Prediction, PredictionRiskCurvePoint
 from app.models.model_registry import ModelRegistry
+from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
 from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL, CURRENT_SCREENING_MODEL_KEY
 from app.prediction.errors import ModelNotReadyError, classify_ml_input_error
@@ -344,18 +345,67 @@ async def read_risk_factors(
     item = await HealthRepository().get_prediction(prediction_id, user.id)
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="예측 결과를 찾을 수 없습니다.")
+    approved = (
+        item.display_allowed is True
+        and item.operational_model_activated is True
+        and item.explanation_status == "approved"
+    )
+    factors = await HealthRepository().risk_factors(item.id) if approved else []
+    job = await PredictionJob.get_or_none(job_id=item.job_id, user_id=user.id) if approved else None
+    explanation = (job.result or {}).get("explanation", {}) if job else {}
+    contract_valid = (
+        approved
+        and explanation.get("status") == "approved"
+        and explanation.get("display_allowed") is True
+        and explanation.get("shap_claimed") is True
+        and explanation.get("additivity_verified") is True
+        and bool(factors)
+    )
+    if not contract_valid:
+        return envelope(
+            {
+                "prediction_id": item.id,
+                "status": item.explanation_status,
+                "method": None,
+                "explanation_version": None,
+                "output_space": None,
+                "additive_to_score": None,
+                "reference_value": None,
+                "items": [],
+                "message": "검증된 설명 방법이 준비되기 전에는 위험·보호 요인을 표시하지 않습니다.",
+                "shap_claimed": False,
+                "display_allowed": False,
+            }
+        )
+    contributions = {factor["feature"]: factor["contribution"] for factor in explanation["items"]}
     return envelope(
         {
             "prediction_id": item.id,
-            "status": item.explanation_status,
-            "method": None,
-            "explanation_version": None,
-            "output_space": None,
-            "additive_to_score": None,
-            "reference_value": None,
-            "items": [],
-            "message": "검증된 설명 방법이 준비되기 전에는 위험·보호 요인을 표시하지 않습니다.",
-            "shap_claimed": False,
-            "display_allowed": False,
+            "status": "approved",
+            "method": explanation["method"],
+            "explanation_version": explanation["explanation_version"],
+            "model_version": explanation["model_version"],
+            "output_space": explanation["output_space"],
+            "additive_to_score": explanation["additive_to_score"],
+            "additivity_verified": explanation["additivity_verified"],
+            "reference_value": explanation["reference_value"],
+            "selection_policy": explanation["selection_policy"],
+            "selection_status": explanation["selection_status"],
+            "items": [
+                {
+                    "factor_name": factor.factor_name,
+                    "display_name": factor.display_name,
+                    "direction": factor.impact_direction,
+                    "contribution": contributions[factor.factor_name],
+                    "absolute_contribution": factor.importance_score,
+                    "modifiable": factor.is_modifiable,
+                    "message": factor.message,
+                    "display_order": factor.display_order,
+                }
+                for factor in factors
+            ],
+            "message": "각 요인은 다른 입력과 함께 계산된 모델 설명이며 원인이나 진단을 뜻하지 않습니다.",
+            "shap_claimed": True,
+            "display_allowed": True,
         }
     )

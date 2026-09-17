@@ -119,7 +119,7 @@ test('XAI explanation cards show only approved returned factors with safe labels
   render(approvedFactors, { approved: true, currentFactors: approvedFactors, currentApproved: true });
   assert.match(nodes['#current-factor-list'].innerHTML, /걷기 시간/);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 점수를 낮춘 방향 · 바꿀 수 있는 요인/);
+  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 당뇨 위험을 낮춘 방향 · 바꿀 수 있는 요인/);
   render({ ...approvedFactors, display_allowed: false }, { approved: true });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /걷기 시간/);
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
