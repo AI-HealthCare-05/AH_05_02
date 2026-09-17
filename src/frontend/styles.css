@@ -2673,6 +2673,8 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
   box-shadow:0 0 0 6px #fff8e8;
 }
 .age-risk-signal-track img{position:absolute;left:var(--marker-x);top:var(--marker-y);z-index:1;width:86px;height:86px;border:6px solid #fff;border-radius:50%;object-fit:cover;transform:translate(-50%,-50%);box-shadow:0 8px 18px rgba(20,33,61,.3)}
+.age-risk-signal-track[data-level="pending"]::before,
+.age-risk-signal-track[data-level="pending"]::after{display:none}
 .age-risk-signal-track[data-level="low"]{--marker-x:24%;--marker-y:61%;--needle-rotation:-54deg}
 .age-risk-signal-track[data-level="low"] img{background:#dff5eb}
 .age-risk-signal-track[data-level="caution"]{--marker-x:50%;--marker-y:18%;--needle-rotation:0deg}
@@ -5490,4 +5492,48 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 .auth-entry-instant .signup-house-visual{
   animation:none!important;
   transition:none!important;
+}
+
+#workspace-panel-home{
+  --home-card-height:150px;
+}
+#workspace-panel-home .summary-grid article,
+#workspace-panel-home .home-feature-card{
+  box-sizing:border-box;
+  min-height:var(--home-card-height);
+}
+#workspace-panel-home .summary-grid article{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:18px 20px;
+}
+#workspace-panel-home .health-management{
+  background:#f5eee3;
+  border-color:#b88950;
+}
+#workspace-panel-home .health-record-actions{
+  flex-direction:row;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+}
+#workspace-panel-home .health-record-actions p{
+  flex:1 1 260px;
+  min-width:0;
+}
+#workspace-panel-home #dashboard-edit-health{
+  background:var(--green);
+  color:#fff;
+  max-width:100%;
+  white-space:normal;
+}
+
+.health-room-board .health-input-panel .form-row label small,
+.health-room-board .health-input-panel .choice-title small,
+.health-room-board .health-input-panel legend small{
+  font-size:15px;
+  font-weight:900;
+  line-height:1.4;
+  color:#b4403a;
 }

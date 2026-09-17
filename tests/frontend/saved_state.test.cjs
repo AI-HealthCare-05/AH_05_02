@@ -41,7 +41,13 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   state.healthCheckupHistory[0] = { checkup_id: 5, weight_kg: 74, regular_exercise: false };
   context.hydrateSavedHealthForm();
   assert.equal($('#weight').value, 74);
-  assert.equal($('#exercise-days').disabled, true);
+  assert.equal($('#exercise-days').disabled, false);
+  assert.equal($('#exercise-minutes').disabled, false);
+  $('#exercise-days').value = '2';
+  $('#exercise-minutes').value = '15';
+  context.syncExerciseDetails();
+  assert.equal($('#exercise-days').value, '2');
+  assert.equal($('#exercise-minutes').value, '15');
   state.healthCheckupHistory[0] = { checkup_id: 6, regular_exercise: true };
   context.hydrateSavedHealthForm();
   assert.equal($('#exercise-days').value, '');
