@@ -7369,6 +7369,23 @@ function renderMvpResultPreview() {
   state.predictionId = state.prediction.prediction_id;
   state.developmentPreviewRiskCategory = "moderate";
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
+  const comparison = new URLSearchParams(window.location.search).get("comparison");
+  if (["current-high-future-low", "current-low-future-high"].includes(comparison)) {
+    const approvedFixture = (modelKey, riskCategory) => ({
+      model_key: modelKey,
+      risk_category: riskCategory,
+      result_status: "approved",
+      promotion_status: "approved",
+      display_allowed: true,
+      operational_model_activated: true,
+    });
+    const currentRisk = comparison === "current-high-future-low" ? "high" : "low";
+    const futureRisk = comparison === "current-high-future-low" ? "low" : "high";
+    renderModelComparisonGuidance(
+      { status: "succeeded", prediction: approvedFixture("diabetes_current_screening", currentRisk) },
+      { status: "succeeded", prediction: approvedFixture("diabetes_incidence", futureRisk) },
+    );
+  }
 }
 
 function resumeMealPhotoPreview() {
