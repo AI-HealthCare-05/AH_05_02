@@ -2,8 +2,8 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
-from fastapi import FastAPI, Response, status
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, Response, status
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from tortoise import connections
 
@@ -58,9 +58,27 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
+_APP_ENTRY_QUERY_KEYS = frozenset(
+    {"intro", "auth", "preview", "resume", "workspace", "invite_token"}
+)
+_RETRO_INTRO_URL = "/static/intro-retro.html?v=20260917-server-entry-v1"
+
+
 @app.get("/", include_in_schema=False)
-async def home() -> FileResponse:
-    """Serve the single index-based customer interface."""
+async def home(request: Request) -> Response:
+    """Show the retro introduction before the customer interface.
+
+    Authentication, invitation, preview, and signed-in resume links keep serving the
+    application directly.  A server redirect is intentional here: some embedded or
+    privacy-restricted browsers disable ``window.location.replace``, which made the
+    previous client-only entry guard unreliable.
+    """
+    if not _APP_ENTRY_QUERY_KEYS.intersection(request.query_params):
+        response = RedirectResponse(_RETRO_INTRO_URL, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        return response
+
     response = FileResponse(FRONTEND_DIR / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
