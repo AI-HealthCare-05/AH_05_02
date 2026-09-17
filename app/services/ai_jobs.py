@@ -6,7 +6,7 @@ from app.core import config
 from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
-from app.models.health import EligibilityCheck, HealthCheckup, Prediction
+from app.models.health import CurrentScreeningInput, EligibilityCheck, HealthCheckup, Prediction
 from app.models.model_registry import ModelRegistry
 from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
@@ -89,6 +89,23 @@ def _ensure_prediction_eligibility(
         raise PermissionError("PREDICTION_NOT_ALLOWED")
 
 
+async def _resolve_current_screening_input(
+    repo: HealthRepository,
+    request: PredictionJobCreateRequest,
+    *,
+    user_id: int,
+    checkup_id: int,
+) -> CurrentScreeningInput | None:
+    if request.current_screening_input_id is None:
+        return None
+    screening_input = await repo.get_current_screening_input(request.current_screening_input_id, user_id)
+    if screening_input is None:
+        raise LookupError("현재 위험 선별 추가 입력을 찾을 수 없습니다.")
+    if screening_input.health_checkup_id != checkup_id:
+        raise ValueError("CURRENT_SCREENING_INPUT_CHECKUP_MISMATCH")
+    return screening_input
+
+
 async def create_prediction_job(user: User, request: PredictionJobCreateRequest) -> PredictionJob:
     repo = HealthRepository()
     checkup = await repo.get_checkup(request.checkup_id, user.id)
@@ -101,7 +118,13 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
     assert eligibility is not None
 
     if request.model_key == CURRENT_SCREENING_MODEL_KEY:
-        return await _create_current_screening_job(user, checkup, eligibility)
+        screening_input = await _resolve_current_screening_input(
+            repo,
+            request,
+            user_id=user.id,
+            checkup_id=checkup.id,
+        )
+        return await _create_current_screening_job(user, checkup, eligibility, screening_input)
 
     if request.model_key == LIFETIME_RISK_MODEL_KEY:
         return await _create_lifetime_risk_job()
@@ -184,6 +207,7 @@ async def _create_current_screening_job(
     user: User,
     checkup: HealthCheckup,
     eligibility: EligibilityCheck,
+    screening_input: CurrentScreeningInput | None,
 ) -> PredictionJob:
     """Queue the KNHANES current-signal model independently from KLoSA incidence."""
     # PR #36 shared7 intentionally reuses the validated common API input and
@@ -194,6 +218,7 @@ async def _create_current_screening_job(
         checkup,
         previously_diagnosed_diabetes=eligibility.has_diabetes_diagnosis,
     )
+    inference_payload.update(HealthService.current_screening_payload(checkup, screening_input))
     job_id = str(uuid4())
     now = datetime.now(UTC)
     job = await PredictionJob.create(
@@ -205,6 +230,7 @@ async def _create_current_screening_job(
             "feature_schema_version": CURRENT_SCREENING_MODEL.feature_schema_version,
             "input_as_of_date": checkup.checkup_date.isoformat(),
             "health_checkup_id": checkup.id,
+            "current_screening_input_id": screening_input.id if screening_input is not None else None,
         },
         model_key=CURRENT_SCREENING_MODEL.model_key,
         model_version=CURRENT_SCREENING_MODEL.version,

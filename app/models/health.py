@@ -87,6 +87,31 @@ class HealthCheckup(Model):
         table = "health_checkups"
 
 
+class CurrentScreeningInput(Model):
+    id = fields.BigIntField(primary_key=True)
+    user_id = fields.BigIntField(db_index=True)
+    health_checkup_id = fields.BigIntField(db_index=True)
+    input_as_of_date = fields.DateField()
+    walking_days = fields.FloatField(null=True)
+    energy_kcal = fields.FloatField(null=True)
+    protein_g = fields.FloatField(null=True)
+    fat_g = fields.FloatField(null=True)
+    carbohydrate_g = fields.FloatField(null=True)
+    sodium_mg = fields.FloatField(null=True)
+    region = fields.CharField(max_length=20, null=True)
+    urban = fields.CharField(max_length=20, null=True)
+    education = fields.CharField(max_length=30, null=True)
+    income_quartile = fields.CharField(max_length=10, null=True)
+    household_income_quartile = fields.CharField(max_length=10, null=True)
+    hypertension_family_history = fields.BooleanField(null=True)
+    diabetes_family_history = fields.BooleanField(null=True)
+    alcohol_frequency = fields.CharField(max_length=30, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "current_screening_inputs"
+
+
 class Prediction(Model):
     id = fields.BigIntField(primary_key=True)
     job_id = fields.CharField(max_length=36, unique=True)

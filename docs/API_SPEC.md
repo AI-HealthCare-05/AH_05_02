@@ -142,6 +142,7 @@
 | GET | `/health-checkups/{checkup_id}` | 건강검진 상세 조회 | `health_checkups` | REQ-HEALTH-003 |
 | PATCH | `/health-checkups/{checkup_id}` | 예측 전 기록 정정 | `health_checkups` | REQ-HEALTH-003~004 |
 | GET | `/health-checkups/input-schema` | 입력 필드·단위·허용 범위·필수 여부 조회 | 설정/메타데이터 | REQ-HEALTH-002~004 |
+| POST | `/current-screening-inputs` | 오늘이 선택 입력 스냅샷 저장 | `current_screening_inputs` | REQ-HEALTH-002~004, REQ-PRED-001 |
 
 예측과 연결된 검진은 수정하지 않는다. 정정값은 새로운 검진 레코드로 저장한다.
 
@@ -403,12 +404,27 @@
 
 ### 4.7 비동기 예측 요청
 
+오늘이 선택 입력은 먼저 `POST /api/v1/current-screening-inputs`에 저장한다. 응답의
+`current_screening_input_id`는 동일 사용자의 동일 `health_checkup_id`에만 연결할 수 있다.
+수축기·이완기 혈압은 건강검진 기록에서, 거주지역·가족력·음주빈도는 이 스냅샷에서
+가져오며, 제공하지 않은 선택값은 모델의 학습 시점 결측 처리 규칙을 따른다.
+
 `POST /api/v1/prediction-jobs`
 
 ```json
 {
   "checkup_id": 501,
   "model_key": "diabetes_incidence"
+}
+```
+
+오늘이 요청 예시:
+
+```json
+{
+  "checkup_id": 501,
+  "model_key": "diabetes_current_screening",
+  "current_screening_input_id": 71
 }
 ```
 
