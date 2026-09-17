@@ -4737,6 +4737,7 @@ function setReportPeriod(period) {
     const selected = button.dataset.reportPeriod === period;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-selected", String(selected));
+    button.setAttribute("tabindex", selected ? "0" : "-1");
   });
   $$("[data-report-panel]").forEach((panel) => {
     const selected = panel.dataset.reportPanel === period;
@@ -4746,28 +4747,41 @@ function setReportPeriod(period) {
   const pdfPeriod = $(`input[name="report-pdf-period"][value="${period}"]`);
   if (pdfPeriod) pdfPeriod.checked = true;
   updateReportPdfAvailability();
+  if (period === "week" && state.lifestyleReportStatus === "error") void loadWeeklyReport();
+  if ((period === "four-week" || period === "all") && typeof loadReportPeriod === "function") void loadReportPeriod(period);
 }
 
 function reportPdfUnavailableReason(period) {
-  if (period !== "week") return "지난 4주·전체 PDF는 연결 준비 중입니다. 다른 기간의 파일을 대신 내려받지 않습니다. 이번 주를 선택해 주세요.";
-  if (!state.token || isLocalPreview()) return "실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.";
+  void period;
   return "";
 }
 
 function updateReportPdfAvailability() {
   const reason = reportPdfUnavailableReason(selectedReportPdfPeriod());
-  $("#report-pdf-status").textContent = reason || "현재 서버의 주간 리포트는 최근 최대 7일의 생활습관 기록 요약입니다. 화면에 표시된 집계 기간을 확인해 주세요.";
+  $("#report-pdf-status").textContent = reason || "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다.";
   // The first click can always reveal period choices; only an actual download is blocked.
   $("#download-report").disabled = !$("#report-pdf-options").hidden && Boolean(reason);
 }
 
 async function fetchWeeklyReportPdf(period) {
-  const reason = reportPdfUnavailableReason(period);
-  if (reason) throw new Error(reason);
+  if (period !== "week") throw new Error("지난 4주·전체는 현재 화면 PDF 저장을 사용해 주세요.");
+  if (!state.token || isLocalPreview()) throw new Error("실제 계정으로 로그인한 뒤 저장된 리포트를 PDF로 받을 수 있습니다.");
   const response = await fetch("/api/v1/weekly-reports/current/pdf", { headers: { Authorization: `Bearer ${state.token}` } });
   if (!response.ok) throw new Error(response.status === 401 ? "로그인이 만료되었습니다. 다시 로그인한 뒤 PDF를 받아 주세요." : "PDF를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
   if (!response.headers.get("content-type")?.includes("application/pdf")) throw new Error("올바른 PDF 응답을 받지 못했습니다. 다시 시도해 주세요.");
   return response.blob();
+}
+
+async function prepareReportPrint(period) {
+  setReportPeriod(period);
+  if (period === "week" && state.lifestyleReportStatus === "idle") await loadWeeklyReport();
+  if ((period === "four-week" || period === "all") && typeof loadReportPeriod === "function" && state.reportPeriodStatus?.[period] !== "ready") {
+    await loadReportPeriod(period);
+  }
+  document.body.dataset.printReportPeriod = period;
+  document.documentElement.dataset.printReportPeriod = period;
+  document.title = `간당간당_${reportPdfPeriodLabels[period] || "리포트"}_리포트`;
+  window.print();
 }
 
 const reportPdfPeriodLabels = {
@@ -4786,6 +4800,38 @@ function selectedReportPdfPeriod() {
   return $('input[name="report-pdf-period"]:checked')?.value || "week";
 }
 
+let reportPdfPrintInProgress = false;
+
+async function openSelectedReportPdf(period) {
+  if (reportPdfPrintInProgress) return;
+  reportPdfPrintInProgress = true;
+  const input = $(`input[name="report-pdf-period"][value="${period}"]`);
+  if (input) input.checked = true;
+  closeReportPdfOptions();
+  try {
+    await prepareReportPrint(period);
+    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} 리포트 PDF 저장 화면을 열었습니다.`, "success");
+  } catch (error) { showMessage(error.message); }
+  finally { reportPdfPrintInProgress = false; }
+}
+
+function updateReportPdfButtonLabel() {
+  const button = $("#download-report");
+  if (!button) return;
+  button.textContent = "PDF로 받기";
+}
+
+function closeReportPdfOptions({ returnFocus = false } = {}) {
+  const options = $("#report-pdf-options");
+  const button = $("#download-report");
+  if (!options || !button || options.hidden) return;
+  options.hidden = true;
+  button.setAttribute("aria-expanded", "false");
+  button.textContent = "PDF로 받기";
+  updateReportPdfAvailability();
+  if (returnFocus) button.focus();
+}
+
 function revealReportPdfOptions() {
   const options = $("#report-pdf-options");
   const button = $("#download-report");
@@ -4793,7 +4839,7 @@ function revealReportPdfOptions() {
   if (!options.hidden) return true;
   options.hidden = false;
   button.setAttribute("aria-expanded", "true");
-  button.textContent = "선택한 기간 PDF 받기";
+  updateReportPdfButtonLabel();
   updateReportPdfAvailability();
   $('input[name="report-pdf-period"]:checked')?.focus();
   return false;
@@ -6693,18 +6739,33 @@ $("#notification-toggle")?.addEventListener("click", async () => {
 $("#profile-notification-settings")?.addEventListener("click", () => {
   showMessage("웹 알림 설정은 이후 설정 화면에서 제공할 예정입니다.", "success");
 });
-$("#download-report").addEventListener("click", async (event) => {
-  if (!revealReportPdfOptions()) return;
-  const releaseBusy = setButtonBusy(event.currentTarget, "PDF 만드는 중…");
-  try {
-    const period = selectedReportPdfPeriod();
-    const url = URL.createObjectURL(await fetchWeeklyReportPdf(period));
-    const link = document.createElement("a"); link.href = url; link.download = reportPdfFileNames[period] || "간당간당_리포트.pdf"; link.click(); URL.revokeObjectURL(url);
-    showMessage(`${reportPdfPeriodLabels[period] || "선택한 기간"} PDF를 저장했습니다.`, "success");
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+$("#download-report").addEventListener("click", () => {
+  const options = $("#report-pdf-options");
+  if (!options) return;
+  if (options.hidden) revealReportPdfOptions();
+  else closeReportPdfOptions({ returnFocus: true });
 });
-$$('input[name="report-pdf-period"]').forEach(input => input.addEventListener("change", updateReportPdfAvailability));
+async function openReportPdfFromPeriodInput(input) {
+  const releaseBusy = setButtonBusy($("#download-report"), "PDF 화면 여는 중…");
+  try {
+    await openSelectedReportPdf(input.value);
+  } finally { releaseBusy(); }
+}
+$$('input[name="report-pdf-period"]').forEach((input) => {
+  input.addEventListener("click", () => { void openReportPdfFromPeriodInput(input); });
+  input.closest("label")?.addEventListener("click", (event) => {
+    if (event.target === input) return;
+    event.preventDefault();
+    void openReportPdfFromPeriodInput(input);
+  });
+});
+document.addEventListener("click", (event) => {
+  const control = $(".report-pdf-control");
+  if (control && !control.contains(event.target)) closeReportPdfOptions();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeReportPdfOptions({ returnFocus: true });
+});
 $("#restart")?.addEventListener("click", () => window.location.reload());
 
 function resumeFromForest() {

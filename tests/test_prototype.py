@@ -521,7 +521,7 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "오늘 기록 저장 중…",
         "초대 이메일 보내는 중…",
         "워치 기록 저장 중…",
-        "PDF 만드는 중…",
+        "PDF 화면 여는 중…",
     ):
         assert busy_label in script
     assert script.count("finally { releaseBusy(); }") >= 8
@@ -582,8 +582,10 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
     assert "지난 4주" in html
     assert "전체" in html
-    assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
-    assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
+    assert "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다" in script
+    assert "prepareReportPrint(period)" in script
+    assert "지난 4주·전체 PDF는 연결 준비 중입니다" not in script
+    assert "다른 기간의 파일을 대신 내려받지 않습니다" not in script
     assert "report.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
