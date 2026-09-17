@@ -205,9 +205,18 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'id="meal-count"' not in html
     assert 'id="walking-days"' not in html
     assert 'id="alcohol-frequency" required' in html
+    assert '<option value="1" selected>최근 1년간 전혀 마시지 않음</option>' in html
+    assert '<option value="8">비해당(평생 음주 경험 없음)</option>' in html
     assert 'id="region"' in html
     assert 'id="diabetes-family-history"' in html
     assert 'id="hypertension-family-history"' in html
+    assert 'education: nullableSelectValue("education-level")' not in script
+    assert '<option value="code_97">' not in html
+    assert '<option value="code_2">별거</option>' in html
+    assert '<option value="code_4">사별 또는 실종</option>' in html
+    assert '<option value="code_1" selected>잠깐 또는 없음(하루 미만)</option>' in html
+    assert '<option value="code_4">항상(5~7일)</option>' in html
+    assert 'moderate: "주의"' in script
     assert 'days.value = "0"' in script
     assert 'minutes.value = "0"' in script
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html

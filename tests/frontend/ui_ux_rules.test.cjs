@@ -81,7 +81,7 @@ test('XAI explanation cards show only approved returned factors with safe labels
     '#factor-list': { innerHTML: '' },
   };
   const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
-  const context = loadMany(['factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),

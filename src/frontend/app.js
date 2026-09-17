@@ -344,6 +344,7 @@ const jobStatusLabels = {
 };
 const riskCategoryLabels = {
   low: "낮음",
+  moderate: "주의",
   caution: "주의",
   high: "높음",
   diabetes_screening_advised: "높음",
@@ -1493,7 +1494,6 @@ function detailHealthPayload() {
     health_satisfaction_score: nullableNumber("health-satisfaction-score"),
     economic_satisfaction_score: nullableNumber("economic-satisfaction-score"),
     overall_quality_of_life_score: nullableNumber("overall-quality-of-life-score"),
-    education: nullableSelectValue("education-level"),
     education_level: nullableSelectValue("education-level"),
     marital_status: nullableSelectValue("marital-status"),
     household_structure: nullableSelectValue("household-structure"),
@@ -2931,7 +2931,7 @@ function renderXaiExplanationLists(
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
-  const futureCategory = state.prediction?.risk_category;
+  const futureCategory = normalizeRiskKey({ risk_category: state.prediction?.risk_category });
   const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
     ["low", "caution", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
