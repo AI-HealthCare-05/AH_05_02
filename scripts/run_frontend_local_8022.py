@@ -46,20 +46,16 @@ def local_queue_environment() -> dict[str, str]:
 
 
 def local_model_environment(root: Path) -> dict[str, str]:
-    """Keep the explicitly selected local shared7 model until v061 is provisioned.
-
-    No automatic model fallback: v061 must be selected explicitly and have its
-    verified artifact available before launch. Run v061 with its dedicated
-    worker image; it requires a different scikit-learn version from shared7.
-    """
-    runtime = os.environ.get("LOCAL_CURRENT_SCREENING_RUNTIME", "shared8-waist")
+    """Select one checksum-verified local current-screening artifact."""
+    runtime = os.environ.get("LOCAL_CURRENT_SCREENING_RUNTIME", "today14")
     names = {
         "shared7": "knhanes-shared7-sk180-v1",
         "shared8-waist": "knhanes-shared8-waist-sk180-v1",
         "v061": "knhanes-current-screening-v061",
+        "today14": "knhanes-today14-sk180-service-v3",
     }
     if runtime not in names:
-        raise ValueError("LOCAL_CURRENT_SCREENING_RUNTIME must be shared7, shared8-waist or v061")
+        raise ValueError("LOCAL_CURRENT_SCREENING_RUNTIME is not supported")
     name = names[runtime]
     manifest_path = root / f"models/registry/diabetes_current_screening/candidates/{name}.json"
     manifest = json.loads(manifest_path.read_text())
@@ -83,7 +79,7 @@ def local_model_environment(root: Path) -> dict[str, str]:
         "CURRENT_SCREENING_MODEL_URI": str(root / manifest["artifact_local_path"]),
         "CURRENT_SCREENING_MANIFEST_URI": str(manifest_path),
         "CURRENT_SCREENING_PREPROCESSING_VERSION": (
-            "shared8-waist-train-estimator-standard-api-frame-v1"
+            manifest.get("preprocessing_version") or "shared8-waist-train-estimator-standard-api-frame-v1"
             if runtime == "shared8-waist"
             else "shared7-standard-api-frame-v1"
             if runtime == "shared7"
@@ -95,13 +91,15 @@ def local_model_environment(root: Path) -> dict[str, str]:
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[1]
     os.chdir(root)
-    os.environ.update(database_environment(root.parent / "AH_05_02" / ".env"))
+    private_env = Path(os.environ.get("LOCAL_PRIVATE_ENV_FILE", root / ".env"))
+    os.environ.update(database_environment(private_env))
     os.environ.update(local_queue_environment())
     os.environ.update(local_model_environment(root))
+    python = Path(os.environ.get("LOCAL_PYTHON", root / ".venv/bin/python"))
     os.execv(
-        root / ".venv/bin/python",
+        python,
         [
-            str(root / ".venv/bin/python"),
+            str(python),
             "-m",
             "uvicorn",
             "app.main:app",

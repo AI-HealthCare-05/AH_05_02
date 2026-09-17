@@ -81,7 +81,7 @@ services:
     # MODEL_SOURCE_DIR is an EC2-local directory. It must not be a Git-tracked
     # source directory because it can contain a joblib model artifact.
     volumes:
-      - ${MODEL_SOURCE_DIR:-../../models}:/app/storage/models:ro
+      - ${MODEL_SOURCE_DIR:-./models}:/app/models:ro
       - model_cache:/app/storage/cache
     mem_limit: 4g
     networks: [healthcare]

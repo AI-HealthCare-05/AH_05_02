@@ -23,7 +23,7 @@ async def preload_configured_models() -> None:
         from src.ml.inference.research_models import load_shared8
 
         await asyncio.to_thread(load_shared8, config.ML_SHARED8_MODEL_URI)
-    elif config.CURRENT_SCREENING_RUNTIME == "v061":
+    elif config.CURRENT_SCREENING_RUNTIME in {"v061", "today14"}:
         from src.ml.inference.diabetes_current_screening import load_current_screening_model
 
         await asyncio.to_thread(

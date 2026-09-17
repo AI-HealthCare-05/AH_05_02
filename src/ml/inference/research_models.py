@@ -242,7 +242,7 @@ def predict_research_model(model: str, payload: dict, *, as_of_date: date, model
             frame,
             loaded.pipeline,
             model_version=loaded.manifest["model_version"],
-            elevated=output["risk_category"] in {"caution", "high"},
+            elevated=output["risk_category"] in {"moderate", "high"},
         )
         return {
             **output,

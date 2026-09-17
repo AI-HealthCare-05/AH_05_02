@@ -47,12 +47,12 @@ def test_current_screening_snapshot_contract_accepts_fourteen_feature_additions(
     snapshot = CurrentScreeningInputCreateRequest(
         health_checkup_id=10,
         input_as_of_date="2026-09-16",
-        region="capital",
+        region=9,
         hypertension_family_history=False,
         diabetes_family_history=True,
-        alcohol_frequency="monthly_or_less",
+        alcohol_frequency=2,
     )
-    assert snapshot.region == "capital"
+    assert snapshot.region == 9
     assert snapshot.diabetes_family_history is True
 
 
@@ -103,21 +103,21 @@ def test_current_screening_snapshot_adds_new_service_features() -> None:
         fat_g=None,
         carbohydrate_g=None,
         sodium_mg=None,
-        region="capital",
+        region=9,
         urban="urban",
         hypertension_family_history=False,
         diabetes_family_history=True,
-        alcohol_frequency="monthly_or_less",
+        alcohol_frequency=2,
     )
 
     payload = HealthService.current_screening_payload(checkup, snapshot)
 
     assert payload["systolic_bp"] == 132
     assert payload["diastolic_bp"] == 84
-    assert payload["region"] == "capital"
+    assert payload["region"] == 9
     assert payload["diabetes_family_history"] is True
     assert payload["hypertension_family_history"] is False
-    assert payload["alcohol_frequency"] == "monthly_or_less"
+    assert payload["alcohol_frequency"] == 2
 
 
 @pytest.mark.asyncio
@@ -230,7 +230,7 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
                     "current_drinker": False,
                     "exercise_days_per_week": 3,
                     "exercise_minutes": 30,
-                    "feature_schema_version": "klosa_stage3_25features_v1",
+                    "feature_schema_version": "klosa_stage3_25features_education4_v2",
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED
@@ -240,10 +240,10 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
                 json={
                     "health_checkup_id": checkup.json()["data"]["checkup_id"],
                     "input_as_of_date": "2026-09-01",
-                    "region": "capital",
+                    "region": 9,
                     "hypertension_family_history": False,
                     "diabetes_family_history": True,
-                    "alcohol_frequency": "none",
+                    "alcohol_frequency": 8,
                 },
             )
             assert snapshot.status_code == status.HTTP_201_CREATED

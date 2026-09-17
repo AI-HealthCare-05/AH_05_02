@@ -433,10 +433,10 @@ class HealthService:
             "fat_g": screening_input.fat_g if screening_input is not None else None,
             "carbohydrate_g": screening_input.carbohydrate_g if screening_input is not None else None,
             "sodium_mg": screening_input.sodium_mg if screening_input is not None else None,
-            "sex": checkup.sex,
+            "sex": 1 if checkup.sex == "male" else 2,
             "region": screening_input.region if screening_input is not None else None,
             "urban": screening_input.urban if screening_input is not None else None,
-            "education": checkup.education_level,
+            "education": (None if checkup.education_level in {None, "code_97"} else int(checkup.education_level[-1])),
             "income_quartile": None,
             "household_income_quartile": None,
             "hypertension_family_history": (
@@ -446,13 +446,7 @@ class HealthService:
                 screening_input.diabetes_family_history if screening_input is not None else None
             ),
             "current_smoker": checkup.current_smoker,
-            "alcohol_frequency": (
-                screening_input.alcohol_frequency
-                if screening_input is not None and screening_input.alcohol_frequency is not None
-                else "none"
-                if not checkup.current_drinker
-                else None
-            ),
+            "alcohol_frequency": screening_input.alcohol_frequency if screening_input is not None else None,
             "aerobic_activity": checkup.regular_exercise,
             "systolic_bp": getattr(checkup, "systolic_bp", None),
             "diastolic_bp": getattr(checkup, "diastolic_bp", None),

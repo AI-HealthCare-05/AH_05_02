@@ -52,37 +52,41 @@ class Config(BaseSettings):
     PREDICTION_TIMEOUT_SECONDS: int = 30
     MODEL_PRELOAD_ENABLED: bool = False
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"
-    PREDICTION_MODEL_VERSION: str = "rf25-tuned-spec40-v1"
-    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_v1"
-    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-25features-v1"
-    PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-v1"
+    PREDICTION_MODEL_VERSION: str = "rf25-tuned-education4-v2"
+    PREDICTION_FEATURE_SCHEMA_VERSION: str = "klosa_stage3_25features_education4_v2"
+    PREDICTION_INPUT_SCHEMA_VERSION: str = "diabetes-incidence-api-education4-v2"
+    PREDICTION_PREPROCESSING_VERSION: str = "train-median-indicator-mode-onehot-education4-v2"
     PREDICTION_TARGET_DEFINITION_VERSION: str = "next-observation-new-diabetes-v1"
     PREDICTION_CALIBRATION_VERSION: str = "unapproved"
-    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8"
-    PREDICTION_THRESHOLD_VERSION: str = "validation-spec043-caution-recall090-v1"
-    PREDICTION_DECISION_THRESHOLD: float | None = 0.021153602801262862
+    PREDICTION_MODEL_ARTIFACT_DIGEST: str = "45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e"
+    PREDICTION_THRESHOLD_VERSION: str = "education4-validation-spec043-caution-recall090-v2"
+    PREDICTION_DECISION_THRESHOLD: float | None = 0.02113653615781283
     PREDICTION_MODEL_MIN_AGE: int = 45
     PREDICTION_MODEL_MAX_AGE: int | None = 105
     PREDICTION_MODEL_POPULATION: str = "undiagnosed_klosa_age_45_105"
     PREDICTION_PROMOTION_STATUS: str = "candidate_only"
     PREDICTION_OPERATIONAL_MODEL_ACTIVATED: bool = False
-    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib"
-    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
-    CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-current-diabetes-recall-v0.6.1"
-    CURRENT_SCREENING_FEATURE_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-v4-waist-residual"
-    CURRENT_SCREENING_INPUT_SCHEMA_VERSION: str = "knhanes-current-diabetes-screening-api-v1"
-    CURRENT_SCREENING_PREPROCESSING_VERSION: str = "knhanes-2016-2024-recall-v061"
-    CURRENT_SCREENING_TARGET_DEFINITION_VERSION: str = "current-diabetes-signal-v1"
-    CURRENT_SCREENING_THRESHOLD_VERSION: str = "validation-2021-2022-spec042-v3"
-    CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.02323125331773926
-    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = "ffc6743849973676308703dd6bd5af0f8d557d5f45a8886e6660f86c81b85178"
-    CURRENT_SCREENING_MODEL_URI: str = "models/artifacts/candidates/diabetes_current_screening/v061/model.joblib"
-    CURRENT_SCREENING_MANIFEST_URI: str = (
-        "models/registry/diabetes_current_screening/candidates/knhanes-current-screening-v061.json"
+    MODEL_URI: str = "models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib"
+    MODEL_MANIFEST_URI: str = "models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json"
+    CURRENT_SCREENING_MODEL_VERSION: str = "knhanes-today14-sk180-service-v3"
+    CURRENT_SCREENING_FEATURE_SCHEMA_VERSION: str = "knhanes-today-14features-missing-indicator-v2"
+    CURRENT_SCREENING_INPUT_SCHEMA_VERSION: str = "today-api-required-alcohol-optional-education-v2"
+    CURRENT_SCREENING_PREPROCESSING_VERSION: str = (
+        "train-median-indicator-mode-onehot-categorical-indicator-waist-estimator-v2"
     )
-    CURRENT_SCREENING_RUNTIME: str = "v061"
-    CURRENT_SCREENING_PROMOTION_STATUS: str = "development_only"
-    CURRENT_SCREENING_OPERATIONAL_MODEL_ACTIVATED: bool = False
+    CURRENT_SCREENING_TARGET_DEFINITION_VERSION: str = "current-diabetes-signal-v1"
+    CURRENT_SCREENING_THRESHOLD_VERSION: str = "today14-missing-indicator-validation-spec042-v2"
+    CURRENT_SCREENING_DECISION_THRESHOLD: float = 0.022445685526736606
+    CURRENT_SCREENING_MODEL_ARTIFACT_DIGEST: str = "2189257587690adfcdf74702f69b516c0a8559cef6059ebd90d003e008c079b1"
+    CURRENT_SCREENING_MODEL_URI: str = (
+        "models/artifacts/candidates/diabetes_current_screening/knhanes-today14-sk180-service-v3/model.joblib"
+    )
+    CURRENT_SCREENING_MANIFEST_URI: str = (
+        "models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json"
+    )
+    CURRENT_SCREENING_RUNTIME: str = "today14"
+    CURRENT_SCREENING_PROMOTION_STATUS: str = "approved"
+    CURRENT_SCREENING_OPERATIONAL_MODEL_ACTIVATED: bool = True
     SAFETY_COPY_VERSION: str = "2026-08-19-v1"
 
     # 식사 사진에서 채소 포함 여부만 자동 판별합니다. 칼로리·영양소는 계산하지 않습니다.

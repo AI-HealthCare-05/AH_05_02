@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": {
     "provider": "google_drive",
     "folder_id": "1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18",
@@ -8,17 +8,17 @@
   "models": [
     {
       "name": "today",
-      "manifest_file_id": "16lktNGh-FsqhkoJUg5U2t6yiFhCzSX3C",
-      "artifact_file_id": "1ld2sWVRm-eWymsDvwQHfmkprKDSNsWi3",
-      "artifact_sha256": "aceafb1011afed055da727f63c996f1e35a711e0e01f3a38c349360d2f3ee8fc",
-      "registry_manifest": "models/registry/diabetes_current_screening/candidates/knhanes-shared8-waist-sk180-v1.json"
+      "manifest_file_id": "1LFdiwtI0mqqdL2TGkVDmKf8QqJuZWGrA",
+      "artifact_file_id": "1-8dFEeIrD3cxhQIm5884qUg-LcQ7H5KQ",
+      "artifact_sha256": "2189257587690adfcdf74702f69b516c0a8559cef6059ebd90d003e008c079b1",
+      "registry_manifest": "models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json"
     },
     {
       "name": "tomorrow",
-      "manifest_file_id": "1v6Nb0WCeiwGZBc2NWSDyoK6PlpT4NMBN",
-      "artifact_file_id": "1tDjBGCSo57Y31GBktkBgEBE0zKrjXcdW",
-      "artifact_sha256": "e5067dacd50006b8d7681ef9e558a2a3488913ae1db58d15632c842623c05bf8",
-      "registry_manifest": "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+      "manifest_file_id": "1UziXZ1ATSrpuqXSt40GtAq_Jq7h3MRfL",
+      "artifact_file_id": "1GKjksiOUujTjrEOBmPXEMAmg29RXNoIY",
+      "artifact_sha256": "45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e",
+      "registry_manifest": "models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json"
     }
   ]
 }

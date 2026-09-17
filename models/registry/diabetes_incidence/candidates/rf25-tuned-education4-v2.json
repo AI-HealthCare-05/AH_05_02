@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "model_key": "diabetes_incidence",
+  "task_type": "future_incidence_risk_screening",
+  "threshold_scope": "future_incidence_2y",
+  "model_version": "rf25-tuned-education4-v2",
+  "promotion_status": "candidate_only",
+  "operational_model_activated": false,
+  "experiment_id": "rf_25features_tuned_education4_v002",
+  "run_id": "20260916T155732942202Z",
+  "artifact_local_path": "models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib",
+  "artifact_source_path": "outputs/ml/rf_25features_tuned_education4_v002/20260916T155732942202Z/model.joblib",
+  "artifact_filename": "model.joblib",
+  "artifact_size_bytes": 2281448,
+  "artifact_sha256": "45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e",
+  "artifact_git_policy": "local_only_do_not_commit_model_binary",
+  "input_schema_version": "diabetes-incidence-api-education4-v2",
+  "feature_schema_version": "klosa_stage3_25features_education4_v2",
+  "preprocessing_version": "train-median-indicator-mode-onehot-education4-v2",
+  "threshold_version": "education4-validation-spec043-caution-recall090-v2",
+  "thresholds": {
+    "low": 0.0,
+    "moderate": 0.01772772727901335,
+    "high": 0.02113653615781283,
+    "selection_data": "validation_only",
+    "moderate_target_recall": 0.9,
+    "high_minimum_validation_specificity": 0.43,
+    "minimum_reported_test_specificity": 0.4
+  },
+  "risk_categories": ["low", "moderate", "high"],
+  "features": [
+    "age", "sex", "bmi", "smoking_status", "current_drinker",
+    "regular_exercise", "exercise_days_per_week", "exercise_minutes",
+    "hypertension_diagnosis", "cancer_diagnosis",
+    "chronic_lung_disease_diagnosis", "liver_disease_diagnosis",
+    "heart_disease_diagnosis", "cerebrovascular_disease_diagnosis",
+    "psychiatric_disease_diagnosis", "arthritis_rheumatism_diagnosis",
+    "log_household_income", "education_level", "marital_status",
+    "household_structure", "health_satisfaction_score",
+    "economic_satisfaction_score", "overall_quality_of_life_score",
+    "depressed_feeling_last_week", "sleep_difficulty_last_week"
+  ],
+  "required_model_features": [
+    "age", "sex", "bmi", "smoking_status", "current_drinker",
+    "regular_exercise", "exercise_days_per_week", "exercise_minutes",
+    "hypertension_diagnosis", "heart_disease_diagnosis",
+    "arthritis_rheumatism_diagnosis", "marital_status",
+    "depressed_feeling_last_week", "sleep_difficulty_last_week"
+  ],
+  "education_contract": {
+    "code_1": "elementary_school_or_less",
+    "code_2": "middle_school",
+    "code_3": "high_school",
+    "code_4": "college_or_more",
+    "other_values": "missing",
+    "api_nonresponse": "null"
+  },
+  "missing_value_policy": {
+    "required_api_fields": "reject_missing",
+    "optional_numeric": "NaN_then_train_median_and_missing_indicator",
+    "optional_categorical": "NaN_then_train_mode",
+    "education_outside_code_1_to_code_4": "NaN_then_train_mode",
+    "unknown_diagnosis": "missing_never_assume_no",
+    "preprocessing_fit_scope": "train_only"
+  },
+  "software": {
+    "python": "3.13.9",
+    "scikit_learn": "1.8.0",
+    "pandas": "2.3.3",
+    "joblib": "1.5.3"
+  },
+  "reproduce": {
+    "validate": "./scripts/ml-experiment.sh validate",
+    "run": "./scripts/ml-experiment.sh run rf_25features_tuned_education4_v002",
+    "provision": "mkdir -p models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2 && cp outputs/ml/rf_25features_tuned_education4_v002/<UTC_RUN_ID>/model.joblib models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib",
+    "verify_sha256": "openssl dgst -sha256 models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib",
+    "test": "uv run pytest -q tests/ml/test_diabetes_standard_inference.py"
+  },
+  "metrics": {
+    "recall": 0.8358974358974359,
+    "specificity": 0.40269849507005706,
+    "ppv": 0.0341934130480386,
+    "npv": 0.9897959183673469,
+    "positive_rate": 0.6031886625332152,
+    "auroc": 0.6593296342128724,
+    "auprc": 0.04883749063936729,
+    "f1": 0.06569931479242241,
+    "brier_score": 0.023897152084063827,
+    "confusion_matrix": {
+      "true_positive": 163,
+      "false_positive": 4604,
+      "true_negative": 3104,
+      "false_negative": 32
+    },
+    "threshold": 0.02113653615781283
+  },
+  "validation_metrics": {
+    "recall": 0.8256410256410256,
+    "specificity": 0.4349527665317139,
+    "auroc": 0.6777410983079,
+    "auprc": 0.055059844741111676,
+    "threshold": 0.02113653615781283
+  },
+  "supported_population": {
+    "age_minimum": 45,
+    "age_maximum": 105,
+    "baseline_diabetes_status": "no_previous_physician_diagnosis",
+    "source_population": "KLoSA participants represented in official_v1 cohort"
+  },
+  "medical_review_required": true,
+  "intended_use": "diabetes incidence risk screening and health education research only",
+  "prohibited_use": [
+    "diagnosis", "prescription", "medication_start_stop_or_dose_change",
+    "emergency_triage", "use_outside_supported_age_range"
+  ]
+}

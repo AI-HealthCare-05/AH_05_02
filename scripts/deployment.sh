@@ -99,6 +99,12 @@ echo "${COLOR_BLUE}EC2 인스턴스의 IP를 입력하세요.${COLOR_NC}"
 read -p "EC2-IP: " ec2_ip
 echo ""
 
+chmod 400 ~/.ssh/${ssh_key_file}
+ssh -i ~/.ssh/${ssh_key_file} ubuntu@${ec2_ip} \
+  "mkdir -p ~/project/scripts ~/project/configs/model_delivery \
+   ~/project/models/registry/diabetes_current_screening/candidates \
+   ~/project/models/registry/diabetes_incidence/candidates"
+
 echo "${COLOR_BLUE}배포중인 서버의 https 여부를 선택하세요.${COLOR_NC}"
 echo "1) http 사용중"
 echo "2) https 사용중"
@@ -108,6 +114,14 @@ echo ""
 # ---------- EC2 내에 배포 준비 파일 복사  ----------
 scp -i ~/.ssh/${ssh_key_file} envs/.prod.env ubuntu@${ec2_ip}:~/project/.env
 scp -i ~/.ssh/${ssh_key_file} infra/docker/docker-compose.prod.yml ubuntu@${ec2_ip}:~/project/docker-compose.yml
+scp -i ~/.ssh/${ssh_key_file} scripts/provision-models-google-drive.py ubuntu@${ec2_ip}:~/project/scripts/
+scp -i ~/.ssh/${ssh_key_file} configs/model_delivery/google_drive_models.json ubuntu@${ec2_ip}:~/project/configs/model_delivery/
+scp -i ~/.ssh/${ssh_key_file} \
+  models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json \
+  ubuntu@${ec2_ip}:~/project/models/registry/diabetes_current_screening/candidates/
+scp -i ~/.ssh/${ssh_key_file} \
+  models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json \
+  ubuntu@${ec2_ip}:~/project/models/registry/diabetes_incidence/candidates/
 if [[ "$is_https" == "1" ]] ; then
   # ---------- prod_http.conf 파일의 server_name 자동 수정 ----------
   sed -i '' "s/server_name .*/server_name ${ec2_ip};/g" infra/nginx/prod_http.conf
@@ -123,7 +137,6 @@ fi
 
 # ---------- EC2 배포 자동화  ----------
 echo "${COLOR_BLUE}EC2 인스턴스에 SSH 접속을 시도합니다.${COLOR_NC}"
-chmod 400 ~/.ssh/${ssh_key_file}
 ssh -i ~/.ssh/${ssh_key_file} ubuntu@${ec2_ip} \
   "DOCKER_USERNAME=${docker_user} \
    DOCKER_PAT=${docker_pw} \
@@ -134,6 +147,9 @@ ssh -i ~/.ssh/${ssh_key_file} ubuntu@${ec2_ip} \
 
   echo "Docker login"
   docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PAT"
+
+  echo "Provisioning Today and Tomorrow model artifacts"
+  python3 scripts/provision-models-google-drive.py
 
   echo "Deploying services: $DEPLOY_SERVICES"
   docker compose up -d --pull always --no-deps $DEPLOY_SERVICES
