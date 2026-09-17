@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
+from ai_worker.core import config as worker_config
 from ai_worker.handlers import run_task
 from app.apis.v1.prediction_routers import prediction_payload
 from app.dtos.auth import SignUpRequest
@@ -144,7 +145,7 @@ def test_feature_contract_matches_pr4_klosa_schema_and_rejects_extra_fields() ->
 
 def test_input_schema_names_leakage_fields_as_excluded() -> None:
     schema = input_schema_document()
-    assert schema["feature_schema_version"] == "klosa_stage3_25features_v1"
+    assert schema["feature_schema_version"] == "klosa_stage3_25features_education4_v2"
     assert "future_wave_measurements" in schema["excluded_leakage_fields"]
 
 
@@ -157,7 +158,8 @@ async def test_development_provider_does_not_fabricate_probability_or_category()
 
 
 @pytest.mark.asyncio
-async def test_worker_development_inference_returns_versioned_safe_result() -> None:
+async def test_worker_development_inference_returns_versioned_safe_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(worker_config, "TOMORROW_RUNTIME", "standard")
     result = await run_task(
         "diabetes_incidence",
         {"input": VALID_RF25_INPUT, "as_of_date": "2026-08-31"},

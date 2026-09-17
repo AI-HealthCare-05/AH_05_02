@@ -184,9 +184,7 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
         "task_type": "future_incidence_risk_screening",
         "threshold_scope": "future_incidence_2y",
         "outcome_definition": ACTIVE_MODEL.outcome_definition,
-        "internal_score": (
-            output["risk_score_internal"] if "risk_score_internal" in output else output["risk_score"]
-        ),
+        "internal_score": (output["risk_score_internal"] if "risk_score_internal" in output else output["risk_score"]),
         "risk_category": output["risk_category"] if operational else None,
         "preview_only": not operational,
         "display_allowed": operational,
