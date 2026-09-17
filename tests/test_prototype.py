@@ -217,8 +217,8 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert '<option value="code_1" selected>잠깐 또는 없음(하루 미만)</option>' in html
     assert '<option value="code_4">항상(5~7일)</option>' in html
     assert 'moderate: "주의"' in script
-    assert "days.disabled = false" in script
-    assert "minutes.disabled = false" in script
+    assert 'days.value = "0"' in script
+    assert 'minutes.value = "0"' in script
     assert '<select id="smoking-status" name="smoking-status" required>' in html
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
     assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
@@ -229,8 +229,8 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
         < lifestyle.index('for="alcohol-frequency"')
         < lifestyle.index('for="health-satisfaction-score"')
     )
-    assert "days.disabled = !isRegularExercise" not in script
-    assert 'card.classList.toggle("disabled", false)' in script
+    assert "days.disabled = !isRegularExercise" in script
+    assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
     assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
     assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split("</div>", 2)[0]
 

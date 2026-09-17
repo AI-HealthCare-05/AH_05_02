@@ -1612,14 +1612,24 @@ async function saveCurrentScreeningInputSnapshot() {
 }
 
 function syncExerciseDetails() {
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const days = $("#exercise-days");
   const minutes = $("#exercise-minutes");
   const card = $("#exercise-detail-card");
   if (!days || !minutes || !card) return;
-  days.disabled = false;
-  minutes.disabled = false;
+  if (!isRegularExercise) {
+    if (!days.disabled) days.dataset.previousValue = days.value;
+    if (!minutes.disabled) minutes.dataset.previousValue = minutes.value;
+    days.value = "0";
+    minutes.value = "0";
+  } else {
+    if (days.disabled) days.value = days.dataset.previousValue ?? "3";
+    if (minutes.disabled) minutes.value = minutes.dataset.previousValue ?? "30";
+  }
+  days.disabled = !isRegularExercise;
+  minutes.disabled = !isRegularExercise;
   card.hidden = false;
-  card.classList.toggle("disabled", false);
+  card.classList.toggle("disabled", !isRegularExercise);
 }
 
 function syncAlcoholFrequencyDetails() {
