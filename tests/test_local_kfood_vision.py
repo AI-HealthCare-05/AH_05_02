@@ -1,11 +1,20 @@
 import asyncio
+import hashlib
+import json
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from app.core import config
-from app.vision.food_vision import FoodVisionError, FoodVisionResult, get_food_vision_provider
+from app.vision.food_vision import (
+    FoodVisionError,
+    FoodVisionResult,
+    _cached_local_kfood_provider,
+    food_vision_is_configured,
+    get_food_vision_provider,
+)
 from app.vision.local_kfood import threshold_decision
 from app.vision.openai_vlm import needs_vlm, supplement_with_vlm
 
@@ -36,6 +45,49 @@ def test_openai_provider_is_retained_but_disabled(monkeypatch: pytest.MonkeyPatc
 
     with pytest.raises(FoodVisionError, match="비활성화"):
         get_food_vision_provider()
+
+
+def _configure_runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    classifier = tmp_path / "best.pt"
+    metadata = tmp_path / "meta.json"
+    segmenter = tmp_path / "1.tflite"
+    segmentation = tmp_path / "seg_config.json"
+    dishes = tmp_path / "dish_vegetables.json"
+    classifier.write_bytes(b"classifier")
+    metadata.write_text(
+        json.dumps(
+            {"classes": ["dish"], "backbone": "efficientnet_b0", "input_size": 224, "mean": [0, 0, 0], "std": [1, 1, 1]}
+        ),
+        encoding="utf-8",
+    )
+    segmenter.write_bytes(b"segmenter")
+    segmentation.write_text(json.dumps({"bg_idx": [0], "veg_idx": [1]}), encoding="utf-8")
+    dishes.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(config, "KFOOD_DRIVE_FILE_ID", "")
+    monkeypatch.setattr(config, "KFOOD_CLASSIFIER_PATH", classifier)
+    monkeypatch.setattr(config, "KFOOD_CLASSIFIER_META_PATH", metadata)
+    monkeypatch.setattr(config, "KFOOD_SEGMENTER_PATH", segmenter)
+    monkeypatch.setattr(config, "KFOOD_SEGMENTATION_CONFIG_PATH", segmentation)
+    monkeypatch.setattr(config, "KFOOD_DISH_VEGETABLES_PATH", dishes)
+    monkeypatch.setattr(config, "KFOOD_CLASSIFIER_SHA256", hashlib.sha256(classifier.read_bytes()).hexdigest())
+    monkeypatch.setattr(config, "KFOOD_CLASSIFIER_META_SHA256", hashlib.sha256(metadata.read_bytes()).hexdigest())
+    monkeypatch.setattr(config, "KFOOD_SEGMENTER_SHA256", hashlib.sha256(segmenter.read_bytes()).hexdigest())
+    _cached_local_kfood_provider.cache_clear()
+
+
+def test_food_vision_readiness_verifies_artifact_digests(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _configure_runtime(monkeypatch, tmp_path)
+    assert food_vision_is_configured() is True
+
+    _cached_local_kfood_provider.cache_clear()
+    (tmp_path / "best.pt").write_bytes(b"tampered")
+    assert food_vision_is_configured() is False
+
+
+def test_local_provider_is_reused_between_requests(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _configure_runtime(monkeypatch, tmp_path)
+    assert get_food_vision_provider() is get_food_vision_provider()
 
 
 def _result(food: float, vegetable: float, reliable: bool = True) -> FoodVisionResult:
