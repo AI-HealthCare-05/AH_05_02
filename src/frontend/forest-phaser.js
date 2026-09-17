@@ -89,6 +89,7 @@
       x: Number.isFinite(source.x) ? source.x : 384, y: Number.isFinite(source.y) ? source.y : 352,
       direction: directionRows[source.direction] == null ? "down" : source.direction,
       mounted: Boolean(source.mounted), sitting: Boolean(source.sitting),
+      sitVariant: source.sitVariant === "home" ? "home" : "field",
       cosmetics: { ...defaultCosmetics, ...(source.cosmetics || {}) },
       tuning: { ...defaultTuning, ...(source.tuning || {}) },
     };
