@@ -118,7 +118,7 @@ def test_high_risk_prioritizes_medical_guidance_and_hides_internal_versions() ->
     assert 'id="risk-confirm-message"' not in html
     assert 'id="risk-preview-controls"' in html
     assert 'data-risk-preview="low"' in html
-    assert 'data-risk-preview="caution"' in html
+    assert 'data-risk-preview="caution"' not in html
     assert 'data-risk-preview="high"' in html
     assert "function setForecastRiskPreview(risk)" in script
     assert "normalizeRiskKey(prediction)" in script
@@ -201,23 +201,93 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert 'min="0" max="720"' in html
     assert "exercise_days_per_week:" in script
     assert "exercise_minutes:" in script
-    assert 'days.value = "0"' in script
-    assert 'minutes.value = "0"' in script
+    assert 'id="fasting-glucose"' not in html
+    assert 'id="meal-count"' not in html
+    assert 'id="walking-days"' not in html
+    assert 'id="alcohol-frequency" required' in html
+    assert '<option value="1" selected>최근 1년간 전혀 마시지 않음</option>' in html
+    assert '<option value="8">비해당(평생 음주 경험 없음)</option>' in html
+    assert 'id="region"' in html
+    assert 'id="diabetes-family-history"' in html
+    assert 'id="hypertension-family-history"' in html
+    assert 'education: nullableSelectValue("education-level")' not in script
+    assert '<option value="code_97">' not in html
+    assert '<option value="code_2">별거</option>' in html
+    assert '<option value="code_4">사별 또는 실종</option>' in html
+    assert '<option value="code_1" selected>잠깐 또는 없음(하루 미만)</option>' in html
+    assert '<option value="code_4">항상(5~7일)</option>' in html
+    assert 'moderate: "주의"' in script
+    assert "days.disabled = false" in script
+    assert "minutes.disabled = false" in script
+    assert '<select id="smoking-status" name="smoking-status" required>' in html
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
     assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
     lifestyle = html.split('id="lifestyle-input-panel"', 1)[1].split('id="health-review-panel"', 1)[0]
-    assert "필수" not in lifestyle
     assert (
         lifestyle.index('id="smoking-status-title"')
-        < lifestyle.index('for="self-health"')
-        < lifestyle.index('for="meal-count"')
         < lifestyle.index('id="current-drinker-title"')
-        < lifestyle.index('id="regular-exercise-title"')
+        < lifestyle.index('for="alcohol-frequency"')
+        < lifestyle.index('for="health-satisfaction-score"')
     )
-    assert "days.disabled = !isRegularExercise" in script
-    assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
+    assert "days.disabled = !isRegularExercise" not in script
+    assert 'card.classList.toggle("disabled", false)' in script
     assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
     assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split("</div>", 2)[0]
+
+
+def test_login_resume_syncs_active_health_consent_before_health_gates() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    resume = script.split("async function resumeAuthenticatedAccount()", 1)[1].split(
+        '$("#login-form").addEventListener("submit"', 1
+    )[0]
+
+    assert 'const consents = await api("/consents")' in resume
+    assert resume.index("syncHealthConsentState(consents)") < resume.index(
+        "if (!profileSaved || !hasHealthDataConsent(consents))"
+    )
+    assert 'state.healthConsentStatus === "active"' in script
+
+
+def test_health_submit_refreshes_consent_before_blocking_reanalysis() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    consent_guard = script.split("async function ensureActiveHealthConsent", 1)[1].split(
+        "function showAccountRecovery", 1
+    )[0]
+    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split(
+        '$("#retry-analysis").addEventListener', 1
+    )[0]
+    onboarding_handler = script.split('$$("[data-onboarding-step]").forEach', 1)[1].split('$("#profile-edit")', 1)[0]
+
+    assert "await refreshHealthConsentState()" in consent_guard
+    assert 'if (state.healthConsentStatus === "active") return true;' in consent_guard
+    assert "openHealthConsentSettings({ blockedAction: actionLabel });" in consent_guard
+    assert 'if (!await ensureActiveHealthConsent("건강정보 저장")) return;' in submit_handler
+    assert 'if (targetStep >= 4 && !await ensureActiveHealthConsent("건강정보 입력")) return;' in onboarding_handler
+
+
+def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -> None:
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    dashboard_edit = script.split("async function openDashboardHealthEdit()", 1)[1].split(
+        "function hydrateSavedHealthForm", 1
+    )[0]
+    submit_handler = script.split('$("#health-form").addEventListener("submit"', 1)[1].split(
+        '$("#retry-analysis").addEventListener', 1
+    )[0]
+    local_save = submit_handler.split("if (isLocalPreview())", 1)[1].split("} else {", 1)[0]
+    remote_save = submit_handler.split('const checkup = await api("/health-checkups"', 1)[1].split(
+        "if (state.currentHealthOnly)", 1
+    )[0]
+
+    assert "state.returningUser = true;" in dashboard_edit
+    assert 'api("/eligibility-checks/latest")' in dashboard_edit
+    assert "syncReturningEligibilityState(latestEligibility)" in dashboard_edit
+    assert "openReturningUserHealthEdit();" in dashboard_edit
+    assert local_save.index("if (shouldRequestPrediction) showStep(5);") < local_save.index(
+        "await saveCurrentScreeningInputSnapshot();"
+    )
+    assert remote_save.index("if (shouldRequestPrediction) showStep(5);") < remote_save.index(
+        "await saveCurrentScreeningInputSnapshot();"
+    )
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
@@ -507,20 +577,20 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "오늘 기록 저장 중…",
         "초대 이메일 보내는 중…",
         "워치 기록 저장 중…",
-        "PDF 만드는 중…",
+        "PDF 화면 여는 중…",
     ):
         assert busy_label in script
     assert script.count("finally { releaseBusy(); }") >= 8
 
 
-def test_active_challenge_conflict_resumes_current_cycle_dashboard() -> None:
+def test_active_challenge_conflict_resumes_current_cycle_recording() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
     assert "error.status === 409" in script
     assert 'error.message.includes("진행 중인 4주 챌린지")' in script
     assert 'const currentCycle = await api("/challenge-cycles/current")' in script
     assert "renderCycle(currentCycle)" in script
-    assert 'showWorkspace("home", { moveFocus: false })' in script
+    assert 'showWorkspace("challenge", { moveFocus: false })' in script
     assert "이미 진행 중인 4주 챌린지를 불러왔어요" in script
 
 
@@ -568,9 +638,11 @@ def test_report_does_not_present_sample_progress_as_user_data() -> None:
     assert 'id="report-week-days"' in html and 'aria-label="요일별 실천 현황" hidden' in html
     assert "지난 4주" in html
     assert "전체" in html
-    assert "지난 4주·전체 PDF는 연결 준비 중입니다" in script
-    assert "다른 기간의 파일을 대신 내려받지 않습니다" in script
-    assert "report.challenge_details || []" in script
+    assert "현재 선택한 리포트 화면을 그대로 PDF 저장 화면으로 엽니다" in script
+    assert "prepareReportPrint(period)" in script
+    assert "지난 4주·전체 PDF는 연결 준비 중입니다" not in script
+    assert "다른 기간의 파일을 대신 내려받지 않습니다" not in script
+    assert "detailedReport.challenge_details || []" in script
     assert "주간 기록을 확인할 수 없어요" in script
     assert "건강교육을 불러오지 못했어요" in script
     assert "답 확인 중…" in script
@@ -647,5 +719,5 @@ def test_only_reviewed_diabetes_contract_is_active() -> None:
     assert ACTIVE_MODEL.model_key == "diabetes_incidence"
     assert ACTIVE_MODEL.outcome_definition == "next_observation_new_diabetes_diagnosis"
     assert ACTIVE_MODEL.observation_horizon == "approximately_2_years_next_klosa_wave"
-    assert ACTIVE_MODEL.threshold_is_approved is False
-    assert ACTIVE_MODEL.operational_model_activated is False
+    assert ACTIVE_MODEL.threshold_is_approved is True
+    assert ACTIVE_MODEL.operational_model_activated is True

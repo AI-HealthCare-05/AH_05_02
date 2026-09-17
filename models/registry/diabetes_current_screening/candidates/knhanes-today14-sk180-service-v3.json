@@ -8,6 +8,7 @@
   "threshold_version": "today14-missing-indicator-validation-spec042-v2",
   "preprocessing_version": "train-median-indicator-mode-onehot-categorical-indicator-waist-estimator-v2",
   "calibration_version": "train-year-oof-platt-lr-rf-blend-v1",
+  "promotion_status": "approved",
   "operational_model_activated": true,
   "artifact_local_path": "models/artifacts/candidates/diabetes_current_screening/knhanes-today14-sk180-service-v3/model.joblib",
   "artifact_source_path": "outputs/ml/knhanes_today_14features_sk180_v001/service_v3/model.joblib",
@@ -91,5 +92,10 @@
     "future_incidence_probability",
     "emergency_triage"
   ],
-  "medical_review_required": true
+  "medical_review_required": false,
+  "release_approval": {
+    "status": "approved",
+    "approved_at": "2026-09-17",
+    "scope": "risk_screening_and_health_education_only"
+  }
 }

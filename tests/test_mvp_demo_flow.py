@@ -8,12 +8,14 @@ from starlette import status
 
 from app.core import config
 from app.main import app
+from app.models.health import HealthCheckup
 from app.prediction import ACTIVE_MODEL
 from tests.db_utils import init_sqlite_test_db, reset_tortoise
 
 
 @pytest.mark.asyncio
-async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
+@pytest.mark.parametrize("include_legacy_fields", [True, False])
+async def test_demo_mode_completes_core_user_flow_without_redis(include_legacy_fields: bool) -> None:
     previous_demo_mode = config.DEMO_MODE
     config.DEMO_MODE = True
     await init_sqlite_test_db()
@@ -67,8 +69,7 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                     "waist_cm": 78,
                     "systolic_bp": 128,
                     "diastolic_bp": 78,
-                    "self_rated_health": "fair",
-                    "meal_count_yesterday": 3,
+                    **({"self_rated_health": "fair", "meal_count_yesterday": 3} if include_legacy_fields else {}),
                     "smoking_status": "never",
                     "regular_exercise": False,
                     "current_drinker": False,
@@ -78,6 +79,10 @@ async def test_demo_mode_completes_core_user_flow_without_redis() -> None:
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED
+            if not include_legacy_fields:
+                stored = await HealthCheckup.get(id=checkup.json()["data"]["checkup_id"])
+                assert stored.self_rated_health is None
+                assert stored.meal_count_yesterday is None
 
             job = await client.post(
                 "/api/v1/prediction-jobs",

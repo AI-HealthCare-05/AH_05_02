@@ -35,4 +35,3 @@
 - [ ] 모델·화면·API·운영 DB 계약 교차 확인
 - [ ] PoC·VOC·멘토링 환류 이력 연결
 - [ ] E2E·QA·Release Gate 완료 조건 확정
-

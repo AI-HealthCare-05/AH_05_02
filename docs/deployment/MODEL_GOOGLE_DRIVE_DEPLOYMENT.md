@@ -7,6 +7,9 @@
 | 오늘이 | `knhanes-today14-sk180-service-v3` | `today-knhanes-today14-sk180-service-v3.joblib` | `2189257587690adfcdf74702f69b516c0a8559cef6059ebd90d003e008c079b1` |
 | 내일이 | `rf25-tuned-education4-v2` | `tomorrow-rf25-tuned-education4-v2.joblib` | `45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e` |
 
+두 모델은 2026-09-17 위험 선별·건강교육 용도로 운영 공개 승인되었다. 진단·처방,
+약물 변경 또는 내일이 내부 점수를 개인 발병확률로 표시하는 용도로 사용할 수 없다.
+
 모델과 Manifest는 Google Drive의 `당뇨 모델` 폴더에 보관한다. 원본 의료 데이터와 사용자 입력은 업로드하지 않는다.
 
 ## 로컬 또는 EC2 설치

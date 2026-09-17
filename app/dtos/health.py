@@ -38,8 +38,8 @@ class HealthCheckupCreateRequest(BaseModel):
     waist_cm: float | None = Field(default=None, ge=45, le=160)
     systolic_bp: int | None = Field(default=None, ge=70, le=250)
     diastolic_bp: int | None = Field(default=None, ge=40, le=150)
-    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"]
-    meal_count_yesterday: int = Field(ge=0, le=10)
+    self_rated_health: Literal["very_good", "good", "fair", "poor", "very_poor"] | None = None
+    meal_count_yesterday: int | None = Field(default=None, ge=0, le=10)
     smoking_status: Literal["never", "former", "current"]
     regular_exercise: bool
     current_drinker: bool

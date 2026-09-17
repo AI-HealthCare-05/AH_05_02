@@ -249,8 +249,9 @@ def predict_research_model(model: str, payload: dict, *, as_of_date: date, model
             "artifact_sha256": loaded.manifest["artifact_sha256"],
             "explanation": explanation,
             "explanation_status": explanation["status"],
-            "display_allowed": False,
-            "operational_model_activated": False,
+            "promotion_status": loaded.manifest.get("promotion_status", "candidate_only"),
+            "display_allowed": loaded.manifest.get("operational_model_activated") is True,
+            "operational_model_activated": loaded.manifest.get("operational_model_activated") is True,
         }
     if model == "first-interval":
         user_input, _ = validated_input(payload, as_of_date)
