@@ -3069,15 +3069,12 @@ function renderPartialAnalysisNotice(run) {
   const modelNames = failedModels.map(([key]) => (
     key === "diabetes_current_screening" ? "현재 건강 신호" : "미래 위험"
   ));
-  const errorCodes = failedModels
-    .map(([, result]) => result.error?.code)
-    .filter(Boolean);
   const parts = [];
   if (modelNames.length) {
-    parts.push(`${modelNames.join("·")} 분석 실패${errorCodes.length ? ` (${errorCodes.join(", ")})` : ""}`);
+    parts.push(`${modelNames.join("·")} 결과를 확인하지 못했어요`);
   }
-  if (hasFactorFailure) parts.push("설명 요인 조회 실패");
-  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 실패한 결과는 낮은 위험으로 대체하지 않습니다.`;
+  if (hasFactorFailure) parts.push("위험 결과는 유지되지만 설명 요인을 불러오지 못했어요");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 잠시 후 다시 시도해 주세요. 확인하지 못한 결과는 '위험 낮음'으로 판정된 것이 아닙니다.`;
   $("#retry-partial-analysis").textContent = modelNames.length
     ? "실패한 분석만 다시 시도하기"
     : "설명 요인 다시 불러오기";
@@ -3088,8 +3085,8 @@ function modelComparisonGuidance(currentRun, futureRun) {
     return {
       code: "MODEL_RESULT_INCOMPLETE",
       display: true,
-      title: "일부 분석 결과를 확인할 수 없습니다",
-      message: "모델 파일 누락이나 분석 실패는 낮은 위험을 의미하지 않습니다.",
+      title: "한쪽 당뇨 위험 결과만 확인됐어요",
+      message: "확인된 결과만 보여드립니다. 확인하지 못한 결과는 '위험 낮음'으로 판정된 것이 아닙니다.",
     };
   }
   const current = currentRun.prediction;
@@ -3254,8 +3251,8 @@ async function runPrediction({ retryFailed = false } = {}) {
         ? "분석 시간이 초과되었습니다"
         : "분석을 완료하지 못했습니다";
       $("#analysis-failure-message").textContent = isTimeout
-        ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
+        ? `당뇨 위험 결과를 확인하지 못했어요. 입력정보는 유지됩니다. ${error.retryAfterSeconds || 30}초 후 다시 시도해 주세요.`
+        : "당뇨 위험 결과를 확인하지 못했어요. 잠시 후 같은 입력정보로 다시 시도해 주세요.";
       $("#analysis-failure").hidden = false;
     }
     $("#retry-analysis").hidden = false;
@@ -7369,7 +7366,9 @@ function renderMvpResultPreview() {
   state.predictionId = state.prediction.prediction_id;
   state.developmentPreviewRiskCategory = "moderate";
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
-  const comparison = new URLSearchParams(window.location.search).get("comparison");
+  const comparison = typeof URLSearchParams === "function"
+    ? new URLSearchParams(window.location.search).get("comparison")
+    : null;
   if (["current-high-future-low", "current-low-future-high"].includes(comparison)) {
     const approvedFixture = (modelKey, riskCategory) => ({
       model_key: modelKey,

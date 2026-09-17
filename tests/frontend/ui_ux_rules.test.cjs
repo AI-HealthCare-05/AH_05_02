@@ -149,9 +149,13 @@ test('model conflict guidance prioritizes current signal and never treats failur
   const future = { status: 'succeeded', prediction: approved('low') };
   assert.equal(context.modelComparisonGuidance(current, future).code, 'CURRENT_SIGNAL_FUTURE_LOW');
   assert.match(context.modelComparisonGuidance(current, future).message, /현재 신호 확인을 우선/);
+  const futureElevated = { status: 'succeeded', prediction: approved('moderate') };
+  const currentLow = { status: 'succeeded', prediction: approved('low') };
+  assert.equal(context.modelComparisonGuidance(currentLow, futureElevated).code, 'CURRENT_LOW_FUTURE_ELEVATED');
+  assert.match(context.modelComparisonGuidance(currentLow, futureElevated).message, /정기 검사와 생활습관 점검/);
   const incomplete = context.modelComparisonGuidance(current, { status: 'failed' });
   assert.equal(incomplete.code, 'MODEL_RESULT_INCOMPLETE');
-  assert.match(incomplete.message, /낮은 위험을 의미하지 않습니다/);
+  assert.match(incomplete.message, /'위험 낮음'으로 판정된 것이 아닙니다/);
 });
 
 test('unapproved model outputs cannot create a public conflict explanation', () => {
