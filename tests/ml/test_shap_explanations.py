@@ -46,13 +46,26 @@ def test_exact_shap_allocates_interactions_and_preserves_body_group():
 
 
 def test_today14_groups_dependent_inputs_and_remains_additive():
-    frame = pd.DataFrame([{
-        "age": 56.0, "height_cm": 162.0, "weight_kg": 68.0, "waist_cm": 91.0,
-        "bmi": 25.9, "systolic_bp": 130.0, "diastolic_bp": 80.0, "sex": 2.0,
-        "current_smoker": 0.0, "education": 3.0, "region": 1.0,
-        "diabetes_family_history": 0.0, "hypertension_family_history": 0.0,
-        "alcohol_frequency": 2.0,
-    }])
+    frame = pd.DataFrame(
+        [
+            {
+                "age": 56.0,
+                "height_cm": 162.0,
+                "weight_kg": 68.0,
+                "waist_cm": 91.0,
+                "bmi": 25.9,
+                "systolic_bp": 130.0,
+                "diastolic_bp": 80.0,
+                "sex": 2.0,
+                "current_smoker": 0.0,
+                "education": 3.0,
+                "region": 1.0,
+                "diabetes_family_history": 0.0,
+                "hypertension_family_history": 0.0,
+                "alcohol_frequency": 2.0,
+            }
+        ]
+    )
 
     def score(rows):
         assert (rows.height_cm.isna() == rows.waist_cm.isna()).all()

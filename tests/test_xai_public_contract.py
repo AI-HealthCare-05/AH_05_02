@@ -39,12 +39,19 @@ def test_independent_xai_gate_requires_explicit_approval(monkeypatch):
 @pytest.mark.asyncio
 async def test_public_risk_factor_endpoint_returns_persisted_approved_contract(monkeypatch):
     prediction = SimpleNamespace(
-        id=91, job_id="job-91", display_allowed=True,
-        operational_model_activated=True, explanation_status="approved",
+        id=91,
+        job_id="job-91",
+        display_allowed=True,
+        operational_model_activated=True,
+        explanation_status="approved",
     )
     factor = SimpleNamespace(
-        factor_name="bmi", display_name="BMI", impact_direction="increase",
-        importance_score=0.01, display_order=1, is_modifiable=True,
+        factor_name="bmi",
+        display_name="BMI",
+        impact_direction="increase",
+        importance_score=0.01,
+        display_order=1,
+        is_modifiable=True,
         message="당뇨 위험을 높이는 방향으로 반영되었습니다.",
     )
     monkeypatch.setattr(prediction_routers.HealthRepository, "get_prediction", AsyncMock(return_value=prediction))
@@ -52,7 +59,9 @@ async def test_public_risk_factor_endpoint_returns_persisted_approved_contract(m
     monkeypatch.setattr(
         prediction_routers.PredictionJob,
         "get_or_none",
-        AsyncMock(return_value=SimpleNamespace(result={"explanation": _explanation(status="approved", display_allowed=True)})),
+        AsyncMock(
+            return_value=SimpleNamespace(result={"explanation": _explanation(status="approved", display_allowed=True)})
+        ),
     )
     response = await prediction_routers.read_risk_factors(91, SimpleNamespace(id=7))
     data = response["data"]
@@ -64,8 +73,11 @@ async def test_public_risk_factor_endpoint_returns_persisted_approved_contract(m
 @pytest.mark.asyncio
 async def test_public_risk_factor_endpoint_fails_closed_without_approval(monkeypatch):
     prediction = SimpleNamespace(
-        id=91, job_id="job-91", display_allowed=True,
-        operational_model_activated=True, explanation_status="research_only",
+        id=91,
+        job_id="job-91",
+        display_allowed=True,
+        operational_model_activated=True,
+        explanation_status="research_only",
     )
     monkeypatch.setattr(prediction_routers.HealthRepository, "get_prediction", AsyncMock(return_value=prediction))
     response = await prediction_routers.read_risk_factors(91, SimpleNamespace(id=7))
