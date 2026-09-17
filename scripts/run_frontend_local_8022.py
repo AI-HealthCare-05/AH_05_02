@@ -96,6 +96,7 @@ if __name__ == "__main__":
     os.environ.update(local_queue_environment())
     os.environ.update(local_model_environment(root))
     python = Path(os.environ.get("LOCAL_PYTHON", root / ".venv/bin/python"))
+    port = os.environ.get("LOCAL_PORT", "8022")
     os.execv(
         python,
         [
@@ -106,6 +107,6 @@ if __name__ == "__main__":
             "--host",
             "127.0.0.1",
             "--port",
-            "8022",
+            port,
         ],
     )
