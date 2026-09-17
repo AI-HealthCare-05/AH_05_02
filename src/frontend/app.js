@@ -1652,10 +1652,18 @@ function syncExerciseDetails() {
   const minutes = $("#exercise-minutes");
   const card = $("#exercise-detail-card");
   if (!days || !minutes || !card) return;
-  days.disabled = false;
-  minutes.disabled = false;
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
+  // 규칙적인 운동이 "아니요"면 운동 일수·시간은 항상 0으로 제출된다(제출 시 강제 변환,
+  // 백엔드 검증도 이를 요구함). 입력칸을 그대로 열어두면 사용자가 값을 입력해 놓고도
+  // 화면 요약에는 0으로 표시되어 혼란을 준다. 여기서 바로 잠그고 0으로 맞춰 둔다.
+  days.disabled = !isRegularExercise;
+  minutes.disabled = !isRegularExercise;
+  if (!isRegularExercise) {
+    days.value = "0";
+    minutes.value = "0";
+  }
   card.hidden = false;
-  card.classList.toggle("disabled", false);
+  card.classList.toggle("disabled", !isRegularExercise);
 }
 
 function syncAlcoholFrequencyDetails() {
