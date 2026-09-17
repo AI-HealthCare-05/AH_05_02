@@ -590,7 +590,7 @@ def test_active_challenge_conflict_resumes_current_cycle_recording() -> None:
     assert 'error.message.includes("진행 중인 4주 챌린지")' in script
     assert 'const currentCycle = await api("/challenge-cycles/current")' in script
     assert "renderCycle(currentCycle)" in script
-    assert 'showWorkspace("challenge", { moveFocus: false })' in script
+    assert "await openChallengeTab()" in script
     assert "이미 진행 중인 4주 챌린지를 불러왔어요" in script
 
 
@@ -599,7 +599,9 @@ def test_challenge_step_navigation_loads_cards_and_guards_start_button() -> None
 
     assert "async function goStepFromNav(step)" in script
     assert "if (step === 7)" in script
-    assert "await loadChallenges()" in script
+    assert "await openChallengeTab()" in script
+    assert "function showChallengeSelectionView()" in script
+    assert 'cycle = await api("/challenge-cycles/current")' in script
     assert "챌린지 목록을 불러오고 있어요." in script
     assert 'const startButton = $("#start-challenge")' in script
     assert "startButton.disabled = true" in script

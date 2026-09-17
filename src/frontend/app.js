@@ -552,6 +552,43 @@ function hasCurrentChallengeCycle(cycle = state.cycle) {
     && !["completed", "cancelled"].includes(cycle?.status);
 }
 
+function showChallengeSelectionView() {
+  $("#challenge-form").hidden = false;
+  $("#challenge-safety-copy").hidden = false;
+  $("#challenge-lifestyle-summary").hidden = false;
+  $("#challenge-title").textContent = "오늘부터 실천할 수 있는 생활습관을 골라보세요";
+}
+
+async function openChallengeTab({ selectionCompleted = false } = {}) {
+  const token = state.token;
+  if (!hasCurrentChallengeCycle(state.cycle) && !isLocalPreview() && !requireActiveHealthConsent("새 챌린지 시작")) return;
+  let cycle = state.cycle;
+  if (!hasCurrentChallengeCycle(cycle) && !isLocalPreview()) {
+    try {
+      cycle = await api("/challenge-cycles/current");
+      if (state.token !== token) return;
+      renderCycle(cycle);
+    } catch (error) {
+      if (state.token !== token) return;
+      if (error.status !== 404 && !error.message.includes("진행 중인 챌린지가 없습니다")) throw error;
+      cycle = null;
+      state.cycle = null;
+    }
+  }
+  if (hasCurrentChallengeCycle(cycle)) {
+    showWorkspace("challenge", { moveFocus: false });
+    showStep(8);
+    await loadDailyRecords();
+    if (state.token !== token) return;
+    if (selectionCompleted) showMessage("챌린지 선택이 완료되었습니다.", "success");
+    return;
+  }
+  showChallengeSelectionView();
+  await loadChallenges();
+  if (state.token !== token) return;
+  showStep(7);
+}
+
 function recordTypeLabel(type) {
   return type === "photo" ? "사진 인증" : "간편 체크";
 }
@@ -787,8 +824,7 @@ async function goStepFromNav(step) {
     return;
   }
   if (step === 7) {
-    showStep(step);
-    await loadChallenges();
+    await openChallengeTab();
     return;
   }
   showStep(step);
@@ -5540,7 +5576,8 @@ $$("[data-top-step]").forEach((button) => button.addEventListener("click", async
   }
   const targetStep = Number(button.dataset.topStep);
   if (targetStep === 7) {
-    try { await loadChallenges(); } catch (error) { showMessage(error.message); }
+    try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+    return;
   }
   showStep(targetStep);
 }));
@@ -6404,22 +6441,27 @@ $("#walking-level-picker").addEventListener("change", (event) => {
 });
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!requireActiveHealthConsent("새 챌린지 시작")) return;
+  if (challengeV3.busy || state.challengeListStatus !== "ready" || !challengeV3.active) return;
+  const token = state.token;
   if (!$("#challenge-follow-up").hidden) {
     $("#challenge-follow-up").focus({ preventScroll: true });
     showMessage("이전 의료기관 안내를 먼저 확인해 주세요.");
     return;
   }
   const ids = [...state.selectedChallengeIds];
+  if (challengeV3.owner !== state.token) return showMessage("로그인한 계정의 후보를 다시 불러와 주세요.");
+  if (ids.length !== 3) return showMessage("음료·식단·운동 각 1개가 필요합니다.");
   const customSelected = state.customChallengeSelected;
   if (!ids.length && !customSelected) return showMessage("챌린지를 하나 이상 선택해 주세요.");
   state.walkingLevel = selectedRadioValue("walking-level") || "starter";
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "챌린지 시작 중…");
   try {
     if (isLocalPreview()) {
-      renderCycle(createLocalDemoCycle(ids, customSelected ? state.customChallenge : null));
+      const cycle = createLocalDemoCycle(ids, customSelected ? state.customChallenge : null);
+      renderCycle(cycle);
       renderLocalDemoDashboard();
-      showStep(8);
-      showWorkspace("challenge", { moveFocus: false });
+      await openChallengeTab({ selectionCompleted: true });
       return;
     }
     if (customSelected) {
@@ -6427,13 +6469,15 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
-      start_date: new Date().toISOString().slice(0, 10), challenge_ids: ids, prediction_id: state.predictionId,
+      start_date: challengeDay(), challenge_ids: ids, prediction_id: state.predictionId,
+      catalog_version: "evidence-v3", focus: challengeV3.focus, difficulty: challengeV3.difficulty,
     }) });
+    if (state.token !== token) return;
     renderCycle(cycle);
-    await refreshDashboard();
-    showStep(8);
-    showWorkspace("challenge", { moveFocus: false });
+    await openChallengeTab({ selectionCompleted: true });
+    void refreshDashboard().catch(() => {});
   } catch (error) {
+    if (state.token !== token) return;
     const hasActiveCycle = error.status === 409 && (
       error.code === "ACTIVE_CHALLENGE_CYCLE_EXISTS"
       || error.message.includes("진행 중인 4주 챌린지")
@@ -6444,11 +6488,11 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     }
     try {
       const currentCycle = await api("/challenge-cycles/current");
+      if (state.token !== token) return;
       renderCycle(currentCycle);
-      await refreshDashboard();
-      showStep(8);
-      showWorkspace("challenge", { moveFocus: false });
-      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요. 오늘의 실천을 이어서 기록해 주세요.", "success");
+      await openChallengeTab();
+      void refreshDashboard().catch(() => {});
+      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요.", "success");
     } catch (currentCycleError) {
       showMessage(currentCycleError.message || error.message);
     }
