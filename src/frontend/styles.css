@@ -5546,3 +5546,24 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   line-height:1.4;
   color:#b4403a;
 }
+
+.result-room-screen .current-signal-content .current-risk-signal-body,
+.result-room-screen .current-signal-content .current-xai-slot.xai-ready{
+  background:rgba(255,250,240,.94) !important;
+}
+.result-room-screen .current-signal-content .current-xai-slot.xai-ready{
+  border:2px solid #c8d9d2 !important;
+  place-items:stretch;
+  text-align:left;
+}
+.result-xai-card.xai-ready .result-xai-waiting{
+  place-items:stretch;
+  align-content:start;
+  text-align:left;
+}
+.result-xai-card.xai-ready .factor-list{
+  width:100%;
+}
+.result-xai-card.xai-ready .factor-list li{
+  display:block;
+}

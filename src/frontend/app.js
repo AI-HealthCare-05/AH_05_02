@@ -2978,7 +2978,11 @@ function renderXaiExplanationLists(
     Array.isArray(currentFactors?.items) ? currentFactors.items : [], currentSignal,
   );
   const futureList = $("#factor-list");
+  const currentReady = Boolean(currentApproved && currentFactors?.display_allowed === true && currentItems.length);
+  const currentTitle = $("#current-factor-title");
+  if (currentTitle) currentTitle.textContent = currentReady ? "현재 위험 신호 설명" : "현재 건강 신호 XAI 연결 대기";
   if (currentList) {
+    currentList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", currentReady);
     currentList.innerHTML = currentApproved && currentFactors?.display_allowed === true && currentItems.length
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
@@ -2987,6 +2991,10 @@ function renderXaiExplanationLists(
   const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
     ["low", "caution", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
+  const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);
+  const futureTitle = $("#future-factor-title");
+  if (futureTitle) futureTitle.textContent = futureReady ? "미래 당뇨 위험 설명" : "미래 위험 XAI 연결 대기";
+  futureList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", futureReady);
   futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
@@ -2994,53 +3002,6 @@ function renderXaiExplanationLists(
 
 
 
-function renderPrediction(prediction, factors) {
-  rememberModelOutputMetadata(prediction, "prediction");
-  const isApprovedRisk = isPublicRiskDisplayAllowed(prediction);
-  const developmentPreviewRisk = isDemoEnvironment()
-    ? normalizeForecastSignal(
-      prediction?.preview_only === true
-        ? prediction.preview_signal_level
-        : state.developmentPreviewRiskCategory,
-    )
-    : null;
-  const canDisplayRisk = isApprovedRisk || Boolean(developmentPreviewRisk);
-  const displayPrediction = developmentPreviewRisk
-    ? { ...prediction, risk_category: developmentPreviewRisk, risk_category_label: riskCategoryLabels[developmentPreviewRisk] }
-    : prediction;
-  const hasApprovedExplanation = isApprovedRisk
-    && factors?.status === "approved"
-    && factors?.shap_claimed === true;
-  renderPredictionStatus("succeeded", { resultAvailable: canDisplayRisk, showResult: true });
-  $("#probability-policy").querySelector("p").textContent = isApprovedRisk
-    ? "결과는 당뇨병 진단이나 치료 판단을 대신하지 않습니다."
-    : developmentPreviewRisk
-      ? "개발 확인용 위험 범주만 표시합니다. 숫자 점수·확률·위험요인은 표시하지 않습니다."
-    : "검증 전 확률·개선율은 표시하지 않습니다. 승인 전에는 숫자 점수와 내부 모델값도 표시하지 않습니다.";
-  const factorItems = Array.isArray(factors?.items) ? factors.items : [];
-  const factorList = $("#factor-list");
-  if (factorList) factorList.innerHTML = hasApprovedExplanation && factorItems.length
-    ? renderFactorItems(factorItems)
-    : `<li><strong>설명 결과 준비 중</strong><p>${escapeHtml(factors?.message || "검증된 위험·보호요인이 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
-  $("#risk-confirm-card").hidden = false;
-  $("#risk-preview-controls").hidden = !isDemoEnvironment();
-  $("#result-unavailable").hidden = true;
-  $("#development-preview-notice").hidden = true;
-  $("#medical-guidance-detail").hidden = true;
-  // A future-model result must never populate the current-screening traffic light.
-  $("#future-risk-category").textContent = canDisplayRisk
-    ? `${developmentPreviewRisk ? "화면 확인용 · " : ""}${forecastSignalLabel(normalizeRiskKey(displayPrediction))}`
-    : "결과 준비 중";
-  renderTwoYearRiskForecast(prediction, {
-    canDisplayRisk,
-    fallbackLevel: normalizeRiskKey(displayPrediction),
-    preview: Boolean(developmentPreviewRisk),
-  });
-  updateResultConfirmation();
-  updateLifestyleSummary();
-  $("#analysis-failure").hidden = true;
-  $("#retry-analysis").hidden = true;
-}
 
 async function requestPredictionModel(modelKey) {
   if (!["diabetes_current_screening", "diabetes_incidence"].includes(modelKey)) {
