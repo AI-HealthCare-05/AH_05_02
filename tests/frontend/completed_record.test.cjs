@@ -16,7 +16,7 @@ function harness() {
     api: async () => { writes++; }, renderDailyRecordList() {}, updateDailyRecordSummary() {},
     loadWeeklyReport: async () => {}, showMessage() {}, habitRecordIcon: kind => kind, openForestEntryDialog() {},
   });
-  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'isHydrationRecord', 'clampWaterServings', 'waterLevelForServings', 'currentWaterServings', 'syncWaterServingControl', 'openSimpleRecordModal', 'showPhotoRecordState', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'dailyChallengeTargetCount', 'allDailyChallengesCompleted', 'closeChallengeRewardDialog', 'openChallengeRewardDialog', 'maybeOpenDailyReward', 'completeDailyRecord', 'undoDailyRecord']) {
+  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'isHydrationRecord', 'clampWaterServings', 'waterLevelForServings', 'currentWaterServings', 'syncWaterServingControl', 'openSimpleRecordModal', 'showPhotoRecordState', 'clearPhotoSelectionPreview', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'dailyChallengeTargetCount', 'allDailyChallengesCompleted', 'closeChallengeRewardDialog', 'openChallengeRewardDialog', 'maybeOpenDailyReward', 'completeDailyRecord', 'undoDailyRecord']) {
     const match = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
     assert.ok(match, name); vm.runInContext(match[0], ctx);
   }

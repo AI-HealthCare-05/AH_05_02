@@ -385,6 +385,10 @@ body.modal-open{overflow:hidden}
 .photo-upload-box span svg{display:block;width:42px;height:42px}
 .photo-upload-box strong{font-size:19px;color:var(--ink)}
 .photo-upload-box small{display:block;max-width:320px;font-size:14px;line-height:1.5;color:#5f6965}
+.photo-upload-preview{display:block;width:min(100%,360px);max-height:260px;object-fit:contain;border-radius:14px;background:#fff;box-shadow:0 4px 16px rgba(32,65,51,.16)}
+.photo-change-label{display:inline-flex!important;align-items:center;justify-content:center;min-height:38px;margin-top:4px;padding:6px 14px;border-radius:999px;background:#174c3d;color:#fff!important;font-size:14px!important;font-weight:900}
+.photo-change-label[hidden]{display:none!important}
+.photo-validation{margin:-4px 0 16px;color:#52635c;font-size:14px;text-align:center}.photo-upload-box:has(.photo-upload-preview:not([hidden])){border-style:solid;border-color:#24765f;background:#eaf6ef}
 .record-modal-card{border:5px solid #704522;background:linear-gradient(160deg,#d7a45f 0%,#a96832 52%,#81502b 100%);box-shadow:inset 0 0 0 3px rgba(255,222,157,.42),0 24px 70px rgba(38,20,8,.38)}
 .record-modal-card>section{border:3px solid #b97936;border-radius:20px;background:#fff8e7;padding:24px;box-shadow:inset 0 0 18px rgba(111,69,34,.08)}
 #record-photo-panel #photo-state-upload>.eyebrow{color:#17120c!important}

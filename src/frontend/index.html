@@ -28,7 +28,7 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260918-demo-photo-selection-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260918-photo-preview-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
@@ -869,10 +869,13 @@
                     <p class="v3-vlm-notice v3-vegetable-only">로컬 모델이 판단하기 어려운 경우 사진이 OpenAI VLM 보완 검토에 자동으로 사용될 수 있습니다.</p>
                   </div>
                   <button class="photo-upload-box" id="start-photo-check" type="button">
-                    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
-                    <strong>사진 찍기 또는 앨범에서 선택</strong>
-                    <small>대표 사진 1장 · JPG·PNG·WEBP · 8MB·1200만 화소 이하</small>
+                    <img id="v3-photo-preview" class="photo-upload-preview" alt="선택한 인증 사진 미리보기" hidden>
+                    <span id="v3-photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+                    <strong id="v3-photo-upload-title">사진 찍기 또는 앨범에서 선택</strong>
+                    <small id="v3-photo-upload-condition">업로드 조건: 대표 사진 1장 · JPG·PNG·WEBP · 8MB·1200만 화소 이하</small>
+                    <span id="v3-photo-change-label" class="photo-change-label" hidden>사진 변경</span>
                   </button>
+                  <p id="v3-photo-validation" class="photo-validation" role="status">사진을 선택하면 형식·용량·해상도를 확인합니다.</p>
                   <button class="primary" id="confirm-photo-record" type="button">사진으로 인증하기</button>
                   <button class="secondary record-fallback" type="button">사진 없이 간편 체크로 완료할게요</button>
                 </div>
