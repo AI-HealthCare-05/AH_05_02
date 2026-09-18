@@ -215,6 +215,7 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
   for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
     const html = fs.readFileSync(file, 'utf8');
     assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
+    assert.equal((html.match(/class="demo-photo-card" aria-pressed="false"/g) || []).length, 3);
     assert.equal((html.match(/name="v3-photo-value"/g) || []).length, 3);
     assert.equal((html.match(/v3-vegetable-only/g) || []).length, 3);
     assert.doesNotMatch(html, /external_vlm_consent/);
@@ -223,6 +224,11 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
   const indexHtml = fs.readFileSync('src/frontend/index.html', 'utf8');
   assert.doesNotMatch(indexHtml, /id="v3-vlm-consent"/);
   assert.doesNotMatch(indexHtml, /OpenAI VLM으로 보완 검토하는 데 동의/);
+  for (const file of ['src/frontend/styles.css', 'src/frontend/intro-retro-base.css']) {
+    const css = fs.readFileSync(file, 'utf8');
+    assert.match(css, /\.demo-photo-card\[aria-pressed="true"\]/);
+    assert.match(css, /content:"✓ 선택"/);
+  }
 });
 
 test('walking photo proof hides every vegetable-only demo and guidance block', () => {
