@@ -25,3 +25,17 @@ def test_production_assets_require_migrations_and_rendered_nginx_config() -> Non
     assert "../nginx/runtime/default.conf" in compose
     assert (ROOT / "scripts" / "preflight-production.sh").exists()
     assert (ROOT / "scripts" / "prepare-ec2-release.sh").exists()
+
+
+def test_all_nginx_entrypoints_allow_photo_upload_multipart_overhead() -> None:
+    configs = (
+        "infra/nginx/default.conf",
+        "infra/nginx/prod_http.conf",
+        "infra/nginx/prod_https.conf",
+        "infra/nginx/prod_http.conf.template",
+        "infra/nginx/prod_https.conf.template",
+        "infra/nginx/ec2-http.conf.template",
+    )
+    for config_path in configs:
+        config = (ROOT / config_path).read_text(encoding="utf-8")
+        assert "client_max_body_size 10m;" in config, config_path
