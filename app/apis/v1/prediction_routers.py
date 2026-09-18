@@ -396,7 +396,7 @@ async def read_risk_factors(
                     "factor_name": factor.factor_name,
                     "display_name": factor.display_name,
                     "direction": factor.impact_direction,
-                    "contribution": contributions[factor.factor_name],
+                    "contribution": contributions.get(factor.factor_name),
                     "absolute_contribution": factor.importance_score,
                     "modifiable": factor.is_modifiable,
                     "message": factor.message,
