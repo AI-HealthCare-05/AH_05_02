@@ -11,6 +11,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,7 @@ def _validate_artifact(artifact: Any, manifest: dict[str, Any]) -> dict[str, Any
     return artifact
 
 
+@lru_cache(maxsize=4)
 def load_current_screening_model(
     *,
     manifest_path: Path = DEFAULT_MANIFEST,
