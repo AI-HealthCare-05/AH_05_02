@@ -4160,13 +4160,60 @@ function showPhotoRecordState(stateId) {
     $(`#${id}`).hidden = id !== stateId;
   });
 }
+function clearPhotoSelectionPreview() {
+  if (state.photoPreviewObjectUrl && typeof URL !== "undefined") URL.revokeObjectURL(state.photoPreviewObjectUrl);
+  state.photoPreviewObjectUrl = "";
+  const preview = $("#v3-photo-preview");
+  preview.hidden = true;
+  preview.removeAttribute?.("src");
+  $("#v3-photo-upload-icon").hidden = false;
+  $("#v3-photo-upload-title").textContent = "사진 찍기 또는 앨범에서 선택";
+  $("#v3-photo-change-label").hidden = true;
+  $("#v3-photo-validation").textContent = "사진을 선택하면 형식·용량·해상도를 확인합니다.";
+}
+async function showPhotoSelectionPreview(file) {
+  if (!file) return clearPhotoSelectionPreview();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("JPG·PNG·WEBP 사진만 업로드할 수 있어요.");
+  if (!file.size || file.size > 8 * 1024 * 1024) throw new Error("사진은 비어 있지 않은 8MB 이하 파일이어야 해요.");
+  const objectUrl = URL.createObjectURL(file);
+  let dimensions;
+  try {
+    dimensions = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      image.onerror = () => reject(new Error("사진을 읽을 수 없어요. 다른 사진을 선택해 주세요."));
+      image.src = objectUrl;
+    });
+    if (!dimensions.width || !dimensions.height || dimensions.width * dimensions.height > 12_000_000) {
+      throw new Error("1200만 화소 이하 사진을 선택해 주세요.");
+    }
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+  if (state.photoPreviewObjectUrl) URL.revokeObjectURL(state.photoPreviewObjectUrl);
+  state.photoPreviewObjectUrl = objectUrl;
+  const preview = $("#v3-photo-preview");
+  preview.src = objectUrl;
+  preview.hidden = false;
+  $("#v3-photo-upload-icon").hidden = true;
+  $("#v3-photo-upload-title").textContent = "선택한 사진";
+  $("#v3-photo-change-label").hidden = false;
+  $("#v3-photo-validation").textContent = `조건 확인 완료 · ${dimensions.width}×${dimensions.height}px · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
+}
 function resetPhotoRecordModal() {
   state.photoAttempt = 0;
   state.photoCompletedByFallback = false;
   showPhotoRecordState("photo-state-upload");
-  $("#photo-fail-hint").textContent = "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.";
+  const vegetableReview = Number(state.recordTarget?.item?.verification_type) === 1;
+  $("#photo-fail-hint").textContent = vegetableReview
+    ? "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요."
+    : "밝은 곳에서 인증 대상이 잘 보이도록 다시 찍어주세요.";
   $("#photo-pending-hint").textContent = "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
   $("#photo-success-title").textContent = "확인됐어요!";
+  $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
+  $("#demo-photo-selection").textContent = "";
+  clearPhotoSelectionPreview();
 }
 function openPhotoRecordModal(item) {
   if (state.dailyCompleted.has(String(item.user_challenge_id))) {
@@ -4176,8 +4223,10 @@ function openPhotoRecordModal(item) {
   state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "photo", item };
   resetPhotoRecordModal();
   const v3 = item.catalog_version === "evidence-v3";
+  const vegetableReview = v3 && Number(item.verification_type) === 1;
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
+  $$(".v3-vegetable-only").forEach((element) => { element.hidden = !vegetableReview; });
   $("#v3-photo-file").value = "";
   $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
   const usesMinutes = Boolean(item.goal.target_minutes);
@@ -6594,16 +6643,31 @@ $("#undo-daily-record")?.addEventListener("click", async (event) => {
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
 async function selectDemoPhoto(button) {
   try {
+    const item = state.recordTarget?.item;
+    if (item?.catalog_version !== "evidence-v3" || Number(item.verification_type) !== 1) return;
     const response = await fetch(button.dataset.demoPhoto);
     if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
     const transfer = new DataTransfer();
     transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
     $("#v3-photo-file").files = transfer.files;
+    await showPhotoSelectionPreview($("#v3-photo-file").files[0]);
     $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
     $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
   } catch (error) { showMessage(error.message); }
 }
 $$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$("#v3-photo-file").addEventListener("change", async () => {
+  const input = $("#v3-photo-file");
+  $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
+  $("#demo-photo-selection").textContent = "";
+  try {
+    await showPhotoSelectionPreview(input.files[0]);
+  } catch (error) {
+    input.value = "";
+    clearPhotoSelectionPreview();
+    showMessage(error.message);
+  }
+});
 $$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
   if (!input.checked) return;
   $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });

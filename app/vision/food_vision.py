@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
@@ -188,28 +189,49 @@ def get_food_vision_provider() -> FoodVisionProvider:
             "OpenAI Vision 제공자는 비활성화되어 있습니다. FOOD_VISION_PROVIDER=local_kfood를 사용해 주세요."
         )
     if config.FOOD_VISION_PROVIDER == "local_kfood":
-        from app.vision.local_kfood import LocalKFoodVisionProvider
-
-        return LocalKFoodVisionProvider()
+        return _cached_local_kfood_provider(_local_kfood_signature())
     raise FoodVisionError(f"지원하지 않는 FOOD_VISION_PROVIDER입니다: {config.FOOD_VISION_PROVIDER}")
+
+
+def _local_kfood_signature() -> tuple[str, ...]:
+    """Return every setting that changes the reusable local model runtime."""
+
+    from app.vision.local_kfood import configured_model_paths
+
+    classifier_path, meta_path, segmenter_path = configured_model_paths()
+    return (
+        str(Path(classifier_path).resolve()),
+        str(Path(meta_path).resolve()),
+        str(Path(segmenter_path).resolve()),
+        str(Path(config.KFOOD_SEGMENTATION_CONFIG_PATH).resolve()),
+        str(Path(config.KFOOD_DISH_VEGETABLES_PATH).resolve()),
+        config.KFOOD_CLASSIFIER_SHA256.lower(),
+        config.KFOOD_CLASSIFIER_META_SHA256.lower(),
+        config.KFOOD_SEGMENTER_SHA256.lower(),
+    )
+
+
+@lru_cache(maxsize=4)
+def _cached_local_kfood_provider(_signature: tuple[str, ...]) -> FoodVisionProvider:
+    """Reuse the heavy Torch and TFLite runtimes across photo requests."""
+
+    from app.vision.local_kfood import LocalKFoodVisionProvider
+
+    return LocalKFoodVisionProvider()
 
 
 def food_vision_is_configured() -> bool:
     if config.FOOD_VISION_PROVIDER != "local_kfood":
         return False
-    from app.vision.local_kfood import configured_model_paths
-
-    classifier_path, meta_path, segmenter_path = configured_model_paths()
-    required = (
-        classifier_path,
-        meta_path,
-        segmenter_path,
-        config.KFOOD_SEGMENTATION_CONFIG_PATH,
-        config.KFOOD_DISH_VEGETABLES_PATH,
-    )
-    return bool(
-        config.KFOOD_CLASSIFIER_SHA256 and config.KFOOD_CLASSIFIER_META_SHA256 and config.KFOOD_SEGMENTER_SHA256
-    ) and all(Path(path).is_file() for path in required)
+    if not (0 < config.FOOD_COVERAGE_PASS_THRESHOLD <= 1 and 0 < config.VEGETABLE_RATIO_PASS_THRESHOLD <= 1):
+        return False
+    try:
+        # Construction verifies every artifact digest and parses both model
+        # configuration files. The cached instance is then reused for inference.
+        get_food_vision_provider()
+    except FoodVisionError:
+        return False
+    return True
 
 
 def sha256_digest(image_bytes: bytes) -> str:

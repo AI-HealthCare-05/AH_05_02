@@ -206,10 +206,12 @@ async def ready(response: Response) -> dict[str, object]:
     )
     current_artifact_available = bool(current_artifact_path) and Path(current_artifact_path).is_file()
     food_vision_ready = config.FOOD_VISION_PROVIDER != "local_kfood" or food_vision_is_configured()
+    food_vision_vlm_fallback_ready = not config.OPENAI_VLM_FALLBACK_ENABLED or bool(config.OPENAI_API_KEY.strip())
     operational_ready = (
         (not ACTIVE_MODEL.operational_model_activated or future_artifact_available)
         and (not CURRENT_SCREENING_MODEL.operational_model_activated or current_artifact_available)
         and food_vision_ready
+        and food_vision_vlm_fallback_ready
     )
     if not operational_ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -223,6 +225,8 @@ async def ready(response: Response) -> dict[str, object]:
             "future_artifact_path_available": future_artifact_available,
             "current_artifact_path_available": current_artifact_available,
             "food_vision_ready": food_vision_ready,
+            "food_vision_vlm_fallback_enabled": config.OPENAI_VLM_FALLBACK_ENABLED,
+            "food_vision_vlm_fallback_ready": food_vision_vlm_fallback_ready,
             "demo_artifact_inference_enabled": config.DEMO_ARTIFACT_INFERENCE_ENABLED,
             "worker_preload_required_for_release": not (config.DEMO_MODE and config.DEMO_ARTIFACT_INFERENCE_ENABLED),
         },
