@@ -440,14 +440,14 @@ function togglePasswordVisibility(button) {
   } else button.textContent = label;
 }
 
-// The actual ASCII symbol set (matches Python's string.punctuation on the server).
-// Testing "not alphanumeric/whitespace" previously let any other character (e.g. Korean
-// text) count as the "special character", so a password with no real symbol still passed.
-const PASSWORD_SPECIAL_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
-function hasPasswordSpecialChar(value) {
-  return [...value].some((char) => PASSWORD_SPECIAL_CHARS.includes(char));
-}
 function signupPasswordIssues(value) {
+  // The actual ASCII symbol set (matches Python's string.punctuation on the server).
+  // Testing "not alphanumeric/whitespace" previously let any other character (e.g. Korean
+  // text) count as the "special character", so a password with no real symbol still passed.
+  // Kept local to this function: regex-based test harnesses extract only the
+  // `function signupPasswordIssues(...) { ... }` block, not top-level helpers above it.
+  const PASSWORD_SPECIAL_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+  const hasPasswordSpecialChar = (value) => [...value].some((char) => PASSWORD_SPECIAL_CHARS.includes(char));
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
   if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
