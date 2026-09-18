@@ -127,7 +127,7 @@ test('XAI explanation cards show only approved returned factors with safe labels
   assert.equal(nodes['#future-factor-title'].textContent, '미래 당뇨 위험 설명');
   assert.equal(nodes['#factor-list'].ready, true);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 점수를 낮춘 방향 · 바꿀 수 있는 요인/);
+  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 당뇨 위험을 낮춘 방향 · 바꿀 수 있는 요인/);
   render({ ...approvedFactors, display_allowed: false }, { approved: true });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /걷기 시간/);
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
@@ -160,9 +160,14 @@ test('model conflict guidance prioritizes current signal and never treats failur
   const future = { status: 'succeeded', prediction: approved('low') };
   assert.equal(context.modelComparisonGuidance(current, future).code, 'CURRENT_SIGNAL_FUTURE_LOW');
   assert.match(context.modelComparisonGuidance(current, future).message, /현재 신호 확인을 우선/);
+  const futureElevated = { status: 'succeeded', prediction: approved('moderate') };
+  const currentLow = { status: 'succeeded', prediction: approved('low') };
+  assert.equal(context.modelComparisonGuidance(currentLow, futureElevated).code, 'CURRENT_LOW_FUTURE_ELEVATED');
+  assert.match(context.modelComparisonGuidance(currentLow, futureElevated).message, /정기 검사와 생활습관 점검/);
   const incomplete = context.modelComparisonGuidance(current, { status: 'failed' });
   assert.equal(incomplete.code, 'MODEL_RESULT_INCOMPLETE');
-  assert.match(incomplete.message, /낮은 위험을 의미하지 않습니다/);
+  assert.match(incomplete.message, /완료하지 못한 분석은 다시 시도/);
+  assert.doesNotMatch(incomplete.message, /위험 (?:높음|낮음)|위험도/);
 });
 
 test('unapproved model outputs cannot create a public conflict explanation', () => {

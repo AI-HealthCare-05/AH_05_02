@@ -45,6 +45,42 @@ def test_exact_shap_allocates_interactions_and_preserves_body_group():
     assert result == explain_today(frame, score, model_version="synthetic-v1", elevated=True)
 
 
+def test_today14_groups_dependent_inputs_and_remains_additive():
+    frame = pd.DataFrame(
+        [
+            {
+                "age": 56.0,
+                "height_cm": 162.0,
+                "weight_kg": 68.0,
+                "waist_cm": 91.0,
+                "bmi": 25.9,
+                "systolic_bp": 130.0,
+                "diastolic_bp": 80.0,
+                "sex": 2.0,
+                "current_smoker": 0.0,
+                "education": 3.0,
+                "region": 1.0,
+                "diabetes_family_history": 0.0,
+                "hypertension_family_history": 0.0,
+                "alcohol_frequency": 2.0,
+            }
+        ]
+    )
+
+    def score(rows):
+        assert (rows.height_cm.isna() == rows.waist_cm.isna()).all()
+        assert (rows.systolic_bp.isna() == rows.diastolic_bp.isna()).all()
+        assert (rows.diabetes_family_history.isna() == rows.hypertension_family_history.isna()).all()
+        return 0.01 + rows.notna().sum(axis=1).to_numpy() / 1000
+
+    result = explain_today(frame, score, model_version="today14", elevated=True)
+    features = {item["feature"] for item in result["all_items"]}
+    assert {"body_measurements", "blood_pressure", "family_history"} <= features
+    assert result["reference_value"] + sum(i["contribution"] for i in result["all_items"]) == pytest.approx(
+        result["score"]
+    )
+
+
 def test_tree_shap_groups_onehot_and_missing_indicators():
     x = pd.DataFrame({"age": [40.0, 50.0, np.nan, 70.0, 80.0, 90.0], "sex": ["a", "b"] * 3})
     prep = ColumnTransformer(

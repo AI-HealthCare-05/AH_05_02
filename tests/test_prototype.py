@@ -42,7 +42,7 @@ def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
         "MODEL_AGE_OUT_OF_RANGE",
     ):
         assert reason_code in script
-    assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." in html
+    assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." not in html
     assert "입력 내용 확인하기" in html
     assert "다시 시도하기" in html
     assert "증상이 있으면 의료기관 안내가 우선돼요." not in html
@@ -518,7 +518,7 @@ def test_rf25_ml_errors_have_safe_actionable_frontend_guidance() -> None:
 
     assert "fallbackApiErrorMessage(resolvedCode)" in script
     assert "failureGuidance?.message || error.message" in script
-    assert "실패는 높은 위험을 의미하지 않습니다." in script
+    assert "실패는 높은 위험을 의미하지 않습니다." not in script
     assert "임의 점수나 위험 범주를 표시하지 않습니다." in script
     assert "점수·확률·위험 범주를 만들거나 표시하지 않습니다." in script
     for error_code in ("ML_MODEL_UNAVAILABLE", "ML_MODEL_CONTRACT_ERROR"):

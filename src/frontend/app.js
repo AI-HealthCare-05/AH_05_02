@@ -1995,7 +1995,7 @@ function renderPredictionStatus(status, options = {}) {
       ? "입력정보는 보존되어 있습니다. 잠시 후 다시 시도할 수 있습니다."
       : errorCode === "MODEL_NOT_READY"
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
+        : "입력정보를 확인한 뒤 다시 시도해 주세요.");
   }
   $("#retry-analysis").hidden = !config.showRetry;
   $("#high-guidance").hidden = true;
@@ -2974,8 +2974,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 점수를 높인 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 점수를 낮춘 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 당뇨 위험을 높인 방향";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 당뇨 위험을 낮춘 방향";
   return "";
 }
 
@@ -2990,7 +2990,8 @@ function renderFactorItems(items = []) {
     const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
     const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
     const meta = [factorDirectionLabel(item), factorModifiableLabel(item)].filter(Boolean).join(" · ");
-    return `<li><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></li>`;
+    const icon = factorDirectionLabel(item).startsWith("↑") ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
+    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></div></li>`;
   }).join("");
 }
 
@@ -3080,15 +3081,12 @@ function renderPartialAnalysisNotice(run) {
   const modelNames = failedModels.map(([key]) => (
     key === "diabetes_current_screening" ? "현재 건강 신호" : "미래 위험"
   ));
-  const errorCodes = failedModels
-    .map(([, result]) => result.error?.code)
-    .filter(Boolean);
   const parts = [];
   if (modelNames.length) {
-    parts.push(`${modelNames.join("·")} 분석 실패${errorCodes.length ? ` (${errorCodes.join(", ")})` : ""}`);
+    parts.push(`${modelNames.join("·")} 결과를 확인하지 못했어요`);
   }
-  if (hasFactorFailure) parts.push("설명 요인 조회 실패");
-  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 실패한 결과는 낮은 위험으로 대체하지 않습니다.`;
+  if (hasFactorFailure) parts.push("확인된 결과는 유지되지만 설명 요인을 불러오지 못했어요");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 잠시 후 다시 시도해 주세요.`;
   $("#retry-partial-analysis").textContent = modelNames.length
     ? "실패한 분석만 다시 시도하기"
     : "설명 요인 다시 불러오기";
@@ -3099,8 +3097,8 @@ function modelComparisonGuidance(currentRun, futureRun) {
     return {
       code: "MODEL_RESULT_INCOMPLETE",
       display: true,
-      title: "일부 분석 결과를 확인할 수 없습니다",
-      message: "모델 파일 누락이나 분석 실패는 낮은 위험을 의미하지 않습니다.",
+      title: "한쪽 분석 결과만 확인됐어요",
+      message: "확인된 결과만 보여드립니다. 완료하지 못한 분석은 다시 시도해 주세요.",
     };
   }
   const current = currentRun.prediction;
@@ -3265,8 +3263,8 @@ async function runPrediction({ retryFailed = false } = {}) {
         ? "분석 시간이 초과되었습니다"
         : "분석을 완료하지 못했습니다";
       $("#analysis-failure-message").textContent = isTimeout
-        ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
+        ? `당뇨 위험 결과를 확인하지 못했어요. 입력정보는 유지됩니다. ${error.retryAfterSeconds || 30}초 후 다시 시도해 주세요.`
+        : "당뇨 위험 결과를 확인하지 못했어요. 잠시 후 같은 입력정보로 다시 시도해 주세요.";
       $("#analysis-failure").hidden = false;
     }
     $("#retry-analysis").hidden = false;
@@ -7380,6 +7378,25 @@ function renderMvpResultPreview() {
   state.predictionId = state.prediction.prediction_id;
   state.developmentPreviewRiskCategory = "moderate";
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
+  const comparison = typeof URLSearchParams === "function"
+    ? new URLSearchParams(window.location.search).get("comparison")
+    : null;
+  if (["current-high-future-low", "current-low-future-high"].includes(comparison)) {
+    const approvedFixture = (modelKey, riskCategory) => ({
+      model_key: modelKey,
+      risk_category: riskCategory,
+      result_status: "approved",
+      promotion_status: "approved",
+      display_allowed: true,
+      operational_model_activated: true,
+    });
+    const currentRisk = comparison === "current-high-future-low" ? "high" : "low";
+    const futureRisk = comparison === "current-high-future-low" ? "low" : "high";
+    renderModelComparisonGuidance(
+      { status: "succeeded", prediction: approvedFixture("diabetes_current_screening", currentRisk) },
+      { status: "succeeded", prediction: approvedFixture("diabetes_incidence", futureRisk) },
+    );
+  }
 }
 
 function resumeMealPhotoPreview() {

@@ -1813,7 +1813,7 @@ function renderPredictionStatus(status, options = {}) {
       ? "입력정보는 보존되어 있습니다. 잠시 후 다시 시도할 수 있습니다."
       : errorCode === "MODEL_NOT_READY"
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
+        : "입력정보를 확인한 뒤 다시 시도해 주세요.");
   }
   $("#retry-analysis").hidden = !config.showRetry;
   $("#high-guidance").hidden = true;
