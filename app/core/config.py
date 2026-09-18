@@ -5,6 +5,7 @@ from dataclasses import field
 from enum import StrEnum
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +13,16 @@ class Env(StrEnum):
     LOCAL = "local"
     DEV = "dev"
     PROD = "prod"
+
+
+# SECRET_KEY가 실제 값으로 채워지지 않았음을 나타내는 표시들.
+# - "default-secret-key"로 시작하면 .env/환경변수에 값이 아예 없어서
+#   Config의 기본값(uuid.uuid4() 기반, 프로세스마다 랜덤)이 그대로 쓰인 것이다.
+# - envs/example.prod.env의 플레이스홀더를 그대로 배포에 썼을 수도 있다.
+_INSECURE_SECRET_KEY_MARKERS = (
+    "default-secret-key",
+    "replace-with-a-random-32-byte-or-longer-secret",
+)
 
 
 class Config(BaseSettings):
@@ -168,3 +179,19 @@ class Config(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 14 * 24 * 60
     JWT_LEEWAY: int = 5
+
+    @model_validator(mode="after")
+    def validate_secret_key_in_prod(self) -> "Config":
+        # ENV=prod인데 SECRET_KEY가 비어있거나 기본/플레이스홀더 값이면
+        # 배포마다(그리고 --workers로 뜨는 워커 프로세스마다) 서로 다른
+        # 랜덤 시크릿을 갖게 되어, 로그인한 사용자가 어느 워커로 요청이
+        # 가느냐에 따라 무작위로 인증이 깨질 수 있다. 조용히 넘어가는 대신
+        # 시작 시점에 바로 실패시킨다.
+        if self.ENV == Env.PROD and (
+            not self.SECRET_KEY or self.SECRET_KEY.startswith(_INSECURE_SECRET_KEY_MARKERS)
+        ):
+            raise ValueError(
+                "ENV=prod에서는 SECRET_KEY를 실제 값으로 설정해야 합니다. "
+                "현재 값이 비어있거나 기본/플레이스홀더 값입니다."
+            )
+        return self
