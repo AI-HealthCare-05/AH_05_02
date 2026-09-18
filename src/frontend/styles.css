@@ -691,6 +691,35 @@ body.modal-open{overflow:hidden}
 .result-xai-waiting .factor-list li{
   display:none;
 }
+.result-xai-card.xai-ready{
+  place-items:stretch;
+  border-style:solid;
+  border-color:#b88950;
+  background:rgba(255,250,240,.94);
+  color:#121b36;
+  text-align:left;
+}
+.result-xai-card.xai-ready .result-xai-waiting{
+  place-items:stretch;
+  align-content:start;
+  text-align:left;
+}
+.result-xai-card.xai-ready .factor-list{width:100%}
+.result-xai-card.xai-ready .factor-list li{
+  display:grid;
+  grid-template-columns:64px minmax(0,1fr);
+  align-items:center;
+  background:#fffaf0;
+  border-color:#c79557;
+}
+.xai-direction-icon{width:54px;height:54px;object-fit:contain}
+.result-xai-card .factor-list small{display:block;margin-top:4px;color:#0b6b5f;font-weight:900}
+@media(max-width:800px){
+  .result-room-screen .current-signal-content,
+  .result-room-screen .risk-forecast-panel{grid-template-columns:minmax(0,1fr)!important}
+  .result-xai-card.xai-ready .factor-list li{grid-template-columns:48px minmax(0,1fr);padding:14px 12px}
+  .xai-direction-icon{width:42px;height:42px}
+}
 .result-room-screen .current-risk-signal-heading .eyebrow,
 .result-room-screen .risk-forecast-heading .eyebrow,
 .result-room-screen #future-prediction-result .eyebrow{
@@ -2472,7 +2501,10 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .report-pdf-hero-control{display:none;width:auto;min-width:0;padding:0;background:transparent;border:0;border-radius:0;grid-template-columns:auto}
 .screen[data-step="8"]:has(#workspace-panel-report.active) .report-pdf-hero-control{display:grid;flex:0 0 auto;width:auto!important;min-width:0!important}
 .report-pdf-hero-control .report-pdf-control{justify-self:auto}
-.report-pdf-hero-control #download-report{min-height:56px;padding:0 18px;border:2px solid #b88950;background:rgba(255,250,240,.9);box-shadow:0 5px 0 rgba(117,68,31,.18);color:#4b240f;font-size:16px}
+.report-pdf-hero-control #download-report{display:flex;align-items:center;justify-content:center;min-height:38px;padding:6px 10px;border:2px solid var(--green);border-radius:10px;background:#fff;box-shadow:none;color:var(--green-dark);font-size:14px;font-weight:900;line-height:1.5;cursor:pointer;white-space:nowrap}
+.report-pdf-hero-control #download-report:hover{background:var(--mint)}
+.report-pdf-hero-control #download-report:focus-visible{outline:3px solid var(--green);outline-offset:4px}
+.screen[data-step="8"]:has(#workspace-panel-report.active) .report-pdf-hero-control{background:transparent;border:0;box-shadow:none}
 .report-pdf-options{box-sizing:border-box;position:absolute;z-index:12;top:calc(100% + 10px);right:0;width:280px;max-width:min(320px,calc(100vw - 32px));min-width:min(280px,calc(100vw - 32px));margin:0;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 16px 38px rgba(20,57,48,.18)}
 .report-pdf-options legend{display:block;float:left;width:100%;box-sizing:border-box;margin:0 0 10px;padding:0 4px;color:var(--green-dark);font-size:14px;font-weight:900;line-height:1.35;white-space:normal}
 .report-pdf-periods{display:grid;grid-template-columns:1fr;gap:8px;width:100%}
@@ -3774,7 +3806,13 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 /* Final result/tool layout overrides for the 2026-09-10 XAI and health-tool handoff. */
 .result-room-screen .current-signal-content,
 .result-room-screen .risk-forecast-panel{
-  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,2fr) !important;
+}
+@media(max-width:760px){
+  .result-room-screen .current-signal-content,
+  .result-room-screen .risk-forecast-panel{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
 }
 .result-room-screen .current-signal-content .current-risk-signal-body,
 .result-room-screen .current-signal-content .current-xai-slot,
@@ -3788,6 +3826,10 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
   background:rgba(255,250,240,.78) !important;
   color:#6b4424;
   box-shadow:none !important;
+}
+@media(max-width:800px){
+  .result-room-screen .current-signal-content,
+  .result-room-screen .risk-forecast-panel{grid-template-columns:minmax(0,1fr)!important}
 }
 .screen[data-step="8"]:has(#workspace-panel-tools.active) .health-tools-pending-grid{
   display:grid !important;
@@ -5536,4 +5578,25 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
   font-weight:900;
   line-height:1.4;
   color:#b4403a;
+}
+
+.result-room-screen .current-signal-content .current-risk-signal-body,
+.result-room-screen .current-signal-content .current-xai-slot.xai-ready{
+  background:rgba(255,250,240,.94) !important;
+}
+.result-room-screen .current-signal-content .current-xai-slot.xai-ready{
+  border:2px solid #c8d9d2 !important;
+  place-items:stretch;
+  text-align:left;
+}
+.result-xai-card.xai-ready .result-xai-waiting{
+  place-items:stretch;
+  align-content:start;
+  text-align:left;
+}
+.result-xai-card.xai-ready .factor-list{
+  width:100%;
+}
+.result-xai-card.xai-ready .factor-list li{
+  display:block;
 }
