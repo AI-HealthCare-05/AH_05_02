@@ -6594,8 +6594,6 @@ async function selectDemoPhoto(button) {
     $("#v3-photo-file").files = transfer.files;
     $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
     $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
-    const targetCount = String(item.goal?.target_count || 1);
-    $$("input[name=\"v3-photo-value\"]").forEach((input) => { input.checked = input.value === targetCount; });
   } catch (error) { showMessage(error.message); }
 }
 $$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));

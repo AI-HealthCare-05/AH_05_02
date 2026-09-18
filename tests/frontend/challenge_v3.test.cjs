@@ -208,7 +208,7 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.match(source, /file\.name === "demo-pass\.png"/);
     assert.match(source, /인증을 통과했어요/);
     assert.match(source, /Number\(item\.verification_type\) !== 1/);
-    assert.match(source, /input\.checked = input\.value === targetCount/);
+    assert.doesNotMatch(source, /input\.checked = input\.value === targetCount/);
     assert.match(source, /element\.hidden = !vegetableReview/);
   }
   for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
