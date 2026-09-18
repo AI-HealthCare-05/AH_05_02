@@ -207,15 +207,28 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.match(source, /openPhotoRecordModal\(item\)/);
     assert.match(source, /file\.name === "demo-pass\.png"/);
     assert.match(source, /인증을 통과했어요/);
+    assert.match(source, /Number\(item\.verification_type\) !== 1/);
+    assert.match(source, /input\.checked = input\.value === targetCount/);
+    assert.match(source, /element\.hidden = !vegetableReview/);
   }
   for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
     const html = fs.readFileSync(file, 'utf8');
     assert.equal((html.match(/class="demo-photo-card"/g) || []).length, 3);
     assert.equal((html.match(/name="v3-photo-value"/g) || []).length, 3);
+    assert.equal((html.match(/v3-vegetable-only/g) || []).length, 3);
     assert.doesNotMatch(html, /external_vlm_consent/);
     assert.match(html, /OpenAI VLM 보완 검토에 자동으로 사용/);
   }
   const indexHtml = fs.readFileSync('src/frontend/index.html', 'utf8');
   assert.doesNotMatch(indexHtml, /id="v3-vlm-consent"/);
   assert.doesNotMatch(indexHtml, /OpenAI VLM으로 보완 검토하는 데 동의/);
+});
+
+test('walking photo proof hides every vegetable-only demo and guidance block', () => {
+  for (const file of ['src/frontend/app.js', 'src/frontend/intro-retro-app.js']) {
+    const source = fs.readFileSync(file, 'utf8');
+    assert.match(source, /const vegetableReview = v3 && Number\(item\.verification_type\) === 1/);
+    assert.match(source, /\$\$\("\.v3-vegetable-only"\)\.forEach/);
+    assert.match(source, /인증 대상이 잘 보이도록 다시 찍어주세요/);
+  }
 });

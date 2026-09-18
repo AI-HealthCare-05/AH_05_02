@@ -4148,9 +4148,14 @@ function resetPhotoRecordModal() {
   state.photoAttempt = 0;
   state.photoCompletedByFallback = false;
   showPhotoRecordState("photo-state-upload");
-  $("#photo-fail-hint").textContent = "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.";
+  const vegetableReview = Number(state.recordTarget?.item?.verification_type) === 1;
+  $("#photo-fail-hint").textContent = vegetableReview
+    ? "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요."
+    : "밝은 곳에서 인증 대상이 잘 보이도록 다시 찍어주세요.";
   $("#photo-pending-hint").textContent = "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
   $("#photo-success-title").textContent = "확인됐어요!";
+  $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
+  $("#demo-photo-selection").textContent = "";
 }
 function openPhotoRecordModal(item) {
   if (state.dailyCompleted.has(String(item.user_challenge_id))) {
@@ -4160,8 +4165,10 @@ function openPhotoRecordModal(item) {
   state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "photo", item };
   resetPhotoRecordModal();
   const v3 = item.catalog_version === "evidence-v3";
+  const vegetableReview = v3 && Number(item.verification_type) === 1;
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
+  $$(".v3-vegetable-only").forEach((element) => { element.hidden = !vegetableReview; });
   $("#v3-photo-file").value = "";
   $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
   const usesMinutes = Boolean(item.goal.target_minutes);
@@ -6578,6 +6585,8 @@ $("#undo-daily-record")?.addEventListener("click", async (event) => {
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
 async function selectDemoPhoto(button) {
   try {
+    const item = state.recordTarget?.item;
+    if (item?.catalog_version !== "evidence-v3" || Number(item.verification_type) !== 1) return;
     const response = await fetch(button.dataset.demoPhoto);
     if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
     const transfer = new DataTransfer();
@@ -6585,6 +6594,8 @@ async function selectDemoPhoto(button) {
     $("#v3-photo-file").files = transfer.files;
     $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
     $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
+    const targetCount = String(item.goal?.target_count || 1);
+    $$("input[name=\"v3-photo-value\"]").forEach((input) => { input.checked = input.value === targetCount; });
   } catch (error) { showMessage(error.message); }
 }
 $$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));

@@ -12,7 +12,7 @@ function harness() {
     if (!nodes.has(key)) nodes.set(key, { hidden: false, dataset: {}, style: { setProperty() {}, removeProperty() {} }, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, focus() {} });
     return nodes.get(key);
   };
-  const ctx = vm.createContext({ state, $, Date, challengeDay: () => "2026-09-08", isLocalPreview: () => false,
+  const ctx = vm.createContext({ state, $, $$: () => [], Date, challengeDay: () => "2026-09-08", isLocalPreview: () => false,
     api: async () => { writes++; }, renderDailyRecordList() {}, updateDailyRecordSummary() {},
     loadWeeklyReport: async () => {}, showMessage() {}, habitRecordIcon: kind => kind, openForestEntryDialog() {},
   });

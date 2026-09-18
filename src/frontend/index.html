@@ -35,7 +35,7 @@
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260917-home-challenge-empty-v1" defer></script>
+  <script src="/static/app.js?v=20260918-photo-proof-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -843,7 +843,7 @@
                   <p id="v3-photo-scope">사진의 확인 범위와 실천 목표를 확인해 주세요.</p>
                   <div id="v3-photo-fields" hidden>
                     <input id="v3-photo-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
-                    <div class="demo-photo-gallery" aria-label="시연용 사진 선택">
+                    <div class="demo-photo-gallery v3-vegetable-only" aria-label="시연용 사진 선택">
                       <p>시연용 사진을 눌러 바로 테스트해 보세요.</p>
                       <div class="demo-photo-grid">
                         <button type="button" class="demo-photo-card" data-demo-photo="/static/assets/demo/vegetable-meal-1.png" data-demo-name="demo-pass.png"><img src="/static/assets/demo/vegetable-meal-1.png" alt="채소가 충분한 식사"><strong>통과 예상</strong><span>음식·채소 충분</span></button>
@@ -865,8 +865,8 @@
                       <input id="v3-photo-minutes" type="number" min="1" max="720" step="1" inputmode="numeric">
                     </div>
                     <p>얼굴·주소·이름 등 개인정보가 보이지 않는 사진을 사용해 주세요. 원본 사진은 저장하지 않습니다.</p>
-                    <p class="v3-photo-model-notice">밥·두부 같은 흰 식재료를 흰 식기와 함께 찍거나 김치·무침처럼 양념이 많이 묻은 채소를 찍으면 인식이 어려울 수 있습니다. 국물에 잠기거나 음식이 겹친 경우도 실제보다 낮게 판정될 수 있으며, 후속 모델 업데이트로 개선할 예정입니다.</p>
-                    <p class="v3-vlm-notice">로컬 모델이 판단하기 어려운 경우 사진이 OpenAI VLM 보완 검토에 자동으로 사용될 수 있습니다.</p>
+                    <p class="v3-photo-model-notice v3-vegetable-only">밥·두부 같은 흰 식재료를 흰 식기와 함께 찍거나 김치·무침처럼 양념이 많이 묻은 채소를 찍으면 인식이 어려울 수 있습니다. 국물에 잠기거나 음식이 겹친 경우도 실제보다 낮게 판정될 수 있으며, 후속 모델 업데이트로 개선할 예정입니다.</p>
+                    <p class="v3-vlm-notice v3-vegetable-only">로컬 모델이 판단하기 어려운 경우 사진이 OpenAI VLM 보완 검토에 자동으로 사용될 수 있습니다.</p>
                   </div>
                   <button class="photo-upload-box" id="start-photo-check" type="button">
                     <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1.3-2h7.4L17 7h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
