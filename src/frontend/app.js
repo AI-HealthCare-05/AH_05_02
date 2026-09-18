@@ -440,6 +440,13 @@ function togglePasswordVisibility(button) {
   } else button.textContent = label;
 }
 
+// The actual ASCII symbol set (matches Python's string.punctuation on the server).
+// Testing "not alphanumeric/whitespace" previously let any other character (e.g. Korean
+// text) count as the "special character", so a password with no real symbol still passed.
+const PASSWORD_SPECIAL_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+function hasPasswordSpecialChar(value) {
+  return [...value].some((char) => PASSWORD_SPECIAL_CHARS.includes(char));
+}
 function signupPasswordIssues(value) {
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
@@ -447,7 +454,7 @@ function signupPasswordIssues(value) {
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
-  if (!/[^A-Za-z0-9\s]/.test(value)) issues.push("특수문자를 포함해 주세요. 예: !");
+  if (!hasPasswordSpecialChar(value)) issues.push("특수문자를 포함해 주세요. 예: !");
   return issues;
 }
 
