@@ -3640,6 +3640,8 @@ function clearPhotoSelectionPreview() {
   $("#v3-photo-upload-title").textContent = "사진 찍기 또는 앨범에서 선택";
   $("#v3-photo-change-label").hidden = true;
   $("#v3-photo-validation").textContent = "사진을 선택하면 형식·용량·해상도를 확인합니다.";
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
 }
 async function showPhotoSelectionPreview(file) {
   if (!file) return clearPhotoSelectionPreview();
@@ -3670,10 +3672,16 @@ async function showPhotoSelectionPreview(file) {
   $("#v3-photo-upload-title").textContent = "선택한 사진";
   $("#v3-photo-change-label").hidden = false;
   $("#v3-photo-validation").textContent = `조건 확인 완료 · ${dimensions.width}×${dimensions.height}px · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
 }
 function resetPhotoRecordModal() {
   state.photoAttempt = 0;
   state.photoCompletedByFallback = false;
+  $("#start-photo-check")?.classList.remove("invalid");
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
   showPhotoRecordState("photo-state-upload");
   const vegetableReview = Number(state.recordTarget?.item?.verification_type) === 1;
   $("#photo-fail-hint").textContent = vegetableReview
@@ -3737,8 +3745,24 @@ async function submitV3Photo() {
     : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
-  if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
-  if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  const photoBox = $("#start-photo-check");
+  const valueField = target.item.goal.target_minutes ? $("#v3-photo-minutes-field") : $("#v3-meal-count-field");
+  const validationEl = $("#v3-photo-validation");
+  const valueMissing = !valueText || !Number.isFinite(value) || value < goal || value > 720;
+  photoBox?.classList.toggle("invalid", !file);
+  valueField?.classList.toggle("invalid", valueMissing);
+  if (!file || valueMissing) {
+    validationEl.classList.add("error");
+    validationEl.textContent = !file && valueMissing
+      ? `사진을 제출하고 실제 실천량(목표 ${goal})을 입력해야 합니다.`
+      : !file
+        ? "사진을 제출해야 합니다."
+        : `실제 실천량(목표 ${goal})을 입력해 주세요.`;
+    validationEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  validationEl.classList.remove("error");
+  if (file.size > 8 * 1024 * 1024) { photoBox?.classList.add("invalid"); validationEl.classList.add("error"); validationEl.textContent = "8MB 이하 사진을 선택해 주세요."; return; }
   if (isLocalPreview()) {
     showPhotoRecordState("photo-state-analyzing");
     window.setTimeout(() => {
@@ -6097,7 +6121,13 @@ $("#v3-photo-file").addEventListener("change", async () => {
 $$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
   if (!input.checked) return;
   $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
 }));
+$("#v3-photo-minutes")?.addEventListener("input", () => {
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
+});
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
