@@ -838,9 +838,9 @@ body.modal-open{overflow:hidden}
 .risk-confirm-copy p{margin:6px 0;color:var(--muted);font-size:19px}
 .risk-confirm-copy .risk-safety{display:inline-flex;width:auto;margin:18px 0 20px;padding:10px 17px;border:1px solid #e6bf40;border-radius:999px;background:var(--warning-bg);color:#72540b;font-size:16px;font-weight:900}
 .risk-confirm-copy .primary{display:block;min-width:250px}
-.risk-confirm-card[data-risk="caution"]{border-color:#d9a20b}
-.risk-confirm-card[data-risk="caution"] .risk-badge{border-color:#d9a20b;background:#fff8df;color:#8a6400}
-.risk-confirm-card[data-risk="caution"] .risk-badge>span{background:#d9a20b}
+.risk-confirm-card[data-risk="moderate"]{border-color:#d9a20b}
+.risk-confirm-card[data-risk="moderate"] .risk-badge{border-color:#d9a20b;background:#fff8df;color:#8a6400}
+.risk-confirm-card[data-risk="moderate"] .risk-badge>span{background:#d9a20b}
 .risk-confirm-card[data-risk="high"]{border-color:#bd4d43}
 .risk-confirm-card[data-risk="high"] .risk-badge{border-color:#bd4d43;background:#fff1ef;color:#8d3029}
 .risk-confirm-card[data-risk="high"] .risk-badge>span{background:#bd4d43}
@@ -2680,8 +2680,8 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .age-risk-signal-track[data-level="pending"]::after{display:none}
 .age-risk-signal-track[data-level="low"]{--marker-x:24%;--marker-y:61%;--needle-rotation:-54deg}
 .age-risk-signal-track[data-level="low"] img{background:#dff5eb}
-.age-risk-signal-track[data-level="caution"]{--marker-x:50%;--marker-y:18%;--needle-rotation:0deg}
-.age-risk-signal-track[data-level="caution"] img{background:#fff2bd}
+.age-risk-signal-track[data-level="moderate"]{--marker-x:50%;--marker-y:18%;--needle-rotation:0deg}
+.age-risk-signal-track[data-level="moderate"] img{background:#fff2bd}
 .age-risk-signal-track[data-level="high"]{--marker-x:76%;--marker-y:61%;--needle-rotation:54deg}
 .age-risk-signal-track[data-level="high"] img{background:#ffe0dd}
 

@@ -1098,6 +1098,13 @@ function nullableSelectValue(id) {
   return value === "" || value == null ? null : value;
 }
 
+function nullableIntegerSelect(id) {
+  const value = nullableSelectValue(id);
+  if (value == null) return null;
+  const number = Number(value);
+  return Number.isInteger(number) ? number : null;
+}
+
 function nullableBooleanSelect(id) {
   const value = nullableSelectValue(id);
   if (value === "true") return true;
@@ -1110,8 +1117,8 @@ function selectLabel(id) {
 }
 
 function alcoholFrequencyValue() {
-  if (selectedRadioValue("current-drinker") === "false") return "none";
-  return nullableSelectValue("alcohol-frequency");
+  if (selectedRadioValue("current-drinker") === "false") return 1;
+  return nullableIntegerSelect("alcohol-frequency");
 }
 
 function detailHealthPayload() {
@@ -1122,7 +1129,7 @@ function detailHealthPayload() {
     fat_g: nullableNumber("fat-g"),
     carbohydrate_g: nullableNumber("carbohydrate-g"),
     sodium_mg: nullableNumber("sodium-mg"),
-    region: nullableSelectValue("region-type"),
+    region: nullableIntegerSelect("region-type"),
     urban: nullableSelectValue("urban-type"),
     education: nullableSelectValue("education-level"),
     income_quartile: nullableSelectValue("income-quartile"),

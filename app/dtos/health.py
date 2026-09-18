@@ -68,14 +68,37 @@ class HealthCheckupCreateRequest(BaseModel):
     def validate_blood_pressure(self) -> HealthCheckupCreateRequest:
         if self.systolic_bp is not None and self.diastolic_bp is not None and self.systolic_bp <= self.diastolic_bp:
             raise ValueError("수축기 혈압은 이완기 혈압보다 커야 합니다.")
-        if not self.regular_exercise:
-            self.exercise_days_per_week = 0
-            self.exercise_minutes = 0
+        if not self.regular_exercise and (self.exercise_days_per_week != 0 or self.exercise_minutes != 0):
+            raise ValueError("규칙적 운동을 하지 않으면 운동 일수와 시간은 0이어야 합니다.")
+        if self.regular_exercise and (self.exercise_days_per_week == 0 or self.exercise_minutes == 0):
+            raise ValueError("규칙적 운동을 하면 운동 일수와 시간은 0보다 커야 합니다.")
         return self
+
+
+class CurrentScreeningInputCreateRequest(BaseModel):
+    """Optional KNHANES-aligned inputs stored separately from account data."""
+
+    health_checkup_id: int = Field(gt=0)
+    input_as_of_date: date
+    walking_days: float | None = Field(default=None, ge=0, le=7)
+    energy_kcal: float | None = Field(default=None, ge=0, le=8000)
+    protein_g: float | None = Field(default=None, ge=0, le=500)
+    fat_g: float | None = Field(default=None, ge=0, le=500)
+    carbohydrate_g: float | None = Field(default=None, ge=0, le=1000)
+    sodium_mg: float | None = Field(default=None, ge=0, le=20000)
+    region: int | None = Field(default=None, ge=1, le=17)
+    urban: Literal["urban", "rural"] | None = None
+    education: Literal["code_1", "code_2", "code_3", "code_4", "code_97"] | None = None
+    income_quartile: Literal["1", "2", "3", "4"] | None = None
+    household_income_quartile: Literal["1", "2", "3", "4"] | None = None
+    hypertension_family_history: bool | None = None
+    diabetes_family_history: bool | None = None
+    alcohol_frequency: Literal[1, 2, 3, 4, 5, 6, 8]
 
 
 class PredictionJobCreateRequest(BaseModel):
     checkup_id: int = Field(gt=0)
+    current_screening_input_id: int | None = Field(default=None, gt=0)
     model_key: Literal["diabetes_current_screening", "diabetes_incidence", "diabetes_lifetime_risk"] = (
         "diabetes_incidence"
     )
@@ -90,6 +113,8 @@ class PredictionJobCreateRequest(BaseModel):
             raise ValueError("diabetes_incidence does not accept prediction_type")
         if self.model_key == "diabetes_current_screening" and self.prediction_type is not None:
             raise ValueError("diabetes_current_screening does not accept prediction_type")
+        if self.model_key != "diabetes_current_screening" and self.current_screening_input_id is not None:
+            raise ValueError("current_screening_input_id is only valid for diabetes_current_screening")
         return self
 
 

@@ -2,7 +2,7 @@
 ((root) => {
   "use strict";
 
-  const NICKNAMES = Object.freeze(["성실한 당근", "꾸준한 상균", "달빛의 빛샘", "숲속의 수인", "발명의 준혁", "해결의 세준"]);
+  const NICKNAMES = Object.freeze(["성실한 당근", "꾸준한 실천", "달빛의 빛샘", "숲속의 수인", "발명의 준혁", "해결의 세준"]);
   const CAMERA = Object.freeze({ x: 666, y: 360, width: 70, height: 74 });
   // The real carrot house occupies x149..286, y0..240 in the 768x512 map.
   // Keep its leafy roof and doorstep visible above the group; never replace

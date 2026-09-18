@@ -58,7 +58,7 @@ services:
       ML_SHARED7_MODEL_URI: /app/models/artifacts/candidates/diabetes_current_screening/knhanes-shared7-sk180-v1/model.joblib
       ML_SHARED8_MODEL_URI: /app/models/artifacts/candidates/diabetes_current_screening/knhanes-shared8-waist-sk180-v1/model.joblib
       ML_FIRST_INTERVAL_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-first-interval-survival-ensemble-v1/model.joblib
-      ML_RF25_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-spec40-v1/model.joblib
+      ML_RF25_MODEL_URI: /app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib
       FOOD_VISION_PROVIDER: local_kfood
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_VLM_MODEL: ${OPENAI_VLM_MODEL:-gpt-4o-mini}

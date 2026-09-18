@@ -10,7 +10,7 @@ from starlette import status
 
 from ai_worker.handlers import run_task
 from app.core import config
-from app.dtos.health import PredictionJobCreateRequest
+from app.dtos.health import CurrentScreeningInputCreateRequest, PredictionJobCreateRequest
 from app.main import app
 from app.services.health import HealthService
 from tests.db_utils import init_sqlite_test_db, reset_tortoise
@@ -19,10 +19,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_prediction_job_contract_separates_today_and_tomorrow_models() -> None:
-    today = PredictionJobCreateRequest(checkup_id=1, model_key="diabetes_current_screening")
+    today = PredictionJobCreateRequest(
+        checkup_id=1,
+        model_key="diabetes_current_screening",
+        current_screening_input_id=20,
+    )
     tomorrow = PredictionJobCreateRequest(checkup_id=1, model_key="diabetes_incidence")
 
     assert today.model_key == "diabetes_current_screening"
+    assert today.current_screening_input_id == 20
     assert tomorrow.model_key == "diabetes_incidence"
     with pytest.raises(ValidationError):
         PredictionJobCreateRequest(
@@ -30,6 +35,25 @@ def test_prediction_job_contract_separates_today_and_tomorrow_models() -> None:
             model_key="diabetes_current_screening",
             prediction_type="survival_curve",
         )
+    with pytest.raises(ValidationError):
+        PredictionJobCreateRequest(
+            checkup_id=1,
+            model_key="diabetes_incidence",
+            current_screening_input_id=20,
+        )
+
+
+def test_current_screening_snapshot_contract_accepts_fourteen_feature_additions() -> None:
+    snapshot = CurrentScreeningInputCreateRequest(
+        health_checkup_id=10,
+        input_as_of_date="2026-09-16",
+        region=9,
+        hypertension_family_history=False,
+        diabetes_family_history=True,
+        alcohol_frequency=2,
+    )
+    assert snapshot.region == 9
+    assert snapshot.diabetes_family_history is True
 
 
 def test_health_checkup_maps_to_current_screening_without_guessing_missing_fields() -> None:
@@ -56,6 +80,46 @@ def test_health_checkup_maps_to_current_screening_without_guessing_missing_field
     assert payload["aerobic_activity"] is True
 
 
+def test_current_screening_snapshot_adds_new_service_features() -> None:
+    checkup = SimpleNamespace(
+        age=52,
+        height_cm=168.0,
+        weight_kg=72.0,
+        waist_cm=87.0,
+        bmi=25.51,
+        systolic_bp=132,
+        diastolic_bp=84,
+        exercise_days_per_week=2.0,
+        sex="female",
+        education_level="code_3",
+        current_smoker=False,
+        current_drinker=True,
+        regular_exercise=True,
+    )
+    snapshot = SimpleNamespace(
+        walking_days=4,
+        energy_kcal=None,
+        protein_g=None,
+        fat_g=None,
+        carbohydrate_g=None,
+        sodium_mg=None,
+        region=9,
+        urban="urban",
+        hypertension_family_history=False,
+        diabetes_family_history=True,
+        alcohol_frequency=2,
+    )
+
+    payload = HealthService.current_screening_payload(checkup, snapshot)
+
+    assert payload["systolic_bp"] == 132
+    assert payload["diastolic_bp"] == 84
+    assert payload["region"] == 9
+    assert payload["diabetes_family_history"] is True
+    assert payload["hypertension_family_history"] is False
+    assert payload["alcohol_frequency"] == 2
+
+
 @pytest.mark.asyncio
 async def test_current_screening_worker_keeps_unapproved_result_internal(monkeypatch: pytest.MonkeyPatch) -> None:
     from src.ml.inference import diabetes_current_screening as screening
@@ -68,7 +132,7 @@ async def test_current_screening_worker_keeps_unapproved_result_internal(monkeyp
             "threshold": 0.02,
         }
     )
-    monkeypatch.setattr(screening, "load_current_screening_model", lambda: loaded)
+    monkeypatch.setattr(screening, "load_current_screening_model", lambda **_kwargs: loaded)
     monkeypatch.setattr(
         screening,
         "predict_with_loaded_current_model",
@@ -81,12 +145,48 @@ async def test_current_screening_worker_keeps_unapproved_result_internal(monkeyp
         },
     )
 
+    loaded.manifest["features"] = ["age"]
     result = await run_task("diabetes_current_screening", {"input": {"age": 41}})
 
     assert result["model_key"] == "diabetes_current_screening"
     assert result["promotion_status"] == "development_only"
     assert result["risk_category"] is None
     assert result["screening_signal_detected"] is None
+
+
+@pytest.mark.asyncio
+async def test_current_screening_worker_exposes_config_approved_manifest(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.prediction.contracts import CURRENT_SCREENING_MODEL
+    from src.ml.inference import diabetes_current_screening as screening
+
+    loaded = SimpleNamespace(
+        manifest={
+            "operational_model_activated": True,
+            "artifact_sha256": CURRENT_SCREENING_MODEL.model_artifact_digest,
+            "threshold": CURRENT_SCREENING_MODEL.decision_threshold,
+            "features": ["age"],
+        }
+    )
+    monkeypatch.setattr(screening, "load_current_screening_model", lambda **_kwargs: loaded)
+    monkeypatch.setattr(
+        screening,
+        "predict_with_loaded_current_model",
+        lambda _loaded, _payload: {
+            "screening_signal_detected": True,
+            "risk_score_internal": 0.8,
+            "model_version": CURRENT_SCREENING_MODEL.version,
+            "feature_schema_version": CURRENT_SCREENING_MODEL.feature_schema_version,
+            "threshold_version": CURRENT_SCREENING_MODEL.threshold_version,
+        },
+    )
+
+    result = await run_task("diabetes_current_screening", {"input": {"age": 41}})
+
+    assert result["promotion_status"] == "approved"
+    assert result["risk_category"] == "high"
+    assert result["screening_signal_detected"] is True
+    assert result["display_allowed"] is True
+    assert result["operational_model_activated"] is True
 
 
 def test_frontend_requests_both_models_and_labels_them_separately() -> None:
@@ -165,16 +265,30 @@ async def test_adult_under_45_can_save_checkup_and_run_today_model_in_demo_mode(
                     "current_drinker": False,
                     "exercise_days_per_week": 3,
                     "exercise_minutes": 30,
-                    "feature_schema_version": "klosa_stage3_25features_v1",
+                    "feature_schema_version": "klosa_stage3_25features_education4_v2",
                 },
             )
             assert checkup.status_code == status.HTTP_201_CREATED
+            snapshot = await client.post(
+                "/api/v1/current-screening-inputs",
+                headers=headers,
+                json={
+                    "health_checkup_id": checkup.json()["data"]["checkup_id"],
+                    "input_as_of_date": "2026-09-01",
+                    "region": 9,
+                    "hypertension_family_history": False,
+                    "diabetes_family_history": True,
+                    "alcohol_frequency": 8,
+                },
+            )
+            assert snapshot.status_code == status.HTTP_201_CREATED
             job = await client.post(
                 "/api/v1/prediction-jobs",
                 headers=headers,
                 json={
                     "checkup_id": checkup.json()["data"]["checkup_id"],
                     "model_key": "diabetes_current_screening",
+                    "current_screening_input_id": snapshot.json()["data"]["current_screening_input_id"],
                 },
             )
             assert job.status_code == status.HTTP_202_ACCEPTED

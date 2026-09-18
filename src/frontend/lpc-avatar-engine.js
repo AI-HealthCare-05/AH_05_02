@@ -47,6 +47,13 @@
       ? Math.min(length - 1, Math.floor(Math.max(0, options.progress) * length))
       : Math.abs(Math.floor(Number(options.frame || 0))) % length;
   }
+
+  function stableSitFrame(avatar, cycles) {
+    // LPC's sit strip has three poses. Keep the field pose fully lowered and
+    // use the middle pose indoors so the same toggle remains visibly distinct.
+    if (avatar.sitVariant === "home") return cycles[Math.max(0, cycles.length - 3)];
+    return cycles[cycles.length - 1];
+  }
   const wingMobilityIds = new Set(["feathered_wings", "lizard_wings", "bat_wings", "lunar_wings"]);
 
   function usesWingMobility(avatar) {
@@ -255,7 +262,7 @@
     const animation = resolvedAnimation(avatar, options);
     const cycles = animationCycles[animation] || animationCycles.idle;
     const frameIndex = (avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose
-      ? cycles[cycles.length - 1]
+      ? stableSitFrame(avatar, cycles)
       : cycles[cyclePosition(options, cycles.length)];
     context.save();
     context.imageSmoothingEnabled = false;
@@ -286,8 +293,10 @@
           .find((candidate) => supported.includes(candidate));
       if (!layerAnimation) return;
       const layerCycle = animationCycles[layerAnimation] || animationCycles.idle;
-      const requestedFrame = ["idle", "sit", "emote", "combat_idle"].includes(requestedAnimation)
-        ? layerCycle[Math.min(1, layerCycle.length - 1)]
+      const requestedFrame = requestedAnimation === "sit"
+        ? frameIndex
+        : ["idle", "emote", "combat_idle"].includes(requestedAnimation)
+          ? layerCycle[Math.min(1, layerCycle.length - 1)]
         : layerCycle[cyclePosition(options, layerCycle.length)];
       const adaptedTool = options.pose === "harvest" && layer.category === "tool"
         && adaptedThrustTools.has(avatar.cosmetics?.lpcTool);

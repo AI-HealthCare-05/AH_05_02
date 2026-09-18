@@ -14,9 +14,8 @@ function load(name, data) {
   return context[name];
 }
 test('MVP keeps the two-year forecast graph design without scenarios or research API callers', () => {
-  assert.match(html, /id="risk-forecast-panel"/);
-  assert.match(html, /id="age-risk-chart"/);
-  assert.match(html, /id="age-risk-chart-points"/);
+  assert.match(html, /id="future-risk-visual"/);
+  assert.match(html, /id="future-risk-points"/);
   assert.doesNotMatch(html, /id="(?:scenario-comparison-title|uncertainty-panel)"/);
   assert.match(html, /id="risk-confirm-card"/);
   assert.match(html, /id="future-risk-category"/);
@@ -24,13 +23,15 @@ test('MVP keeps the two-year forecast graph design without scenarios or research
   assert.doesNotMatch(source, /\/research\/models\/|tryRunJunhyukModelDemo|future_forecast/);
 });
 test('forecast graph selects only the two-year point from a multi-horizon response', () => {
-  const select = load('selectTwoYearForecastPoint', { normalizeForecastSignal: value => value });
+  const select = load('selectTwoYearForecastPoint', {
+    normalizeForecastSignal: value => value === 'caution' ? 'moderate' : value,
+  });
   const selected = select({ age_risk_forecast: { points: [
     { display_label: '4년 후', signal_level: 'high' },
     { display_label: '2년 후 (54세)', signal_level: 'caution' },
     { display_label: '6년 후', signal_level: 'low' },
   ] } }, 'low');
-  assert.deepEqual({ ...selected }, { label: '2년 후 (54세)', level: 'caution' });
+  assert.deepEqual({ ...selected }, { label: '2년 후 (54세)', level: 'moderate' });
 });
 test('legacy local preview is a clearly labelled two-model fixture and performs no API calls', () => {
   const state = {};

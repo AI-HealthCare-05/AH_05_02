@@ -31,7 +31,7 @@ from src.ml.preprocessing.diabetes_api_features import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CANDIDATE_MANIFEST = REPOSITORY_ROOT / (
-    "models/registry/diabetes_incidence/candidates/rf25-tuned-spec40-v1.json"
+    "models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json"
 )
 
 
@@ -68,7 +68,7 @@ def _load_candidate_manifest(path: Path) -> dict[str, Any]:
         raise ModelContractError(f"invalid model candidate manifest: {path}")
     if tuple(manifest.get("features", ())) != STANDARD_MODEL_FEATURES:
         raise ModelContractError("candidate manifest feature order is invalid")
-    if manifest.get("risk_categories") != ["low", "caution", "high"]:
+    if manifest.get("risk_categories") != ["low", "moderate", "high"]:
         raise ModelContractError("candidate manifest risk categories are invalid")
     required_metrics = {"recall", "specificity", "auroc", "auprc"}
     if not required_metrics.issubset(manifest.get("metrics", {})):
@@ -163,19 +163,19 @@ def predict_with_loaded_model(
     thresholds = loaded.manifest["thresholds"]
     category = categorize_risk_score(
         score,
-        caution_threshold=float(thresholds["caution"]),
+        caution_threshold=float(thresholds.get("moderate", thresholds.get("caution"))),
         high_threshold=float(thresholds["high"]),
     )
     return {
         "disease_type": "diabetes",
         "task_type": "binary_incidence_risk_screening",
         "risk_score": score,
-        "risk_category": category,
+        "risk_category": "moderate" if category == "caution" else category,
         "risk_category_label": {
             "low": "낮음",
-            "caution": "주의",
+            "moderate": "주의",
             "high": "높음",
-        }[category],
+        }["moderate" if category == "caution" else category],
         "model_version": loaded.manifest["model_version"],
         "feature_schema_version": loaded.manifest["feature_schema_version"],
         "input_schema_version": loaded.manifest["input_schema_version"],

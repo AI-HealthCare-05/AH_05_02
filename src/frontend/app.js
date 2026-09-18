@@ -552,6 +552,43 @@ function hasCurrentChallengeCycle(cycle = state.cycle) {
     && !["completed", "cancelled"].includes(cycle?.status);
 }
 
+function showChallengeSelectionView() {
+  $("#challenge-form").hidden = false;
+  $("#challenge-safety-copy").hidden = false;
+  $("#challenge-lifestyle-summary").hidden = false;
+  $("#challenge-title").textContent = "오늘부터 실천할 수 있는 생활습관을 골라보세요";
+}
+
+async function openChallengeTab({ selectionCompleted = false } = {}) {
+  const token = state.token;
+  if (!hasCurrentChallengeCycle(state.cycle) && !isLocalPreview() && !requireActiveHealthConsent("새 챌린지 시작")) return;
+  let cycle = state.cycle;
+  if (!hasCurrentChallengeCycle(cycle) && !isLocalPreview()) {
+    try {
+      cycle = await api("/challenge-cycles/current");
+      if (state.token !== token) return;
+      renderCycle(cycle);
+    } catch (error) {
+      if (state.token !== token) return;
+      if (error.status !== 404 && !error.message.includes("진행 중인 챌린지가 없습니다")) throw error;
+      cycle = null;
+      state.cycle = null;
+    }
+  }
+  if (hasCurrentChallengeCycle(cycle)) {
+    showWorkspace("challenge", { moveFocus: false });
+    showStep(8);
+    await loadDailyRecords();
+    if (state.token !== token) return;
+    if (selectionCompleted) showMessage("챌린지 선택이 완료되었습니다.", "success");
+    return;
+  }
+  showChallengeSelectionView();
+  await loadChallenges();
+  if (state.token !== token) return;
+  showStep(7);
+}
+
 function recordTypeLabel(type) {
   return type === "photo" ? "사진 인증" : "간편 체크";
 }
@@ -787,8 +824,7 @@ async function goStepFromNav(step) {
     return;
   }
   if (step === 7) {
-    showStep(step);
-    await loadChallenges();
+    await openChallengeTab();
     return;
   }
   showStep(step);
@@ -1974,7 +2010,7 @@ function renderPredictionStatus(status, options = {}) {
 function normalizeRiskKey(prediction = state.prediction) {
   const raw = prediction?.risk_category || prediction?.risk_category_label || "low";
   if (raw === "high" || raw === "diabetes_screening_advised" || raw === "높음") return "high";
-  if (raw === "moderate" || raw === "caution" || raw === "주의") return "caution";
+  if (raw === "moderate" || raw === "caution" || raw === "주의") return "moderate";
   return "low";
 }
 
@@ -2794,13 +2830,13 @@ async function pollPrediction(jobId) {
 function normalizeForecastSignal(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (["low", "낮음"].includes(normalized)) return "low";
-  if (["caution", "moderate", "medium", "주의", "보통"].includes(normalized)) return "caution";
+  if (["caution", "moderate", "medium", "주의", "보통"].includes(normalized)) return "moderate";
   if (["high", "높음", "위험"].includes(normalized)) return "high";
   return null;
 }
 
 function forecastSignalLabel(level) {
-  return { low: "낮음", caution: "주의", high: "높음" }[level] || "결과 준비 중";
+  return { low: "낮음", moderate: "주의", high: "높음" }[level] || "결과 준비 중";
 }
 
 function selectTwoYearForecastPoint(prediction = {}, fallbackLevel = null) {
@@ -2869,7 +2905,8 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
   track.dataset.level = point.level;
   track.setAttribute("aria-hidden", "true");
   const marker = document.createElement("img");
-  marker.src = `/static/assets/hyeoldangi-face-${point.level}.png`;
+  const assetLevel = point.level === "moderate" ? "caution" : point.level;
+  marker.src = `/static/assets/hyeoldangi-face-${assetLevel}.png`;
   marker.alt = "";
   track.append(marker);
   const label = document.createElement("small");
@@ -2930,6 +2967,7 @@ function renderPrediction(prediction, factors, currentFactors = null) {
     preview: Boolean(developmentPreviewRisk),
   });
   updateResultConfirmation();
+  updateLifestyleSummary();
   $("#analysis-failure").hidden = true;
   $("#retry-analysis").hidden = true;
 }
@@ -2989,7 +3027,7 @@ function renderXaiExplanationLists(
   }
   const futureCategory = normalizeRiskKey({ risk_category: state.prediction?.risk_category });
   const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
-    ["low", "caution", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
+    ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
   const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);
   const futureTitle = $("#future-factor-title");
@@ -2999,10 +3037,6 @@ function renderXaiExplanationLists(
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
 }
-
-
-
-
 async function requestPredictionModel(modelKey) {
   if (!["diabetes_current_screening", "diabetes_incidence"].includes(modelKey)) {
     throw new Error("이번 서비스에서 지원하지 않는 예측 모델입니다.");
@@ -3084,7 +3118,7 @@ function modelComparisonGuidance(currentRun, futureRun) {
       message: "현재 신호 확인을 우선하세요. 미래 모델의 낮음은 현재 상태를 배제하거나 진단하지 않습니다.",
     };
   }
-  if (!currentSignal && ["caution", "high"].includes(futureCategory)) {
+  if (!currentSignal && ["moderate", "high"].includes(futureCategory)) {
     return {
       code: "CURRENT_LOW_FUTURE_ELEVATED",
       display: true,
@@ -5560,7 +5594,8 @@ $$("[data-top-step]").forEach((button) => button.addEventListener("click", async
   }
   const targetStep = Number(button.dataset.topStep);
   if (targetStep === 7) {
-    try { await loadChallenges(); } catch (error) { showMessage(error.message); }
+    try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+    return;
   }
   showStep(targetStep);
 }));
@@ -6424,22 +6459,27 @@ $("#walking-level-picker").addEventListener("change", (event) => {
 });
 $("#challenge-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!requireActiveHealthConsent("새 챌린지 시작")) return;
+  if (challengeV3.busy || state.challengeListStatus !== "ready" || !challengeV3.active) return;
+  const token = state.token;
   if (!$("#challenge-follow-up").hidden) {
     $("#challenge-follow-up").focus({ preventScroll: true });
     showMessage("이전 의료기관 안내를 먼저 확인해 주세요.");
     return;
   }
   const ids = [...state.selectedChallengeIds];
+  if (challengeV3.owner !== state.token) return showMessage("로그인한 계정의 후보를 다시 불러와 주세요.");
+  if (ids.length !== 3) return showMessage("음료·식단·운동 각 1개가 필요합니다.");
   const customSelected = state.customChallengeSelected;
   if (!ids.length && !customSelected) return showMessage("챌린지를 하나 이상 선택해 주세요.");
   state.walkingLevel = selectedRadioValue("walking-level") || "starter";
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "챌린지 시작 중…");
   try {
     if (isLocalPreview()) {
-      renderCycle(createLocalDemoCycle(ids, customSelected ? state.customChallenge : null));
+      const cycle = createLocalDemoCycle(ids, customSelected ? state.customChallenge : null);
+      renderCycle(cycle);
       renderLocalDemoDashboard();
-      showStep(8);
-      showWorkspace("challenge", { moveFocus: false });
+      await openChallengeTab({ selectionCompleted: true });
       return;
     }
     if (customSelected) {
@@ -6447,13 +6487,15 @@ $("#challenge-form").addEventListener("submit", async (event) => {
       return;
     }
     const cycle = await api("/challenge-cycles", { method: "POST", body: JSON.stringify({
-      start_date: new Date().toISOString().slice(0, 10), challenge_ids: ids, prediction_id: state.predictionId,
+      start_date: challengeDay(), challenge_ids: ids, prediction_id: state.predictionId,
+      catalog_version: "evidence-v3", focus: challengeV3.focus, difficulty: challengeV3.difficulty,
     }) });
+    if (state.token !== token) return;
     renderCycle(cycle);
-    await refreshDashboard();
-    showStep(8);
-    showWorkspace("challenge", { moveFocus: false });
+    await openChallengeTab({ selectionCompleted: true });
+    void refreshDashboard().catch(() => {});
   } catch (error) {
+    if (state.token !== token) return;
     const hasActiveCycle = error.status === 409 && (
       error.code === "ACTIVE_CHALLENGE_CYCLE_EXISTS"
       || error.message.includes("진행 중인 4주 챌린지")
@@ -6464,11 +6506,11 @@ $("#challenge-form").addEventListener("submit", async (event) => {
     }
     try {
       const currentCycle = await api("/challenge-cycles/current");
+      if (state.token !== token) return;
       renderCycle(currentCycle);
-      await refreshDashboard();
-      showStep(8);
-      showWorkspace("challenge", { moveFocus: false });
-      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요. 오늘의 실천을 이어서 기록해 주세요.", "success");
+      await openChallengeTab();
+      void refreshDashboard().catch(() => {});
+      showMessage("이미 진행 중인 4주 챌린지를 불러왔어요.", "success");
     } catch (currentCycleError) {
       showMessage(currentCycleError.message || error.message);
     }
@@ -7329,14 +7371,14 @@ function renderMvpResultPreview() {
   // Static UI fixture only: never call the combined current/survival research endpoint.
   const fixture = (modelKey) => ({
     model_key: modelKey, prediction_id: "local-mvp-preview",
-    preview_only: true, preview_signal_level: "caution", preview_source: "static_fixture",
+    preview_only: true, preview_signal_level: "moderate", preview_source: "static_fixture",
     result_status: "development_only", promotion_status: "development_only",
     display_allowed: false, operational_model_activated: false,
   });
   state.currentScreeningPrediction = fixture("diabetes_current_screening");
   state.prediction = fixture("diabetes_incidence");
   state.predictionId = state.prediction.prediction_id;
-  state.developmentPreviewRiskCategory = "caution";
+  state.developmentPreviewRiskCategory = "moderate";
   renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
 }
 

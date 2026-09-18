@@ -252,3 +252,10 @@ V3 1·2유형을 PUT의 `is_completed: true`로 완료하려 하면 422다. `fal
 - 밭·당근 보상의 지급 조건·중복 방지·기존 게임과의 연결 방식 확정 후 별도 범위로 구현
 
 팀 공유 시에는 “의료 효과가 검증된 개인 맞춤 챌린지”가 아니라 “공식 자료의 일반 원칙을 바탕으로 만든, 선호·실천 단계별 3영역 챌린지”로 설명한다.
+
+## 9. 메인 화면 연결 회귀 방지
+
+- 운영 메인 화면은 `src/frontend/index.html`과 `src/frontend/app.js`를 사용한다. 레트로 소개용 파일만 수정해서는 운영 챌린지가 바뀌지 않는다.
+- 상단의 `챌린지` 메뉴는 `openChallengeTab()`을 통해 진입한다. 진행 중인 사이클이 있으면 `/challenge-cycles/current`를 조회해 오늘의 기록 화면을 열고, 없을 때만 V3 후보 3개를 불러온다.
+- 후보 화면 진입 전 `showChallengeSelectionView()`가 반드시 정의되어 있어야 한다. 이 함수 누락은 API 요청 전 JavaScript 예외를 일으켜 `0/3 선택`만 남기는 장애가 된다.
+- V3 사이클 생성 요청에는 `catalog_version: evidence-v3`, `focus`, `difficulty`를 함께 전송한다. 생성 직후와 409 재진입 모두 같은 챌린지 기록 화면으로 이동한다.

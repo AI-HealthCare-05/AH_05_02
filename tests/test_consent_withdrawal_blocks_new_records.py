@@ -75,7 +75,7 @@ async def _signup_login_consent_and_checkup(client: AsyncClient) -> dict[str, ob
         "current_drinker": False,
         "exercise_days_per_week": 3,
         "exercise_minutes": 30,
-        "feature_schema_version": "klosa_stage3_25features_v1",
+        "feature_schema_version": "klosa_stage3_25features_education4_v2",
     }
     checkup = await client.post("/api/v1/health-checkups", headers=headers, json=checkup_payload)
     assert checkup.status_code == status.HTTP_201_CREATED

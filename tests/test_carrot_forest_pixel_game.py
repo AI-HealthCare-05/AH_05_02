@@ -470,7 +470,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v178-16";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v179-sit-toggle";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -896,9 +896,14 @@ def test_avatar_sitting_is_a_stable_toggle_and_clothing_catalog_is_expanded() ->
     assert 'data-action="sit"' in html
     assert 'const seatObjectCodes = new Set(["chair_green", "chair_red", "bench"])' in game_script
     assert "async function sitAtPlacedObject" in game_script
-    assert "state.avatar.sitting = !state.avatar.sitting" in game_script
+    assert 'if (!["world", "home"].includes(currentScene))' in game_script
+    assert 'state.avatar.sitVariant = currentScene === "home" ? "home" : "field"' in game_script
+    assert 'state.avatar.sitVariant = "home"' in game_script
+    assert 'state.avatar.sitVariant = "field"' in game_script
+    assert 'if (avatar.sitVariant === "home")' in engine_script
+    assert 'const requestedFrame = requestedAnimation === "sit"' in engine_script
     assert "(avatar.sitting || (avatar.mounted && !usesWingMobility(avatar))) && !options.pose" in engine_script
-    assert "cycles[cycles.length - 1]" in engine_script
+    assert "stableSitFrame(avatar, cycles)" in engine_script
     assert 'lpcOutfit: "outfit"' in game_script
     assert 'lpcBottom: "bottom"' in game_script
 

@@ -116,7 +116,7 @@ def test_input_with_all_optional_values_missing_completes_inference() -> None:
     )
 
     assert result["risk_score"] == pytest.approx(0.02)
-    assert result["risk_category"] == "caution"
+    assert result["risk_category"] == "moderate"
 
 
 @pytest.mark.parametrize("missing_field", REQUIRED_API_FIELDS)
@@ -214,7 +214,7 @@ def test_supported_ages_complete_inference(birth_date: date, expected_age: int) 
 
     assert frame.loc[0, "age"] == expected_age
     assert result["risk_score"] == pytest.approx(0.02)
-    assert result["risk_category"] == "caution"
+    assert result["risk_category"] == "moderate"
     assert result["applicability"]["minimum_age"] == 45
     assert result["applicability"]["maximum_age"] == 105
     assert "동일한 성능을 보장하지 않습니다" in result["applicability"]["notice"]
@@ -266,7 +266,7 @@ def test_fixed_input_inference_is_deterministic_and_versioned() -> None:
 
     assert first == second
     assert first["risk_score"] == pytest.approx(0.02)
-    assert first["risk_category"] == "caution"
+    assert first["risk_category"] == "moderate"
     assert first["model_version"] == "rf-25features-v001-run-test"
     assert first["feature_schema_version"] == "klosa_stage3_25features_v1"
     assert first["threshold_version"] == "validation-recall-090-080-v1"
