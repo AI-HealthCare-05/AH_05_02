@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import math
+from dataclasses import replace
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -19,6 +20,16 @@ from app.services.challenge_catalog import metadata_for
 from app.vision.food_vision import FoodVisionError, get_food_vision_provider, sha256_digest
 
 logger = logging.getLogger(__name__)
+
+_VLM_UNAVAILABLE_NOTICES = {
+    "vlm_disabled": "VLM 보완 기능이 현재 비활성화되어 로컬 모델 결과만 사용했어요.",
+    "vlm_configuration_incomplete": "VLM 보완 설정이 완료되지 않아 로컬 모델 결과만 사용했어요.",
+    "vlm_timeout": "VLM 보완 요청 시간이 초과되어 로컬 모델 결과만 사용했어요.",
+    "vlm_connection_failed": "VLM 보완 서비스에 연결할 수 없어 로컬 모델 결과만 사용했어요.",
+    "vlm_rate_limited": "VLM 보완 요청이 많아 현재 사용할 수 없어 로컬 모델 결과만 사용했어요.",
+    "vlm_service_unavailable": "VLM 보완 서비스를 일시적으로 사용할 수 없어 로컬 모델 결과만 사용했어요.",
+    "vlm_response_invalid": "VLM 보완 결과를 확인할 수 없어 로컬 모델 결과만 사용했어요.",
+}
 
 
 def challenge_today():
@@ -87,6 +98,14 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
             from app.vision.openai_vlm import supplement_with_vlm
 
             result = await supplement_with_vlm(result, photo)
+        else:
+            from app.vision.openai_vlm import needs_vlm
+
+            if needs_vlm(result):
+                result = replace(
+                    result,
+                    uncertainty_reasons=[*result.uncertainty_reasons, "vlm_disabled"],
+                )
         if result.provider_kind not in {"local_kfood_cv", "local_kfood_openai_vlm"}:
             raise FoodVisionError("The image-review result is not from the local provider")
     except FoodVisionError as exc:
@@ -123,6 +142,11 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
         ),
     }
     review_status, notice = messages.get(result.decision_status or "uncertain", messages["uncertain"])
+    unavailable_reason = next(
+        (reason for reason in result.uncertainty_reasons if reason in _VLM_UNAVAILABLE_NOTICES), None
+    )
+    if unavailable_reason:
+        notice = f"{notice} {_VLM_UNAVAILABLE_NOTICES[unavailable_reason]}"
     return review_status, notice, result
 
 

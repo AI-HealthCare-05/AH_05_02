@@ -16,7 +16,7 @@ from app.vision.food_vision import (
     get_food_vision_provider,
 )
 from app.vision.local_kfood import threshold_decision
-from app.vision.openai_vlm import needs_vlm, supplement_with_vlm
+from app.vision.openai_vlm import VLMUnavailableError, needs_vlm, supplement_with_vlm
 
 
 def test_ratio_thresholds_require_both_stages() -> None:
@@ -157,3 +157,86 @@ async def test_vlm_can_promote_borderline_visible_vegetables(monkeypatch: pytest
     result = await supplement_with_vlm(_result(48, 28), b"image")
     assert result.decision_status == "valid"
     assert result.provider_kind == "local_kfood_openai_vlm"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "reason_code",
+    [
+        "vlm_configuration_incomplete",
+        "vlm_timeout",
+        "vlm_connection_failed",
+        "vlm_rate_limited",
+        "vlm_service_unavailable",
+        "vlm_response_invalid",
+    ],
+)
+async def test_vlm_unavailable_reason_is_preserved_for_user_guidance(
+    monkeypatch: pytest.MonkeyPatch, reason_code: str
+) -> None:
+    async def verify(_self, _image):
+        raise VLMUnavailableError(reason_code, "internal detail")
+
+    monkeypatch.setattr("app.vision.openai_vlm.OpenAIVegetableVerifier.verify", verify)
+    monkeypatch.setattr(config, "OPENAI_API_KEY", "test-key")
+    result = await supplement_with_vlm(_result(48, 28), b"image")
+    assert result.decision_status == "uncertain"
+    assert reason_code in result.uncertainty_reasons
+
+
+def test_vlm_unavailable_notice_distinguishes_disabled_and_runtime_causes(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def analyze(_photo, _mime_type, _filename):
+        return _result(48, 28)
+
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(config, "OPENAI_VLM_FALLBACK_ENABLED", False)
+    monkeypatch.setattr(
+        "app.services.challenge_proofs.get_food_vision_provider",
+        lambda: SimpleNamespace(provider_kind="local_kfood_cv", analyze=analyze),
+    )
+
+    from app.services.challenge_proofs import _review
+
+    status, notice, result = asyncio.run(_review(b"image", 1))
+    assert status == "needs_review"
+    assert "비활성화" in notice
+    assert "로컬 모델 결과만 사용" in notice
+    assert "vlm_disabled" in result.uncertainty_reasons
+
+
+@pytest.mark.parametrize(
+    ("reason_code", "expected"),
+    [
+        ("vlm_configuration_incomplete", "설정이 완료되지 않아"),
+        ("vlm_timeout", "요청 시간이 초과되어"),
+        ("vlm_connection_failed", "연결할 수 없어"),
+        ("vlm_rate_limited", "요청이 많아"),
+        ("vlm_service_unavailable", "일시적으로 사용할 수 없어"),
+        ("vlm_response_invalid", "결과를 확인할 수 없어"),
+    ],
+)
+def test_vlm_runtime_failure_notice_is_cause_specific(
+    monkeypatch: pytest.MonkeyPatch, reason_code: str, expected: str
+) -> None:
+    local_result = _result(48, 28)
+
+    async def analyze(_photo, _mime_type, _filename):
+        return local_result
+
+    async def supplement(result, _photo):
+        return replace(result, uncertainty_reasons=[reason_code])
+
+    monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
+    monkeypatch.setattr(config, "OPENAI_VLM_FALLBACK_ENABLED", True)
+    monkeypatch.setattr(
+        "app.services.challenge_proofs.get_food_vision_provider",
+        lambda: SimpleNamespace(provider_kind="local_kfood_cv", analyze=analyze),
+    )
+    monkeypatch.setattr("app.vision.openai_vlm.supplement_with_vlm", supplement)
+
+    from app.services.challenge_proofs import _review
+
+    status, notice, _result_value = asyncio.run(_review(b"image", 1))
+    assert status == "needs_review"
+    assert expected in notice
+    assert "로컬 모델 결과만 사용" in notice

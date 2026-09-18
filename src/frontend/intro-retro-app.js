@@ -3736,7 +3736,13 @@ async function submitV3Photo() {
       result = await api(`/user-challenges/${target.id}/photo-verifications`, { method: "POST", body: form });
       if (state.token !== token || state.cycle?.cycle_id !== cycleId) return;
     }
-    if (result.challenge_completed !== true || result.review_status !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
+    const reviewStatus = String(result.review_status || "").toLowerCase();
+    if (reviewStatus === "needs_review" || reviewStatus === "pending" || reviewStatus === "in_review") {
+      $("#photo-pending-hint").textContent = result.notice || "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
+      showPhotoRecordState("photo-state-pending");
+      return;
+    }
+    if (result.challenge_completed !== true || reviewStatus !== "accepted") throw new Error(result.notice || "검토가 완료되지 않았습니다.");
     state.dailyCompleted.add(target.id);
     target.saved = true;
     renderDailyRecordList(); updateDailyRecordSummary();

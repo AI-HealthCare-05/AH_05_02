@@ -210,6 +210,7 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.match(source, /Number\(item\.verification_type\) !== 1/);
     assert.doesNotMatch(source, /input\.checked = input\.value === targetCount/);
     assert.match(source, /element\.hidden = !vegetableReview/);
+    assert.match(source, /result\.notice \|\| "사진은 제출됐지만/);
   }
   for (const file of ['src/frontend/index.html', 'src/frontend/intro-retro.html']) {
     const html = fs.readFileSync(file, 'utf8');
