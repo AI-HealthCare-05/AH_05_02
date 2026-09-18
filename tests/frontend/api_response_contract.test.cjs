@@ -29,6 +29,13 @@ test('legacy string error, validation array, network error remain actionable', a
   await assert.rejects(harness(422, { detail: [{ loc: ['body', 'height_cm'], msg: 'invalid' }] }).api('/qa'), e => e.message.includes('height_cm') && e.details.length === 1);
   await assert.rejects(harness(0, {}, true).api('/qa'), e => e.code === 'NETWORK_ERROR' && e.retryable);
 });
+test('proxy upload rejection explains the photo size limit', async () => {
+  await assert.rejects(harness(413, {}).api('/qa'), error =>
+    error.code === 'PAYLOAD_TOO_LARGE'
+    && error.status === 413
+    && error.message.includes('8MB 이하 사진')
+  );
+});
 test('signal mapping is Korean and unknown signals stay pending', () => {
   const c = harness(200, {});
   for (const [key, label] of [['low', '낮음'], ['moderate', '주의'], ['caution', '주의'], ['high', '높음']]) {
