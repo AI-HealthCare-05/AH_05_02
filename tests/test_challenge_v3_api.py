@@ -211,14 +211,17 @@ async def test_invalid_preference_queries_are_rejected(api, params):
 async def test_demo_allows_both_diet_choices_without_claiming_photo_review(api, monkeypatch):
     monkeypatch.setattr(config, "DEMO_MODE", True)
     items = await catalog(api)
-    ids = [items[code]["challenge_id"] for code in (
-        "v3_hydration_choice", "v3_vegetable_easy", "v3_walk_easy"
-    )]
+    ids = [items[code]["challenge_id"] for code in ("v3_hydration_choice", "v3_vegetable_easy", "v3_walk_easy")]
     response = await api.client.post(
         "/api/v1/challenge-cycles",
         headers=api.headers,
-        json={"start_date": challenge_today().isoformat(), "challenge_ids": ids,
-              "catalog_version": CATALOG_VERSION, "focus": "balanced", "difficulty": "easy"},
+        json={
+            "start_date": challenge_today().isoformat(),
+            "challenge_ids": ids,
+            "catalog_version": CATALOG_VERSION,
+            "focus": "balanced",
+            "difficulty": "easy",
+        },
     )
     assert response.status_code == 201, response.text
     selected = find_item(response.json()["data"], "fiber_diet")

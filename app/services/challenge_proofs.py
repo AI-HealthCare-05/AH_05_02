@@ -86,7 +86,11 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
     if verification_type == 2:
         return "accepted", "사진 제출을 확인했습니다. 활동 시간·섭취량은 본인 기록이며 AI 검증이 아닙니다.", None
     if config.DEMO_MODE and not food_vision_is_configured():
-        return "accepted", "데모: 사진 제출만 확인했습니다. 채소 포함 여부·섭취량은 자동 판정하지 않았으며 본인 기록입니다.", None
+        return (
+            "accepted",
+            "데모: 사진 제출만 확인했습니다. 채소 포함 여부·섭취량은 자동 판정하지 않았으며 본인 기록입니다.",
+            None,
+        )
     if config.FOOD_VISION_PROVIDER != "local_kfood":
         raise HTTPException(
             status_code=503, detail="사진 검토 서비스가 연결되지 않았습니다. 완료로 처리하지 않았습니다."
