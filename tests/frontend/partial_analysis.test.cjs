@@ -44,7 +44,8 @@ for (const failed of [CURRENT, FUTURE]) {
     await h.run();
     assert.equal(h.state.step, 6);
     assert.equal(h.$('#partial-analysis-notice').hidden, false);
-    assert.match(h.$('#partial-analysis-message').textContent, /확인하지 못한 결과는 '위험 낮음'으로 판정된 것이 아닙니다/);
+    assert.match(h.$('#partial-analysis-message').textContent, /잠시 후 다시 시도해 주세요/);
+    assert.doesNotMatch(h.$('#partial-analysis-message').textContent, /위험 (?:높음|낮음)|위험도/);
     const successful = failed === CURRENT ? h.state.prediction : h.state.currentScreeningPrediction;
     assert.ok(successful);
     assert.equal(successful.display_allowed, false);
@@ -85,7 +86,7 @@ test('explanation failure preserves models; retry only fetches explanations', as
   await h.run();
   assert.equal(h.state.step, 6);
   assert.ok(h.state.prediction);
-  assert.match(h.$('#partial-analysis-message').textContent, /위험 결과는 유지되지만 설명 요인을 불러오지 못했어요/);
+  assert.match(h.$('#partial-analysis-message').textContent, /확인된 결과는 유지되지만 설명 요인을 불러오지 못했어요/);
   h.calls.length = 0;
   h.setFactorFailure(false);
   await h.run({ retryFailed: true });

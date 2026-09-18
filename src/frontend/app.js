@@ -1985,7 +1985,7 @@ function renderPredictionStatus(status, options = {}) {
       ? "입력정보는 보존되어 있습니다. 잠시 후 다시 시도할 수 있습니다."
       : errorCode === "MODEL_NOT_READY"
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
+        : "입력정보를 확인한 뒤 다시 시도해 주세요.");
   }
   $("#retry-analysis").hidden = !config.showRetry;
   $("#high-guidance").hidden = true;
@@ -3073,8 +3073,8 @@ function renderPartialAnalysisNotice(run) {
   if (modelNames.length) {
     parts.push(`${modelNames.join("·")} 결과를 확인하지 못했어요`);
   }
-  if (hasFactorFailure) parts.push("위험 결과는 유지되지만 설명 요인을 불러오지 못했어요");
-  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 잠시 후 다시 시도해 주세요. 확인하지 못한 결과는 '위험 낮음'으로 판정된 것이 아닙니다.`;
+  if (hasFactorFailure) parts.push("확인된 결과는 유지되지만 설명 요인을 불러오지 못했어요");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 잠시 후 다시 시도해 주세요.`;
   $("#retry-partial-analysis").textContent = modelNames.length
     ? "실패한 분석만 다시 시도하기"
     : "설명 요인 다시 불러오기";
@@ -3085,8 +3085,8 @@ function modelComparisonGuidance(currentRun, futureRun) {
     return {
       code: "MODEL_RESULT_INCOMPLETE",
       display: true,
-      title: "한쪽 당뇨 위험 결과만 확인됐어요",
-      message: "확인된 결과만 보여드립니다. 확인하지 못한 결과는 '위험 낮음'으로 판정된 것이 아닙니다.",
+      title: "한쪽 분석 결과만 확인됐어요",
+      message: "확인된 결과만 보여드립니다. 완료하지 못한 분석은 다시 시도해 주세요.",
     };
   }
   const current = currentRun.prediction;

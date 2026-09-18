@@ -155,7 +155,8 @@ test('model conflict guidance prioritizes current signal and never treats failur
   assert.match(context.modelComparisonGuidance(currentLow, futureElevated).message, /정기 검사와 생활습관 점검/);
   const incomplete = context.modelComparisonGuidance(current, { status: 'failed' });
   assert.equal(incomplete.code, 'MODEL_RESULT_INCOMPLETE');
-  assert.match(incomplete.message, /'위험 낮음'으로 판정된 것이 아닙니다/);
+  assert.match(incomplete.message, /완료하지 못한 분석은 다시 시도/);
+  assert.doesNotMatch(incomplete.message, /위험 (?:높음|낮음)|위험도/);
 });
 
 test('unapproved model outputs cannot create a public conflict explanation', () => {
