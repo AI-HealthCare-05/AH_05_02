@@ -1648,14 +1648,24 @@ async function saveCurrentScreeningInputSnapshot() {
 }
 
 function syncExerciseDetails() {
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const days = $("#exercise-days");
   const minutes = $("#exercise-minutes");
   const card = $("#exercise-detail-card");
   if (!days || !minutes || !card) return;
-  days.disabled = false;
-  minutes.disabled = false;
+  if (!isRegularExercise) {
+    if (!days.disabled) days.dataset.previousValue = days.value;
+    if (!minutes.disabled) minutes.dataset.previousValue = minutes.value;
+    days.value = "0";
+    minutes.value = "0";
+  } else {
+    if (days.disabled) days.value = days.dataset.previousValue ?? "3";
+    if (minutes.disabled) minutes.value = minutes.dataset.previousValue ?? "30";
+  }
+  days.disabled = !isRegularExercise;
+  minutes.disabled = !isRegularExercise;
   card.hidden = false;
-  card.classList.toggle("disabled", false);
+  card.classList.toggle("disabled", !isRegularExercise);
 }
 
 function syncAlcoholFrequencyDetails() {
@@ -3007,10 +3017,11 @@ function renderXaiExplanationLists(
     Array.isArray(currentFactors?.items) ? currentFactors.items : [], currentSignal,
   );
   const futureList = $("#factor-list");
+  const currentReady = Boolean(currentApproved && currentFactors?.display_allowed === true && currentItems.length);
+  const currentTitle = $("#current-factor-title");
+  if (currentTitle) currentTitle.textContent = currentReady ? "현재 위험 신호 설명" : "현재 건강 신호 XAI 연결 대기";
   if (currentList) {
-    currentList.closest?.(".result-xai-card")?.classList.toggle(
-      "xai-ready", currentApproved && currentFactors?.display_allowed === true && currentItems.length > 0,
-    );
+    currentList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", currentReady);
     currentList.innerHTML = currentApproved && currentFactors?.display_allowed === true && currentItems.length
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
@@ -3019,9 +3030,10 @@ function renderXaiExplanationLists(
   const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
     ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
-  futureList.closest?.(".result-xai-card")?.classList.toggle(
-    "xai-ready", approved && factors?.display_allowed === true && factorItems.length > 0,
-  );
+  const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);
+  const futureTitle = $("#future-factor-title");
+  if (futureTitle) futureTitle.textContent = futureReady ? "미래 당뇨 위험 설명" : "미래 위험 XAI 연결 대기";
+  futureList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", futureReady);
   futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;

@@ -107,7 +107,12 @@ test('XAI explanation cards show only approved returned factors with safe labels
   const nodes = {
     '#current-factor-list': { innerHTML: '' },
     '#factor-list': { innerHTML: '' },
+    '#current-factor-title': { textContent: '' },
+    '#future-factor-title': { textContent: '' },
   };
+  for (const id of ['#current-factor-list', '#factor-list']) {
+    nodes[id].closest = () => ({ classList: { toggle: (name, ready) => { nodes[id].ready = ready; } } });
+  }
   const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
   const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
     state,
@@ -118,6 +123,9 @@ test('XAI explanation cards show only approved returned factors with safe labels
   const approvedFactors = { status: 'approved', shap_claimed: true, display_allowed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '모델 점수를 낮춘 방향입니다.' }] };
   render(approvedFactors, { approved: true, currentFactors: approvedFactors, currentApproved: true });
   assert.match(nodes['#current-factor-list'].innerHTML, /걷기 시간/);
+  assert.equal(nodes['#current-factor-title'].textContent, '현재 위험 신호 설명');
+  assert.equal(nodes['#future-factor-title'].textContent, '미래 당뇨 위험 설명');
+  assert.equal(nodes['#factor-list'].ready, true);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
   assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 당뇨 위험을 낮춘 방향 · 바꿀 수 있는 요인/);
   render({ ...approvedFactors, display_allowed: false }, { approved: true });
@@ -125,6 +133,9 @@ test('XAI explanation cards show only approved returned factors with safe labels
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /임의 표시 금지/);
   assert.match(nodes['#factor-list'].innerHTML, /미래 위험 XAI 연결 대기/);
+  assert.equal(nodes['#future-factor-title'].textContent, '미래 위험 XAI 연결 대기');
+  assert.equal(nodes['#current-factor-title'].textContent, '현재 건강 신호 XAI 연결 대기');
+  assert.equal(nodes['#factor-list'].ready, false);
 });
 test('XAI picks directional 2+1 without padding and hides unknown result states', () => {
   const context = loadMany(['factorDirectionLabel', 'selectXaiFactors']);
