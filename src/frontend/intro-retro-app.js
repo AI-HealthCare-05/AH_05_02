@@ -402,8 +402,18 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance").focus({ preventScroll: true });
 }
 
+let _messageHome = null;
 function showMessage(message, kind = "error") {
   const box = $("#message");
+  if (!_messageHome) _messageHome = box.parentElement;
+  // A message shown while a native <dialog> is open would otherwise render
+  // behind that dialog's top layer (or its ::backdrop) and be invisible even
+  // though it technically scrolls into view. Move it into the open dialog so
+  // people actually see the warning instead of just feeling the page jump.
+  const openDialogs = document.querySelectorAll("dialog[open]");
+  const activeDialog = openDialogs.length ? openDialogs[openDialogs.length - 1] : null;
+  const host = activeDialog || _messageHome;
+  if (box.parentElement !== host) host.prepend(box);
   box.textContent = message;
   box.dataset.kind = kind;
   box.hidden = false;
