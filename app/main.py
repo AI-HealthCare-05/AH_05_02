@@ -14,10 +14,27 @@ from app.core.redis import close_redis, redis_client
 from app.middleware.challenge_upload_limit import ChallengeUploadLimit
 
 
+async def _preload_embedded_demo_models() -> None:
+    """Load and verify both approved artifacts before accepting demo traffic."""
+    from app.prediction.providers import load_standard_model
+    from src.ml.inference.diabetes_current_screening import load_current_screening_model
+
+    await asyncio.gather(
+        asyncio.to_thread(load_standard_model),
+        asyncio.to_thread(
+            load_current_screening_model,
+            manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
+            model_path=config.CURRENT_SCREENING_MODEL_URI,
+        ),
+    )
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if not config.DEMO_MODE:
         await redis_client.ping()
+    if config.DEMO_MODE and config.DEMO_ARTIFACT_INFERENCE_ENABLED:
+        await _preload_embedded_demo_models()
     from app.services.challenge_v2_retention import retention_loop
 
     retention = asyncio.create_task(retention_loop())
@@ -169,7 +186,8 @@ async def ready(response: Response) -> dict[str, object]:
             "future_artifact_path_available": future_artifact_available,
             "current_artifact_path_available": current_artifact_available,
             "food_vision_ready": food_vision_ready,
-            "worker_preload_required_for_release": True,
+            "demo_artifact_inference_enabled": config.DEMO_ARTIFACT_INFERENCE_ENABLED,
+            "worker_preload_required_for_release": not (config.DEMO_MODE and config.DEMO_ARTIFACT_INFERENCE_ENABLED),
         },
         "active_model": {
             "model_key": ACTIVE_MODEL.model_key,

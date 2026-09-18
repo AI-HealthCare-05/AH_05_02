@@ -32,6 +32,7 @@ class Config(BaseSettings):
     DB_GENERATE_SCHEMAS: bool = False
     DATABASE_URL: str | None = None
     DEMO_MODE: bool = False
+    DEMO_ARTIFACT_INFERENCE_ENABLED: bool = False
     CHALLENGE_V2_ENABLED: bool = False
     CHALLENGE_V2_CONTENT_APPROVED: bool = False
     CHALLENGE_V2_REVIEWER_IDS: list[int] = []
