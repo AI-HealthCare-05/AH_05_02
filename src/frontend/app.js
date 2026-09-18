@@ -5268,7 +5268,7 @@ async function refreshDashboard() {
     : cards.length ? "모델 검증 중" : "기록 없음";
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${Number(progress.recent_7_days?.completed || 0)}개`;
-  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadHealthCheckupHistory()]);
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadInvitations(), loadSharedGroups(), loadHealthCheckupHistory()]);
 }
 
 function setInviteMode(mode) {
@@ -5284,6 +5284,78 @@ function setInviteMode(mode) {
   });
 }
 
+function invitationStatusLabel(status) {
+  return { pending: "수락 대기", accepted: "수락 완료", expired: "기간 만료", revoked: "취소됨" }[status] || status || "상태 확인 중";
+}
+
+function formatInvitationExpiry(value) {
+  if (!value) return "만료일 확인 필요";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "만료일 확인 필요";
+  return `${date.getMonth() + 1}/${date.getDate()}까지`;
+}
+
+function setInviteDisclosure(panelId, { forceOpen = false, moveFocus = true } = {}) {
+  const target = document.getElementById(panelId);
+  if (!target) return;
+  const shouldOpen = forceOpen || target.hidden;
+  $$("[data-invite-disclosure]").forEach((button) => {
+    const selected = shouldOpen && button.getAttribute("aria-controls") === panelId;
+    button.setAttribute("aria-expanded", String(selected));
+    button.classList.toggle("active", selected);
+  });
+  $$(".forest-invite-detail").forEach((panel) => {
+    panel.hidden = !(shouldOpen && panel.id === panelId);
+  });
+  if (shouldOpen && moveFocus) target.focus({ preventScroll: true });
+  if (shouldOpen && panelId === "received-invite-panel") void loadInvitations();
+  if (shouldOpen && panelId === "create-invite-panel") setInviteMode("email");
+}
+
+function closeInviteDisclosure(panelId) {
+  const panel = document.getElementById(panelId);
+  const opener = $(`[data-invite-disclosure][aria-controls="${panelId}"]`);
+  if (panel) panel.hidden = true;
+  if (opener) {
+    opener.setAttribute("aria-expanded", "false");
+    opener.classList.remove("active");
+    opener.focus();
+  }
+}
+
+function renderReceivedInvitations() {
+  const list = $("#received-invitation-list");
+  if (!list) return;
+  const received = Array.isArray(state.invitations?.received) ? state.invitations.received : [];
+  if (!received.length) {
+    list.innerHTML = renderTogetherEmpty("아직 받은 초대가 없습니다.", "새 초대를 받으면 이곳에 표시됩니다.");
+    return;
+  }
+  list.innerHTML = received.map((item) => {
+    const pending = item.status === "pending";
+    return `<article class="received-invitation-item ${pending ? "is-pending" : ""}">
+      <div><strong>${escapeHtml(relationLabel(item.relation_type))} 초대</strong><p>${escapeHtml(formatInvitationExpiry(item.expires_at))} · ${escapeHtml(invitationStatusLabel(item.status))}</p></div>
+      <span class="member-status">${escapeHtml(invitationStatusLabel(item.status))}</span>
+    </article>`;
+  }).join("");
+}
+
+async function loadInvitations() {
+  const list = $("#received-invitation-list");
+  if (!list) return;
+  list.innerHTML = renderTogetherEmpty("초대 목록을 불러오고 있어요", "잠시만 기다려 주세요.");
+  try {
+    const result = isLocalPreview() ? { sent: [], received: [] } : await api("/invitations");
+    state.invitations = {
+      sent: Array.isArray(result?.sent) ? result.sent : [],
+      received: Array.isArray(result?.received) ? result.received : [],
+    };
+    renderReceivedInvitations();
+  } catch (error) {
+    list.innerHTML = `<article class="together-empty"><strong>받은 초대를 불러오지 못했어요.</strong><p>${escapeHtml(error.message || "잠시 후 다시 시도해 주세요.")}</p><button class="secondary retry-invitations" type="button">다시 불러오기</button></article>`;
+  }
+}
+
 function configureEnvironmentControls() {
   const statusPanel = $(".status-demo-panel");
   const requestedPreview = new URLSearchParams(window.location.search).get("preview");
@@ -5292,6 +5364,11 @@ function configureEnvironmentControls() {
   const codeNode = $("#forest-invite-code");
   const codeNote = $("#invite-code-note");
   const copyButton = $("#copy-invite-code");
+  const incomingToken = new URLSearchParams(window.location.search).get("invite_token");
+  if (incomingToken && $("#invitation-token")) {
+    $("#invitation-token").value = incomingToken;
+    setInviteDisclosure("received-invite-panel", { forceOpen: true, moveFocus: false });
+  }
   if (!codeNode || !codeNote || !copyButton) return;
 
   const isDemo = isDemoEnvironment();
@@ -5304,20 +5381,31 @@ function configureEnvironmentControls() {
   copyButton.textContent = isDemo ? "복사" : "준비 중";
 }
 
-function renderInviteEmailResult(result = {}) {
+function renderInviteCodeResult(result = {}) {
   const box = $("#invite-result");
-  if (!box) return;
-  const content = document.createElement("div");
-  const title = document.createElement("strong");
-  const token = document.createElement("p");
-  const notice = document.createElement("small");
-  title.textContent = "초대 이메일을 보낼 준비가 되었습니다";
-  token.className = "invite-code";
-  token.textContent = result.token || "초대 요청 접수 완료";
-  notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요.";
-  content.append(title, token, notice);
-  box.replaceChildren(content);
-  box.hidden = false;
+  const codeNode = $("#forest-invite-code");
+  const codeNote = $("#invite-code-note");
+  const copyButton = $("#copy-invite-code");
+  const inviteCode = typeof result.token === "string" ? result.token.trim() : "";
+  setInviteDisclosure("create-invite-panel", { forceOpen: true, moveFocus: false });
+  if (!codeNode || !codeNote || !copyButton || !inviteCode) {
+    if (box) {
+      box.textContent = "초대 코드를 발급받지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      box.hidden = false;
+    }
+    return;
+  }
+  codeNode.textContent = inviteCode;
+  codeNode.dataset.copyValue = inviteCode;
+  copyButton.disabled = false;
+  copyButton.textContent = "복사";
+  const expiry = formatInvitationExpiry(result.expires_at);
+  codeNote.textContent = `초대받을 분에게 이 코드를 전달해 주세요. ${expiry} 사용할 수 있어요.`;
+  if (box) {
+    box.replaceChildren();
+    box.hidden = true;
+  }
+  codeNode.focus?.();
 }
 
 function setReportPeriod(period) {
@@ -6870,16 +6958,47 @@ $("#education-feedback-action")?.addEventListener("click", (event) => {
 });
 $("#invite-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 이메일 보내는 중…");
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 코드 만드는 중…");
   try {
     const result = await api("/invitations", { method: "POST", body: JSON.stringify({
       invitee_email: $("#invite-email").value, relation_type: "family",
     }) });
-    renderInviteEmailResult(result);
+    renderInviteCodeResult(result);
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
+$("#accept-invitation-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const tokenInput = $("#invitation-token");
+  const token = tokenInput.value.trim();
+  if (!tokenInput.checkValidity()) {
+    tokenInput.reportValidity();
+    return;
+  }
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 수락 중…");
+  try {
+    await api("/invitations/accept", { method: "POST", body: JSON.stringify({ token }) });
+    tokenInput.value = "";
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("invite_token")) {
+      url.searchParams.delete("invite_token");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    await Promise.all([loadInvitations(), loadConnections()]);
+    showMessage("초대를 수락했습니다. 함께하는 가족·친구 목록에서 확인해 주세요.", "success");
+  } catch (error) { showMessage(error.message || "초대를 수락하지 못했습니다."); }
+  finally { releaseBusy(); }
+});
+$("#received-invitation-list")?.addEventListener("click", (event) => {
+  if (event.target.closest(".retry-invitations")) loadInvitations();
+});
 $$("[data-invite-mode]").forEach((button) => button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode)));
+$$("[data-invite-disclosure]").forEach((button) => button.addEventListener("click", () => {
+  setInviteDisclosure(button.getAttribute("aria-controls"));
+}));
+$$("[data-invite-close]").forEach((button) => button.addEventListener("click", () => {
+  closeInviteDisclosure(button.dataset.inviteClose);
+}));
 $("#copy-invite-code")?.addEventListener("click", async () => {
   const code = $("#forest-invite-code")?.dataset.copyValue || "";
   if (!code) {
