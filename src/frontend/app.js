@@ -3,7 +3,7 @@ const $ = (selector) => document.querySelector(selector);
 Object.assign(state, { lifestyleReportStatus: "idle", reportPeriods: {}, reportPeriodStatus: {} });
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const challengeV3 = { active: false, busy: false, rotation: 0, focus: "balanced", difficulty: "easy", policy: null, owner: null, request: 0 };
+const challengeV3 = { active: false, busy: false, focus: "balanced", difficulty: "easy", photoReviewAvailable: false, demoPhotoSubmissionOnly: false, owner: null, request: 0 };
 const challengeDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const challengeLevelLabel = (level) => ({ easy: "쉬움", moderate: "보통", advanced: "도전" }[level] || "공통");
 const challengeProofLabel = (type) => ({ 1: "1유형 · 사진 + 채소 확인", 2: "2유형 · 사진 제출", 3: "3유형 · 자가 체크" }[type] || "기존 기록 방식");
@@ -3294,78 +3294,7 @@ async function runPrediction({ retryFailed = false } = {}) {
   }
 }
 async function loadChallenges() {
-  if (typeof challengeV3 !== "undefined") {
-    showChallengeSelectionView();
-    const token = state.token;
-    if (challengeV3.busy && challengeV3.owner === token) return;
-    if (challengeV3.owner !== token) {
-      challengeV3.active = false;
-      state.challengeRecommendations = [];
-      state.challengeCatalog = [];
-      state.selectedChallengeIds = new Set();
-      state.openFollowUpActionIds = [];
-      $("#challenge-list").replaceChildren();
-    }
-    challengeV3.owner = token;
-    challengeV3.busy = true;
-    state.challengeListStatus = "loading";
-    state.challengeStartSafetyBlocked = false;
-    const request = ++challengeV3.request;
-    const isCurrent = () => state.token === token && challengeV3.request === request;
-    const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
-    controls.forEach((control) => { control.disabled = true; });
-    $("#retry-challenges").hidden = true;
-    $("#challenge-v3-policy").textContent = "자료 기반 후보를 불러오고 있어요…";
-    try {
-      const focus = $("#challenge-v3-focus").value;
-      const difficulty = $("#challenge-v3-difficulty").value;
-      const query = new URLSearchParams({ catalog_version: "evidence-v3", focus, difficulty, rotation: String(challengeV3.rotation) });
-      if (state.predictionId && !isLocalPreview()) query.set("prediction_id", String(state.predictionId));
-      let result;
-      if (isLocalPreview()) {
-        const catalog = await api("/challenges?catalog_version=evidence-v3");
-        result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
-      } else result = await api(`/challenge-recommendations?${query}`);
-      if (!isCurrent()) return;
-      result = normalizeRecommendationResult(result, difficulty);
-      Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
-      state.challengeRecommendations = result.items;
-      state.challengeCatalog = result.items;
-      state.selectedChallengeIds = new Set(result.items.map((item) => Number(item.challenge_id)));
-      state.customChallengeSelected = false;
-      state.activeChallengeCategory = null;
-      closeRagChallengeGenerator();
-      $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
-      state.openFollowUpActionIds = [];
-      $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-      if (result.medical_guidance_required_first) {
-        $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
-        const actions = await api("/follow-up-actions");
-        if (!isCurrent()) return;
-        state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
-        $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-      }
-      if (!isCurrent()) return;
-      renderChallengeChoices();
-      state.challengeListStatus = "ready";
-    } catch (error) {
-      if (!isCurrent()) return;
-      state.challengeListStatus = "failed";
-      $("#challenge-v3-focus").value = challengeV3.focus;
-      $("#challenge-v3-difficulty").value = challengeV3.difficulty;
-      $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
-      $("#retry-challenges").hidden = false;
-      showMessage(error.message);
-    } finally {
-      if (challengeV3.request === request) {
-        challengeV3.busy = false;
-        controls.forEach((control) => { control.disabled = false; });
-        updateChallengeStartState();
-        if (!isCurrent() || !challengeV3.active) $("#start-challenge").disabled = true;
-      }
-    }
-    return;
-  }
+  if (typeof challengeV3 !== "undefined") return loadV3Challenges();
   const challengeList = $("#challenge-list");
   const startButton = $("#start-challenge");
   $("#retry-challenges").hidden = true;
@@ -3426,65 +3355,86 @@ async function loadChallenges() {
   syncWalkingLevelPicker();
 }
 
+function selectV3Challenges() {
+  const difficulty = $("#challenge-v3-difficulty").value;
+  const selected = [
+    state.challengeCatalog.find((item) => item.code === "v3_hydration_choice"),
+    state.challengeCatalog.find((item) => item.code === $("#challenge-v3-diet").value),
+    state.challengeCatalog.find((item) => item.code === $("#challenge-v3-activity").value),
+  ];
+  if (selected.some((item) => !item) || selected[1].difficulty !== difficulty || selected[2].difficulty !== difficulty) {
+    state.challengeListStatus = "failed";
+    showMessage("선택한 챌린지를 확인할 수 없습니다. 목록을 다시 불러와 주세요.");
+    return;
+  }
+  state.challengeRecommendations = selected;
+  state.selectedChallengeIds = new Set(selected.map((item) => Number(item.challenge_id)));
+  renderChallengeChoices();
+}
+
 async function loadV3Challenges() {
   showChallengeSelectionView();
+  if (challengeV3.busy) return;
   const token = state.token;
-  if (challengeV3.busy && challengeV3.owner === token) return;
-  if (challengeV3.owner !== token) {
-    challengeV3.active = false;
-    state.challengeRecommendations = [];
-    state.challengeCatalog = [];
-    state.selectedChallengeIds = new Set();
-    state.openFollowUpActionIds = [];
-    $("#challenge-list").replaceChildren();
-  }
   challengeV3.owner = token;
   challengeV3.busy = true;
   state.challengeListStatus = "loading";
-  state.challengeStartSafetyBlocked = false;
   const request = ++challengeV3.request;
-  const isCurrent = () => state.token === token && challengeV3.request === request;
-  const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
+  const controls = [$("#challenge-v3-difficulty"), $("#challenge-v3-diet"), $("#challenge-v3-activity"), $("#start-challenge")];
   controls.forEach((control) => { control.disabled = true; });
   $("#retry-challenges").hidden = true;
-  $("#challenge-v3-policy").textContent = "자료 기반 후보를 불러오고 있어요…";
+  $("#challenge-v3-policy").textContent = "챌린지 목록을 불러오고 있어요…";
   try {
-    const focus = $("#challenge-v3-focus").value;
     const difficulty = $("#challenge-v3-difficulty").value;
-    const query = new URLSearchParams({ catalog_version: "evidence-v3", focus, difficulty, rotation: String(challengeV3.rotation) });
-    if (state.predictionId && !isLocalPreview()) query.set("prediction_id", String(state.predictionId));
-    let result;
-    if (isLocalPreview()) {
-      const catalog = await api("/challenges?catalog_version=evidence-v3");
-      result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
-    } else result = await api(`/challenge-recommendations?${query}`);
-    if (!isCurrent()) return;
-    result = normalizeRecommendationResult(result, difficulty);
-    Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
-    state.challengeRecommendations = result.items;
-    state.challengeCatalog = result.items;
-    state.selectedChallengeIds = new Set(result.items.map((item) => Number(item.challenge_id)));
-    state.customChallengeSelected = false;
-    state.activeChallengeCategory = null;
-    closeRagChallengeGenerator();
-    renderChallengeChoices();
-    $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
+    const [catalog, recommendation] = await Promise.all([
+      api("/challenges?catalog_version=evidence-v3"),
+      api(`/challenge-recommendations?catalog_version=evidence-v3&focus=balanced&difficulty=${encodeURIComponent(difficulty)}`),
+    ]);
+    if (state.token !== token || challengeV3.request !== request) return;
+    const items = catalog.items || [];
+    const diet = items.filter((item) => item.domain === "fiber_diet" && item.difficulty === difficulty);
+    const activity = items.filter((item) => item.domain === "aerobic_activity" && item.difficulty === difficulty);
+    if (diet.length !== 2 || activity.length !== 2 || !items.some((item) => item.code === "v3_hydration_choice")) {
+      throw new Error("선택 가능한 챌린지 목록을 확인할 수 없습니다.");
+    }
+    challengeV3.photoReviewAvailable = recommendation.photo_review_available === true;
+    challengeV3.demoPhotoSubmissionOnly = recommendation.demo_photo_submission_only === true;
+    const fill = (id, choices) => {
+      const select = $(id);
+      const previous = select.value;
+      select.innerHTML = choices.map((item) => {
+        const unavailable = item.verification_type === 1 && !challengeV3.photoReviewAvailable && !challengeV3.demoPhotoSubmissionOnly;
+        return `<option value="${escapeHtml(item.code)}" ${unavailable ? "disabled" : ""}>${escapeHtml(item.title)}${unavailable ? " · 사진 판별 모델 필요" : ""}</option>`;
+      }).join("");
+      const available = [...select.options].filter((option) => !option.disabled);
+      select.value = available.some((option) => option.value === previous) ? previous : available[0]?.value || "";
+    };
+    fill("#challenge-v3-diet", diet);
+    fill("#challenge-v3-activity", activity);
+    state.challengeCatalog = items;
+    challengeV3.active = true;
+    challengeV3.difficulty = difficulty;
+    state.challengeListStatus = "ready";
+    state.challengeStartSafetyBlocked = false;
     state.openFollowUpActionIds = [];
-    $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-    if (result.medical_guidance_required_first) {
+    $("#challenge-follow-up").hidden = !recommendation.medical_guidance_required_first;
+    if (recommendation.medical_guidance_required_first) {
       $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
       const actions = await api("/follow-up-actions");
-      if (!isCurrent()) return;
+      if (state.token !== token || challengeV3.request !== request) return;
       state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
       $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
     }
-    state.challengeListStatus = "ready";
+    $("#challenge-v3-policy").textContent = challengeV3.photoReviewAvailable
+      ? "음료 1개와 선택한 식단·운동 각 1개가 포함됩니다."
+      : challengeV3.demoPhotoSubmissionOnly
+        ? "미리보기에서는 채소 식단도 사진 제출과 본인 기록만 확인합니다. 채소 포함 여부는 자동 판정하지 않습니다."
+        : "식사 사진 판별 모델이 없어 채소 식단은 선택할 수 없습니다.";
+    selectV3Challenges();
   } catch (error) {
-    if (!isCurrent()) return;
+    if (state.token !== token || challengeV3.request !== request) return;
     state.challengeListStatus = "failed";
-    $("#challenge-v3-focus").value = challengeV3.focus;
-    $("#challenge-v3-difficulty").value = challengeV3.difficulty;
-    $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
+    $("#challenge-v3-policy").textContent = "목록을 불러오지 못했습니다. 다시 시도해 주세요.";
     $("#retry-challenges").hidden = false;
     showMessage(error.message);
   } finally {
@@ -3492,23 +3442,8 @@ async function loadV3Challenges() {
       challengeV3.busy = false;
       controls.forEach((control) => { control.disabled = false; });
       updateChallengeStartState();
-      if (!isCurrent() || !challengeV3.active) $("#start-challenge").disabled = true;
     }
   }
-}
-
-function previewV3Recommendations(items, focus, difficulty, rotation) {
-  const levels = ["easy", "moderate", "advanced"];
-  const index = levels.indexOf(difficulty);
-  const diet = levels[Math.max(0, index - Number(focus === "activity"))];
-  const exercise = levels[Math.max(0, index - Number(focus === "diet"))];
-  const codes = ["v3_hydration_choice", `v3_wholegrain_${diet}`, `v3_${["walk", "indoor_aerobic"][rotation % 2]}_${exercise}`];
-  return {
-    items: codes.map((code) => items.find((item) => item.code === code)).filter(Boolean),
-    medical_guidance_required_first: false,
-    photo_review_available: false,
-    policy: { notice: "3영역을 유지하고 선호하지 않은 영역은 한 단계 가볍게 제안합니다." },
-  };
 }
 
 function customChallengeSlot() {
@@ -3676,7 +3611,7 @@ function renderChallengeChoices() {
         <img src="/static/assets/hyeoldangi-challenge-${images[item.domain]}.png" alt="">
         <p class="eyebrow">${labels[item.domain]} · ${item.always_include ? "공통 목표" : challengeLevelLabel(item.difficulty)}</p>
         <h4>${challengeCardTitle(item.title)}</h4><strong>${challengeCardGoal(item.daily_goal)}</strong>
-        <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${challengeProofLabel(item.verification_type)}</span>
+        <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${item.verification_type === 1 && !challengeV3.photoReviewAvailable ? "사진 제출 · 채소 여부는 본인 기록" : challengeProofLabel(item.verification_type)}</span>
         <p class="challenge-v3-safety">${escapeHtml(item.safety)}</p>
       </article>`;
     }).join("");
@@ -3743,12 +3678,12 @@ function updateChallengeStartState() {
   const loading = state.challengeListStatus === "loading";
   const failed = state.challengeListStatus === "failed";
   if ($("#challenge-selection-count")) $("#challenge-selection-count").textContent = `${count}/3 선택`;
-  if (startButton) startButton.disabled = loading || failed || followUpBlocked || count < 1 || state.challengeStartSafetyBlocked === true;
+  if (startButton) startButton.disabled = loading || failed || followUpBlocked || count < (challengeV3.active ? 3 : 1) || state.challengeStartSafetyBlocked === true;
   if (!reason) return;
   if (loading) reason.textContent = "챌린지 후보를 불러오고 있어요.";
   else if (failed) reason.textContent = "후보를 불러오지 못했습니다. 다시 시도해 주세요.";
   else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다.\n무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.";
-  else if (count < 1) reason.textContent = "세부 챌린지를 하나 이상 선택해 주세요.";
+  else if (count < (challengeV3.active ? 3 : 1)) reason.textContent = "음료·식단·운동 각 1개를 선택해 주세요.";
   else reason.textContent = `${count}개 챌린지를 선택했습니다.`;
 }
 function renderCycle(cycle) {
@@ -6491,10 +6426,9 @@ $("#health-form").addEventListener("submit", async (event) => {
 $("#retry-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-partial-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-challenges").addEventListener("click", loadChallenges);
-$("#challenge-v3-refresh")?.addEventListener("click", async () => {
-  challengeV3.rotation += 1;
-  await loadChallenges();
-});
+$("#challenge-v3-difficulty")?.addEventListener("change", loadChallenges);
+$("#challenge-v3-diet")?.addEventListener("change", selectV3Challenges);
+$("#challenge-v3-activity")?.addEventListener("change", selectV3Challenges);
 $$("[data-demo-status]").forEach((button) => button.addEventListener("click", () => {
   renderPredictionStatus(button.dataset.demoStatus);
   showStep(5);
