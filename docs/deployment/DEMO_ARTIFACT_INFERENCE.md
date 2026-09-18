@@ -9,6 +9,7 @@ DEMO_MODE=true
 DEMO_ARTIFACT_INFERENCE_ENABLED=true
 PREDICTION_PROVIDER=artifact
 MODEL_PRELOAD_ENABLED=true
+XAI_DISPLAY_ALLOWED=true
 MODEL_URI=/app/models/artifacts/candidates/diabetes_incidence/rf25-tuned-education4-v2/model.joblib
 MODEL_MANIFEST_URI=/app/models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json
 CURRENT_SCREENING_RUNTIME=today14
@@ -36,6 +37,8 @@ curl -fsS http://127.0.0.1:8001/api/v1/ready
 - `worker_preload_required_for_release=false`
 
 FastAPI 시작 시 두 모델을 한 번 적재해 해시·Manifest·입력 계약을 검증한다. 이후 요청은 프로세스별 메모리 캐시를 재사용한다. 파일 누락, 해시 불일치, 역직렬화 실패 또는 입력 계약 오류가 발생하면 작업은 `MODEL_NOT_READY`로 종료되며 실제 결과처럼 표시하지 않는다.
+
+`XAI_DISPLAY_ALLOWED`는 모델 배포 승인과 독립된 설명 공개 게이트다. `true`여도 SHAP 가산성 검증과 3개 방향 요인 선택을 모두 통과한 설명만 `/predictions/{prediction_id}/risk-factors`에 공개한다. 오늘이는 의존 입력군을 묶은 exact grouped SHAP, 내일이는 one-hot·결측 파생 열을 원래 변수로 합산한 TreeSHAP을 사용한다. 설명 계산이 실패하면 모델의 위험 선별 결과는 유지하고 XAI만 `unavailable`로 처리한다.
 
 ## SQLite 스키마
 
