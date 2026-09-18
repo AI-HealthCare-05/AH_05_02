@@ -25,6 +25,7 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   const context = load(['hydrateSavedHealthForm', 'syncExerciseDetails'], {
     state, $, $$: selector => radios[selector.match(/name="([^"]+)"/)[1]],
     selectedRadioValue: name => radios[name].find(input => input.checked)?.value,
+    setRadioValue: (name, value) => { $("#smoking-status").value = value; },
     syncAlcoholFrequencyDetails() {}, syncLifestyleAvatar() {},
   });
   context.hydrateSavedHealthForm();
@@ -33,7 +34,7 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   assert.equal($('#exercise-days').value, 5);
   assert.equal($('#exercise-minutes').value, 45);
   assert.equal($('#exercise-days').disabled, false);
-  assert.equal(radios['smoking-status'][1].checked, true);
+  assert.equal($('#smoking-status').value, 'former');
   assert.equal(radios['current-drinker'][1].checked, true);
   $('#weight').value = '72';
   context.hydrateSavedHealthForm();
@@ -41,17 +42,42 @@ test('saved health restores nullable values, radio choices and exercise; reopeni
   state.healthCheckupHistory[0] = { checkup_id: 5, weight_kg: 74, regular_exercise: false };
   context.hydrateSavedHealthForm();
   assert.equal($('#weight').value, 74);
-  assert.equal($('#exercise-days').disabled, false);
-  assert.equal($('#exercise-minutes').disabled, false);
+  assert.equal($('#exercise-days').disabled, true);
+  assert.equal($('#exercise-minutes').disabled, true);
   $('#exercise-days').value = '2';
   $('#exercise-minutes').value = '15';
   context.syncExerciseDetails();
-  assert.equal($('#exercise-days').value, '2');
-  assert.equal($('#exercise-minutes').value, '15');
+  assert.equal($('#exercise-days').value, '0');
+  assert.equal($('#exercise-minutes').value, '0');
   state.healthCheckupHistory[0] = { checkup_id: 6, regular_exercise: true };
   context.hydrateSavedHealthForm();
   assert.equal($('#exercise-days').value, '');
   assert.equal($('#exercise-minutes').value, '');
+});
+
+test('exercise no disables and zeroes fields; yes restores the previous values', () => {
+  let exercise = 'true';
+  const nodes = {
+    '#exercise-days': { value: '4', dataset: {}, disabled: false },
+    '#exercise-minutes': { value: '25', dataset: {}, disabled: false },
+    '#exercise-detail-card': { classList: { toggle() {} } },
+  };
+  const context = load(['syncExerciseDetails'], {
+    $: key => nodes[key], selectedRadioValue: () => exercise,
+  });
+  exercise = 'false';
+  context.syncExerciseDetails();
+  for (const id of ['#exercise-days', '#exercise-minutes']) {
+    assert.equal(nodes[id].disabled, true);
+    assert.equal(nodes[id].value, '0');
+  }
+  context.syncExerciseDetails();
+  exercise = 'true';
+  context.syncExerciseDetails();
+  assert.equal(nodes['#exercise-days'].disabled, false);
+  assert.equal(nodes['#exercise-minutes'].disabled, false);
+  assert.equal(nodes['#exercise-days'].value, '4');
+  assert.equal(nodes['#exercise-minutes'].value, '25');
 });
 
 function dailyHarness(api) {

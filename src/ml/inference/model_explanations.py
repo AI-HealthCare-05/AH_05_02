@@ -10,6 +10,8 @@ from collections.abc import Sequence
 from typing import Any
 
 DISPLAY_NAMES = {
+    "blood_pressure": "혈압 정보",
+    "family_history": "가족력 정보",
     "body_measurements": "체격 정보 (키·체중·BMI)",
     "log_household_income": "가구소득",
     "arthritis_rheumatism_diagnosis": "관절염·류머티즘 진단력",
@@ -41,15 +43,20 @@ DISPLAY_NAMES = {
     "cerebrovascular_disease_diagnosis": "뇌혈관질환 진단력",
     "education": "교육 수준",
     "education_level": "교육 수준",
+    "region": "거주 지역",
+    "alcohol_frequency": "음주 빈도",
 }
 
 MODIFIABLE = {
+    "body_measurements",
+    "blood_pressure",
     "weight_kg",
     "bmi",
     "waist_cm",
     "smoking_status",
     "current_smoker",
     "current_drinker",
+    "alcohol_frequency",
     "regular_exercise",
     "exercise_days_per_week",
     "exercise_minutes",

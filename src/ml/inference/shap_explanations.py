@@ -48,7 +48,7 @@ def _result(values, *, reference, score, method, baseline, model_version, elevat
                 "contribution": float(value),
                 "absolute_contribution": abs(float(value)),
                 "modifiable": feature in MODIFIABLE,
-                "message": "입력 정보가 기준점수 대비 모델 점수를 "
+                "message": "입력 정보가 기준값 대비 당뇨 위험을 "
                 + ("높이는" if value > 0 else "낮추는" if value < 0 else "바꾸지 않는")
                 + " 방향으로 반영되었습니다.",
             }
@@ -89,14 +89,23 @@ def explain_today(frame, score_batch, *, model_version, elevated):
     Every coalition passes through waist estimation, preprocessing, both models,
     both Platt calibrators and the final weighted sum without refitting anything.
     """
-    if len(frame) != 1 or len(frame.columns) > 8:
-        raise ValueError("Today requires one row with at most eight features")
-    body = [c for c in ("height_cm", "weight_kg", "bmi") if c in frame]
-    groups = {c: [c] for c in frame if c not in body}
-    if body:
-        groups["body_measurements"] = body
+    if len(frame) != 1 or len(frame.columns) > 14:
+        raise ValueError("Today requires one row with at most fourteen features")
+    dependent_groups = {
+        "body_measurements": ("height_cm", "weight_kg", "waist_cm", "bmi"),
+        "blood_pressure": ("systolic_bp", "diastolic_bp"),
+        "family_history": ("diabetes_family_history", "hypertension_family_history"),
+    }
+    grouped_features = {feature for features in dependent_groups.values() for feature in features}
+    groups = {c: [c] for c in frame if c not in grouped_features}
+    for group_name, features in dependent_groups.items():
+        present = [feature for feature in features if feature in frame]
+        if present:
+            groups[group_name] = present
     names = list(groups)
     n = len(names)
+    if n > 10:
+        raise ValueError("Today grouped SHAP requires at most ten independent input groups")
     rows = []
     for mask in range(1 << n):
         rows.append(
