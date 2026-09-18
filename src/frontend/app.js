@@ -6015,7 +6015,11 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  window.location.assign("/");
+  if (state.step === 8) {
+    showWorkspace("home");
+    return;
+  }
+  showStep(1);
 });
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#open-lifestyle-map")?.addEventListener("click", () => {

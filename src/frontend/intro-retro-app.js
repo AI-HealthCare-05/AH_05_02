@@ -5407,7 +5407,11 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  window.location.assign("/static/intro-retro.html?v=20260915-brand-retro-v1");
+  if (state.step === 8) {
+    showWorkspace("home");
+    return;
+  }
+  showStep(1);
 });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
