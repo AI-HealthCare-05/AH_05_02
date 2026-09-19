@@ -2976,8 +2976,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 당뇨 위험을 높인 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 당뇨 위험을 낮춘 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "주의 요인 · 당뇨 위험을 높인 방향";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "긍정 요인 · 당뇨 위험을 낮춘 방향";
   return "";
 }
 
@@ -2987,13 +2987,24 @@ function factorModifiableLabel(item = {}) {
   return "";
 }
 
+function factorIdentity(item = {}) {
+  return String(item.feature || item.feature_name || item.factor_name || item.name || item.display_name || "")
+    .replace(/\s*\(화면 예시\)\s*$/u, "")
+    .trim()
+    .toLowerCase();
+}
+
 function renderFactorItems(items = []) {
   return items.map((item) => {
     const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
     const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
-    const meta = [factorDirectionLabel(item), factorModifiableLabel(item)].filter(Boolean).join(" · ");
-    const icon = factorDirectionLabel(item).startsWith("↑") ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
-    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></div></li>`;
+    const direction = factorDirectionLabel(item);
+    const caution = direction.startsWith("주의 요인");
+    const icon = caution ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
+    const meta = direction
+      ? `<small class="xai-factor-meta"><span class="xai-factor-direction ${caution ? "is-caution" : "is-positive"}">${escapeHtml(direction)}</span></small>`
+      : "";
+    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta}<p>${escapeHtml(factorDescription)}</p></div></li>`;
   }).join("");
 }
 
@@ -3003,8 +3014,8 @@ function selectXaiFactors(items, elevated) {
     || (typeof item.contribution === "number" && Number.isFinite(item.contribution)
       && Math.abs(item.contribution) > 1e-10))
     .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0));
-  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("↓"));
-  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("↑"));
+  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("긍정 요인"));
+  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("주의 요인"));
   return elevated ? [...caution.slice(0, 2), ...positive.slice(0, 1)]
     : [...positive.slice(0, 2), ...caution.slice(0, 1)];
 }
@@ -3029,7 +3040,12 @@ function renderXaiExplanationLists(
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
   const futureCategory = normalizeRiskKey({ risk_category: state.prediction?.risk_category });
-  const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
+  const currentDirections = new Map(currentItems.map(item => [factorIdentity(item), factorDirectionLabel(item)]));
+  const futureCandidates = (Array.isArray(factors?.items) ? factors.items : []).filter((item) => {
+    const currentDirection = currentDirections.get(factorIdentity(item));
+    return !currentDirection || currentDirection === factorDirectionLabel(item);
+  });
+  const factorItems = selectXaiFactors(futureCandidates,
     ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
   const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);

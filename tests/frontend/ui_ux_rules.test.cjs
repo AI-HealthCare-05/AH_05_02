@@ -114,7 +114,7 @@ test('XAI explanation cards show only approved returned factors with safe labels
     nodes[id].closest = () => ({ classList: { toggle: (name, ready) => { nodes[id].ready = ready; } } });
   }
   const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
-  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),
@@ -127,7 +127,9 @@ test('XAI explanation cards show only approved returned factors with safe labels
   assert.equal(nodes['#future-factor-title'].textContent, '미래 당뇨 위험 설명');
   assert.equal(nodes['#factor-list'].ready, true);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /긍정 요인 · 당뇨 위험을 낮춘 방향 · 바꿀 수 있는 요인/);
+  assert.match(nodes['#factor-list'].innerHTML, /class="xai-factor-direction is-positive">긍정 요인 · 당뇨 위험을 낮춘 방향<\/span>/);
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /(?:참고 요인|바꿀 수 있는 요인|xai-factor-modifier)/);
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /[↑↓] (?:주의|긍정) 요인/);
   render({ ...approvedFactors, display_allowed: false }, { approved: true });
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /걷기 시간/);
   render({ items: [{ display_name: '임의 표시 금지' }] }, { approved: false });
@@ -136,6 +138,36 @@ test('XAI explanation cards show only approved returned factors with safe labels
   assert.equal(nodes['#future-factor-title'].textContent, '미래 위험 XAI 연결 대기');
   assert.equal(nodes['#current-factor-title'].textContent, '현재 건강 신호 XAI 연결 대기');
   assert.equal(nodes['#factor-list'].ready, false);
+});
+test('XAI replaces an opposite-direction duplicate with the next future factor', () => {
+  const nodes = {
+    '#current-factor-list': { innerHTML: '', closest: () => ({ classList: { toggle() {} } }) },
+    '#factor-list': { innerHTML: '', closest: () => ({ classList: { toggle() {} } }) },
+    '#current-factor-title': { textContent: '' },
+    '#future-factor-title': { textContent: '' },
+  };
+  const state = { currentScreeningPrediction: { screening_signal_detected: true }, prediction: { risk_category: 'high' } };
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+    state,
+    $: selector => nodes[selector] || null,
+    escapeHtml: value => String(value),
+  });
+  const current = { display_allowed: true, items: [
+    { display_name: 'BMI', direction: 'increase', contribution: .5 },
+    { display_name: '혈압', direction: 'increase', contribution: .4 },
+    { display_name: '운동', direction: 'decrease', contribution: -.3 },
+  ] };
+  const future = { display_allowed: true, items: [
+    { display_name: 'BMI', direction: 'decrease', contribution: -.8 },
+    { display_name: '연령', direction: 'increase', contribution: .6 },
+    { display_name: '가구소득', direction: 'increase', contribution: .4 },
+    { display_name: '운동시간', direction: 'decrease', contribution: -.2 },
+  ] };
+  context.renderXaiExplanationLists(future, { approved: true, currentFactors: current, currentApproved: true });
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, />BMI</);
+  assert.match(nodes['#factor-list'].innerHTML, />연령</);
+  assert.match(nodes['#factor-list'].innerHTML, />가구소득</);
+  assert.match(nodes['#factor-list'].innerHTML, />운동시간</);
 });
 test('XAI picks directional 2+1 without padding and hides unknown result states', () => {
   const context = loadMany(['factorDirectionLabel', 'selectXaiFactors']);
