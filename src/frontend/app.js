@@ -7436,14 +7436,39 @@ function renderMvpResultPreview() {
   const fixture = (modelKey) => ({
     model_key: modelKey, prediction_id: "local-mvp-preview",
     preview_only: true, preview_signal_level: "moderate", preview_source: "static_fixture",
+    risk_category: "moderate", screening_signal_detected: true,
     result_status: "development_only", promotion_status: "development_only",
     display_allowed: false, operational_model_activated: false,
   });
+  const xaiFixture = (items) => ({
+    status: "approved",
+    display_allowed: true,
+    shap_claimed: true,
+    preview_only: true,
+    items,
+  });
+  const currentFactors = xaiFixture([
+    { display_name: "허리둘레 (화면 예시)", direction: "increase", contribution: .31, modifiable: true, message: "복부 비만 관련 입력이 현재 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "수축기 혈압 (화면 예시)", direction: "increase", contribution: .22, modifiable: true, message: "혈압 관련 입력이 현재 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "규칙적 운동 (화면 예시)", direction: "decrease", contribution: -.16, modifiable: true, message: "운동 관련 입력이 현재 위험 신호를 낮추는 방향으로 작용한 예시입니다." },
+  ]);
+  const futureFactors = xaiFixture([
+    { display_name: "연령 (화면 예시)", direction: "increase", contribution: .27, modifiable: false, message: "연령 입력이 약 2년 내 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "고혈압 진단 (화면 예시)", direction: "increase", contribution: .19, modifiable: false, message: "고혈압 관련 입력이 미래 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "BMI (화면 예시)", direction: "decrease", contribution: -.12, modifiable: true, message: "BMI 입력이 미래 위험 신호를 낮추는 방향으로 작용한 예시입니다." },
+  ]);
   state.currentScreeningPrediction = fixture("diabetes_current_screening");
   state.prediction = fixture("diabetes_incidence");
   state.predictionId = state.prediction.prediction_id;
   state.developmentPreviewRiskCategory = "moderate";
-  renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
+  renderPrediction(state.prediction, futureFactors, currentFactors);
+  // Preview-only explanations are rendered after the production approval gate.
+  // The fixture itself stays development_only and cannot be mistaken for a released result.
+  renderXaiExplanationLists(futureFactors, {
+    approved: true,
+    currentFactors,
+    currentApproved: true,
+  });
   const comparison = typeof URLSearchParams === "function"
     ? new URLSearchParams(window.location.search).get("comparison")
     : null;
