@@ -1,0 +1,27 @@
+{
+  "experiment_id": "age-stratified-thresholds-20260821",
+  "seed": 20260821,
+  "minimum_validation_positive_events": 30,
+  "minimum_auprc_lift": 1.05,
+  "exploratory_specificity_targets": [0.50, 0.55, 0.60, 0.65, 0.70],
+  "risk_band_policy": {
+    "low_cutoff_minimum_recall": 0.90,
+    "high_cutoff_minimum_specificity": 0.80
+  },
+  "knhanes": {
+    "minimum_specificity_by_age": {
+      "19-44": 0.60,
+      "45-64": 0.60,
+      "65+": 0.60
+    },
+    "threshold_grid": {
+      "minimum": 0.001,
+      "maximum": 0.30,
+      "points": 300
+    }
+  },
+  "klosa": {
+    "policy": "global_threshold_only_age_audit",
+    "reason": "KLoSA has no observed 19-44 group and incident events are sparse; do not operationalize age-specific thresholds yet."
+  }
+}

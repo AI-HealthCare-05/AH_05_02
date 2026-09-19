@@ -1,0 +1,4 @@
+version,waist_strategy,validation_recall,validation_specificity,validation_auprc,test_recall,test_specificity,test_auprc,test_auroc,test_tp,test_fn,status
+v0.5.0,median imputation,0.9614457831,0.4200986578,0.1464991210,0.9307692308,0.4067304591,0.1121987164,0.7673238885,363,27,current reference
+v0.6.0,fold-trained waist fallback plus waist-height ratio,0.9590361446,0.4219341517,0.1499099008,0.9358974359,0.4149016235,0.1115556207,0.7689790731,365,25,exploratory challenger
+v0.6.1,fold-trained waist fallback plus expected-waist residual,0.9590361446,0.4200986578,0.1463576247,0.9384615385,0.4066229438,0.1138336468,0.7711872724,366,24,selected waist challenger

@@ -1,0 +1,201 @@
+{
+  "purpose": "Reduced-sample pipeline feasibility check; not final model performance.",
+  "cross_dataset_comparison_warning": "KLoSA predicts adjacent-wave incidence; KNHANES screens current cross-sectional status. Their metrics must not be ranked as if they share one target.",
+  "features": [
+    "age",
+    "female",
+    "bmi",
+    "current_smoker",
+    "physically_active"
+  ],
+  "config": {
+    "seed": 20260819,
+    "sample_limits": {
+      "train": 6000,
+      "validation": 2000,
+      "test": 3000
+    },
+    "features": [
+      "age",
+      "female",
+      "bmi",
+      "current_smoker",
+      "physically_active"
+    ],
+    "models": [
+      "dummy",
+      "logistic_regression",
+      "random_forest"
+    ],
+    "decision_threshold": 0.5,
+    "age_groups": [
+      "19-44",
+      "45-64",
+      "65+"
+    ]
+  },
+  "datasets": [
+    {
+      "dataset": "KLoSA",
+      "target_definition": "t0 미진단자의 다음 인접 조사(약 2년) 신규 당뇨 진단",
+      "inclusion_criteria": "기준시점까지 당뇨 진단 이력이 없고 바로 다음 인접 차수의 타깃이 관측된 패널 행",
+      "exclusion_criteria": "기준시점 이전 진단; 인접 다음 차수 미응답; 타깃 결측",
+      "source_path_name": "klosa_diabetes_incident_all.csv",
+      "source_size_bytes": 3198507,
+      "source_sha256": "834705c77c0869cb648833808e8b990bf02f70e1b71c55ecd930168a38bd6df3",
+      "full_observation_n": 51807,
+      "full_unique_entity_n": 8730,
+      "full_positive_n": 1299,
+      "full_positive_rate": 0.025073831721582025,
+      "full_age_groups": {
+        "19-44": {
+          "observation_n": 0,
+          "positive_n": 0,
+          "positive_rate": null
+        },
+        "45-64": {
+          "observation_n": 25625,
+          "positive_n": 504,
+          "positive_rate": 0.01966829268292683
+        },
+        "65+": {
+          "observation_n": 26182,
+          "positive_n": 795,
+          "positive_rate": 0.030364372469635626
+        }
+      },
+      "observed_age_min": 45.0,
+      "observed_age_max": 105.0,
+      "seed": 20260819,
+      "strata": "split x age_group x target",
+      "splits": {
+        "train": {
+          "full_n": 36273,
+          "sample_n": 6000,
+          "full_positive_rate": 0.025280511675350812,
+          "sample_positive_rate": 0.025333333333333333,
+          "sample_id_sha256": "4f4e6659998e61cae366f009e7e101b0a3e4f7ad8f5d67da7b217d0561b4250b",
+          "sample_age_label_counts": {
+            "19-44|0": 0,
+            "19-44|1": 0,
+            "45-64|0": 2870,
+            "45-64|1": 59,
+            "65+|0": 2978,
+            "65+|1": 93
+          }
+        },
+        "validation": {
+          "full_n": 7678,
+          "sample_n": 2000,
+          "full_positive_rate": 0.024355300859598854,
+          "sample_positive_rate": 0.0245,
+          "sample_id_sha256": "0c12ed5bb79caefcc1e1788dd65c5d77bad33461643ca8ba89d905f9bbc6d232",
+          "sample_age_label_counts": {
+            "19-44|0": 0,
+            "19-44|1": 0,
+            "45-64|0": 1014,
+            "45-64|1": 19,
+            "65+|0": 937,
+            "65+|1": 30
+          }
+        },
+        "test": {
+          "full_n": 7856,
+          "sample_n": 3000,
+          "full_positive_rate": 0.024821792260692463,
+          "sample_positive_rate": 0.025,
+          "sample_id_sha256": "92996edae5aac7f791cc06161a3117240a35fff436800567256255428c9d5c89",
+          "sample_age_label_counts": {
+            "19-44|0": 0,
+            "19-44|1": 0,
+            "45-64|0": 1480,
+            "45-64|1": 30,
+            "65+|0": 1445,
+            "65+|1": 45
+          }
+        }
+      }
+    },
+    {
+      "dataset": "KNHANES",
+      "target_definition": "현재 미진단 성인의 횡단면 당뇨 임상 기준 해당 여부",
+      "inclusion_criteria": "만 19세 이상; 의사진단 문항이 명시적으로 아니오; 공식 당뇨 상태 타깃 관측",
+      "exclusion_criteria": "만 19세 미만; 진단 이력 있음 또는 진단 문항 불명; 타깃 결측",
+      "source_path_name": "knhanes_diabetes_undiagnosed_19plus.csv",
+      "source_size_bytes": 7886308,
+      "source_sha256": "ee8411b67f14495fca47e980c75282d25c3d0d5dfb22cc17795f9b5f58bb414c",
+      "full_observation_n": 44828,
+      "full_unique_entity_n": 44828,
+      "full_positive_n": 1945,
+      "full_positive_rate": 0.04338806103328277,
+      "full_age_groups": {
+        "19-44": {
+          "observation_n": 16990,
+          "positive_n": 291,
+          "positive_rate": 0.01712772218952325
+        },
+        "45-64": {
+          "observation_n": 17064,
+          "positive_n": 893,
+          "positive_rate": 0.052332395686826065
+        },
+        "65+": {
+          "observation_n": 10774,
+          "positive_n": 761,
+          "positive_rate": 0.07063300538333024
+        }
+      },
+      "observed_age_min": 19.0,
+      "observed_age_max": 80.0,
+      "seed": 20260819,
+      "strata": "split x age_group x target",
+      "splits": {
+        "train": {
+          "full_n": 26005,
+          "sample_n": 6000,
+          "full_positive_rate": 0.04383772351470871,
+          "sample_positive_rate": 0.043833333333333335,
+          "sample_id_sha256": "c08a40b17deba42ad86d1dfcb37b3d28b2c8c750eeb3a25f48c68de2aea85f0f",
+          "sample_age_label_counts": {
+            "19-44|0": 2340,
+            "19-44|1": 44,
+            "45-64|0": 2169,
+            "45-64|1": 128,
+            "65+|0": 1228,
+            "65+|1": 91
+          }
+        },
+        "validation": {
+          "full_n": 9132,
+          "sample_n": 2000,
+          "full_positive_rate": 0.045444590451160755,
+          "sample_positive_rate": 0.0455,
+          "sample_id_sha256": "a60f6d398f142b36c41b7bbde01dcb821c8991cd4766669e5044ae72543ec516",
+          "sample_age_label_counts": {
+            "19-44|0": 710,
+            "19-44|1": 12,
+            "45-64|0": 709,
+            "45-64|1": 37,
+            "65+|0": 490,
+            "65+|1": 42
+          }
+        },
+        "test": {
+          "full_n": 9691,
+          "sample_n": 3000,
+          "full_positive_rate": 0.040243524920028896,
+          "sample_positive_rate": 0.04,
+          "sample_id_sha256": "ba4d5cbfc3972e3749faa11f9f9ed42691d81ea171db68108041c0d1dc17c3d4",
+          "sample_age_label_counts": {
+            "19-44|0": 1026,
+            "19-44|1": 14,
+            "45-64|0": 1094,
+            "45-64|1": 52,
+            "65+|0": 760,
+            "65+|1": 54
+          }
+        }
+      }
+    }
+  ]
+}

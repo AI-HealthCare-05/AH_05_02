@@ -1,0 +1,157 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const source = fs.readFileSync(path.join(__dirname, '../../src/frontend/app.js'), 'utf8');
+function load(names, data) {
+  const context = vm.createContext(data);
+  for (const name of names) {
+    const fn = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
+    assert.ok(fn, name);
+    vm.runInContext(fn[0], context);
+  }
+  return context;
+}
+
+test('saved health restores nullable values, radio choices and exercise; reopening keeps draft', () => {
+  const state = { healthCheckupHistory: [{ checkup_id: 4, height_cm: 170, weight_kg: 70, waist_cm: null,
+    smoking_status: 'former', current_drinker: false, regular_exercise: true,
+    exercise_days_per_week: 5, exercise_minutes: 45 }] };
+  const nodes = {};
+  const $ = key => nodes[key] ||= { value: 'default', dataset: {}, disabled: true, classList: { toggle() {} } };
+  const radios = Object.fromEntries(['smoking-status', 'current-drinker', 'regular-exercise'].map(name =>
+    [name, (name === 'smoking-status' ? ['never', 'former', 'current'] : ['true', 'false']).map(value => ({ value, checked: false }))]));
+  const context = load(['hydrateSavedHealthForm', 'syncExerciseDetails'], {
+    state, $, $$: selector => radios[selector.match(/name="([^"]+)"/)[1]],
+    selectedRadioValue: name => radios[name].find(input => input.checked)?.value,
+    setRadioValue: (name, value) => { $("#smoking-status").value = value; },
+    syncAlcoholFrequencyDetails() {}, syncLifestyleAvatar() {},
+  });
+  context.hydrateSavedHealthForm();
+  assert.equal($('#height').value, 170);
+  assert.equal($('#waist').value, '');
+  assert.equal($('#exercise-days').value, 5);
+  assert.equal($('#exercise-minutes').value, 45);
+  assert.equal($('#exercise-days').disabled, false);
+  assert.equal($('#smoking-status').value, 'former');
+  assert.equal(radios['current-drinker'][1].checked, true);
+  $('#weight').value = '72';
+  context.hydrateSavedHealthForm();
+  assert.equal($('#weight').value, '72');
+  state.healthCheckupHistory[0] = { checkup_id: 5, weight_kg: 74, regular_exercise: false };
+  context.hydrateSavedHealthForm();
+  assert.equal($('#weight').value, 74);
+  assert.equal($('#exercise-days').disabled, true);
+  assert.equal($('#exercise-minutes').disabled, true);
+  $('#exercise-days').value = '2';
+  $('#exercise-minutes').value = '15';
+  context.syncExerciseDetails();
+  assert.equal($('#exercise-days').value, '0');
+  assert.equal($('#exercise-minutes').value, '0');
+  state.healthCheckupHistory[0] = { checkup_id: 6, regular_exercise: true };
+  context.hydrateSavedHealthForm();
+  assert.equal($('#exercise-days').value, '');
+  assert.equal($('#exercise-minutes').value, '');
+});
+
+test('exercise no disables and zeroes fields; yes restores the previous values', () => {
+  let exercise = 'true';
+  const nodes = {
+    '#exercise-days': { value: '4', dataset: {}, disabled: false },
+    '#exercise-minutes': { value: '25', dataset: {}, disabled: false },
+    '#exercise-detail-card': { classList: { toggle() {} } },
+  };
+  const context = load(['syncExerciseDetails'], {
+    $: key => nodes[key], selectedRadioValue: () => exercise,
+  });
+  exercise = 'false';
+  context.syncExerciseDetails();
+  for (const id of ['#exercise-days', '#exercise-minutes']) {
+    assert.equal(nodes[id].disabled, true);
+    assert.equal(nodes[id].value, '0');
+  }
+  context.syncExerciseDetails();
+  exercise = 'true';
+  context.syncExerciseDetails();
+  assert.equal(nodes['#exercise-days'].disabled, false);
+  assert.equal(nodes['#exercise-minutes'].disabled, false);
+  assert.equal(nodes['#exercise-days'].value, '4');
+  assert.equal(nodes['#exercise-minutes'].value, '25');
+});
+
+function dailyHarness(api) {
+  const state = { token: 'test-only', cycle: { user_challenges: [{ user_challenge_id: 1 }, { user_challenge_id: 2 }] }, dailyCompleted: new Set(['old']), dailyRecordFailures: new Set() };
+  const nodes = { '#barrier-challenge': { innerHTML: '' } };
+  const context = load(['hasCurrentChallengeCycle', 'isServerChallengeId', 'clearCurrentChallengeCycle', 'loadDailyRecords'], {
+    state, api, isLocalPreview: () => false, challengeDay: () => new Date().toISOString().slice(0, 10), renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    $: key => nodes[key] ||= { innerHTML: '' },
+  });
+  return { state, read: context.loadDailyRecords };
+}
+test('today logs restore only completed records, and successful empty logs clear prior state', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  let empty = false;
+  const { state, read } = dailyHarness(async url => {
+    assert.ok(url.includes(`start_date=${today}&end_date=${today}`));
+    return { items: empty ? [] : [{ log_date: today, is_completed: url.includes('/1/') }, { log_date: '2000-01-01', is_completed: true }] };
+  });
+  await read();
+  assert.deepEqual([...state.dailyCompleted], ['1']);
+  assert.equal(state.dailyRecordsStatus, 'ready');
+  empty = true;
+  await read();
+  assert.equal(state.dailyCompleted.size, 0);
+});
+test('fully failed or malformed read preserves records and exposes retry; retry recovers', async () => {
+  let mode = 'fail';
+  const { state, read } = dailyHarness(async () => {
+    if (mode === 'fail') throw new Error('503');
+    return mode === 'malformed' ? {} : { items: [] };
+  });
+  for (mode of ['fail', 'malformed']) {
+    await read();
+    assert.equal(state.dailyRecordsStatus, 'error');
+    assert.deepEqual([...state.dailyCompleted], ['old']);
+  }
+  mode = 'ready';
+  await read();
+  assert.equal(state.dailyRecordsStatus, 'ready');
+});
+test('partial daily log failure keeps available cards and marks only failed items', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const { state, read } = dailyHarness(async url => {
+    if (url.includes('/2/')) throw new Error('503');
+    return { items: [{ log_date: today, is_completed: true }] };
+  });
+  await read();
+  assert.equal(state.dailyRecordsStatus, 'ready');
+  assert.deepEqual([...state.dailyCompleted], ['1']);
+  assert.deepEqual([...state.dailyRecordFailures], ['2']);
+});
+test('local demo challenge ids are cleared before daily log API calls in authenticated mode', async () => {
+  const calls = [];
+  const state = { token: 'real-session', cycle: { user_challenges: [{ user_challenge_id: 'local-1' }] }, dailyCompleted: new Set(['old']), dailyRecordFailures: new Set() };
+  const nodes = { '#barrier-challenge': { innerHTML: 'stale' } };
+  const context = load(['hasCurrentChallengeCycle', 'isServerChallengeId', 'clearCurrentChallengeCycle', 'loadDailyRecords'], {
+    state, api: async url => { calls.push(url); return { items: [] }; }, isLocalPreview: () => false,
+    challengeDay: () => '2026-09-09', renderDailyRecordList() {}, renderTodayTaskStatus() {},
+    $: key => nodes[key] ||= { innerHTML: '' },
+  });
+  await context.loadDailyRecords();
+  assert.equal(calls.length, 0);
+  assert.equal(state.cycle, null);
+  assert.equal(state.dailyCompleted.size, 0);
+  assert.equal(nodes['#barrier-challenge'].innerHTML, '');
+});
+test('an old cycle response cannot replace the new cycle or login state', async () => {
+  const resolvers = [];
+  const { state, read } = dailyHarness(() => new Promise(resolve => resolvers.push(resolve)));
+  const pending = read();
+  state.cycle = { user_challenges: [] };
+  state.token = 'different-test-session';
+  state.dailyCompleted = new Set(['new']);
+  resolvers.forEach(resolve => resolve({ items: [] }));
+  await pending;
+  assert.deepEqual([...state.dailyCompleted], ['new']);
+});

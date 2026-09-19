@@ -1,0 +1,20 @@
+{
+  "disease_type": "diabetes",
+  "task_type": "binary_incidence_risk_screening",
+  "risk_score": 0.029554591894,
+  "risk_category": "high",
+  "risk_category_label": "높음",
+  "model_version": "rf-25features-v001-run-20260825T045054926974Z",
+  "feature_schema_version": "klosa_stage3_25features_v1",
+  "input_schema_version": "diabetes-incidence-api-25features-v1",
+  "threshold_version": "validation-recall-090-080-v1",
+  "decision_threshold": 0.022410835788097848,
+  "applicability": {
+    "minimum_age": 45,
+    "maximum_age": 105,
+    "age_unit": "years",
+    "notice": "만 45~105세 입력에만 사용할 수 있습니다. 이 범위는 기술적 입력 허용 범위이며 모든 연령에서 동일한 성능을 보장하지 않습니다."
+  },
+  "output_status": "research_screening_candidate_not_operationally_approved",
+  "disclaimer": "향후 신규 당뇨병 의사진단 위험을 선별하기 위한 연구용 점수이며 진단이나 처방이 아닙니다. 의료적 판단은 의료진과 상의하세요."
+}

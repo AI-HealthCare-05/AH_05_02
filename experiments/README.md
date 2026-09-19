@@ -1,4 +1,15 @@
 # 실험 기록
 
-각 실험 문서에는 데이터 버전, 전처리, 모델, 하이퍼파라미터, 시드, 평가 지표와 결론을 기록합니다.
+새 모델 실험은 `diabetes_incidence/` 아래에 표준 폴더로 생성합니다. 상세 실행법은 `diabetes_incidence/README.md`와 `docs/REPOSITORY_STRUCTURE_GUIDE.md`를 따릅니다.
 
+각 실험 문서에는 데이터 버전, 전처리, 모델, 하이퍼파라미터, 시드, 평가 지표와 결론을 기록합니다. 실행 산출물과 모델 바이너리는 `outputs/ml/`에 생성하며 Git에 커밋하지 않습니다.
+
+기존 Sprint 2 실험 기록은 다음과 같습니다.
+
+- `sp2_data_003/`: KLoSA 미래 신규 진단과 KNHANES 현재 상태 선별의 축소 표본 베이스라인. 두 타깃의 성능은 직접 비교하지 않습니다.
+- `sp2_recall_ensemble/`: LR·RF·XGBoost·LightGBM과 OOF 앙상블의 Recall 중심 축소 실험. 검증셋에서 후보·임계값을 고정하고 테스트셋은 한 번만 평가합니다.
+- `sp2_tree_stacking/`: RF·XGBoost·LightGBM만 기본 모델로 사용하고 Logistic Regression으로 최종 결합한 트리 전용 Stacking 추가 실험입니다.
+- `klosa_full_retrain/`: KLoSA 전체 표본 Logistic 재학습, Train 유병률 Null Model, Brier Skill Score, Calibration Curve와 Reliability Diagram 결과입니다.
+- `knhanes_full_comparison/`: KNHANES 전체 표본의 기본 모델·앙상블·임계값·Sigmoid·Isotonic 비교와 시간 분할 Test 결과입니다.
+- `age_stratified_thresholds/`: KNHANES 연령별 임계값·3단계 위험구간과 KLoSA 단일 임계값 연령 감사 결과입니다.
+- `klosa_feature_expansion/`: KLoSA 기존 8개 대비 선택적 패널 이력·고혈압 병력 변수 묶음 ablation 결과입니다.

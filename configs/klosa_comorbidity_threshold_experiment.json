@@ -1,0 +1,12 @@
+{
+  "experiment_id": "klosa-comorbidity-threshold-20260824",
+  "seed": 20260824,
+  "cv_folds": 5,
+  "primary_minimum_specificity": 0.40,
+  "specificity_targets": [0.40, 0.41, 0.42, 0.43, 0.44, 0.45, 0.50, 0.55],
+  "minimum_auprc_lift": 1.05,
+  "threshold_grid": {"minimum": 0.001, "maximum": 0.20, "points": 500},
+  "bootstrap_repetitions": 1000,
+  "model_version": "diabetes-klosa-comorbidity-v0.6.0",
+  "feature_schema_version": "klosa-diabetes-incident-comorbidity16-v1"
+}
