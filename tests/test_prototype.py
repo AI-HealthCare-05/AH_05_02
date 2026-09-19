@@ -298,8 +298,8 @@ def test_dashboard_health_history_controls_and_today_risk_summary_are_wired() ->
     assert 'id="dashboard-find-nearby-medical-facilities"' in html
     assert 'id="health-history-pagination"' in html
     assert 'id="health-history-filter"' in html
-    assert 'data-health-history-edit=' in script
-    assert 'data-health-history-result=' in script
+    assert "data-health-history-edit=" in script
+    assert "data-health-history-result=" in script
     assert "async function openSavedAnalysisResult(checkupId)" in script
     assert "const pageSize = 10;" in script
     assert 'card.model_key === "diabetes_current_screening"' in script
