@@ -176,6 +176,7 @@ class ApiError extends Error {
 
 function fallbackApiErrorCode(status) {
   if (status === 401) return "UNAUTHENTICATED";
+  if (status === 413) return "PAYLOAD_TOO_LARGE";
   if (status === 409) return "CONFLICT";
   if (status === 422) return "VALIDATION_ERROR";
   if (status === 503) return "MODEL_NOT_READY";
@@ -196,6 +197,7 @@ function fallbackApiErrorMessage(code) {
   const normalizedCode = normalizeModelErrorCode(code);
   return {
     UNAUTHENTICATED: "로그인 정보가 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.",
+    PAYLOAD_TOO_LARGE: "사진 전송 용량이 서버 한도를 초과했어요. 8MB 이하 사진으로 다시 시도해 주세요.",
     CONFLICT: "이미 등록된 정보와 겹칩니다. 입력 내용을 확인해 주세요.",
     VALIDATION_ERROR: "입력값의 형식과 범위를 확인해 주세요.",
     ML_INPUT_MISSING: "분석에 필요한 건강정보가 빠져 있습니다. 입력정보를 확인해 주세요.",

@@ -223,7 +223,7 @@ test('meal photo preview opens the evidence-v3 upload with three demo cases', ()
     assert.equal((html.match(/name="v3-photo-value"/g) || []).length, 3);
     assert.equal((html.match(/v3-vegetable-only/g) || []).length, 3);
     assert.doesNotMatch(html, /external_vlm_consent/);
-    assert.match(html, /OpenAI VLM 보완 검토에 자동으로 사용/);
+    assert.match(html, /로컬 모델이 판단하기 어려운 경우 OpenAI VLM을 보완 검토에 자동으로 사용할 수 있습니다/);
     assert.match(html, /id="v3-photo-preview"/);
     assert.match(html, /id="v3-photo-change-label"[^>]*hidden>사진 변경/);
     assert.match(html, /업로드 조건: 대표 사진 1장 · JPG·PNG·WEBP · 8MB·1200만 화소 이하/);
