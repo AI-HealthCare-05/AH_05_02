@@ -404,8 +404,18 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance").focus({ preventScroll: true });
 }
 
+let _messageHome = null;
 function showMessage(message, kind = "error") {
   const box = $("#message");
+  if (!_messageHome) _messageHome = box.parentElement;
+  // A message shown while a native <dialog> is open would otherwise render
+  // behind that dialog's top layer (or its ::backdrop) and be invisible even
+  // though it technically scrolls into view. Move it into the open dialog so
+  // people actually see the warning instead of just feeling the page jump.
+  const openDialogs = document.querySelectorAll("dialog[open]");
+  const activeDialog = openDialogs.length ? openDialogs[openDialogs.length - 1] : null;
+  const host = activeDialog || _messageHome;
+  if (box.parentElement !== host) host.prepend(box);
   box.textContent = message;
   box.dataset.kind = kind;
   box.hidden = false;
@@ -426,13 +436,20 @@ function togglePasswordVisibility(button) {
 }
 
 function signupPasswordIssues(value) {
+  // The actual ASCII symbol set (matches Python's string.punctuation on the server).
+  // Testing "not alphanumeric/whitespace" previously let any other character (e.g. Korean
+  // text) count as the "special character", so a password with no real symbol still passed.
+  // Kept local to this function: regex-based test harnesses extract only the
+  // `function signupPasswordIssues(...) { ... }` block, not top-level helpers above it.
+  const PASSWORD_SPECIAL_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+  const hasPasswordSpecialChar = (value) => [...value].some((char) => PASSWORD_SPECIAL_CHARS.includes(char));
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
   if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
-  if (!/[^A-Za-z0-9\s]/.test(value)) issues.push("특수문자를 포함해 주세요. 예: !");
+  if (!hasPasswordSpecialChar(value)) issues.push("특수문자를 포함해 주세요. 예: !");
   return issues;
 }
 
@@ -3642,6 +3659,8 @@ function clearPhotoSelectionPreview() {
   $("#v3-photo-upload-title").textContent = "사진 찍기 또는 앨범에서 선택";
   $("#v3-photo-change-label").hidden = true;
   $("#v3-photo-validation").textContent = "사진을 선택하면 형식·용량·해상도를 확인합니다.";
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
 }
 async function showPhotoSelectionPreview(file) {
   if (!file) return clearPhotoSelectionPreview();
@@ -3672,10 +3691,16 @@ async function showPhotoSelectionPreview(file) {
   $("#v3-photo-upload-title").textContent = "선택한 사진";
   $("#v3-photo-change-label").hidden = false;
   $("#v3-photo-validation").textContent = `조건 확인 완료 · ${dimensions.width}×${dimensions.height}px · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
 }
 function resetPhotoRecordModal() {
   state.photoAttempt = 0;
   state.photoCompletedByFallback = false;
+  $("#start-photo-check")?.classList.remove("invalid");
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
   showPhotoRecordState("photo-state-upload");
   const vegetableReview = Number(state.recordTarget?.item?.verification_type) === 1;
   $("#photo-fail-hint").textContent = vegetableReview
@@ -3739,8 +3764,24 @@ async function submitV3Photo() {
     : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
-  if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
-  if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  const photoBox = $("#start-photo-check");
+  const valueField = target.item.goal.target_minutes ? $("#v3-photo-minutes-field") : $("#v3-meal-count-field");
+  const validationEl = $("#v3-photo-validation");
+  const valueMissing = !valueText || !Number.isFinite(value) || value < goal || value > 720;
+  photoBox?.classList.toggle("invalid", !file);
+  valueField?.classList.toggle("invalid", valueMissing);
+  if (!file || valueMissing) {
+    validationEl.classList.add("error");
+    validationEl.textContent = !file && valueMissing
+      ? `사진을 제출하고 실제 실천량(목표 ${goal})을 입력해야 합니다.`
+      : !file
+        ? "사진을 제출해야 합니다."
+        : `실제 실천량(목표 ${goal})을 입력해 주세요.`;
+    validationEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  validationEl.classList.remove("error");
+  if (file.size > 8 * 1024 * 1024) { photoBox?.classList.add("invalid"); validationEl.classList.add("error"); validationEl.textContent = "8MB 이하 사진을 선택해 주세요."; return; }
   if (isLocalPreview()) {
     showPhotoRecordState("photo-state-analyzing");
     window.setTimeout(() => {
@@ -5375,7 +5416,11 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  window.location.assign("/static/intro-retro.html?v=20260915-brand-retro-v1");
+  if (state.step === 8) {
+    showWorkspace("home");
+    return;
+  }
+  showStep(1);
 });
 $("#font-toggle").addEventListener("click", (event) => {
   const enabled = document.body.classList.toggle("large-text");
@@ -6099,7 +6144,13 @@ $("#v3-photo-file").addEventListener("change", async () => {
 $$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
   if (!input.checked) return;
   $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
 }));
+$("#v3-photo-minutes")?.addEventListener("input", () => {
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
+});
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });

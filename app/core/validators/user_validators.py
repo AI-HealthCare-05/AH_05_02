@@ -1,9 +1,16 @@
 import re
+import string
 from datetime import date, datetime
 
 from dateutil.relativedelta import relativedelta
 
 from app.core import config
+
+# string.punctuation is the actual ASCII symbol set (!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~).
+# Using "not alphanumeric" here previously let any non-ASCII character (e.g. Korean text)
+# satisfy the "special character" requirement, so a password like "abc123가" passed even
+# though it has no symbol in it at all.
+_PASSWORD_SPECIAL_CHARS = frozenset(string.punctuation)
 
 
 def validate_password(password: str) -> str:
@@ -17,8 +24,8 @@ def validate_password(password: str) -> str:
     if not re.search(r"[0-9]", password):
         raise ValueError("비밀번호에는 영문, 숫자, 특수문자가 각 하나씩 포함되어야 합니다.")
 
-    # 특수문자를 포함하고 있는지
-    if not re.search(r"[^a-zA-Z0-9]", password):
+    # 특수문자(기호)를 포함하고 있는지 — 한글/공백 등은 특수문자로 인정하지 않는다.
+    if not any(char in _PASSWORD_SPECIAL_CHARS for char in password):
         raise ValueError("비밀번호에는 영문, 숫자, 특수문자가 각 하나씩 포함되어야 합니다.")
 
     return password
