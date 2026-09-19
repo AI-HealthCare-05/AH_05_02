@@ -1101,7 +1101,7 @@ body.modal-open{overflow:hidden}
 }
 .challenge-v3-control-row{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(220px,.62fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
   align-items:end;
   gap:16px;
 }
@@ -5604,3 +5604,5 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 .result-xai-card.xai-ready .factor-list li{
   display:block;
 }
+
+#challenge-v3-policy{margin:16px 0;padding:12px 16px;border-radius:12px;background:#fff7df;color:#624817;line-height:1.5}

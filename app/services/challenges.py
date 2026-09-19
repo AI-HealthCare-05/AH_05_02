@@ -438,6 +438,7 @@ class ChallengeService:
             "policy": policy,
             "catalog_version": CATALOG_VERSION,
             "photo_review_available": review_available,
+            "demo_photo_submission_only": config.DEMO_MODE and not review_available,
             "recommendation_type": "source_backed_rule_based",
             "personalized": False,
             "preference_applied": True,
@@ -457,7 +458,7 @@ class ChallengeService:
         for item in selected:
             if item["domain"] != "hydration" and item["difficulty"] != expected[item["domain"]]:
                 raise HTTPException(status_code=422, detail="선호·난이도에 맞는 목록을 다시 받아 주세요.")
-            if item["verification_type"] == 1 and not food_vision_is_configured():
+            if item["verification_type"] == 1 and not food_vision_is_configured() and not config.DEMO_MODE:
                 raise HTTPException(
                     status_code=503, detail="사진 검토가 아직 연결되지 않았습니다. 후보를 다시 선택해 주세요."
                 )

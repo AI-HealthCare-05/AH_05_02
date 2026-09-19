@@ -180,6 +180,7 @@ async def test_recommendations_apply_preference_keep_water_and_hide_unavailable_
         body = response.json()["data"]
         assert len(body["items"]) == 3 and body["items"][0]["domain"] == "hydration"
         assert body["photo_review_available"] is False
+        assert body["demo_photo_submission_only"] is False
         assert all(item["verification_type"] != 1 for item in body["items"])
         assert body["policy"]["focus"] == focus and body["policy"]["difficulty"] == difficulty
         assert body["personalized"] is False and body["preference_applied"] is True
@@ -204,6 +205,29 @@ async def test_invalid_preference_queries_are_rejected(api, params):
         params={"catalog_version": CATALOG_VERSION, **params},
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_demo_allows_both_diet_choices_without_claiming_photo_review(api, monkeypatch):
+    monkeypatch.setattr(config, "DEMO_MODE", True)
+    items = await catalog(api)
+    ids = [items[code]["challenge_id"] for code in ("v3_hydration_choice", "v3_vegetable_easy", "v3_walk_easy")]
+    response = await api.client.post(
+        "/api/v1/challenge-cycles",
+        headers=api.headers,
+        json={
+            "start_date": challenge_today().isoformat(),
+            "challenge_ids": ids,
+            "catalog_version": CATALOG_VERSION,
+            "focus": "balanced",
+            "difficulty": "easy",
+        },
+    )
+    assert response.status_code == 201, response.text
+    selected = find_item(response.json()["data"], "fiber_diet")
+    photo = await submit_photo(api, selected, content=image_bytes())
+    assert photo.status_code == 201, photo.text
+    assert "자동 판정하지 않았" in photo.json()["data"]["notice"]
 
 
 @pytest.mark.asyncio
