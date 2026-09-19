@@ -16,6 +16,10 @@
   const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
   const WISDOM_SPRING_SIGN = Object.freeze({ x: 108, y: 424 });
+  // 원본(gandangi-wisdom-guide.png)은 포인터를 왼쪽으로 들고 있어서, 말풍선 왼쪽에 놓으면
+  // 간당이가 채팅과 반대 방향을 보는 것처럼 보인다. 좌우로 뒤집어서 포인터·시선이 오른쪽
+  // (말풍선 쪽)을 향하게 만든 채팅 전용 버전.
+  const WISDOM_CHAT_AVATAR_SRC = "/static/assets/gandangi-wisdom-guide-chat-v1.png?v=20260916-1";
   const WORLD_MEMORY_CAMERA = Object.freeze({ x: 666, y: 360, bounds: { left: 634, right: 704, top: 320, bottom: 394 } });
   const WORLD_FIXED_LANTERNS = Object.freeze([
     { id: "house_back", x: 192, y: 82, radius: 98, bounds: { left: 174, right: 210, top: 56, bottom: 112 } },
@@ -3540,14 +3544,27 @@
   });
 
   let chatFocusTimer = 0;
+  // "간당이"가 보낸 말풍선에만 아바타를 붙인다 — 지금까지 유일하게 등장한 두 발신자는
+  // "간당이"(봇)와 state.avatar.name(플레이어 자신)뿐이라, 이름만으로 구분해도 충분하다.
   function appendChatMessage(authorName, message, className = "") {
-    const row = document.createElement("p");
-    if (className) row.className = className;
+    const isBot = authorName === "간당이";
+    const row = document.createElement("div");
+    row.className = isBot ? "chat-row chat-row-bot" : "chat-row chat-row-user";
+    if (isBot) {
+      const avatar = document.createElement("img");
+      avatar.className = "chat-avatar";
+      avatar.src = WISDOM_CHAT_AVATAR_SRC;
+      avatar.alt = "";
+      row.append(avatar);
+    }
+    const bubble = document.createElement("p");
+    if (className) bubble.className = className;
     const author = document.createElement("strong");
     const copy = document.createElement("span");
     author.textContent = authorName;
     copy.textContent = message;
-    row.append(author, copy);
+    bubble.append(author, copy);
+    row.append(bubble);
     $("#chat-messages").append(row);
     while ($("#chat-messages").children.length > 50) $("#chat-messages").firstElementChild.remove();
     $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
@@ -3588,25 +3605,40 @@
   }
 
   function wisdomFallbackAnswer(question) {
-    const lower = question.toLowerCase();
-    if (question.includes("물") || question.includes("음료") || question.includes("당")) {
-      return "단 음료를 물이나 덜 단 음료로 바꾸는 건 당류 섭취를 줄이는 쉬운 시작점이에요. 오늘 한 잔부터 바꿔 보고, 당뇨병이나 복약 중인 상황은 의료진 안내를 우선해 주세요.\n출처: 챌린지 선정 근거, 식약처·질병관리청 일반 건강지침";
-    }
-    if (question.includes("혈압") || question.includes("혈당") || question.includes("검진")) {
+    // 검사·수치, 그다음 운동을 먼저 확인한다 — 예전엔 "물/음료/당"을 제일 먼저 봐서 "당뇨"처럼
+    // "당" 한 글자만 겹쳐도 운동·검진 질문까지 전부 음료 답변으로 잘못 분류됐다.
+    if (question.includes("혈압") || question.includes("혈당") || question.includes("검진") || question.includes("수치")) {
       return "혈압·혈당 같은 건강 수치는 같은 시간대와 비슷한 조건에서 확인해야 변화를 비교하기 쉬워요. 수치가 높거나 증상이 있으면 앱 답변으로 판단하지 말고 의료기관에 문의해 주세요.\n출처: 챌린지 선정 근거, 질병관리청 건강수치 확인 지침";
     }
     if (question.includes("걷") || question.includes("운동") || question.includes("식후")) {
       return "가벼운 걷기는 활동량을 늘리는 부담 낮은 방법이에요. 처음에는 짧게 시작하고, 통증·어지럼·심한 숨참이 있으면 멈추는 게 좋아요.\n출처: 챌린지 선정 근거, 대한당뇨병학회·질병관리청 신체활동 자료";
     }
+    if (question.includes("음료") || question.includes("당류") || question.includes("단맛") || question.includes("단 것")) {
+      return "단 음료를 물이나 덜 단 음료로 바꾸는 건 당류 섭취를 줄이는 쉬운 시작점이에요. 오늘 한 잔부터 바꿔 보고, 당뇨병이나 복약 중인 상황은 의료진 안내를 우선해 주세요.\n출처: 챌린지 선정 근거, 식약처·질병관리청 일반 건강지침";
+    }
     return "건강한 생활습관은 걷기, 규칙적인 식사, 덜 달게 마시기, 정기적인 건강수치 확인처럼 매일 기록하기 쉬운 행동부터 시작할 수 있어요. 이 답변은 일반 건강교육 정보라서 개인 진단이나 처방을 대신하지 않아요.\n출처: RAG 준비 문서, 공공기관 일반 건강교육 자료";
+  }
+
+  // /health-education/questions는 HTTPBearer로 보호돼 있어 Authorization 헤더 없이는
+  // 매번 401/403이 난다 — 세션 쿠키(credentials: same-origin)만으로는 인증되지 않는다.
+  // forest-profile.js가 계정 이름을 읽어올 때 쓰는 것과 같은 리프레시 방식으로 토큰을 받는다.
+  async function fetchWisdomAuthToken() {
+    try {
+      const response = await fetch("/api/v1/auth/token/refresh", { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      return typeof payload?.access_token === "string" && payload.access_token ? payload.access_token : null;
+    } catch { return null; }
   }
 
   async function askWisdomSpring(question) {
     const pending = appendChatMessage("간당이", "근거를 찾아보고 있어요...", "is-pending");
     try {
+      const token = await fetchWisdomAuthToken();
+      if (!token) throw new Error("로그인 정보를 확인하지 못했어요.");
       const response = await fetch("/api/v1/health-education/questions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         credentials: "same-origin",
         cache: "no-store",
         body: JSON.stringify({ question }),
@@ -3617,11 +3649,11 @@
       const citations = Array.isArray(data.citations) && data.citations.length
         ? `\n출처: ${data.citations.slice(0, 3).map((item) => item.title || item.url || item.document_id).filter(Boolean).join(", ")}`
         : "";
-      pending.className = "";
-      pending.children[1].textContent = `${data.answer || wisdomFallbackAnswer(question)}\n${data.medical_notice || "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."}${citations}`;
+      pending.querySelector("p").className = "";
+      pending.querySelector("span").textContent = `${data.answer || wisdomFallbackAnswer(question)}\n${data.medical_notice || "일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다."}${citations}`;
     } catch {
-      pending.className = "";
-      pending.children[1].textContent = `${wisdomFallbackAnswer(question)}\n일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다.`;
+      pending.querySelector("p").className = "";
+      pending.querySelector("span").textContent = `${wisdomFallbackAnswer(question)}\n일반 건강교육 정보이며 개인 진단·처방을 대신하지 않습니다.`;
     }
     $("#chat-messages").scrollTop = $("#chat-messages").scrollHeight;
   }

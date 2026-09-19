@@ -356,11 +356,10 @@ def test_demo_controls_and_invite_placeholders_are_environment_safe() -> None:
 def test_invite_api_response_is_rendered_as_text_not_html() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "function renderInviteEmailResult(result = {})" in script
-    assert 'token.textContent = result.token || "초대 요청 접수 완료"' in script
-    assert 'notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요."' in script
-    assert "box.replaceChildren(content)" in script
-    assert "renderInviteEmailResult(result)" in script
+    assert "function renderInviteCodeResult(result = {})" in script
+    assert "codeNode.textContent = inviteCode" in script
+    assert "codeNode.dataset.copyValue = inviteCode" in script
+    assert "renderInviteCodeResult(result)" in script
     assert "box.innerHTML = `<div><strong>초대 이메일을 보낼 준비가 되었습니다" not in script
 
 
@@ -591,7 +590,7 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "챌린지 시작 중…",
         "기록 저장 중…",
         "오늘 기록 저장 중…",
-        "초대 이메일 보내는 중…",
+        "초대 코드 만드는 중…",
         "워치 기록 저장 중…",
         "PDF 화면 여는 중…",
     ):

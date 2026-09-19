@@ -54,7 +54,9 @@ def _item(code, title, category, domain, difficulty, count, minutes, verificatio
         "verification_scope": (
             "대표 사진에서 음식이 충분히 보이고 채소가 포함됐는지만 확인합니다. 끼니 횟수·섭취량·실제 섭취는 본인 기록입니다."
             if verification == 1
-            else "사진 제출 여부만 확인합니다. 통곡물·영양성분·운동 시간의 진위를 자동 판정하지 않습니다."
+            else "사진 제출 여부만 확인합니다. 통곡물·영양성분의 진위를 자동 판정하지 않습니다."
+            if verification == 2 and category == "diet"
+            else "사진 제출 여부만 확인합니다. 운동 시간의 진위를 자동 판정하지 않습니다."
             if verification == 2
             else "본인의 실천 여부를 체크합니다. 의료적 검증이 아닙니다."
         ),
