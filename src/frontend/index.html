@@ -28,7 +28,7 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260918-photo-preview-v1">
+  <link rel="stylesheet" href="/static/styles.css?v=20260919-health-history-result-v2">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
@@ -36,7 +36,7 @@
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <script src="/static/health-quiz-preview.js?v=20260913-rag-quiz-preview-v4" defer></script>
-  <script src="/static/app.js?v=20260919-xai-results-v1" defer></script>
+  <script src="/static/app.js?v=20260919-health-history-result-v2" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
@@ -772,7 +772,7 @@
             <button class="secondary" id="today-select-challenge" type="button" hidden>챌린지 선택하러 가기</button>
           </div>
           <div class="dashboard-grid summary-grid">
-            <article><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></article>
+            <article class="dashboard-risk-summary" id="dashboard-risk-summary" data-risk="pending"><div><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></div><img id="dashboard-risk-image" src="/static/assets/hyeoldangi-risk-low.png" alt="최근 위험 범주 결과 준비 중"></article>
             <article><small>현재 챌린지</small><strong id="dashboard-cycle">-</strong><p>4주 실천 과정</p></article>
             <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
           </div>
@@ -784,7 +784,7 @@
           </div>
           <div class="dashboard-management-grid">
             <section class="dashboard-account-actions health-management" id="home-health-management" aria-labelledby="dashboard-health-title" hidden>
-              <div class="dashboard-management-heading"><h3 id="dashboard-health-title" tabindex="-1">건강정보 관리</h3><button class="secondary" id="close-health-management" type="button">닫기</button></div>
+              <div class="dashboard-management-heading"><h3 id="dashboard-health-title" tabindex="-1">건강정보 관리</h3><div class="health-management-header-actions"><button class="medical-facility-shortcut" id="dashboard-find-nearby-medical-facilities" type="button">내 주변 의료기관 찾기</button><button class="secondary" id="close-health-management" type="button">닫기</button></div></div>
               <div class="dashboard-management-content">
                 <div class="dashboard-management-heading health-record-actions">
                   <button class="primary" id="dashboard-edit-health" type="button">새 건강정보 기록하기</button>
@@ -798,6 +798,13 @@
                   <div id="health-history-list" class="health-history-list" role="list">
                     <p class="health-history-empty">저장된 건강정보가 없습니다.</p>
                   </div>
+                  <nav id="health-history-pagination" class="health-history-pagination" aria-label="저장된 건강정보 페이지" hidden></nav>
+                  <form id="health-history-filter" class="health-history-filter">
+                    <div><label for="health-history-start-date">시작일</label><input id="health-history-start-date" type="date"></div>
+                    <div><label for="health-history-end-date">종료일</label><input id="health-history-end-date" type="date"></div>
+                    <button class="secondary" type="submit">조회</button>
+                    <button class="text-button" id="health-history-filter-reset" type="button">전체 보기</button>
+                  </form>
                 </section>
               </div>
             </section>

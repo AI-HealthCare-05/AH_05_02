@@ -2290,6 +2290,11 @@ body.dashboard-mode .app-shell{padding-top:22px}
 .health-history-values div{min-width:0;padding:10px;border-radius:10px;background:#fff}
 .health-history-values dt{color:var(--muted);font-size:13px;font-weight:800}
 .health-history-values dd{margin:4px 0 0;color:var(--ink);font-size:16px;font-weight:900;overflow-wrap:anywhere}
+.health-history-values .health-history-result-action{display:flex;align-items:flex-end;justify-content:flex-end;background:transparent}
+.health-history-result-action button{min-height:44px;padding:10px 16px;border:1px solid var(--green);border-radius:10px;background:var(--green);color:#fff;font:inherit;font-weight:900;cursor:pointer}
+.health-history-result-action button:hover{background:var(--green-dark);border-color:var(--green-dark)}
+.health-history-result-action button:focus-visible{outline:3px solid rgba(19,119,94,.24);outline-offset:2px}
+.health-history-result-action button:disabled{cursor:wait;opacity:.7}
 .dashboard-safety-note{display:flex;align-items:center;gap:9px;margin:26px 6px 0;color:#777f7c;font-size:15px}
 .dashboard-safety-note p{margin:0}
 .dashboard-safety-note strong{font-weight:800}
@@ -2749,6 +2754,8 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
   .dashboard-management-heading{align-items:stretch;flex-direction:column}
   .dashboard-management-heading button{width:100%}
   .health-history-values{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .health-history-values .health-history-result-action{grid-column:1/-1}
+  .health-history-result-action button{width:100%}
 }
 
 @media(max-width:520px){
@@ -3684,6 +3691,9 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .dashboard-management-grid:has(>.health-management[hidden]){display:none}
 .health-management>.dashboard-management-heading{padding:20px 24px;gap:16px}
 .health-management>.dashboard-management-heading h3{margin:0}
+.health-management-header-actions{display:flex;align-items:center;gap:10px}.health-management-header-actions button{min-height:48px}.medical-facility-shortcut{border:1px solid #a93f37;border-radius:12px;background:#a93f37;color:#fff;padding:10px 18px;font-weight:900;cursor:pointer}.medical-facility-shortcut:hover{border-color:#8d3029;background:#8d3029}.dashboard-risk-summary{display:flex!important;align-items:center!important;justify-content:space-between;gap:12px}.dashboard-risk-summary>div{min-width:0}.dashboard-risk-summary img{width:58px;height:58px;object-fit:contain;flex:0 0 auto}.dashboard-risk-summary[data-risk="low"] strong{color:#277e62}.dashboard-risk-summary[data-risk="moderate"] strong{color:#b57613}.dashboard-risk-summary[data-risk="high"] strong{color:#b23b35}.dashboard-risk-summary[data-risk="pending"] strong{color:var(--muted)}
+.health-history-filter{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:14px 0 0;padding:12px;border-radius:12px;background:#f7faf9}.health-history-filter>div{display:grid;gap:4px}.health-history-filter label{color:var(--muted);font-size:13px;font-weight:800}.health-history-filter input{min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 10px}.health-history-filter button{min-height:44px}.health-history-edit{border:0;background:transparent;color:var(--green-dark);padding:3px 0;font:inherit;font-size:14px;font-weight:900;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.health-history-pagination{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:14px}.health-history-pagination button{display:grid;place-items:center;min-width:40px;min-height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--green-dark);font-weight:900;cursor:pointer}.health-history-pagination button[aria-current="page"]{border-color:var(--green);background:var(--green);color:#fff}
+@media(max-width:700px){.health-management-header-actions{width:100%;align-items:stretch;flex-direction:column}.health-history-filter>div{width:100%}.health-history-filter button{flex:1}}
 .feature-report{background:linear-gradient(120deg,#e1f1ec,#f5faf6)}
 .challenge-v3-controls{padding:24px;background:#f1f7f4;border:1px solid #c4dbd2;border-radius:20px;margin:20px 0;color:#153d32}
 .challenge-v3-controls h3{font-size:26px;margin:8px 0 14px}.challenge-v3-controls>small{display:block;margin:10px 0;line-height:1.6}

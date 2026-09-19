@@ -274,7 +274,7 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
         '$("#retry-analysis").addEventListener', 1
     )[0]
     local_save = submit_handler.split("if (isLocalPreview())", 1)[1].split("} else {", 1)[0]
-    remote_save = submit_handler.split('const checkup = await api("/health-checkups"', 1)[1].split(
+    remote_save = submit_handler.split("const checkup = await api(editingId ?", 1)[1].split(
         "if (state.currentHealthOnly)", 1
     )[0]
 
@@ -288,6 +288,22 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
     assert remote_save.index("if (shouldRequestPrediction) showStep(5);") < remote_save.index(
         "await saveCurrentScreeningInputSnapshot();"
     )
+
+
+def test_dashboard_health_history_controls_and_today_risk_summary_are_wired() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="dashboard-risk-image"' in html
+    assert 'id="dashboard-find-nearby-medical-facilities"' in html
+    assert 'id="health-history-pagination"' in html
+    assert 'id="health-history-filter"' in html
+    assert 'data-health-history-edit=' in script
+    assert 'data-health-history-result=' in script
+    assert "async function openSavedAnalysisResult(checkupId)" in script
+    assert "const pageSize = 10;" in script
+    assert 'card.model_key === "diabetes_current_screening"' in script
+    assert 'method: editingId ? "PATCH" : "POST"' in script
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
