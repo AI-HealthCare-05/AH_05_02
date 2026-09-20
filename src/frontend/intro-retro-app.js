@@ -405,6 +405,7 @@ function showEligibilityGuidance(reasonCodes) {
 }
 
 let _messageHome = null;
+let _messageTimer = null;
 function showMessage(message, kind = "error") {
   const box = $("#message");
   if (!_messageHome) _messageHome = box.parentElement;
@@ -420,8 +421,14 @@ function showMessage(message, kind = "error") {
   box.dataset.kind = kind;
   box.hidden = false;
   box.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.clearTimeout(_messageTimer);
+  _messageTimer = window.setTimeout(clearMessage, 2000);
 }
-function clearMessage() { $("#message").hidden = true; }
+function clearMessage() {
+  window.clearTimeout(_messageTimer);
+  _messageTimer = null;
+  $("#message").hidden = true;
+}
 
 function togglePasswordVisibility(button) {
   const input = document.getElementById(button.dataset.passwordTarget);
@@ -635,12 +642,9 @@ function syncSidebarChallengeEntry() {
 
 function syncTopNavigation() {
   const isLoggedIn = Boolean(state.token);
-  const hasHealthRecord = Boolean(state.checkupId || state.healthCheckupResult || state.healthCheckupHistory.length);
-  const hasChallengeAccess = Boolean(state.cycle || state.capabilities.challenge || state.step >= 7);
   const needsAccountSetup = Boolean(state.accountRecovery);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
-  const isOnboardingFlow = state.step >= 3 && state.step <= 6;
-  const showWorkspaceNav = isLoggedIn && !needsAccountSetup && (hasHealthRecord || hasChallengeAccess || isOnboardingFlow);
+  const showWorkspaceNav = isLoggedIn && !needsAccountSetup;
   const showOnboardingNav = false;
   const guestNav = $("#guest-flow-panel");
   const workspaceNav = $("#workspace-top-nav");
@@ -3457,7 +3461,7 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
       : "기록 없음";
     return `<details class="health-history-item" role="listitem" ${index === 0 ? "open" : ""}>
       <summary>
-        <span><strong>${escapeHtml(healthHistoryDateLabel(item.checkup_date || item.created_at))}</strong><small>${escapeHtml(typeLabel)}</small></span>
+        <span><strong>${escapeHtml(healthHistoryDateLabel(item.checkup_date || item.created_at))}</strong><button class="health-history-edit" type="button" data-health-history-edit="${escapeHtml(item.checkup_id)}">${escapeHtml(typeLabel === "첫 기록" ? "수정" : typeLabel)}</button><button class="health-history-delete" type="button" data-health-history-delete="${escapeHtml(item.checkup_id)}">기록 삭제</button></span>
         ${index === 0 ? '<em class="health-history-latest">최신</em>' : ""}
       </summary>
       <dl class="health-history-values">
@@ -3472,7 +3476,6 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
         <div><dt>현재 흡연</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_smoker))}</dd></div>
         <div><dt>현재 음주</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_drinker))}</dd></div>
       </dl>
-      ${index === 0 ? '<button class="secondary" type="button" data-health-history-edit>최근 정보 불러와 수정하기</button>' : ""}
     </details>`;
   }).join("");
 }
@@ -6562,9 +6565,38 @@ $("#return-login-back")?.addEventListener("click", () => {
 $("#dashboard-edit-health").addEventListener("click", () => {
   openReturningUserHealthEdit();
 });
-$("#health-history-list").addEventListener("click", (event) => {
+$("#health-history-list").addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("[data-health-history-delete]");
+  if (deleteButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const checkupId = deleteButton.dataset.healthHistoryDelete;
+    if (!window.confirm("이 건강정보와 연결된 분석 결과를 삭제할까요? 삭제 후 복구할 수 없습니다.")) return;
+    const releaseBusy = setButtonBusy(deleteButton, "삭제 중…");
+    try {
+      if (isLocalPreview()) {
+        state.healthCheckupHistory = state.healthCheckupHistory.filter(
+          (item) => String(item.checkup_id) !== String(checkupId),
+        );
+        renderHealthCheckupHistory();
+      } else {
+        await api(`/health-checkups/${checkupId}`, { method: "DELETE" });
+        await loadHealthCheckupHistory();
+      }
+      showMessage("건강정보 기록을 삭제했습니다.", "success");
+    } catch (error) {
+      showMessage(error.message || "건강정보 기록을 삭제하지 못했습니다.");
+    } finally {
+      releaseBusy();
+    }
+    return;
+  }
   const button = event.target.closest("[data-health-history-edit]");
   if (!button) return;
+  const checkup = state.healthCheckupHistory.find(
+    (item) => String(item.checkup_id) === String(button.dataset.healthHistoryEdit),
+  );
+  if (checkup) state.healthCheckupResult = checkup;
   openReturningUserHealthEdit();
 });
 $("#shared-group-list")?.addEventListener("click", async (event) => {

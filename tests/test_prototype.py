@@ -293,16 +293,20 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
 def test_dashboard_health_history_controls_and_today_risk_summary_are_wired() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    dashboard_router = (ROOT / "app/apis/v1/dashboard_routers.py").read_text(encoding="utf-8")
 
     assert 'id="dashboard-risk-image"' in html
     assert 'id="dashboard-find-nearby-medical-facilities"' in html
     assert 'id="health-history-pagination"' in html
     assert 'id="health-history-filter"' in html
     assert "data-health-history-edit=" in script
+    assert "data-health-history-delete=" in script
     assert "data-health-history-result=" in script
+    assert 'method: "DELETE"' in script
     assert "async function openSavedAnalysisResult(checkupId)" in script
     assert "const pageSize = 10;" in script
     assert 'card.model_key === "diabetes_current_screening"' in script
+    assert "latest_prediction_for_model_key(user.id, CURRENT_SCREENING_MODEL_KEY)" in dashboard_router
     assert 'method: editingId ? "PATCH" : "POST"' in script
     assert 'error.code !== "CHECKUP_ALREADY_PREDICTED"' in script
     assert 'checkup_type: "reassessment"' in script
@@ -321,6 +325,9 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert "async function restoreIntroSession()" in intro_script
     assert 'await api("/auth/token/refresh")' in intro_script
     assert 'window.addEventListener("pageshow"' in intro_script
+    assert "showWorkspaceNav = isLoggedIn && !needsAccountSetup" in intro_script
+    assert "window.setTimeout(clearMessage, 2000)" in script
+    assert "window.setTimeout(clearMessage, 2000)" in intro_script
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:

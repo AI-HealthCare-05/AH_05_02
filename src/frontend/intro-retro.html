@@ -9,20 +9,20 @@
   <link rel="icon" href="/static/assets/gandang-site-icon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="/static/assets/gandang-site-icon-180.png" sizes="180x180">
   <link rel="manifest" href="/static/site.webmanifest">
-  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260920-brand-logo-v1">
+  <link rel="stylesheet" href="/static/intro-retro-base.css?v=20260921-health-record-delete-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260908-carousel-clear-v2">
   <script src="/static/education-carousel.js?v=20260908-shared-carousel-v1" defer></script>
   <script src="/static/lifestyle-map.js?v=20260908-body-art-v3" defer></script>
   <link rel="stylesheet" href="/static/retro-intro.css?v=20260910-result-signal-grid-restore-v1">
   <script src="/static/retro-intro.js?v=20260910-result-signal-grid-restore-v1" defer></script>
-  <script src="/static/intro-retro-app.js?v=20260918-photo-proof-v1" defer></script>
+  <script src="/static/intro-retro-app.js?v=20260921-intro-session-health-delete-v1" defer></script>
 </head>
 <body class="intro-mode">
   <a class="skip-link" href="#main">본문으로 바로가기</a>
   <header class="topbar">
     <a class="brand" id="brand-home" href="/static/intro-retro.html?v=20260915-brand-retro-v1" aria-label="간당간당 레트로 소개 화면으로"><img class="brand-logo" src="/static/assets/gandang-logo-web-v2.png" width="1998" height="787" alt=""></a>
-    <nav class="intro-route-nav" aria-label="첫 방문 서비스 안내">
+    <nav class="intro-route-nav" aria-label="첫 방문 서비스 안내" hidden>
       <button type="button" data-intro-signup>회원정보 입력</button>
       <a href="#story-health">건강정보 입력</a>
       <a href="#story-results">위험 신호 확인</a>
@@ -60,7 +60,7 @@
           <button class="text-button danger" id="open-account-delete" type="button">회원탈퇴</button>
         </div>
       </details>
-      <button class="text-button font-toggle-button" id="font-toggle" type="button" aria-pressed="false">글자 크게</button>
+      <button class="text-button font-toggle-button" id="font-toggle" type="button" aria-pressed="false" hidden>글자 크게</button>
     </div>
   </header>
   <div class="profile-editor" id="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profile-editor-title" hidden>

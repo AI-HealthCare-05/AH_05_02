@@ -133,6 +133,14 @@ async def test_demo_mode_completes_core_user_flow_without_redis(include_legacy_f
             assert pdf.headers["content-type"] == "application/pdf"
             assert pdf.content.startswith(b"%PDF")
             assert len(pdf.content) > 1000
+
+            deleted = await client.delete(
+                f"/api/v1/health-checkups/{checkup.json()['data']['checkup_id']}", headers=headers
+            )
+            assert deleted.status_code == status.HTTP_200_OK
+            assert deleted.json()["data"]["deleted"] is True
+            history = await client.get("/api/v1/health-checkups", headers=headers)
+            assert history.json()["data"]["items"] == []
     finally:
         config.DEMO_MODE = previous_demo_mode
         await reset_tortoise()
