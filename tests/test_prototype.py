@@ -317,6 +317,7 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
     intro_script = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
+    retro_intro_script = (ROOT / "src/frontend/retro-intro.js").read_text(encoding="utf-8")
 
     assert 'id="height" type="number" min="120" max="220" step="0.1"' in html
     assert "if (state.step === 6)" in script
@@ -327,6 +328,7 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert 'window.addEventListener("pageshow"' in intro_script
     assert "showWorkspaceNav = isLoggedIn && !needsAccountSetup" in intro_script
     assert "if (introRouteNav) introRouteNav.hidden = true;" in intro_script
+    assert "routeNav.hidden = true;" in retro_intro_script
     assert "window.setTimeout(clearMessage, 2000)" in script
     assert "window.setTimeout(clearMessage, 2000)" in intro_script
 

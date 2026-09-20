@@ -131,7 +131,9 @@
     const p = reduced.matches ? 0 : progress();
     const compact = scrollY > 80;
     topbar.classList.toggle('retro-nav-compact', compact);
-    routeNav.hidden = compact;
+    // Authentication-aware navigation is rendered by intro-retro-app.js.
+    // Keep the legacy story shortcuts out of the top bar for both guests and members.
+    routeNav.hidden = true;
     const headerBottom = topbar.getBoundingClientRect().bottom;
     document.documentElement.style.setProperty('--intro-safe-top', `${Math.ceil(headerBottom + 28)}px`);
     // Extra sticky space belongs to the folder cover, not the mascot reveal.
