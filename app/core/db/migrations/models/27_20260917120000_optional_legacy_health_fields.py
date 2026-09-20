@@ -1,7 +1,14 @@
 from tortoise import BaseDBAsyncClient
 
 
-async def upgrade(db: BaseDBAsyncClient) -> str:
+async def upgrade(db: BaseDBAsyncClient | None) -> str:
+    if db is None:
+        # aerich calls upgrade(None) when backfilling MODELS_STATE on an
+        # old-format migration file that has no pending model changes
+        # (e.g. `aerich migrate --name x` run with nothing to migrate).
+        # There is no real connection to inspect a dialect from, so return
+        # a no-op instead of crashing on `db.capabilities`.
+        return "SELECT 1;"
     if db.capabilities.dialect == "mysql":
         return """
             ALTER TABLE `health_checkups`
@@ -35,7 +42,7 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
     raise RuntimeError("Unsupported database dialect for optional legacy health fields")
 
 
-async def downgrade(db: BaseDBAsyncClient) -> str:
+async def downgrade(db: BaseDBAsyncClient | None) -> str:
     # Restoring NOT NULL would require inventing answers for newer records.
     del db
     return "SELECT 1;"
