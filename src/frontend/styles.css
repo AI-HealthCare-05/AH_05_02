@@ -2986,6 +2986,11 @@ body.dashboard-mode .brand-mark{
   height:50px;
   object-fit:contain;
 }
+
+/* Production wordmark: preserve source proportions and remain readable on every viewport. */
+.topbar .brand:has(.brand-logo){display:flex;align-items:center;flex:0 0 auto;min-height:48px;line-height:0}
+.topbar .brand-logo{display:block;width:clamp(150px,14vw,220px);height:auto;max-height:62px;object-fit:contain}
+@media(max-width:760px){.topbar .brand-logo{width:clamp(126px,38vw,168px);max-height:52px}}
 body.dashboard-mode .workspace-top-nav ol{
   gap:6px;
 }
