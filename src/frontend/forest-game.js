@@ -15,7 +15,7 @@
   const RENDER_SCALE = 2;
   const TODAY = new Date().toISOString().slice(0, 10);
   const $ = (selector) => document.querySelector(selector);
-  const WISDOM_SPRING_SIGN = Object.freeze({ x: 108, y: 424 });
+  const WISDOM_SPRING = Object.freeze({ x: 108, y: 424 });
   // 원본(gandangi-wisdom-guide.png)은 포인터를 왼쪽으로 들고 있어서, 말풍선 왼쪽에 놓으면
   // 간당이가 채팅과 반대 방향을 보는 것처럼 보인다. 좌우로 뒤집어서 포인터·시선이 오른쪽
   // (말풍선 쪽)을 향하게 만든 채팅 전용 버전.
@@ -1908,7 +1908,7 @@
   }
 
   function projectMapLabels() {
-    [[".home-label", 205, 62], [".garden-label", 610, 62], ["#wisdom-spring-sign", WISDOM_SPRING_SIGN.x, WISDOM_SPRING_SIGN.y]].forEach(([selector, x, y]) => {
+    [[".home-label", 205, 62], [".garden-label", 610, 62]].forEach(([selector, x, y]) => {
       const label = $(selector);
       if (!label?.style) return;
       const point = window.ForestCamera?.worldToScreen(x, y) || { x: x / WORLD_WIDTH, y: y / WORLD_HEIGHT };
@@ -2101,7 +2101,7 @@
     if (distanceTo(WORLD_MEMORY_CAMERA.x, WORLD_MEMORY_CAMERA.y) < 78) return "memory_camera";
     if (distanceTo(218, 238) < 62) return "home";
     if (distanceTo(612, 246) < 72) return "garden";
-    if (distanceTo(WISDOM_SPRING_SIGN.x, WISDOM_SPRING_SIGN.y) < 72) return "wisdom_spring";
+    if (distanceTo(WISDOM_SPRING.x, WISDOM_SPRING.y) < 72) return "wisdom_spring";
     return null;
   }
 
@@ -3258,8 +3258,6 @@
     const guide = ragGuideFor(question);
     $("#forest-rag-result").innerHTML = `<strong>${guide.answer}</strong><a href="${guide.url}" target="_blank" rel="noopener">검색 근거 · ${guide.source}</a><small>일반적인 건강교육 정보이며 진단·처방이 아닙니다.</small>`;
   });
-  $("#open-wisdom-spring")?.addEventListener("click", openWisdomSpringChat);
-
   $("#group-goal-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     state.groupGoalMemo = $("#group-goal-memo").value.trim().slice(0, 80);
@@ -4123,11 +4121,6 @@
     appendChatMessage(state.avatar.name, message);
     input.value = "";
     if (chatMode === "wisdom") askWisdomSpring(message);
-  });
-
-  $("#wisdom-spring-sign")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    openWisdomSpringChat();
   });
 
   $("#music-toggle").addEventListener("click", async (event) => {

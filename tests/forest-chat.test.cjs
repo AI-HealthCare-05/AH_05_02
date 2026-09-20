@@ -68,8 +68,7 @@ function setup({ phaserActive = true, fetchImpl } = {}) {
   }
   for (const [id, tag] of [['chat-panel', 'SECTION'], ['chat-input', 'INPUT'], ['chat-form', 'FORM'],
     ['chat-toggle', 'BUTTON'], ['chat-close', 'BUTTON'], ['ui-toggle', 'BUTTON'], ['chat-messages', 'DIV'], ['phaser-world', 'DIV'],
-    ['chat-title', 'H2'], ['chat-help', 'SMALL'], ['wisdom-chat-guide', 'DIV'], ['wisdom-question-suggestions', 'DIV'],
-    ['wisdom-spring-sign', 'BUTTON']]) {
+    ['chat-title', 'H2'], ['chat-help', 'SMALL'], ['wisdom-chat-guide', 'DIV'], ['wisdom-question-suggestions', 'DIV']]) {
     elements.set(`#${id}`, element(tag));
   }
   const classes = new Set(), canvas = element('CANVAS');
@@ -225,9 +224,9 @@ test('Enter inside chat retains native form submission, renders plain text and k
   assert.equal(app.get('chat-messages').scrollTop, app.get('chat-messages').scrollHeight);
 });
 
-test('wisdom spring sign opens Gandangi health chat with example questions and active input', () => {
+test('nearby wisdom spring interaction opens Gandangi health chat with example questions and active input', () => {
   const app = setup();
-  app.get('wisdom-spring-sign').emit('click');
+  app.context.openWisdomSpringChat();
   app.flushTimers();
   assert.equal(app.get('chat-panel').hidden, false);
   assert.equal(app.get('chat-panel').classList.contains('wisdom-mode'), true);
