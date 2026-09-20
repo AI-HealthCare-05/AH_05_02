@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from tortoise.transactions import in_transaction
+
 from app.models.health import (
     Challenge,
     ChallengeCycle,
@@ -18,9 +20,11 @@ from app.models.health import (
     HealthCheckup,
     Prediction,
     PredictionRiskCurvePoint,
+    PredictionScenario,
     RiskFactor,
     UserChallenge,
 )
+from app.models.prediction_jobs import PredictionJob
 
 
 class HealthRepository:
@@ -62,6 +66,38 @@ class HealthRepository:
 
     async def checkup_has_prediction(self, checkup_id: int, user_id: int) -> bool:
         return await Prediction.filter(health_checkup_id=checkup_id, user_id=user_id).exists()
+
+    async def delete_checkup(self, checkup_id: int, user_id: int) -> bool:
+        """Delete one owned health record and its derived analysis data."""
+        item = await self.get_checkup(checkup_id, user_id)
+        if item is None:
+            return False
+        predictions = await Prediction.filter(health_checkup_id=checkup_id, user_id=user_id)
+        prediction_ids = [prediction.id for prediction in predictions]
+        async with in_transaction() as connection:
+            if prediction_ids:
+                await PredictionRiskCurvePoint.filter(prediction_id__in=prediction_ids).using_db(connection).delete()
+                await PredictionScenario.filter(prediction_id__in=prediction_ids).using_db(connection).delete()
+                await RiskFactor.filter(prediction_id__in=prediction_ids).using_db(connection).delete()
+                await (
+                    ChallengeCycle.filter(user_id=user_id, prediction_id__in=prediction_ids)
+                    .using_db(connection)
+                    .update(prediction_id=None)
+                )
+                await (
+                    Feedback.filter(user_id=user_id, prediction_id__in=prediction_ids)
+                    .using_db(connection)
+                    .update(prediction_id=None)
+                )
+                await Prediction.filter(id__in=prediction_ids, user_id=user_id).using_db(connection).delete()
+            await PredictionJob.filter(health_checkup_id=checkup_id, user_id=user_id).using_db(connection).delete()
+            await (
+                CurrentScreeningInput.filter(health_checkup_id=checkup_id, user_id=user_id)
+                .using_db(connection)
+                .delete()
+            )
+            await HealthCheckup.filter(id=checkup_id, user_id=user_id).using_db(connection).delete()
+        return True
 
     async def get_prediction(self, prediction_id: int, user_id: int) -> Prediction | None:
         return await Prediction.get_or_none(id=prediction_id, user_id=user_id)

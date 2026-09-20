@@ -10,7 +10,7 @@ from app.apis.v1.prediction_routers import prediction_payload
 from app.dependencies.security import get_request_user
 from app.models.model_registry import ModelRegistry
 from app.models.users import User
-from app.prediction.contracts import LIFETIME_RISK_MODEL_KEY
+from app.prediction.contracts import CURRENT_SCREENING_MODEL_KEY, LIFETIME_RISK_MODEL_KEY
 from app.repositories.health_repository import HealthRepository
 from app.services import challenge_v2
 from app.services.challenges import ChallengeService
@@ -24,7 +24,9 @@ DASHBOARD_DISCLAIMER = "위험 범주와 챌린지 수행률은 진단, 질병�
 @dashboard_router.get("/dashboard/summary")
 async def dashboard_summary(user: Annotated[User, Depends(get_request_user)]) -> dict[str, object]:
     repo = HealthRepository()
-    prediction = await repo.latest_prediction(user.id)
+    # The home card is specifically the current-screening ("오늘이") result.
+    # A newer future-incidence result must not replace or hide that card.
+    prediction = await repo.latest_prediction_for_model_key(user.id, CURRENT_SCREENING_MODEL_KEY)
     cycle = await repo.active_cycle(user.id)
     follow_up = await repo.open_follow_up(user.id)
     cycle_data = await ChallengeService().cycle_payload(cycle, user.id) if cycle is not None else None

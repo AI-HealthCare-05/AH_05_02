@@ -186,3 +186,14 @@ async def update_health_checkup(
 ) -> dict[str, object]:
     item = await HealthService().update_checkup(user, checkup_id, request)
     return envelope(checkup_payload(item))
+
+
+@health_router.delete("/health-checkups/{checkup_id}", status_code=status.HTTP_200_OK)
+async def delete_health_checkup(
+    checkup_id: int,
+    user: Annotated[User, Depends(get_request_user)],
+) -> dict[str, object]:
+    deleted = await HealthRepository().delete_checkup(checkup_id, user.id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="건강정보 기록을 찾을 수 없습니다.")
+    return envelope({"checkup_id": checkup_id, "deleted": True})

@@ -964,6 +964,9 @@ body.dashboard-mode .app-shell{padding-top:34px}
 .health-history-item summary span{display:flex;align-items:baseline;gap:10px}
 .health-history-item summary strong{font-size:18px}
 .health-history-item summary small{color:var(--muted);font-weight:800}
+.health-history-edit,.health-history-delete{border:0;background:transparent;padding:3px 0;font:inherit;font-size:14px;font-weight:900;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.health-history-edit{color:var(--green-dark)}
+.health-history-delete{color:#b42318}
 .health-history-item summary::after{content:"⌄";display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border:1px solid var(--line);border-radius:999px;color:var(--green-dark);font-size:20px;font-weight:900;line-height:1}
 .health-history-item[open] summary::after{content:"^"}
 .health-history-latest{margin-left:auto;padding:4px 8px;border-radius:999px;background:#e5f5ee;color:var(--green-dark);font-size:13px;font-style:normal;font-weight:900}
