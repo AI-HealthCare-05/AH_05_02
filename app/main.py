@@ -112,6 +112,14 @@ async def carrot_forest() -> FileResponse:
     return response
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def site_favicon() -> FileResponse:
+    """Serve the compact brand mark from the conventional browser icon path."""
+    response = FileResponse(FRONTEND_DIR / "favicon.ico", media_type="image/x-icon")
+    response.headers["Cache-Control"] = "public, max-age=604800"
+    return response
+
+
 @app.get("/service", include_in_schema=False)
 async def suin_service() -> FileResponse:
     """Namespaced September 7 frontend; shares the forest's host-only session."""

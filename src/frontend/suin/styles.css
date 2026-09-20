@@ -1495,6 +1495,7 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .topbar{gap:18px;padding-inline:clamp(16px,3vw,52px)}
 .topbar .brand{flex:0 0 auto;font-size:26px;white-space:nowrap}
 .brand:has(.brand-emblem){display:inline-flex;align-items:center;gap:0;line-height:0}.brand-emblem{display:block;width:50px;height:50px;object-fit:contain}
+.topbar .brand:has(.brand-logo){display:flex;align-items:center;flex:0 0 auto;min-height:48px;line-height:0}.topbar .brand-logo{display:block;width:clamp(150px,14vw,220px);height:auto;max-height:62px;object-fit:contain}@media(max-width:760px){.topbar .brand-logo{width:clamp(126px,38vw,168px);max-height:52px}}
 .topbar nav[hidden]{display:none!important}
 .topbar .service-flow-panel{flex:1 1 auto;display:flex;align-items:center;justify-content:flex-start;min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 body.dashboard-mode .topbar .service-flow-panel{display:flex}
