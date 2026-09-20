@@ -326,6 +326,7 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert 'await api("/auth/token/refresh")' in intro_script
     assert 'window.addEventListener("pageshow"' in intro_script
     assert "showWorkspaceNav = isLoggedIn && !needsAccountSetup" in intro_script
+    assert "if (introRouteNav) introRouteNav.hidden = true;" in intro_script
     assert "window.setTimeout(clearMessage, 2000)" in script
     assert "window.setTimeout(clearMessage, 2000)" in intro_script
 

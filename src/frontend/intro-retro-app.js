@@ -647,8 +647,10 @@ function syncTopNavigation() {
   const showWorkspaceNav = isLoggedIn && !needsAccountSetup;
   const showOnboardingNav = false;
   const guestNav = $("#guest-flow-panel");
+  const introRouteNav = $(".intro-route-nav");
   const workspaceNav = $("#workspace-top-nav");
   const onboardingNav = $("#onboarding-top-nav");
+  if (introRouteNav) introRouteNav.hidden = true;
   if (guestNav) guestNav.hidden = isLoggedIn;
   if (workspaceNav) workspaceNav.hidden = !showWorkspaceNav;
   if (onboardingNav) onboardingNav.hidden = !showOnboardingNav;
