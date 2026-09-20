@@ -5224,6 +5224,33 @@ function applyAuthEntryFromUrl() {
 }
 window.addEventListener("popstate", applyAuthEntryFromUrl);
 applyAuthEntryFromUrl();
+
+let introSessionRestore = null;
+async function restoreIntroSession() {
+  if (state.token || ["login", "signup"].includes(new URLSearchParams(window.location.search).get("auth"))) return false;
+  if (introSessionRestore) return introSessionRestore;
+  introSessionRestore = (async () => {
+    try {
+      const refreshed = await api("/auth/token/refresh");
+      if (!refreshed?.access_token) return false;
+      state.token = refreshed.access_token;
+      state.userProfile = await api("/users/me");
+      syncTopNavigation();
+      return true;
+    } catch (error) {
+      if (error.status !== 401) console.warn("인트로에서 로그인 상태를 복원하지 못했습니다.");
+      state.token = null;
+      state.userProfile = null;
+      syncTopNavigation();
+      return false;
+    } finally {
+      introSessionRestore = null;
+    }
+  })();
+  return introSessionRestore;
+}
+void restoreIntroSession();
+window.addEventListener("pageshow", () => { void restoreIntroSession(); });
 $("#my-page")?.addEventListener("click", () => {
   if (state.token) {
     openProfileEditor();

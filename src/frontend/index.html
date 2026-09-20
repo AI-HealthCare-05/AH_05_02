@@ -28,7 +28,7 @@
       if (!explicitAppEntry) window.location.replace("/static/intro-retro.html?v=20260910-orbit-card-height-v1");
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=20260919-health-history-result-v2">
+  <link rel="stylesheet" href="/static/styles.css?v=20260920-centered-message-v1">
   <link rel="stylesheet" href="/static/wood-sign-theme.css?v=20260910-result-signal-grid-restore-v1">
   <link rel="stylesheet" href="/static/lifestyle-map.css?v=20260908-tools-heading-v3">
   <link rel="stylesheet" href="/static/education-carousel.css?v=20260915-health-quiz-card-art-v1">
@@ -402,7 +402,7 @@
             <ul id="health-error-list"></ul>
           </div>
           <section id="health-metrics-panel" class="health-input-panel health-combined-panel" aria-label="건강정보 입력 항목">
-            <div class="form-row"><label for="height">키 <small>cm · 필수</small></label><input id="height" type="number" min="120" max="220" value="160" required></div>
+            <div class="form-row"><label for="height">키 <small>cm · 필수 · 소수점 첫째 자리까지</small></label><input id="height" type="number" min="120" max="220" step="0.1" inputmode="decimal" value="160" required></div>
             <div class="form-row"><label for="weight">몸무게 <small>kg · 필수</small></label><input id="weight" type="number" min="25" max="250" step="0.1" value="67.5" required></div>
             <div class="form-row"><label for="waist">허리둘레 <small>cm</small></label><input id="waist" type="number" min="40" max="200" step="0.1" value="91"></div>
             <div class="actions full"><button class="primary" data-next-health-panel="vitals" type="button">혈압 입력하기</button></div>
@@ -772,7 +772,7 @@
             <button class="secondary" id="today-select-challenge" type="button" hidden>챌린지 선택하러 가기</button>
           </div>
           <div class="dashboard-grid summary-grid">
-            <article class="dashboard-risk-summary" id="dashboard-risk-summary" data-risk="pending"><div><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></div><img id="dashboard-risk-image" src="/static/assets/hyeoldangi-risk-low.png" alt="최근 위험 범주 결과 준비 중"></article>
+            <article class="dashboard-risk-summary" id="dashboard-risk-summary" data-risk="pending"><div><small>최근 위험 범주</small><strong id="dashboard-stage">-</strong><p>검토된 범주만 표시</p></div><img id="dashboard-risk-image" src="/static/assets/hyeoldangi-face-low.png" alt="최근 위험 범주 결과 준비 중"></article>
             <article><small>현재 챌린지</small><strong id="dashboard-cycle">-</strong><p>4주 실천 과정</p></article>
             <article><small>최근 7일 실천</small><strong id="dashboard-complete">0개</strong><p>완료 기록</p></article>
           </div>
