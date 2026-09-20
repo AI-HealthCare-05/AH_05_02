@@ -26,6 +26,7 @@ class Config(BaseSettings):
     AI_JOB_MAX_ATTEMPTS: int = 3
     PREDICTION_TIMEOUT_SECONDS: int = 30
     MODEL_PRELOAD_ENABLED: bool = False
+    XAI_DISPLAY_ALLOWED: bool = False
 
     PREDICTION_PROVIDER: str = "development"
     PREDICTION_MODEL_KEY: str = "diabetes_incidence"

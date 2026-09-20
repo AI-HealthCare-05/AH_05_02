@@ -3,12 +3,29 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from ai_worker.core import config
 from ai_worker.model_loader import load_model
 from app.prediction import get_prediction_provider
 from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL
 
 MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보조용이며 진단·처방이 아닙니다."
+
+
+def _release_explanation(explanation: dict[str, Any], *, operational: bool) -> dict[str, Any]:
+    """Apply the independent XAI release gate without changing SHAP values."""
+    released = dict(explanation)
+    allowed = (
+        operational
+        and config.XAI_DISPLAY_ALLOWED
+        and released.get("shap_claimed") is True
+        and released.get("additivity_verified") is True
+        and released.get("selection_status") == "complete"
+    )
+    released["status"] = "approved" if allowed else released.get("status", "unavailable")
+    released["display_allowed"] = allowed
+    return released
 
 
 async def preload_configured_models() -> None:
@@ -179,6 +196,7 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
         and output["model_version"] == ACTIVE_MODEL.version
         and output["artifact_sha256"] == ACTIVE_MODEL.model_artifact_digest
     )
+    explanation = _release_explanation(output.get("explanation", {}), operational=operational)
     return {
         "model_key": ACTIVE_MODEL.model_key,
         "task_type": "future_incidence_risk_screening",
@@ -203,7 +221,8 @@ async def _run_rf25_future_model(model_input: dict[str, Any], as_of_date: date) 
             "screening_not_diagnosis" if operational else "research_candidate_not_operationally_approved"
         ),
         "model_population": "undiagnosed_klosa_age_45_105",
-        "explanation_status": output.get("explanation_status", "not_available"),
+        "explanation": explanation,
+        "explanation_status": explanation.get("status", "not_available"),
         "medical_notice": output["disclaimer"],
     }
 
@@ -361,6 +380,19 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             and loaded.manifest.get("artifact_sha256") == CURRENT_SCREENING_MODEL.model_artifact_digest
         )
         signal = bool(output["screening_signal_detected"])
+        from src.ml.inference.shap_explanations import explain_today, safe_explanation
+        from src.ml.modeling.knhanes_current_screening import predict_artifact
+
+        frame = pd.DataFrame([contracted_input], columns=loaded.manifest["features"])
+        explanation = await asyncio.to_thread(
+            safe_explanation,
+            explain_today,
+            frame,
+            lambda candidates: predict_artifact(loaded.artifact, candidates),
+            model_version=output["model_version"],
+            elevated=signal,
+        )
+        explanation = _release_explanation(explanation, operational=operational)
         return {
             "model_key": CURRENT_SCREENING_MODEL.model_key,
             "outcome_definition": CURRENT_SCREENING_MODEL.outcome_definition,
@@ -381,7 +413,8 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             "display_allowed": operational,
             "operational_model_activated": operational,
             "model_population": CURRENT_SCREENING_MODEL.model_population,
-            "explanation_status": "not_available",
+            "explanation": explanation,
+            "explanation_status": explanation.get("status", "not_available"),
             "medical_notice": "현재 당뇨 관련 위험 신호 선별 결과이며 진단·처방이 아닙니다.",
         }
 

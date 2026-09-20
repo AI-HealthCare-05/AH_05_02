@@ -18,6 +18,7 @@ from app.models.health import (
     HealthCheckup,
     Prediction,
     PredictionRiskCurvePoint,
+    RiskFactor,
     UserChallenge,
 )
 
@@ -74,6 +75,9 @@ class HealthRepository:
     async def risk_curve_points(self, prediction_id: int) -> list[PredictionRiskCurvePoint]:
         """API-LIFE-004: ordered (age, cumulative_risk) points for a lifetime-risk prediction."""
         return await PredictionRiskCurvePoint.filter(prediction_id=prediction_id).order_by("age")
+
+    async def risk_factors(self, prediction_id: int) -> list[RiskFactor]:
+        return await RiskFactor.filter(prediction_id=prediction_id).order_by("display_order", "id")
 
     async def latest_prediction_for_model_key(self, user_id: int, model_key: str) -> Prediction | None:
         return await Prediction.filter(user_id=user_id, model_key=model_key).order_by("-predicted_at", "-id").first()

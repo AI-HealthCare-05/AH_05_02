@@ -14,7 +14,7 @@ powershell -ExecutionPolicy Bypass -File scripts/run_mvp_demo.ps1
 - API 문서: `http://127.0.0.1:8000/api/docs`
 - 상태 확인: `http://127.0.0.1:8000/api/v1/ready`
 
-`DEMO_MODE`는 Docker 없이 사용자 흐름을 확인하기 위한 로컬 전용 실행 방식이다. SQLite 파일은 `storage/gandang_mvp.sqlite3`에 생성되며 `.gitignore` 규칙에 따라 Git에 포함되지 않는다.
+`DEMO_MODE`는 Docker 없이 사용자 흐름을 확인하기 위한 로컬 전용 실행 방식이다. SQLite 파일은 `storage/gandang_mvp.sqlite3`에 생성되며 `.gitignore` 규칙에 따라 Git에 포함되지 않는다. 기본값에서는 개인 모델 결과를 만들지 않는다. 승인된 Artifact를 갖춘 제한된 데모 배포에서만 `DEMO_ARTIFACT_INFERENCE_ENABLED=true`를 명시해 SQLite와 FastAPI 프로세스 내 실제 추론을 함께 사용할 수 있다.
 
 ## 확인할 사용자 흐름
 
@@ -30,6 +30,8 @@ powershell -ExecutionPolicy Bypass -File scripts/run_mvp_demo.ps1
 ## 데모 모드 안전 경계
 
 - SQLite와 인프로세스 Worker는 `DEMO_MODE=true`일 때만 사용한다.
+- `DEMO_ARTIFACT_INFERENCE_ENABLED=true`를 쓰려면 FastAPI 이미지를 `ML_RESEARCH_RUNTIME=true`로 빌드하고 오늘이·내일이 Artifact 및 Manifest를 모두 공급해야 한다.
+- 시작 시 두 파일의 해시·Manifest 계약·역직렬화를 검증한다. 하나라도 실패하면 서버가 준비 상태가 되지 않으며 가짜 결과를 만들지 않는다.
 - 개발 provider는 확률·점수·위험 범주를 만들지 않는다.
 - 결과는 진단·처방이 아니라 시스템 연결과 건강교육 흐름 확인용이다.
 - 식단 분류와 OCR은 `development_mock`이며 사용자 확인 전 건강기록에 반영하지 않는다.

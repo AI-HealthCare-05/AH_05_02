@@ -64,8 +64,9 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
         { checkup_id: 10, height_cm: 168, weight_kg: 68 },
       ]));
       await page.locator('#open-health-management').click();
-      assert.equal(await page.locator('[data-health-history-edit]').count(), 1);
-      await page.locator('[data-health-history-edit]').click();
+      assert.equal(await page.locator('[data-health-history-edit]').count(), 2);
+      assert.equal(await page.locator('[data-health-history-result]').count(), 2);
+      await page.locator('[data-health-history-edit]').first().click();
       assert.equal(await page.locator('#height').inputValue(), '170');
       assert.equal(await page.locator('#weight').inputValue(), '70');
       await page.evaluate(() => { showStep(8); showWorkspace('home'); });

@@ -48,6 +48,8 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile
+      args:
+        ML_RESEARCH_RUNTIME: "true"
     image: ${DOCKER_USER:-local}/${DOCKER_REPOSITORY:-ah-05-02}:app-${APP_VERSION:-v0.1.0}
     restart: unless-stopped
     env_file:

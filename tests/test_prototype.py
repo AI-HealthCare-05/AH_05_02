@@ -42,7 +42,7 @@ def test_reviewed_eligibility_and_failure_guidance_is_user_specific() -> None:
         "MODEL_AGE_OUT_OF_RANGE",
     ):
         assert reason_code in script
-    assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." in html
+    assert "분석 실패는 당뇨병 위험도가 높다는 의미가 아닙니다." not in html
     assert "입력 내용 확인하기" in html
     assert "다시 시도하기" in html
     assert "증상이 있으면 의료기관 안내가 우선돼요." not in html
@@ -217,8 +217,8 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
     assert '<option value="code_1" selected>잠깐 또는 없음(하루 미만)</option>' in html
     assert '<option value="code_4">항상(5~7일)</option>' in html
     assert 'moderate: "주의"' in script
-    assert "days.disabled = false" in script
-    assert "minutes.disabled = false" in script
+    assert 'days.value = "0"' in script
+    assert 'minutes.value = "0"' in script
     assert '<select id="smoking-status" name="smoking-status" required>' in html
     assert "운동하지 않는 경우에는 두 값이 자동으로 0으로 저장됩니다." not in html
     assert html.index('id="smoking-status-title"') < html.index('id="current-drinker-title"')
@@ -229,8 +229,8 @@ def test_health_form_uses_rf25_exercise_detail_contract() -> None:
         < lifestyle.index('for="alcohol-frequency"')
         < lifestyle.index('for="health-satisfaction-score"')
     )
-    assert "days.disabled = !isRegularExercise" not in script
-    assert 'card.classList.toggle("disabled", false)' in script
+    assert "days.disabled = !isRegularExercise" in script
+    assert 'card.classList.toggle("disabled", !isRegularExercise)' in script
     assert 'id="regular-exercise" name="regular-exercise" type="radio" value="true" required' in lifestyle
     assert 'value="true" checked' not in lifestyle.split('id="regular-exercise-title"', 1)[1].split("</div>", 2)[0]
 
@@ -274,7 +274,7 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
         '$("#retry-analysis").addEventListener', 1
     )[0]
     local_save = submit_handler.split("if (isLocalPreview())", 1)[1].split("} else {", 1)[0]
-    remote_save = submit_handler.split('const checkup = await api("/health-checkups"', 1)[1].split(
+    remote_save = submit_handler.split("const checkup = await api(editingId ?", 1)[1].split(
         "if (state.currentHealthOnly)", 1
     )[0]
 
@@ -288,6 +288,22 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
     assert remote_save.index("if (shouldRequestPrediction) showStep(5);") < remote_save.index(
         "await saveCurrentScreeningInputSnapshot();"
     )
+
+
+def test_dashboard_health_history_controls_and_today_risk_summary_are_wired() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+
+    assert 'id="dashboard-risk-image"' in html
+    assert 'id="dashboard-find-nearby-medical-facilities"' in html
+    assert 'id="health-history-pagination"' in html
+    assert 'id="health-history-filter"' in html
+    assert "data-health-history-edit=" in script
+    assert "data-health-history-result=" in script
+    assert "async function openSavedAnalysisResult(checkupId)" in script
+    assert "const pageSize = 10;" in script
+    assert 'card.model_key === "diabetes_current_screening"' in script
+    assert 'method: editingId ? "PATCH" : "POST"' in script
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
@@ -340,11 +356,10 @@ def test_demo_controls_and_invite_placeholders_are_environment_safe() -> None:
 def test_invite_api_response_is_rendered_as_text_not_html() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
 
-    assert "function renderInviteEmailResult(result = {})" in script
-    assert 'token.textContent = result.token || "초대 요청 접수 완료"' in script
-    assert 'notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요."' in script
-    assert "box.replaceChildren(content)" in script
-    assert "renderInviteEmailResult(result)" in script
+    assert "function renderInviteCodeResult(result = {})" in script
+    assert "codeNode.textContent = inviteCode" in script
+    assert "codeNode.dataset.copyValue = inviteCode" in script
+    assert "renderInviteCodeResult(result)" in script
     assert "box.innerHTML = `<div><strong>초대 이메일을 보낼 준비가 되었습니다" not in script
 
 
@@ -518,7 +533,7 @@ def test_rf25_ml_errors_have_safe_actionable_frontend_guidance() -> None:
 
     assert "fallbackApiErrorMessage(resolvedCode)" in script
     assert "failureGuidance?.message || error.message" in script
-    assert "실패는 높은 위험을 의미하지 않습니다." in script
+    assert "실패는 높은 위험을 의미하지 않습니다." not in script
     assert "임의 점수나 위험 범주를 표시하지 않습니다." in script
     assert "점수·확률·위험 범주를 만들거나 표시하지 않습니다." in script
     for error_code in ("ML_MODEL_UNAVAILABLE", "ML_MODEL_CONTRACT_ERROR"):
@@ -575,7 +590,7 @@ def test_remaining_user_actions_block_duplicate_requests_while_busy() -> None:
         "챌린지 시작 중…",
         "기록 저장 중…",
         "오늘 기록 저장 중…",
-        "초대 이메일 보내는 중…",
+        "초대 코드 만드는 중…",
         "워치 기록 저장 중…",
         "PDF 화면 여는 중…",
     ):

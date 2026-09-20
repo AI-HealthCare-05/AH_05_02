@@ -1,12 +1,15 @@
+import asyncio
 import json
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from app.core import config
 from app.core.redis import redis_client
 from app.dtos.ai_jobs import AIJobCreateRequest
 from app.dtos.health import PredictionJobCreateRequest
-from app.models.health import CurrentScreeningInput, EligibilityCheck, HealthCheckup, Prediction
+from app.models.health import CurrentScreeningInput, EligibilityCheck, HealthCheckup, Prediction, RiskFactor
 from app.models.model_registry import ModelRegistry
 from app.models.prediction_jobs import PredictionJob
 from app.models.users import User
@@ -183,7 +186,11 @@ async def create_prediction_job(user: User, request: PredictionJobCreateRequest)
         "created_at": now.isoformat(),
     }
     if config.DEMO_MODE:
-        await _complete_demo_prediction(job, inference_payload, as_of_date)
+        try:
+            await _complete_demo_prediction(job, inference_payload, as_of_date)
+        except Exception as exc:
+            await _fail_embedded_artifact_job(job)
+            raise ModelNotReadyError("미래 위험 선별 모델을 불러오거나 실행할 수 없습니다.") from exc
         return job
     try:
         await redis_client.hset(
@@ -247,7 +254,11 @@ async def _create_current_screening_job(
         deadline_at=now + timedelta(seconds=config.PREDICTION_TIMEOUT_SECONDS),
     )
     if config.DEMO_MODE:
-        await _complete_demo_current_screening(job, checkup.checkup_date)
+        try:
+            await _complete_demo_current_screening(job, checkup.checkup_date, inference_payload)
+        except Exception as exc:
+            await _fail_embedded_artifact_job(job)
+            raise ModelNotReadyError("현재 위험 신호 모델을 불러오거나 실행할 수 없습니다.") from exc
         return job
     message = {
         "job_id": job_id,
@@ -322,6 +333,20 @@ async def _complete_demo_prediction(
     await job.save(update_fields=["status", "started_at", "worker_name", "attempts", "updated_at"])
     provider = get_prediction_provider()
     result = await provider.predict(inference_payload, as_of_date=as_of_date)
+    artifact_enabled = config.DEMO_ARTIFACT_INFERENCE_ENABLED
+    operational = bool(
+        artifact_enabled
+        and result.display_allowed
+        and result.operational_model_activated
+        and result.promotion_status == "approved"
+    )
+    explanation = await _demo_future_explanation(
+        inference_payload,
+        as_of_date=as_of_date,
+        model_version=result.model_version,
+        elevated=result.risk_category in {"moderate", "caution", "high"},
+        operational=operational,
+    )
     prediction = await Prediction.create(
         job_id=job.job_id,
         user_id=job.user_id,
@@ -329,9 +354,9 @@ async def _complete_demo_prediction(
         input_as_of_date=as_of_date,
         model_key=ACTIVE_MODEL.model_key,
         outcome_definition=ACTIVE_MODEL.outcome_definition,
-        result_status="development_only",
-        risk_category=None,
-        internal_score=None,
+        result_status=result.promotion_status if artifact_enabled else "development_only",
+        risk_category=result.risk_category if artifact_enabled else None,
+        internal_score=result.internal_score if artifact_enabled else None,
         model_version=result.model_version,
         feature_schema_version=result.feature_schema_version,
         input_schema_version=result.input_schema_version,
@@ -340,32 +365,190 @@ async def _complete_demo_prediction(
         calibration_version=result.calibration_version,
         model_artifact_digest=result.model_artifact_digest,
         threshold_version=result.threshold_version,
-        decision_threshold=None,
+        decision_threshold=result.decision_threshold if artifact_enabled else None,
         class_probabilities=None,
-        output_status="uncalibrated_research_probability_only",
+        output_status="screening_not_diagnosis" if artifact_enabled else "uncalibrated_research_probability_only",
         model_population=ACTIVE_MODEL.model_population,
-        explanation_status=result.explanation_status,
+        explanation_status=str(explanation.get("status", result.explanation_status)),
+        display_allowed=result.display_allowed if artifact_enabled else False,
+        operational_model_activated=result.operational_model_activated if artifact_enabled else False,
         disclaimer="이 결과는 당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
     )
+    await _persist_demo_explanation(prediction.id, explanation, operational=operational)
     job.status = "succeeded"
     job.prediction_id = prediction.id
     job.completed_at = datetime.now(UTC)
     job.result = {
-        "promotion_status": "development_only",
-        "risk_category": None,
-        "internal_score": None,
-        "medical_notice": "개발용 연결 결과이며 진단·처방이 아닙니다.",
+        "promotion_status": result.promotion_status if artifact_enabled else "development_only",
+        "risk_category": result.risk_category if artifact_enabled else None,
+        "internal_score": result.internal_score if artifact_enabled else None,
+        "explanation": explanation,
+        "medical_notice": "당뇨병 진단이 아닌 미래 발병 위험 선별 및 건강교육 정보입니다.",
     }
     await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
 
 
-async def _complete_demo_current_screening(job: PredictionJob, as_of_date: date) -> None:
+def _release_demo_explanation(explanation: dict[str, Any], *, operational: bool) -> dict[str, Any]:
+    """Apply the independent public-XAI gate without altering SHAP values."""
+    released = dict(explanation)
+    allowed = (
+        operational
+        and config.XAI_DISPLAY_ALLOWED
+        and released.get("shap_claimed") is True
+        and released.get("additivity_verified") is True
+        and released.get("selection_status") == "complete"
+    )
+    released["status"] = "approved" if allowed else released.get("status", "unavailable")
+    released["display_allowed"] = allowed
+    return released
+
+
+async def _demo_future_explanation(
+    inference_payload: dict[str, object],
+    *,
+    as_of_date: date,
+    model_version: str,
+    elevated: bool,
+    operational: bool,
+) -> dict[str, Any]:
+    """Generate TreeSHAP for embedded RF25; never fail a successful prediction."""
+    if not operational or not config.XAI_DISPLAY_ALLOWED:
+        return _release_demo_explanation({}, operational=operational)
+    from app.prediction.providers import load_standard_model
+    from src.ml.inference.shap_explanations import explain_tomorrow, safe_explanation
+    from src.ml.preprocessing.diabetes_api_features import build_standard_model_frame, parse_diabetes_risk_input
+
+    def explain() -> dict[str, Any]:
+        try:
+            loaded = load_standard_model()
+            user_input = parse_diabetes_risk_input(inference_payload)
+            frame = build_standard_model_frame(user_input, as_of_date=as_of_date)
+            return safe_explanation(
+                explain_tomorrow,
+                frame,
+                loaded.pipeline,
+                model_version=model_version,
+                elevated=elevated,
+            )
+        except Exception:
+            return safe_explanation(
+                lambda: (_ for _ in ()).throw(RuntimeError("XAI unavailable")),
+                model_version=model_version,
+            )
+
+    return _release_demo_explanation(await asyncio.to_thread(explain), operational=operational)
+
+
+async def _persist_demo_explanation(
+    prediction_id: int,
+    explanation: dict[str, Any],
+    *,
+    operational: bool,
+) -> None:
+    """Persist only independently approved explanations for the public endpoint."""
+    if not (
+        operational
+        and explanation.get("status") == "approved"
+        and explanation.get("display_allowed") is True
+        and explanation.get("shap_claimed") is True
+    ):
+        return
+    try:
+        await RiskFactor.filter(prediction_id=prediction_id).delete()
+        for order, factor in enumerate(explanation.get("items", ()), start=1):
+            await RiskFactor.create(
+                prediction_id=prediction_id,
+                factor_name=str(factor["feature"]),
+                display_name=str(factor["display_name"]),
+                impact_direction=str(factor["direction"]),
+                importance_score=abs(float(factor["contribution"])),
+                display_order=order,
+                is_modifiable=factor.get("modifiable") is True,
+                message=str(factor["message"]),
+                explanation_version=str(explanation["explanation_version"]),
+            )
+    except Exception:
+        # XAI storage is best-effort and must not discard an approved model result.
+        return
+
+
+async def _fail_embedded_artifact_job(job: PredictionJob) -> None:
+    """Persist a safe terminal state without exposing paths or model internals."""
+    job.status = "failed"
+    job.error = "승인된 모델을 불러오거나 실행할 수 없습니다. 잠시 후 다시 시도해 주세요."
+    job.error_code = "MODEL_NOT_READY"
+    job.retryable = True
+    job.retry_after_seconds = 30
+    job.completed_at = datetime.now(UTC)
+    await job.save(
+        update_fields=[
+            "status",
+            "error",
+            "error_code",
+            "retryable",
+            "retry_after_seconds",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+
+
+async def _complete_demo_current_screening(
+    job: PredictionJob,
+    as_of_date: date,
+    inference_payload: dict[str, object],
+) -> None:
     """Complete wiring in demo mode without inventing an individual screening result."""
     job.status = "running"
     job.started_at = datetime.now(UTC)
     job.worker_name = "embedded-demo-worker"
     job.attempts = 1
     await job.save(update_fields=["status", "started_at", "worker_name", "attempts", "updated_at"])
+    artifact_enabled = config.DEMO_ARTIFACT_INFERENCE_ENABLED
+    result: dict[str, object] = {}
+    if artifact_enabled:
+        from src.ml.inference.diabetes_current_screening import (
+            load_current_screening_model,
+            predict_artifact,
+            predict_with_loaded_current_model,
+        )
+
+        loaded = await asyncio.to_thread(
+            load_current_screening_model,
+            manifest_path=Path(config.CURRENT_SCREENING_MANIFEST_URI),
+            model_path=config.CURRENT_SCREENING_MODEL_URI,
+        )
+        contracted_input = {name: inference_payload.get(name) for name in loaded.manifest["features"]}
+        output = await asyncio.to_thread(predict_with_loaded_current_model, loaded, contracted_input)
+        operational = (
+            CURRENT_SCREENING_MODEL.threshold_is_approved
+            and loaded.manifest.get("operational_model_activated") is True
+            and output["model_version"] == CURRENT_SCREENING_MODEL.version
+            and loaded.manifest.get("artifact_sha256") == CURRENT_SCREENING_MODEL.model_artifact_digest
+        )
+        signal = bool(output["screening_signal_detected"])
+        explanation = await _demo_current_explanation(
+            loaded,
+            contracted_input,
+            predict_artifact=predict_artifact,
+            model_version=str(output["model_version"]),
+            elevated=signal,
+            operational=operational,
+        )
+        result = {
+            "internal_score": float(output["risk_score_internal"]),
+            "risk_category": ("high" if signal else "low") if operational else None,
+            "screening_signal_detected": signal if operational else None,
+            "model_version": output["model_version"],
+            "feature_schema_version": output["feature_schema_version"],
+            "threshold_version": output["threshold_version"],
+            "model_artifact_digest": loaded.manifest.get("artifact_sha256"),
+            "decision_threshold": loaded.manifest.get("threshold") if operational else None,
+            "promotion_status": "approved" if operational else "development_only",
+            "operational": operational,
+            "explanation": explanation,
+        }
+    explanation = result.get("explanation", {})
     prediction = await Prediction.create(
         job_id=job.job_id,
         user_id=job.user_id,
@@ -373,33 +556,77 @@ async def _complete_demo_current_screening(job: PredictionJob, as_of_date: date)
         input_as_of_date=as_of_date,
         model_key=CURRENT_SCREENING_MODEL.model_key,
         outcome_definition=CURRENT_SCREENING_MODEL.outcome_definition,
-        result_status="development_only",
-        risk_category=None,
-        internal_score=None,
-        model_version=CURRENT_SCREENING_MODEL.version,
-        feature_schema_version=CURRENT_SCREENING_MODEL.feature_schema_version,
+        result_status=str(result.get("promotion_status", "development_only")),
+        risk_category=result.get("risk_category"),
+        internal_score=result.get("internal_score"),
+        model_version=str(result.get("model_version", CURRENT_SCREENING_MODEL.version)),
+        feature_schema_version=str(
+            result.get("feature_schema_version", CURRENT_SCREENING_MODEL.feature_schema_version)
+        ),
         input_schema_version=CURRENT_SCREENING_MODEL.input_schema_version,
         preprocessing_version=CURRENT_SCREENING_MODEL.preprocessing_version,
         target_definition_version=CURRENT_SCREENING_MODEL.target_definition_version,
         calibration_version=CURRENT_SCREENING_MODEL.calibration_version,
-        model_artifact_digest=CURRENT_SCREENING_MODEL.model_artifact_digest,
-        threshold_version=CURRENT_SCREENING_MODEL.threshold_version,
-        decision_threshold=None,
+        model_artifact_digest=result.get("model_artifact_digest", CURRENT_SCREENING_MODEL.model_artifact_digest),
+        threshold_version=str(result.get("threshold_version", CURRENT_SCREENING_MODEL.threshold_version)),
+        decision_threshold=result.get("decision_threshold"),
         class_probabilities=None,
-        output_status="screening_model_wiring_only",
+        output_status="screening_not_diagnosis" if result.get("operational") else "screening_model_wiring_only",
         model_population=CURRENT_SCREENING_MODEL.model_population,
-        explanation_status="not_available",
+        explanation_status=str(explanation.get("status", "not_available")),
+        display_allowed=bool(result.get("operational", False)),
+        operational_model_activated=bool(result.get("operational", False)),
         disclaimer="현재 당뇨 관련 위험 신호를 선별하는 건강교육용 흐름이며 진단이 아닙니다.",
+    )
+    await _persist_demo_explanation(
+        prediction.id,
+        explanation,
+        operational=bool(result.get("operational", False)),
     )
     job.status = "succeeded"
     job.prediction_id = prediction.id
     job.completed_at = datetime.now(UTC)
     job.result = {
-        "promotion_status": "development_only",
-        "screening_signal_detected": None,
-        "medical_notice": "개발용 연결 결과이며 개인 위험 신호는 표시하지 않습니다.",
+        "promotion_status": result.get("promotion_status", "development_only"),
+        "screening_signal_detected": result.get("screening_signal_detected"),
+        "explanation": explanation,
+        "medical_notice": "현재 당뇨 관련 위험 신호를 선별하는 건강교육용 결과이며 진단이 아닙니다.",
     }
     await job.save(update_fields=["status", "prediction_id", "completed_at", "result", "updated_at"])
+
+
+async def _demo_current_explanation(
+    loaded: Any,
+    contracted_input: dict[str, object],
+    *,
+    predict_artifact: Any,
+    model_version: str,
+    elevated: bool,
+    operational: bool,
+) -> dict[str, Any]:
+    """Generate grouped exact SHAP for embedded Today14 without blocking its result."""
+    if not operational or not config.XAI_DISPLAY_ALLOWED:
+        return _release_demo_explanation({}, operational=operational)
+    import pandas as pd
+
+    from src.ml.inference.shap_explanations import explain_today, safe_explanation
+
+    try:
+        frame = pd.DataFrame([contracted_input], columns=loaded.manifest["features"])
+        explanation = await asyncio.to_thread(
+            safe_explanation,
+            explain_today,
+            frame,
+            lambda candidates: predict_artifact(loaded.artifact, candidates),
+            model_version=model_version,
+            elevated=elevated,
+        )
+    except Exception:
+        explanation = safe_explanation(
+            lambda: (_ for _ in ()).throw(RuntimeError("XAI unavailable")),
+            model_version=model_version,
+        )
+    return _release_demo_explanation(explanation, operational=operational)
 
 
 async def get_prediction_job(job_id: str, user_id: int) -> PredictionJob | None:

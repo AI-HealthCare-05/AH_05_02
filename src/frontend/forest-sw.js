@@ -53,6 +53,7 @@ const MEDIA_ASSETS = [
   "/static/assets/challenge-compost-team-v171.webp?v=20260908-1",
   "/static/assets/challenge-weeding-team-v171.webp?v=20260908-1",
   "/static/assets/gandangi-wisdom-guide.png?v=20260910-1",
+  "/static/assets/gandangi-wisdom-guide-chat-v1.png?v=20260916-1",
   "/static/assets/wisdom-spring-chat-banner-v1.png?v=20260910-1",
   "/static/assets/town-pro-sensory-cc0.mp3",
   "/static/assets/home-drowsy-evening-cc0.wav",

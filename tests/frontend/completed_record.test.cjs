@@ -12,11 +12,11 @@ function harness() {
     if (!nodes.has(key)) nodes.set(key, { hidden: false, dataset: {}, style: { setProperty() {}, removeProperty() {} }, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, focus() {} });
     return nodes.get(key);
   };
-  const ctx = vm.createContext({ state, $, Date, challengeDay: () => "2026-09-08", isLocalPreview: () => false,
+  const ctx = vm.createContext({ state, $, $$: () => [], Date, challengeDay: () => "2026-09-08", isLocalPreview: () => false,
     api: async () => { writes++; }, renderDailyRecordList() {}, updateDailyRecordSummary() {},
     loadWeeklyReport: async () => {}, showMessage() {}, habitRecordIcon: kind => kind, openForestEntryDialog() {},
   });
-  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'isHydrationRecord', 'clampWaterServings', 'waterLevelForServings', 'currentWaterServings', 'syncWaterServingControl', 'openSimpleRecordModal', 'showPhotoRecordState', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'dailyChallengeTargetCount', 'allDailyChallengesCompleted', 'closeChallengeRewardDialog', 'openChallengeRewardDialog', 'maybeOpenDailyReward', 'completeDailyRecord', 'undoDailyRecord']) {
+  for (const name of ['challengeRecordType', 'simpleRecordPresentation', 'isHydrationRecord', 'clampWaterServings', 'waterLevelForServings', 'currentWaterServings', 'syncWaterServingControl', 'openSimpleRecordModal', 'showPhotoRecordState', 'clearPhotoSelectionPreview', 'resetPhotoRecordModal', 'openPhotoRecordModal', 'closeRecordModal', 'dailyChallengeTargetCount', 'allDailyChallengesCompleted', 'closeChallengeRewardDialog', 'openChallengeRewardDialog', 'maybeOpenDailyReward', 'completeDailyRecord', 'undoDailyRecord']) {
     const match = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
     assert.ok(match, name); vm.runInContext(match[0], ctx);
   }

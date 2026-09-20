@@ -36,7 +36,12 @@ test('forecast graph selects only the two-year point from a multi-horizon respon
 test('legacy local preview is a clearly labelled two-model fixture and performs no API calls', () => {
   const state = {};
   let rendered;
-  const preview = load('renderMvpResultPreview', { state, renderPrediction: value => { rendered = value; } });
+  let xaiPreview;
+  const preview = load('renderMvpResultPreview', {
+    state,
+    renderPrediction: value => { rendered = value; },
+    renderXaiExplanationLists: (factors, options) => { xaiPreview = { factors, options }; },
+  });
   preview();
   assert.equal(state.currentScreeningPrediction.model_key, 'diabetes_current_screening');
   assert.equal(rendered.model_key, 'diabetes_incidence');
@@ -44,6 +49,8 @@ test('legacy local preview is a clearly labelled two-model fixture and performs 
   assert.equal(rendered.display_allowed, false);
   assert.equal(rendered.operational_model_activated, false);
   assert.equal(rendered.age_risk_forecast, undefined);
+  assert.equal(xaiPreview.factors.preview_only, true);
+  assert.equal(xaiPreview.options.currentFactors.preview_only, true);
 });
 test('MVP prediction requests reject research/lifetime models before any HTTP call', async () => {
   const calls = [];

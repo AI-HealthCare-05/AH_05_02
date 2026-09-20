@@ -1,9 +1,9 @@
-const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, healthConsent: null, healthConsentStatus: "unknown", checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), waterServingsByChallenge: {}, recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, wearablePreviewItems: [], ocrExtractedFields: {}, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
+const state = { step: 1, visitedSteps: new Set([1]), navigationHistory: [1], token: null, userProfile: null, sessionRecovery: null, healthDraftDirty: false, healthConsent: null, healthConsentStatus: "unknown", checkupId: null, healthCheckupResult: null, healthCheckupHistory: [], healthHistoryPage: 1, healthHistoryStartDate: "", healthHistoryEndDate: "", editingHealthCheckupId: null, currentScreeningInputId: null, currentScreeningPredictionId: null, currentScreeningPrediction: null, predictionId: null, prediction: null, modelOutputMetadata: {}, developmentPreviewRiskCategory: null, cycle: null, dailyCompleted: new Set(), waterServingsByChallenge: {}, recordTarget: null, photoAttempt: 0, photoCompletedByFallback: false, returningUser: false, eligibility: null, requiresEligibility: false, returningDestination: null, medicalGuidanceRequired: false, openFollowUpActionIds: [], modelOutOfRange: false, currentHealthOnly: false, capabilities: { challenge: false, currentHealth: false, futurePrediction: false }, walkingLevel: "starter", wearableConnectionId: null, wearableProvider: null, wearablePreviewItems: [], ocrExtractedFields: {}, notificationsEnabled: true, foodAnalysisId: null, foodCategory: null, ocrDraftId: null, challengeRecommendations: [], challengeCatalog: [], challengeRecommendationsPersonalized: false, selectedChallengeIds: new Set(), activeChallengeCategory: null, customChallenge: null, customChallengeSelected: false, educationContents: [], activeEducationId: null, educationQuizIndex: 0, educationQuizCorrectCount: 0, ragChallengeDraft: null, ragChallengeCandidates: [], selectedRagChallengeId: null, ragChallengeStatus: "idle", lastKnownLocation: null, challengeV2Expanded: false, activeWorkspace: "home" };
 const $ = (selector) => document.querySelector(selector);
 Object.assign(state, { lifestyleReportStatus: "idle", reportPeriods: {}, reportPeriodStatus: {} });
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-const challengeV3 = { active: false, busy: false, rotation: 0, focus: "balanced", difficulty: "easy", policy: null, owner: null, request: 0 };
+const challengeV3 = { active: false, busy: false, focus: "balanced", difficulty: "easy", photoReviewAvailable: false, demoPhotoSubmissionOnly: false, owner: null, request: 0 };
 const challengeDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const challengeLevelLabel = (level) => ({ easy: "쉬움", moderate: "보통", advanced: "도전" }[level] || "공통");
 const challengeProofLabel = (type) => ({ 1: "1유형 · 사진 + 채소 확인", 2: "2유형 · 사진 제출", 3: "3유형 · 자가 체크" }[type] || "기존 기록 방식");
@@ -176,6 +176,7 @@ class ApiError extends Error {
 
 function fallbackApiErrorCode(status) {
   if (status === 401) return "UNAUTHENTICATED";
+  if (status === 413) return "PAYLOAD_TOO_LARGE";
   if (status === 409) return "CONFLICT";
   if (status === 422) return "VALIDATION_ERROR";
   if (status === 503) return "MODEL_NOT_READY";
@@ -196,6 +197,7 @@ function fallbackApiErrorMessage(code) {
   const normalizedCode = normalizeModelErrorCode(code);
   return {
     UNAUTHENTICATED: "로그인 정보가 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요.",
+    PAYLOAD_TOO_LARGE: "사진 전송 용량이 서버 한도를 초과했어요. 8MB 이하 사진으로 다시 시도해 주세요.",
     CONFLICT: "이미 등록된 정보와 겹칩니다. 입력 내용을 확인해 주세요.",
     VALIDATION_ERROR: "입력값의 형식과 범위를 확인해 주세요.",
     ML_INPUT_MISSING: "분석에 필요한 건강정보가 빠져 있습니다. 입력정보를 확인해 주세요.",
@@ -409,8 +411,18 @@ function showEligibilityGuidance(reasonCodes) {
   $("#eligibility-guidance").focus({ preventScroll: true });
 }
 
+let _messageHome = null;
 function showMessage(message, kind = "error") {
   const box = $("#message");
+  if (!_messageHome) _messageHome = box.parentElement;
+  // A message shown while a native <dialog> is open would otherwise render
+  // behind that dialog's top layer (or its ::backdrop) and be invisible even
+  // though it technically scrolls into view. Move it into the open dialog so
+  // people actually see the warning instead of just feeling the page jump.
+  const openDialogs = document.querySelectorAll("dialog[open]");
+  const activeDialog = openDialogs.length ? openDialogs[openDialogs.length - 1] : null;
+  const host = activeDialog || _messageHome;
+  if (box.parentElement !== host) host.prepend(box);
   box.textContent = message;
   box.dataset.kind = kind;
   box.hidden = false;
@@ -431,13 +443,20 @@ function togglePasswordVisibility(button) {
 }
 
 function signupPasswordIssues(value) {
+  // The actual ASCII symbol set (matches Python's string.punctuation on the server).
+  // Testing "not alphanumeric/whitespace" previously let any other character (e.g. Korean
+  // text) count as the "special character", so a password with no real symbol still passed.
+  // Kept local to this function: regex-based test harnesses extract only the
+  // `function signupPasswordIssues(...) { ... }` block, not top-level helpers above it.
+  const PASSWORD_SPECIAL_CHARS = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+  const hasPasswordSpecialChar = (value) => [...value].some((char) => PASSWORD_SPECIAL_CHARS.includes(char));
   const issues = [];
   if (value.length < 8) issues.push("비밀번호는 8자 이상 입력해 주세요.");
   if (!/[A-Za-z]/.test(value)) issues.push("영문자를 포함해 주세요.");
   if (!/[0-9]/.test(value)) issues.push("숫자를 포함해 주세요.");
   // Check missing character groups only; the server remains authoritative
   // for its exact allowed special-character set and any additional rules.
-  if (!/[^A-Za-z0-9\s]/.test(value)) issues.push("특수문자를 포함해 주세요. 예: !");
+  if (!hasPasswordSpecialChar(value)) issues.push("특수문자를 포함해 주세요. 예: !");
   return issues;
 }
 
@@ -1263,8 +1282,8 @@ async function openDashboardHealthEdit() {
   openReturningUserHealthEdit();
 }
 
-function hydrateSavedHealthForm() {
-  const checkup = state.healthCheckupHistory?.[0] || state.healthCheckupResult;
+function hydrateSavedHealthForm(selectedCheckup = null) {
+  const checkup = selectedCheckup || state.healthCheckupHistory?.[0] || state.healthCheckupResult;
   if (!checkup?.checkup_id || state.healthFormCheckupId === checkup.checkup_id) return;
   const fields = {
     height: "height_cm", weight: "weight_kg", waist: "waist_cm",
@@ -1285,6 +1304,32 @@ function hydrateSavedHealthForm() {
     $$(`input[name="${name}"]`).forEach((input) => {
       input.checked = value != null && input.value === String(value);
     });
+  });
+  const optionalFields = {
+    "annual-household-income": "annual_household_income_10k_krw",
+    "health-satisfaction-score": "health_satisfaction_score",
+    "economic-satisfaction-score": "economic_satisfaction_score",
+    "overall-quality-of-life-score": "overall_quality_of_life_score",
+    "education-level": "education_level",
+    "marital-status": "marital_status",
+    "household-structure": "household_structure",
+    "depressed-feeling-last-week": "depressed_feeling_last_week",
+    "sleep-difficulty-last-week": "sleep_difficulty_last_week",
+    "hypertension-diagnosis": "hypertension_diagnosis",
+    "cancer-diagnosis": "cancer_diagnosis",
+    "chronic-lung-disease-diagnosis": "chronic_lung_disease_diagnosis",
+    "liver-disease-diagnosis": "liver_disease_diagnosis",
+    "heart-disease-diagnosis": "heart_disease_diagnosis",
+    "cerebrovascular-disease-diagnosis": "cerebrovascular_disease_diagnosis",
+    "psychiatric-disease-diagnosis": "psychiatric_disease_diagnosis",
+    "arthritis-rheumatism-diagnosis": "arthritis_rheumatism_diagnosis",
+  };
+  Object.entries(optionalFields).forEach(([id, key]) => {
+    const input = $(`#${id}`);
+    if (!input) return;
+    const value = checkup[key];
+    input.value = typeof value === "boolean" ? String(value) : value ?? "";
+    input.dataset.previousValue = input.value;
   });
   syncExerciseDetails();
   syncAlcoholFrequencyDetails();
@@ -1648,14 +1693,24 @@ async function saveCurrentScreeningInputSnapshot() {
 }
 
 function syncExerciseDetails() {
+  const isRegularExercise = selectedRadioValue("regular-exercise") === "true";
   const days = $("#exercise-days");
   const minutes = $("#exercise-minutes");
   const card = $("#exercise-detail-card");
   if (!days || !minutes || !card) return;
-  days.disabled = false;
-  minutes.disabled = false;
+  if (!isRegularExercise) {
+    if (!days.disabled) days.dataset.previousValue = days.value;
+    if (!minutes.disabled) minutes.dataset.previousValue = minutes.value;
+    days.value = "0";
+    minutes.value = "0";
+  } else {
+    if (days.disabled) days.value = days.dataset.previousValue ?? "3";
+    if (minutes.disabled) minutes.value = minutes.dataset.previousValue ?? "30";
+  }
+  days.disabled = !isRegularExercise;
+  minutes.disabled = !isRegularExercise;
   card.hidden = false;
-  card.classList.toggle("disabled", false);
+  card.classList.toggle("disabled", !isRegularExercise);
 }
 
 function syncAlcoholFrequencyDetails() {
@@ -1985,7 +2040,7 @@ function renderPredictionStatus(status, options = {}) {
       ? "입력정보는 보존되어 있습니다. 잠시 후 다시 시도할 수 있습니다."
       : errorCode === "MODEL_NOT_READY"
         ? "아직 사용자에게 제공할 수 있는 결과가 준비되지 않았습니다."
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 실패는 높은 위험을 의미하지 않습니다.");
+        : "입력정보를 확인한 뒤 다시 시도해 주세요.");
   }
   $("#retry-analysis").hidden = !config.showRetry;
   $("#high-guidance").hidden = true;
@@ -2964,8 +3019,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "↑ 주의 요인 · 점수를 높인 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "↓ 긍정 요인 · 점수를 낮춘 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "주의 요인 · 당뇨 위험을 높인 방향";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "긍정 요인 · 당뇨 위험을 낮춘 방향";
   return "";
 }
 
@@ -2975,12 +3030,24 @@ function factorModifiableLabel(item = {}) {
   return "";
 }
 
+function factorIdentity(item = {}) {
+  return String(item.feature || item.feature_name || item.factor_name || item.name || item.display_name || "")
+    .replace(/\s*\(화면 예시\)\s*$/u, "")
+    .trim()
+    .toLowerCase();
+}
+
 function renderFactorItems(items = []) {
   return items.map((item) => {
     const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
     const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
-    const meta = [factorDirectionLabel(item), factorModifiableLabel(item)].filter(Boolean).join(" · ");
-    return `<li><strong>${escapeHtml(factorName)}</strong>${meta ? `<small>${escapeHtml(meta)}</small>` : ""}<p>${escapeHtml(factorDescription)}</p></li>`;
+    const direction = factorDirectionLabel(item);
+    const caution = direction.startsWith("주의 요인");
+    const icon = caution ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
+    const meta = direction
+      ? `<small class="xai-factor-meta"><span class="xai-factor-direction ${caution ? "is-caution" : "is-positive"}">${escapeHtml(direction)}</span></small>`
+      : "";
+    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta}<p>${escapeHtml(factorDescription)}</p></div></li>`;
   }).join("");
 }
 
@@ -2990,8 +3057,8 @@ function selectXaiFactors(items, elevated) {
     || (typeof item.contribution === "number" && Number.isFinite(item.contribution)
       && Math.abs(item.contribution) > 1e-10))
     .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0));
-  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("↓"));
-  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("↑"));
+  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("긍정 요인"));
+  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("주의 요인"));
   return elevated ? [...caution.slice(0, 2), ...positive.slice(0, 1)]
     : [...positive.slice(0, 2), ...caution.slice(0, 1)];
 }
@@ -3006,15 +3073,28 @@ function renderXaiExplanationLists(
     Array.isArray(currentFactors?.items) ? currentFactors.items : [], currentSignal,
   );
   const futureList = $("#factor-list");
+  const currentReady = Boolean(currentApproved && currentFactors?.display_allowed === true && currentItems.length);
+  const currentTitle = $("#current-factor-title");
+  if (currentTitle) currentTitle.textContent = currentReady ? "현재 위험 신호 설명" : "현재 건강 신호 XAI 연결 대기";
   if (currentList) {
+    currentList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", currentReady);
     currentList.innerHTML = currentApproved && currentFactors?.display_allowed === true && currentItems.length
       ? renderFactorItems(currentItems)
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
   const futureCategory = normalizeRiskKey({ risk_category: state.prediction?.risk_category });
-  const factorItems = selectXaiFactors(Array.isArray(factors?.items) ? factors.items : [],
+  const currentDirections = new Map(currentItems.map(item => [factorIdentity(item), factorDirectionLabel(item)]));
+  const futureCandidates = (Array.isArray(factors?.items) ? factors.items : []).filter((item) => {
+    const currentDirection = currentDirections.get(factorIdentity(item));
+    return !currentDirection || currentDirection === factorDirectionLabel(item);
+  });
+  const factorItems = selectXaiFactors(futureCandidates,
     ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
+  const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);
+  const futureTitle = $("#future-factor-title");
+  if (futureTitle) futureTitle.textContent = futureReady ? "미래 당뇨 위험 설명" : "미래 위험 XAI 연결 대기";
+  futureList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", futureReady);
   futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
     ? renderFactorItems(factorItems)
     : `<li><strong>미래 위험 XAI 연결 대기</strong><p>${escapeHtml(factors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
@@ -3062,15 +3142,12 @@ function renderPartialAnalysisNotice(run) {
   const modelNames = failedModels.map(([key]) => (
     key === "diabetes_current_screening" ? "현재 건강 신호" : "미래 위험"
   ));
-  const errorCodes = failedModels
-    .map(([, result]) => result.error?.code)
-    .filter(Boolean);
   const parts = [];
   if (modelNames.length) {
-    parts.push(`${modelNames.join("·")} 분석 실패${errorCodes.length ? ` (${errorCodes.join(", ")})` : ""}`);
+    parts.push(`${modelNames.join("·")} 결과를 확인하지 못했어요`);
   }
-  if (hasFactorFailure) parts.push("설명 요인 조회 실패");
-  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 실패한 결과는 낮은 위험으로 대체하지 않습니다.`;
+  if (hasFactorFailure) parts.push("확인된 결과는 유지되지만 설명 요인을 불러오지 못했어요");
+  $("#partial-analysis-message").textContent = `${parts.join(". ")}. 잠시 후 다시 시도해 주세요.`;
   $("#retry-partial-analysis").textContent = modelNames.length
     ? "실패한 분석만 다시 시도하기"
     : "설명 요인 다시 불러오기";
@@ -3081,8 +3158,8 @@ function modelComparisonGuidance(currentRun, futureRun) {
     return {
       code: "MODEL_RESULT_INCOMPLETE",
       display: true,
-      title: "일부 분석 결과를 확인할 수 없습니다",
-      message: "모델 파일 누락이나 분석 실패는 낮은 위험을 의미하지 않습니다.",
+      title: "한쪽 분석 결과만 확인됐어요",
+      message: "확인된 결과만 보여드립니다. 완료하지 못한 분석은 다시 시도해 주세요.",
     };
   }
   const current = currentRun.prediction;
@@ -3247,8 +3324,8 @@ async function runPrediction({ retryFailed = false } = {}) {
         ? "분석 시간이 초과되었습니다"
         : "분석을 완료하지 못했습니다";
       $("#analysis-failure-message").textContent = isTimeout
-        ? `입력정보는 보존되어 있습니다. ${error.retryAfterSeconds || 30}초 후 같은 정보로 다시 시도해 주세요.`
-        : "입력정보를 확인한 뒤 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.";
+        ? `당뇨 위험 결과를 확인하지 못했어요. 입력정보는 유지됩니다. ${error.retryAfterSeconds || 30}초 후 다시 시도해 주세요.`
+        : "당뇨 위험 결과를 확인하지 못했어요. 잠시 후 같은 입력정보로 다시 시도해 주세요.";
       $("#analysis-failure").hidden = false;
     }
     $("#retry-analysis").hidden = false;
@@ -3261,78 +3338,7 @@ async function runPrediction({ retryFailed = false } = {}) {
   }
 }
 async function loadChallenges() {
-  if (typeof challengeV3 !== "undefined") {
-    showChallengeSelectionView();
-    const token = state.token;
-    if (challengeV3.busy && challengeV3.owner === token) return;
-    if (challengeV3.owner !== token) {
-      challengeV3.active = false;
-      state.challengeRecommendations = [];
-      state.challengeCatalog = [];
-      state.selectedChallengeIds = new Set();
-      state.openFollowUpActionIds = [];
-      $("#challenge-list").replaceChildren();
-    }
-    challengeV3.owner = token;
-    challengeV3.busy = true;
-    state.challengeListStatus = "loading";
-    state.challengeStartSafetyBlocked = false;
-    const request = ++challengeV3.request;
-    const isCurrent = () => state.token === token && challengeV3.request === request;
-    const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
-    controls.forEach((control) => { control.disabled = true; });
-    $("#retry-challenges").hidden = true;
-    $("#challenge-v3-policy").textContent = "자료 기반 후보를 불러오고 있어요…";
-    try {
-      const focus = $("#challenge-v3-focus").value;
-      const difficulty = $("#challenge-v3-difficulty").value;
-      const query = new URLSearchParams({ catalog_version: "evidence-v3", focus, difficulty, rotation: String(challengeV3.rotation) });
-      if (state.predictionId && !isLocalPreview()) query.set("prediction_id", String(state.predictionId));
-      let result;
-      if (isLocalPreview()) {
-        const catalog = await api("/challenges?catalog_version=evidence-v3");
-        result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
-      } else result = await api(`/challenge-recommendations?${query}`);
-      if (!isCurrent()) return;
-      result = normalizeRecommendationResult(result, difficulty);
-      Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
-      state.challengeRecommendations = result.items;
-      state.challengeCatalog = result.items;
-      state.selectedChallengeIds = new Set(result.items.map((item) => Number(item.challenge_id)));
-      state.customChallengeSelected = false;
-      state.activeChallengeCategory = null;
-      closeRagChallengeGenerator();
-      $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
-      state.openFollowUpActionIds = [];
-      $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-      if (result.medical_guidance_required_first) {
-        $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
-        const actions = await api("/follow-up-actions");
-        if (!isCurrent()) return;
-        state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
-        $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
-      }
-      if (!isCurrent()) return;
-      renderChallengeChoices();
-      state.challengeListStatus = "ready";
-    } catch (error) {
-      if (!isCurrent()) return;
-      state.challengeListStatus = "failed";
-      $("#challenge-v3-focus").value = challengeV3.focus;
-      $("#challenge-v3-difficulty").value = challengeV3.difficulty;
-      $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
-      $("#retry-challenges").hidden = false;
-      showMessage(error.message);
-    } finally {
-      if (challengeV3.request === request) {
-        challengeV3.busy = false;
-        controls.forEach((control) => { control.disabled = false; });
-        updateChallengeStartState();
-        if (!isCurrent() || !challengeV3.active) $("#start-challenge").disabled = true;
-      }
-    }
-    return;
-  }
+  if (typeof challengeV3 !== "undefined") return loadV3Challenges();
   const challengeList = $("#challenge-list");
   const startButton = $("#start-challenge");
   $("#retry-challenges").hidden = true;
@@ -3393,65 +3399,86 @@ async function loadChallenges() {
   syncWalkingLevelPicker();
 }
 
+function selectV3Challenges() {
+  const difficulty = $("#challenge-v3-difficulty").value;
+  const selected = [
+    state.challengeCatalog.find((item) => item.code === "v3_hydration_choice"),
+    state.challengeCatalog.find((item) => item.code === $("#challenge-v3-diet").value),
+    state.challengeCatalog.find((item) => item.code === $("#challenge-v3-activity").value),
+  ];
+  if (selected.some((item) => !item) || selected[1].difficulty !== difficulty || selected[2].difficulty !== difficulty) {
+    state.challengeListStatus = "failed";
+    showMessage("선택한 챌린지를 확인할 수 없습니다. 목록을 다시 불러와 주세요.");
+    return;
+  }
+  state.challengeRecommendations = selected;
+  state.selectedChallengeIds = new Set(selected.map((item) => Number(item.challenge_id)));
+  renderChallengeChoices();
+}
+
 async function loadV3Challenges() {
   showChallengeSelectionView();
+  if (challengeV3.busy) return;
   const token = state.token;
-  if (challengeV3.busy && challengeV3.owner === token) return;
-  if (challengeV3.owner !== token) {
-    challengeV3.active = false;
-    state.challengeRecommendations = [];
-    state.challengeCatalog = [];
-    state.selectedChallengeIds = new Set();
-    state.openFollowUpActionIds = [];
-    $("#challenge-list").replaceChildren();
-  }
   challengeV3.owner = token;
   challengeV3.busy = true;
   state.challengeListStatus = "loading";
-  state.challengeStartSafetyBlocked = false;
   const request = ++challengeV3.request;
-  const isCurrent = () => state.token === token && challengeV3.request === request;
-  const controls = [$("#challenge-v3-focus"), $("#challenge-v3-difficulty"), $("#challenge-v3-refresh"), $("#start-challenge")];
+  const controls = [$("#challenge-v3-difficulty"), $("#challenge-v3-diet"), $("#challenge-v3-activity"), $("#start-challenge")];
   controls.forEach((control) => { control.disabled = true; });
   $("#retry-challenges").hidden = true;
-  $("#challenge-v3-policy").textContent = "자료 기반 후보를 불러오고 있어요…";
+  $("#challenge-v3-policy").textContent = "챌린지 목록을 불러오고 있어요…";
   try {
-    const focus = $("#challenge-v3-focus").value;
     const difficulty = $("#challenge-v3-difficulty").value;
-    const query = new URLSearchParams({ catalog_version: "evidence-v3", focus, difficulty, rotation: String(challengeV3.rotation) });
-    if (state.predictionId && !isLocalPreview()) query.set("prediction_id", String(state.predictionId));
-    let result;
-    if (isLocalPreview()) {
-      const catalog = await api("/challenges?catalog_version=evidence-v3");
-      result = previewV3Recommendations(catalog.items, focus, difficulty, challengeV3.rotation);
-    } else result = await api(`/challenge-recommendations?${query}`);
-    if (!isCurrent()) return;
-    result = normalizeRecommendationResult(result, difficulty);
-    Object.assign(challengeV3, { active: true, focus, difficulty, policy: result.policy });
-    state.challengeRecommendations = result.items;
-    state.challengeCatalog = result.items;
-    state.selectedChallengeIds = new Set(result.items.map((item) => Number(item.challenge_id)));
-    state.customChallengeSelected = false;
-    state.activeChallengeCategory = null;
-    closeRagChallengeGenerator();
-    renderChallengeChoices();
-    $("#challenge-v3-policy").textContent = `${result.policy?.notice || "음료·식단·운동 각 1개입니다."}${result.photo_review_available === false ? " 사진 자동 검토가 미연결되어 식단은 사진 제출형으로 제안합니다." : ""}${isLocalPreview() ? " 화면 확인용이며 실제 인증·보상을 처리하지 않습니다." : ""}`;
+    const [catalog, recommendation] = await Promise.all([
+      api("/challenges?catalog_version=evidence-v3"),
+      api(`/challenge-recommendations?catalog_version=evidence-v3&focus=balanced&difficulty=${encodeURIComponent(difficulty)}`),
+    ]);
+    if (state.token !== token || challengeV3.request !== request) return;
+    const items = catalog.items || [];
+    const diet = items.filter((item) => item.domain === "fiber_diet" && item.difficulty === difficulty);
+    const activity = items.filter((item) => item.domain === "aerobic_activity" && item.difficulty === difficulty);
+    if (diet.length !== 2 || activity.length !== 2 || !items.some((item) => item.code === "v3_hydration_choice")) {
+      throw new Error("선택 가능한 챌린지 목록을 확인할 수 없습니다.");
+    }
+    challengeV3.photoReviewAvailable = recommendation.photo_review_available === true;
+    challengeV3.demoPhotoSubmissionOnly = recommendation.demo_photo_submission_only === true;
+    const fill = (id, choices) => {
+      const select = $(id);
+      const previous = select.value;
+      select.innerHTML = choices.map((item) => {
+        const unavailable = item.verification_type === 1 && !challengeV3.photoReviewAvailable && !challengeV3.demoPhotoSubmissionOnly;
+        return `<option value="${escapeHtml(item.code)}" ${unavailable ? "disabled" : ""}>${escapeHtml(item.title)}${unavailable ? " · 사진 판별 모델 필요" : ""}</option>`;
+      }).join("");
+      const available = [...select.options].filter((option) => !option.disabled);
+      select.value = available.some((option) => option.value === previous) ? previous : available[0]?.value || "";
+    };
+    fill("#challenge-v3-diet", diet);
+    fill("#challenge-v3-activity", activity);
+    state.challengeCatalog = items;
+    challengeV3.active = true;
+    challengeV3.difficulty = difficulty;
+    state.challengeListStatus = "ready";
+    state.challengeStartSafetyBlocked = false;
     state.openFollowUpActionIds = [];
-    $("#challenge-follow-up").hidden = !result.medical_guidance_required_first;
-    if (result.medical_guidance_required_first) {
+    $("#challenge-follow-up").hidden = !recommendation.medical_guidance_required_first;
+    if (recommendation.medical_guidance_required_first) {
       $("#challenge-follow-up-message").textContent = "의료기관 안내를 먼저 확인해 주세요.";
       const actions = await api("/follow-up-actions");
-      if (!isCurrent()) return;
+      if (state.token !== token || challengeV3.request !== request) return;
       state.openFollowUpActionIds = (actions.items || []).filter((item) => !item.acknowledged_at).map((item) => item.action_id);
       $("#acknowledge-challenge-follow-up").hidden = !state.openFollowUpActionIds.length;
     }
-    state.challengeListStatus = "ready";
+    $("#challenge-v3-policy").textContent = challengeV3.photoReviewAvailable
+      ? "음료 1개와 선택한 식단·운동 각 1개가 포함됩니다."
+      : challengeV3.demoPhotoSubmissionOnly
+        ? "미리보기에서는 채소 식단도 사진 제출과 본인 기록만 확인합니다. 채소 포함 여부는 자동 판정하지 않습니다."
+        : "식사 사진 판별 모델이 없어 채소 식단은 선택할 수 없습니다.";
+    selectV3Challenges();
   } catch (error) {
-    if (!isCurrent()) return;
+    if (state.token !== token || challengeV3.request !== request) return;
     state.challengeListStatus = "failed";
-    $("#challenge-v3-focus").value = challengeV3.focus;
-    $("#challenge-v3-difficulty").value = challengeV3.difficulty;
-    $("#challenge-v3-policy").textContent = "후보를 불러오지 못했습니다. 이전 후보와 진행 기록은 유지됩니다.";
+    $("#challenge-v3-policy").textContent = "목록을 불러오지 못했습니다. 다시 시도해 주세요.";
     $("#retry-challenges").hidden = false;
     showMessage(error.message);
   } finally {
@@ -3459,23 +3486,8 @@ async function loadV3Challenges() {
       challengeV3.busy = false;
       controls.forEach((control) => { control.disabled = false; });
       updateChallengeStartState();
-      if (!isCurrent() || !challengeV3.active) $("#start-challenge").disabled = true;
     }
   }
-}
-
-function previewV3Recommendations(items, focus, difficulty, rotation) {
-  const levels = ["easy", "moderate", "advanced"];
-  const index = levels.indexOf(difficulty);
-  const diet = levels[Math.max(0, index - Number(focus === "activity"))];
-  const exercise = levels[Math.max(0, index - Number(focus === "diet"))];
-  const codes = ["v3_hydration_choice", `v3_wholegrain_${diet}`, `v3_${["walk", "indoor_aerobic"][rotation % 2]}_${exercise}`];
-  return {
-    items: codes.map((code) => items.find((item) => item.code === code)).filter(Boolean),
-    medical_guidance_required_first: false,
-    photo_review_available: false,
-    policy: { notice: "3영역을 유지하고 선호하지 않은 영역은 한 단계 가볍게 제안합니다." },
-  };
 }
 
 function customChallengeSlot() {
@@ -3643,7 +3655,7 @@ function renderChallengeChoices() {
         <img src="/static/assets/hyeoldangi-challenge-${images[item.domain]}.png" alt="">
         <p class="eyebrow">${labels[item.domain]} · ${item.always_include ? "공통 목표" : challengeLevelLabel(item.difficulty)}</p>
         <h4>${challengeCardTitle(item.title)}</h4><strong>${challengeCardGoal(item.daily_goal)}</strong>
-        <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${challengeProofLabel(item.verification_type)}</span>
+        <p>${escapeHtml(item.description)}</p><span class="record-type-badge">${item.verification_type === 1 && !challengeV3.photoReviewAvailable ? "사진 제출 · 채소 여부는 본인 기록" : challengeProofLabel(item.verification_type)}</span>
         <p class="challenge-v3-safety">${escapeHtml(item.safety)}</p>
       </article>`;
     }).join("");
@@ -3710,12 +3722,12 @@ function updateChallengeStartState() {
   const loading = state.challengeListStatus === "loading";
   const failed = state.challengeListStatus === "failed";
   if ($("#challenge-selection-count")) $("#challenge-selection-count").textContent = `${count}/3 선택`;
-  if (startButton) startButton.disabled = loading || failed || followUpBlocked || count < 1 || state.challengeStartSafetyBlocked === true;
+  if (startButton) startButton.disabled = loading || failed || followUpBlocked || count < (challengeV3.active ? 3 : 1) || state.challengeStartSafetyBlocked === true;
   if (!reason) return;
   if (loading) reason.textContent = "챌린지 후보를 불러오고 있어요.";
   else if (failed) reason.textContent = "후보를 불러오지 못했습니다. 다시 시도해 주세요.";
   else if (followUpBlocked || state.challengeStartSafetyBlocked === true) reason.textContent = "챌린지는 진단이나 치료가 아니라, 건강한 생활습관을 기록하고 점검하기 위한 기능입니다.\n무리하지 말고 몸 상태와 의료진의 지침을 우선해 주세요.";
-  else if (count < 1) reason.textContent = "세부 챌린지를 하나 이상 선택해 주세요.";
+  else if (count < (challengeV3.active ? 3 : 1)) reason.textContent = "음료·식단·운동 각 1개를 선택해 주세요.";
   else reason.textContent = `${count}개 챌린지를 선택했습니다.`;
 }
 function renderCycle(cycle) {
@@ -3890,11 +3902,13 @@ function healthHistoryBoolean(value) {
 function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
   const list = $("#health-history-list");
   const count = $("#health-history-count");
+  const pagination = $("#health-history-pagination");
   if (!list || !count) return;
   state.healthCheckupHistory = Array.isArray(items) ? items : [];
   count.textContent = `${state.healthCheckupHistory.length}건`;
   if (!state.healthCheckupHistory.length) {
     list.innerHTML = '<p class="health-history-empty">저장된 건강정보가 없습니다.</p>';
+    if (pagination) pagination.hidden = true;
     return;
   }
   const selfRatedLabels = {
@@ -3904,7 +3918,19 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
     poor: "나쁨",
     very_poor: "매우 나쁨",
   };
-  list.innerHTML = state.healthCheckupHistory.map((item, index) => {
+  const filteredItems = state.healthCheckupHistory.filter((item) => {
+    const date = String(item.checkup_date || item.created_at || "").slice(0, 10);
+    return (!state.healthHistoryStartDate || date >= state.healthHistoryStartDate)
+      && (!state.healthHistoryEndDate || date <= state.healthHistoryEndDate);
+  });
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  state.healthHistoryPage = Math.min(Math.max(1, state.healthHistoryPage), pageCount);
+  const pageStart = (state.healthHistoryPage - 1) * pageSize;
+  const pageItems = filteredItems.slice(pageStart, pageStart + pageSize);
+  if (!pageItems.length) {
+    list.innerHTML = '<p class="health-history-empty">선택한 기간에 저장된 건강정보가 없습니다.</p>';
+  } else list.innerHTML = pageItems.map((item, index) => {
     const typeLabel = item.checkup_type === "reassessment" ? "다시 기록" : "첫 기록";
     const bloodPressure = item.systolic_bp !== null && item.systolic_bp !== undefined
       && item.diastolic_bp !== null && item.diastolic_bp !== undefined
@@ -3912,8 +3938,8 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
       : "기록 없음";
     return `<details class="health-history-item" role="listitem" ${index === 0 ? "open" : ""}>
       <summary>
-        <span><strong>${escapeHtml(healthHistoryDateLabel(item.checkup_date || item.created_at))}</strong><small>${escapeHtml(typeLabel)}</small></span>
-        ${index === 0 ? '<em class="health-history-latest">최신</em>' : ""}
+        <span><strong>${escapeHtml(healthHistoryDateLabel(item.checkup_date || item.created_at))}</strong><button class="health-history-edit" type="button" data-health-history-edit="${escapeHtml(item.checkup_id)}">${escapeHtml(typeLabel === "첫 기록" ? "수정" : typeLabel)}</button></span>
+        ${String(item.checkup_id) === String(state.healthCheckupHistory[0]?.checkup_id) ? '<em class="health-history-latest">최신</em>' : ""}
       </summary>
       <dl class="health-history-values">
         <div><dt>키</dt><dd>${escapeHtml(healthHistoryValue(item.height_cm, " cm"))}</dd></div>
@@ -3924,9 +3950,17 @@ function renderHealthCheckupHistory(items = state.healthCheckupHistory) {
         <div><dt>규칙적 운동</dt><dd>${escapeHtml(healthHistoryBoolean(item.regular_exercise))}</dd></div>
         <div><dt>현재 흡연</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_smoker))}</dd></div>
         <div><dt>현재 음주</dt><dd>${escapeHtml(healthHistoryBoolean(item.current_drinker))}</dd></div>
+        <div class="health-history-result-action"><button type="button" data-health-history-result="${escapeHtml(item.checkup_id)}">분석 결과 다시보기</button></div>
       </dl>
     </details>`;
   }).join("");
+  if (pagination) {
+    pagination.hidden = pageCount <= 1;
+    pagination.innerHTML = Array.from({ length: pageCount }, (_, index) => {
+      const page = index + 1;
+      return `<button type="button" data-health-history-page="${page}" aria-current="${page === state.healthHistoryPage ? "page" : "false"}">${page}</button>`;
+    }).join("");
+  }
 }
 
 async function loadHealthCheckupHistory(items = null) {
@@ -3947,6 +3981,47 @@ async function loadHealthCheckupHistory(items = null) {
     $("#health-history-count").textContent = "확인 실패";
     list.innerHTML = '<p class="health-history-empty error">건강정보 기록을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요.</p>';
   }
+}
+
+async function openSavedAnalysisResult(checkupId) {
+  if (isLocalPreview()) {
+    state.checkupId = checkupId;
+    renderMvpResultPreview();
+    showStep(6);
+    return;
+  }
+  const result = await api("/predictions");
+  const predictions = (result?.items || []).filter(
+    (prediction) => String(prediction.checkup_id) === String(checkupId),
+  );
+  const current = predictions.find((prediction) => prediction.model_key === "diabetes_current_screening");
+  const future = predictions.find((prediction) => prediction.model_key === "diabetes_incidence");
+  if (!current && !future) throw new Error("이 건강정보에 연결된 분석 결과가 없습니다.");
+  const [currentFactors, futureFactors] = await Promise.all([
+    current ? api(`/predictions/${current.prediction_id}/risk-factors`).catch(() => null) : null,
+    future ? api(`/predictions/${future.prediction_id}/risk-factors`).catch(() => null) : null,
+  ]);
+  state.checkupId = checkupId;
+  state.currentScreeningPredictionId = current?.prediction_id || null;
+  state.currentScreeningPrediction = current || null;
+  state.predictionId = future?.prediction_id || current?.prediction_id || null;
+  state.prediction = future || current;
+  if (future) {
+    renderPrediction(future, futureFactors, currentFactors);
+    if (current) renderCurrentHealthResult(current, { standalone: false });
+    renderModelComparisonGuidance(
+      current ? { status: "succeeded", prediction: current } : null,
+      { status: "succeeded", prediction: future },
+    );
+  } else {
+    renderCurrentHealthResult(current, { standalone: true });
+    renderXaiExplanationLists(null, {
+      currentFactors,
+      currentApproved: currentFactors?.status === "approved" && currentFactors?.shap_claimed === true,
+    });
+    renderModelComparisonGuidance({ status: "succeeded", prediction: current }, null);
+  }
+  showStep(6);
 }
 
 function localHealthCheckupSnapshot() {
@@ -3971,8 +4046,23 @@ function localHealthCheckupSnapshot() {
   };
 }
 
+function renderDashboardRiskSummary(category, label) {
+  const risk = ["low", "moderate", "high"].includes(category) ? category : "pending";
+  const summary = $("#dashboard-risk-summary");
+  const image = $("#dashboard-risk-image");
+  $("#dashboard-stage").textContent = label;
+  if (summary) summary.dataset.risk = risk;
+  if (image) {
+    const imageRisk = risk === "moderate" ? "caution" : risk === "pending" ? "low" : risk;
+    image.src = `/static/assets/hyeoldangi-risk-${imageRisk}.png`;
+    image.alt = risk === "pending" ? "최근 위험 범주 결과 준비 중" : `오늘이 분석 결과 ${label}`;
+  }
+}
+
 function renderLocalDemoDashboard() {
-  $("#dashboard-stage").textContent = state.prediction ? getRiskCategoryLabel(state.prediction) : "최근 결과 없음";
+  const todayResult = state.currentScreeningPrediction || state.healthCheckupResult;
+  const localRisk = todayResult ? normalizeRiskKey(todayResult) : "pending";
+  renderDashboardRiskSummary(localRisk, todayResult ? getRiskCategoryLabel(todayResult) : "최근 결과 없음");
   $("#dashboard-complete").textContent = `${state.dailyCompleted?.size || 0}개`;
   $("#report-week-period").textContent = "로컬 화면 확인";
   $("#report-week-streak").textContent = state.dailyCompleted.size
@@ -4144,13 +4234,68 @@ function showPhotoRecordState(stateId) {
     $(`#${id}`).hidden = id !== stateId;
   });
 }
+function clearPhotoSelectionPreview() {
+  if (state.photoPreviewObjectUrl && typeof URL !== "undefined") URL.revokeObjectURL(state.photoPreviewObjectUrl);
+  state.photoPreviewObjectUrl = "";
+  const preview = $("#v3-photo-preview");
+  preview.hidden = true;
+  preview.removeAttribute?.("src");
+  $("#v3-photo-upload-icon").hidden = false;
+  $("#v3-photo-upload-title").textContent = "사진 찍기 또는 앨범에서 선택";
+  $("#v3-photo-change-label").hidden = true;
+  $("#v3-photo-validation").textContent = "사진을 선택하면 형식·용량·해상도를 확인합니다.";
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
+}
+async function showPhotoSelectionPreview(file) {
+  if (!file) return clearPhotoSelectionPreview();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("JPG·PNG·WEBP 사진만 업로드할 수 있어요.");
+  if (!file.size || file.size > 8 * 1024 * 1024) throw new Error("사진은 비어 있지 않은 8MB 이하 파일이어야 해요.");
+  const objectUrl = URL.createObjectURL(file);
+  let dimensions;
+  try {
+    dimensions = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      image.onerror = () => reject(new Error("사진을 읽을 수 없어요. 다른 사진을 선택해 주세요."));
+      image.src = objectUrl;
+    });
+    if (!dimensions.width || !dimensions.height || dimensions.width * dimensions.height > 12_000_000) {
+      throw new Error("1200만 화소 이하 사진을 선택해 주세요.");
+    }
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
+  if (state.photoPreviewObjectUrl) URL.revokeObjectURL(state.photoPreviewObjectUrl);
+  state.photoPreviewObjectUrl = objectUrl;
+  const preview = $("#v3-photo-preview");
+  preview.src = objectUrl;
+  preview.hidden = false;
+  $("#v3-photo-upload-icon").hidden = true;
+  $("#v3-photo-upload-title").textContent = "선택한 사진";
+  $("#v3-photo-change-label").hidden = false;
+  $("#v3-photo-validation").textContent = `조건 확인 완료 · ${dimensions.width}×${dimensions.height}px · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
+  $("#v3-photo-validation").classList.remove("error");
+  $("#start-photo-check")?.classList.remove("invalid");
+}
 function resetPhotoRecordModal() {
   state.photoAttempt = 0;
   state.photoCompletedByFallback = false;
+  $("#start-photo-check")?.classList.remove("invalid");
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
   showPhotoRecordState("photo-state-upload");
-  $("#photo-fail-hint").textContent = "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요.";
+  const vegetableReview = Number(state.recordTarget?.item?.verification_type) === 1;
+  $("#photo-fail-hint").textContent = vegetableReview
+    ? "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요."
+    : "밝은 곳에서 인증 대상이 잘 보이도록 다시 찍어주세요.";
   $("#photo-pending-hint").textContent = "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
   $("#photo-success-title").textContent = "확인됐어요!";
+  $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
+  $("#demo-photo-selection").textContent = "";
+  clearPhotoSelectionPreview();
 }
 function openPhotoRecordModal(item) {
   if (state.dailyCompleted.has(String(item.user_challenge_id))) {
@@ -4160,8 +4305,10 @@ function openPhotoRecordModal(item) {
   state.recordTarget = { id: String(item.user_challenge_id), title: item.title, type: "photo", item };
   resetPhotoRecordModal();
   const v3 = item.catalog_version === "evidence-v3";
+  const vegetableReview = v3 && Number(item.verification_type) === 1;
   $("#record-modal").setAttribute("aria-labelledby", "v3-photo-heading");
   $("#v3-photo-fields").hidden = !v3;
+  $$(".v3-vegetable-only").forEach((element) => { element.hidden = !vegetableReview; });
   $("#v3-photo-file").value = "";
   $$('input[name="v3-photo-value"]').forEach((input) => { input.checked = false; });
   const usesMinutes = Boolean(item.goal.target_minutes);
@@ -4203,8 +4350,24 @@ async function submitV3Photo() {
     : $('input[name="v3-photo-value"]:checked')?.value || "";
   const value = Number(valueText);
   const goal = target.item.goal.target_minutes || target.item.goal.target_count;
-  if (!file || !valueText || !Number.isFinite(value) || value < goal || value > 720) return showMessage(`사진과 실제 실천량(목표 ${goal})을 입력해 주세요.`);
-  if (file.size > 8 * 1024 * 1024) return showMessage("8MB 이하 사진을 선택해 주세요.");
+  const photoBox = $("#start-photo-check");
+  const valueField = target.item.goal.target_minutes ? $("#v3-photo-minutes-field") : $("#v3-meal-count-field");
+  const validationEl = $("#v3-photo-validation");
+  const valueMissing = !valueText || !Number.isFinite(value) || value < goal || value > 720;
+  photoBox?.classList.toggle("invalid", !file);
+  valueField?.classList.toggle("invalid", valueMissing);
+  if (!file || valueMissing) {
+    validationEl.classList.add("error");
+    validationEl.textContent = !file && valueMissing
+      ? `사진을 제출하고 실제 실천량(목표 ${goal})을 입력해야 합니다.`
+      : !file
+        ? "사진을 제출해야 합니다."
+        : `실제 실천량(목표 ${goal})을 입력해 주세요.`;
+    validationEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  validationEl.classList.remove("error");
+  if (file.size > 8 * 1024 * 1024) { photoBox?.classList.add("invalid"); validationEl.classList.add("error"); validationEl.textContent = "8MB 이하 사진을 선택해 주세요."; return; }
   if (isLocalPreview()) {
     showPhotoRecordState("photo-state-analyzing");
     window.setTimeout(() => {
@@ -5161,15 +5324,17 @@ async function refreshDashboard() {
   await loadDailyRecords();
   const summary = await api("/dashboard/summary");
   const cards = Array.isArray(summary.risk_cards) ? summary.risk_cards : [];
-  const approvedCard = cards.find((card) => card.result_status === "approved"
+  const approvedCard = cards.find((card) => card.model_key === "diabetes_current_screening"
+    && card.result_status === "approved"
     && card.promotion_status === "approved"
     && Boolean(card.risk_category));
-  $("#dashboard-stage").textContent = approvedCard
-    ? approvedCard.risk_category_label
-    : cards.length ? "모델 검증 중" : "기록 없음";
+  renderDashboardRiskSummary(
+    approvedCard ? normalizeRiskKey(approvedCard) : "pending",
+    approvedCard ? approvedCard.risk_category_label : cards.length ? "모델 검증 중" : "기록 없음",
+  );
   const progress = await api("/dashboard/challenge-progress");
   $("#dashboard-complete").textContent = `${Number(progress.recent_7_days?.completed || 0)}개`;
-  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadSharedGroups(), loadHealthCheckupHistory()]);
+  await Promise.all([loadWeeklyReport(), loadEducation(), loadConnections(), loadInvitations(), loadSharedGroups(), loadHealthCheckupHistory()]);
 }
 
 function setInviteMode(mode) {
@@ -5185,6 +5350,78 @@ function setInviteMode(mode) {
   });
 }
 
+function invitationStatusLabel(status) {
+  return { pending: "수락 대기", accepted: "수락 완료", expired: "기간 만료", revoked: "취소됨" }[status] || status || "상태 확인 중";
+}
+
+function formatInvitationExpiry(value) {
+  if (!value) return "만료일 확인 필요";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "만료일 확인 필요";
+  return `${date.getMonth() + 1}/${date.getDate()}까지`;
+}
+
+function setInviteDisclosure(panelId, { forceOpen = false, moveFocus = true } = {}) {
+  const target = document.getElementById(panelId);
+  if (!target) return;
+  const shouldOpen = forceOpen || target.hidden;
+  $$("[data-invite-disclosure]").forEach((button) => {
+    const selected = shouldOpen && button.getAttribute("aria-controls") === panelId;
+    button.setAttribute("aria-expanded", String(selected));
+    button.classList.toggle("active", selected);
+  });
+  $$(".forest-invite-detail").forEach((panel) => {
+    panel.hidden = !(shouldOpen && panel.id === panelId);
+  });
+  if (shouldOpen && moveFocus) target.focus({ preventScroll: true });
+  if (shouldOpen && panelId === "received-invite-panel") void loadInvitations();
+  if (shouldOpen && panelId === "create-invite-panel") setInviteMode("email");
+}
+
+function closeInviteDisclosure(panelId) {
+  const panel = document.getElementById(panelId);
+  const opener = $(`[data-invite-disclosure][aria-controls="${panelId}"]`);
+  if (panel) panel.hidden = true;
+  if (opener) {
+    opener.setAttribute("aria-expanded", "false");
+    opener.classList.remove("active");
+    opener.focus();
+  }
+}
+
+function renderReceivedInvitations() {
+  const list = $("#received-invitation-list");
+  if (!list) return;
+  const received = Array.isArray(state.invitations?.received) ? state.invitations.received : [];
+  if (!received.length) {
+    list.innerHTML = renderTogetherEmpty("아직 받은 초대가 없습니다.", "새 초대를 받으면 이곳에 표시됩니다.");
+    return;
+  }
+  list.innerHTML = received.map((item) => {
+    const pending = item.status === "pending";
+    return `<article class="received-invitation-item ${pending ? "is-pending" : ""}">
+      <div><strong>${escapeHtml(relationLabel(item.relation_type))} 초대</strong><p>${escapeHtml(formatInvitationExpiry(item.expires_at))} · ${escapeHtml(invitationStatusLabel(item.status))}</p></div>
+      <span class="member-status">${escapeHtml(invitationStatusLabel(item.status))}</span>
+    </article>`;
+  }).join("");
+}
+
+async function loadInvitations() {
+  const list = $("#received-invitation-list");
+  if (!list) return;
+  list.innerHTML = renderTogetherEmpty("초대 목록을 불러오고 있어요", "잠시만 기다려 주세요.");
+  try {
+    const result = isLocalPreview() ? { sent: [], received: [] } : await api("/invitations");
+    state.invitations = {
+      sent: Array.isArray(result?.sent) ? result.sent : [],
+      received: Array.isArray(result?.received) ? result.received : [],
+    };
+    renderReceivedInvitations();
+  } catch (error) {
+    list.innerHTML = `<article class="together-empty"><strong>받은 초대를 불러오지 못했어요.</strong><p>${escapeHtml(error.message || "잠시 후 다시 시도해 주세요.")}</p><button class="secondary retry-invitations" type="button">다시 불러오기</button></article>`;
+  }
+}
+
 function configureEnvironmentControls() {
   const statusPanel = $(".status-demo-panel");
   const requestedPreview = new URLSearchParams(window.location.search).get("preview");
@@ -5193,6 +5430,11 @@ function configureEnvironmentControls() {
   const codeNode = $("#forest-invite-code");
   const codeNote = $("#invite-code-note");
   const copyButton = $("#copy-invite-code");
+  const incomingToken = new URLSearchParams(window.location.search).get("invite_token");
+  if (incomingToken && $("#invitation-token")) {
+    $("#invitation-token").value = incomingToken;
+    setInviteDisclosure("received-invite-panel", { forceOpen: true, moveFocus: false });
+  }
   if (!codeNode || !codeNote || !copyButton) return;
 
   const isDemo = isDemoEnvironment();
@@ -5205,20 +5447,31 @@ function configureEnvironmentControls() {
   copyButton.textContent = isDemo ? "복사" : "준비 중";
 }
 
-function renderInviteEmailResult(result = {}) {
+function renderInviteCodeResult(result = {}) {
   const box = $("#invite-result");
-  if (!box) return;
-  const content = document.createElement("div");
-  const title = document.createElement("strong");
-  const token = document.createElement("p");
-  const notice = document.createElement("small");
-  title.textContent = "초대 이메일을 보낼 준비가 되었습니다";
-  token.className = "invite-code";
-  token.textContent = result.token || "초대 요청 접수 완료";
-  notice.textContent = result.notice || "초대 상태는 함께하기 화면에서 확인할 수 있어요.";
-  content.append(title, token, notice);
-  box.replaceChildren(content);
-  box.hidden = false;
+  const codeNode = $("#forest-invite-code");
+  const codeNote = $("#invite-code-note");
+  const copyButton = $("#copy-invite-code");
+  const inviteCode = typeof result.token === "string" ? result.token.trim() : "";
+  setInviteDisclosure("create-invite-panel", { forceOpen: true, moveFocus: false });
+  if (!codeNode || !codeNote || !copyButton || !inviteCode) {
+    if (box) {
+      box.textContent = "초대 코드를 발급받지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      box.hidden = false;
+    }
+    return;
+  }
+  codeNode.textContent = inviteCode;
+  codeNode.dataset.copyValue = inviteCode;
+  copyButton.disabled = false;
+  copyButton.textContent = "복사";
+  const expiry = formatInvitationExpiry(result.expires_at);
+  codeNote.textContent = `초대받을 분에게 이 코드를 전달해 주세요. ${expiry} 사용할 수 있어요.`;
+  if (box) {
+    box.replaceChildren();
+    box.hidden = true;
+  }
+  codeNode.focus?.();
 }
 
 function setReportPeriod(period) {
@@ -5828,7 +6081,11 @@ $$('.workspace-tab').forEach((button, index, tabs) => button.addEventListener("k
 
 $("#brand-home").addEventListener("click", (event) => {
   event.preventDefault();
-  window.location.assign("/");
+  if (state.step === 8) {
+    showWorkspace("home");
+    return;
+  }
+  showStep(1);
 });
 $$('.body-map-point').forEach((button) => button.addEventListener("click", () => updateLifestyleMap(button.dataset.mapTopic)));
 $("#open-lifestyle-map")?.addEventListener("click", () => {
@@ -6183,6 +6440,45 @@ $("#health-error-list").addEventListener("click", (event) => {
 });
 $("#health-form").addEventListener("input", () => persistHealthDraft({ markDirty: true }));
 $("#health-form").addEventListener("change", () => persistHealthDraft({ markDirty: true }));
+function healthCheckupPayload() {
+  const smokingStatus = selectedRadioValue("smoking-status");
+  const detailHealth = detailHealthPayload();
+  const exercising = selectedRadioValue("regular-exercise") === "true";
+  return {
+    checkup_type: state.editingHealthCheckupId
+      ? (state.healthCheckupHistory.find((item) => String(item.checkup_id) === String(state.editingHealthCheckupId))?.checkup_type || "reassessment")
+      : state.returningUser ? "reassessment" : "initial",
+    checkup_date: state.editingHealthCheckupId
+      ? String((state.healthCheckupHistory.find((item) => String(item.checkup_id) === String(state.editingHealthCheckupId)) || {}).checkup_date || new Date().toISOString()).slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+    height_cm: Number($("#height").value), weight_kg: Number($("#weight").value),
+    waist_cm: $("#waist").value ? Number($("#waist").value) : null,
+    systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
+    diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
+    regular_exercise: exercising,
+    smoking_status: smokingStatus,
+    exercise_days_per_week: exercising ? Number($("#exercise-days").value) : 0,
+    exercise_minutes: exercising ? Number($("#exercise-minutes").value) : 0,
+    current_drinker: selectedRadioValue("current-drinker") === "true",
+    annual_household_income_10k_krw: detailHealth.annual_household_income_10k_krw,
+    health_satisfaction_score: detailHealth.health_satisfaction_score,
+    economic_satisfaction_score: detailHealth.economic_satisfaction_score,
+    overall_quality_of_life_score: detailHealth.overall_quality_of_life_score,
+    hypertension_diagnosis: detailHealth.hypertension_diagnosis,
+    cancer_diagnosis: detailHealth.cancer_diagnosis,
+    chronic_lung_disease_diagnosis: detailHealth.chronic_lung_disease_diagnosis,
+    liver_disease_diagnosis: detailHealth.liver_disease_diagnosis,
+    heart_disease_diagnosis: detailHealth.heart_disease_diagnosis,
+    cerebrovascular_disease_diagnosis: detailHealth.cerebrovascular_disease_diagnosis,
+    psychiatric_disease_diagnosis: detailHealth.psychiatric_disease_diagnosis,
+    arthritis_rheumatism_diagnosis: detailHealth.arthritis_rheumatism_diagnosis,
+    education_level: detailHealth.education_level,
+    marital_status: detailHealth.marital_status,
+    household_structure: detailHealth.household_structure,
+    depressed_feeling_last_week: detailHealth.depressed_feeling_last_week,
+    sleep_difficulty_last_week: detailHealth.sleep_difficulty_last_week,
+  };
+}
 $("#health-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const submit = event.submitter;
@@ -6206,51 +6502,30 @@ $("#health-form").addEventListener("submit", async (event) => {
   try {
     if (isLocalPreview()) {
       const checkup = localHealthCheckupSnapshot();
+      const editingId = state.editingHealthCheckupId;
+      if (editingId) {
+        checkup.checkup_id = editingId;
+        const original = state.healthCheckupHistory.find((item) => String(item.checkup_id) === String(editingId));
+        checkup.checkup_date = original?.checkup_date || checkup.checkup_date;
+      }
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
       rememberCurrentScreeningInputId(checkup);
       if (shouldRequestPrediction) showStep(5);
       await saveCurrentScreeningInputSnapshot();
       clearHealthDraft();
-      state.healthCheckupHistory = [checkup, ...state.healthCheckupHistory];
+      state.healthCheckupHistory = editingId
+        ? state.healthCheckupHistory.map((item) => String(item.checkup_id) === String(editingId) ? checkup : item)
+        : [checkup, ...state.healthCheckupHistory];
+      state.editingHealthCheckupId = null;
       renderHealthCheckupHistory();
     } else {
-      const smokingStatus = selectedRadioValue("smoking-status");
-      const detailHealth = detailHealthPayload();
-      const checkup = await api("/health-checkups", { method: "POST", body: JSON.stringify({
-        checkup_type: state.returningUser ? "reassessment" : "initial", checkup_date: new Date().toISOString().slice(0, 10),
-        height_cm: Number($("#height").value), weight_kg: Number($("#weight").value),
-        waist_cm: $("#waist").value ? Number($("#waist").value) : null,
-        systolic_bp: $("#systolic").value ? Number($("#systolic").value) : null,
-        diastolic_bp: $("#diastolic").value ? Number($("#diastolic").value) : null,
-        regular_exercise: selectedRadioValue("regular-exercise") === "true",
-        current_smoker: smokingStatus === "current",
-        smoking_status: smokingStatus,
-        exercise_days_per_week: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-days").value) : 0,
-        exercise_minutes: selectedRadioValue("regular-exercise") === "true" ? Number($("#exercise-minutes").value) : 0,
-        current_drinker: selectedRadioValue("current-drinker") === "true",
-        annual_household_income_10k_krw: detailHealth.annual_household_income_10k_krw,
-        health_satisfaction_score: detailHealth.health_satisfaction_score,
-        economic_satisfaction_score: detailHealth.economic_satisfaction_score,
-        overall_quality_of_life_score: detailHealth.overall_quality_of_life_score,
-        hypertension_diagnosis: detailHealth.hypertension_diagnosis,
-        cancer_diagnosis: detailHealth.cancer_diagnosis,
-        chronic_lung_disease_diagnosis: detailHealth.chronic_lung_disease_diagnosis,
-        liver_disease_diagnosis: detailHealth.liver_disease_diagnosis,
-        heart_disease_diagnosis: detailHealth.heart_disease_diagnosis,
-        cerebrovascular_disease_diagnosis: detailHealth.cerebrovascular_disease_diagnosis,
-        psychiatric_disease_diagnosis: detailHealth.psychiatric_disease_diagnosis,
-        arthritis_rheumatism_diagnosis: detailHealth.arthritis_rheumatism_diagnosis,
-        education_level: detailHealth.education_level,
-        marital_status: detailHealth.marital_status,
-        household_structure: detailHealth.household_structure,
-        depressed_feeling_last_week: detailHealth.depressed_feeling_last_week,
-        sleep_difficulty_last_week: detailHealth.sleep_difficulty_last_week,
-        region: detailHealth.region,
-        diabetes_family_history: detailHealth.diabetes_family_history,
-        hypertension_family_history: detailHealth.hypertension_family_history,
-        alcohol_frequency: detailHealth.alcohol_frequency,
-      }) });
+      const editingId = state.editingHealthCheckupId;
+      const checkup = await api(editingId ? `/health-checkups/${editingId}` : "/health-checkups", {
+        method: editingId ? "PATCH" : "POST",
+        body: JSON.stringify(healthCheckupPayload()),
+      });
+      state.editingHealthCheckupId = null;
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
       rememberCurrentScreeningInputId(checkup);
@@ -6293,10 +6568,9 @@ $("#health-form").addEventListener("submit", async (event) => {
 $("#retry-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-partial-analysis").addEventListener("click", () => runPrediction({ retryFailed: true }));
 $("#retry-challenges").addEventListener("click", loadChallenges);
-$("#challenge-v3-refresh")?.addEventListener("click", async () => {
-  challengeV3.rotation += 1;
-  await loadChallenges();
-});
+$("#challenge-v3-difficulty")?.addEventListener("change", loadChallenges);
+$("#challenge-v3-diet")?.addEventListener("change", selectV3Challenges);
+$("#challenge-v3-activity")?.addEventListener("change", selectV3Challenges);
 $$("[data-demo-status]").forEach((button) => button.addEventListener("click", () => {
   renderPredictionStatus(button.dataset.demoStatus);
   showStep(5);
@@ -6305,6 +6579,17 @@ $("#risk-factor-focus")?.addEventListener("click", () => {
   $("#factor-panel-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 $("#find-nearby-medical-facilities")?.addEventListener("click", findNearbyMedicalFacilities);
+$("#dashboard-find-nearby-medical-facilities")?.addEventListener("click", () => {
+  closeHealthManagement();
+  showStep(6);
+  const guidance = $("#medical-guidance-detail");
+  if (guidance) {
+    $("#medical-challenge-next").hidden = !canContinueAfterMedicalGuidance();
+    guidance.hidden = false;
+    guidance.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  $("#find-nearby-medical-facilities")?.click();
+});
 $("#facility-address-form")?.addEventListener("submit", findMedicalFacilitiesByAddress);
 $("#close-medical-guidance")?.addEventListener("click", () => {
   $("#medical-guidance-detail").hidden = true;
@@ -6578,20 +6863,41 @@ $("#undo-daily-record")?.addEventListener("click", async (event) => {
 $$(".record-modal-close, .record-cancel").forEach((button) => button.addEventListener("click", closeRecordModal));
 async function selectDemoPhoto(button) {
   try {
+    const item = state.recordTarget?.item;
+    if (item?.catalog_version !== "evidence-v3" || Number(item.verification_type) !== 1) return;
     const response = await fetch(button.dataset.demoPhoto);
     if (!response.ok) throw new Error("시연 사진을 불러오지 못했습니다.");
     const transfer = new DataTransfer();
     transfer.items.add(new File([await response.blob()], button.dataset.demoName, { type: "image/png" }));
     $("#v3-photo-file").files = transfer.files;
+    await showPhotoSelectionPreview($("#v3-photo-file").files[0]);
     $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", String(card === button)));
     $("#demo-photo-selection").textContent = `${button.querySelector("strong").textContent} 사진을 선택했습니다.`;
   } catch (error) { showMessage(error.message); }
 }
 $$('.demo-photo-card').forEach((button) => button.addEventListener('click', () => void selectDemoPhoto(button)));
+$("#v3-photo-file").addEventListener("change", async () => {
+  const input = $("#v3-photo-file");
+  $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
+  $("#demo-photo-selection").textContent = "";
+  try {
+    await showPhotoSelectionPreview(input.files[0]);
+  } catch (error) {
+    input.value = "";
+    clearPhotoSelectionPreview();
+    showMessage(error.message);
+  }
+});
 $$('input[name="v3-photo-value"]').forEach((input) => input.addEventListener("change", () => {
   if (!input.checked) return;
   $$('input[name="v3-photo-value"]').forEach((other) => { if (other !== input) other.checked = false; });
+  $("#v3-meal-count-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
 }));
+$("#v3-photo-minutes")?.addEventListener("input", () => {
+  $("#v3-photo-minutes-field")?.classList.remove("invalid");
+  $("#v3-photo-validation")?.classList.remove("error");
+});
 $("#record-modal").addEventListener("click", (event) => {
   if (event.target.id === "record-modal") closeRecordModal();
 });
@@ -6750,16 +7056,47 @@ $("#education-feedback-action")?.addEventListener("click", (event) => {
 });
 $("#invite-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 이메일 보내는 중…");
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 코드 만드는 중…");
   try {
     const result = await api("/invitations", { method: "POST", body: JSON.stringify({
       invitee_email: $("#invite-email").value, relation_type: "family",
     }) });
-    renderInviteEmailResult(result);
+    renderInviteCodeResult(result);
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
+$("#accept-invitation-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const tokenInput = $("#invitation-token");
+  const token = tokenInput.value.trim();
+  if (!tokenInput.checkValidity()) {
+    tokenInput.reportValidity();
+    return;
+  }
+  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "초대 수락 중…");
+  try {
+    await api("/invitations/accept", { method: "POST", body: JSON.stringify({ token }) });
+    tokenInput.value = "";
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("invite_token")) {
+      url.searchParams.delete("invite_token");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    await Promise.all([loadInvitations(), loadConnections()]);
+    showMessage("초대를 수락했습니다. 함께하는 가족·친구 목록에서 확인해 주세요.", "success");
+  } catch (error) { showMessage(error.message || "초대를 수락하지 못했습니다."); }
+  finally { releaseBusy(); }
+});
+$("#received-invitation-list")?.addEventListener("click", (event) => {
+  if (event.target.closest(".retry-invitations")) loadInvitations();
+});
 $$("[data-invite-mode]").forEach((button) => button.addEventListener("click", () => setInviteMode(button.dataset.inviteMode)));
+$$("[data-invite-disclosure]").forEach((button) => button.addEventListener("click", () => {
+  setInviteDisclosure(button.getAttribute("aria-controls"));
+}));
+$$("[data-invite-close]").forEach((button) => button.addEventListener("click", () => {
+  closeInviteDisclosure(button.dataset.inviteClose);
+}));
 $("#copy-invite-code")?.addEventListener("click", async () => {
   const code = $("#forest-invite-code")?.dataset.copyValue || "";
   if (!code) {
@@ -6960,19 +7297,72 @@ $("#return-login-back")?.addEventListener("click", () => {
 });
 $("#dashboard-edit-health").addEventListener("click", async () => {
   try {
+    state.editingHealthCheckupId = null;
+    state.healthFormCheckupId = null;
     await openDashboardHealthEdit();
   } catch (error) {
     showMessage(error.message || "건강정보 입력 화면으로 이동하지 못했습니다.");
   }
 });
 $("#health-history-list").addEventListener("click", async (event) => {
+  const resultButton = event.target.closest("[data-health-history-result]");
+  if (resultButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const releaseBusy = setButtonBusy(resultButton, "결과 여는 중…");
+    try {
+      await openSavedAnalysisResult(resultButton.dataset.healthHistoryResult);
+    } catch (error) {
+      showMessage(error.message || "저장된 분석 결과를 불러오지 못했습니다.");
+    } finally {
+      releaseBusy();
+    }
+    return;
+  }
   const button = event.target.closest("[data-health-history-edit]");
   if (!button) return;
   try {
+    event.preventDefault();
+    event.stopPropagation();
+    const checkup = state.healthCheckupHistory.find((item) => String(item.checkup_id) === button.dataset.healthHistoryEdit);
+    if (!checkup) throw new Error("수정할 건강정보를 찾지 못했습니다.");
+    state.editingHealthCheckupId = checkup.checkup_id;
+    state.healthFormCheckupId = null;
+    state.healthCheckupResult = checkup;
     await openDashboardHealthEdit();
+    hydrateSavedHealthForm(checkup);
+    $("#submit-analysis").textContent = "수정 내용 저장하기";
   } catch (error) {
     showMessage(error.message || "건강정보 입력 화면으로 이동하지 못했습니다.");
   }
+});
+$("#health-history-pagination")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-health-history-page]");
+  if (!button) return;
+  state.healthHistoryPage = Number(button.dataset.healthHistoryPage) || 1;
+  renderHealthCheckupHistory();
+  $("#health-history-title")?.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+$("#health-history-filter")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const startDate = $("#health-history-start-date").value;
+  const endDate = $("#health-history-end-date").value;
+  if (startDate && endDate && startDate > endDate) {
+    showMessage("시작일은 종료일보다 늦을 수 없습니다.");
+    return;
+  }
+  state.healthHistoryStartDate = startDate;
+  state.healthHistoryEndDate = endDate;
+  state.healthHistoryPage = 1;
+  renderHealthCheckupHistory();
+});
+$("#health-history-filter-reset")?.addEventListener("click", () => {
+  $("#health-history-start-date").value = "";
+  $("#health-history-end-date").value = "";
+  state.healthHistoryStartDate = "";
+  state.healthHistoryEndDate = "";
+  state.healthHistoryPage = 1;
+  renderHealthCheckupHistory();
 });
 $("#shared-group-list")?.addEventListener("click", async (event) => {
   const accept = event.target.closest(".accept-shared");
@@ -7354,14 +7744,58 @@ function renderMvpResultPreview() {
   const fixture = (modelKey) => ({
     model_key: modelKey, prediction_id: "local-mvp-preview",
     preview_only: true, preview_signal_level: "moderate", preview_source: "static_fixture",
+    risk_category: "moderate", screening_signal_detected: true,
     result_status: "development_only", promotion_status: "development_only",
     display_allowed: false, operational_model_activated: false,
   });
+  const xaiFixture = (items) => ({
+    status: "approved",
+    display_allowed: true,
+    shap_claimed: true,
+    preview_only: true,
+    items,
+  });
+  const currentFactors = xaiFixture([
+    { display_name: "허리둘레 (화면 예시)", direction: "increase", contribution: .31, modifiable: true, message: "복부 비만 관련 입력이 현재 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "수축기 혈압 (화면 예시)", direction: "increase", contribution: .22, modifiable: true, message: "혈압 관련 입력이 현재 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "규칙적 운동 (화면 예시)", direction: "decrease", contribution: -.16, modifiable: true, message: "운동 관련 입력이 현재 위험 신호를 낮추는 방향으로 작용한 예시입니다." },
+  ]);
+  const futureFactors = xaiFixture([
+    { display_name: "연령 (화면 예시)", direction: "increase", contribution: .27, modifiable: false, message: "연령 입력이 약 2년 내 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "고혈압 진단 (화면 예시)", direction: "increase", contribution: .19, modifiable: false, message: "고혈압 관련 입력이 미래 위험 신호를 높이는 방향으로 작용한 예시입니다." },
+    { display_name: "BMI (화면 예시)", direction: "decrease", contribution: -.12, modifiable: true, message: "BMI 입력이 미래 위험 신호를 낮추는 방향으로 작용한 예시입니다." },
+  ]);
   state.currentScreeningPrediction = fixture("diabetes_current_screening");
   state.prediction = fixture("diabetes_incidence");
   state.predictionId = state.prediction.prediction_id;
   state.developmentPreviewRiskCategory = "moderate";
-  renderPrediction(state.prediction, { status: "pending_validation", items: [], shap_claimed: false });
+  renderPrediction(state.prediction, futureFactors, currentFactors);
+  // Preview-only explanations are rendered after the production approval gate.
+  // The fixture itself stays development_only and cannot be mistaken for a released result.
+  renderXaiExplanationLists(futureFactors, {
+    approved: true,
+    currentFactors,
+    currentApproved: true,
+  });
+  const comparison = typeof URLSearchParams === "function"
+    ? new URLSearchParams(window.location.search).get("comparison")
+    : null;
+  if (["current-high-future-low", "current-low-future-high"].includes(comparison)) {
+    const approvedFixture = (modelKey, riskCategory) => ({
+      model_key: modelKey,
+      risk_category: riskCategory,
+      result_status: "approved",
+      promotion_status: "approved",
+      display_allowed: true,
+      operational_model_activated: true,
+    });
+    const currentRisk = comparison === "current-high-future-low" ? "high" : "low";
+    const futureRisk = comparison === "current-high-future-low" ? "low" : "high";
+    renderModelComparisonGuidance(
+      { status: "succeeded", prediction: approvedFixture("diabetes_current_screening", currentRisk) },
+      { status: "succeeded", prediction: approvedFixture("diabetes_incidence", futureRisk) },
+    );
+  }
 }
 
 function resumeMealPhotoPreview() {

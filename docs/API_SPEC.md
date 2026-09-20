@@ -490,6 +490,12 @@
 
 설명 방법과 원변수 메타데이터가 검토·승인되기 전에는 `risk_factors` 레코드를 생성하지 않는다.
 
+승인된 SHAP 설명은 동일 엔드포인트에서 기존 계약을 유지하여 반환한다. 공개 조건은 모델의
+`display_allowed=true`, `operational_model_activated=true`, 설명의 `status=approved`,
+`shap_claimed=true`, `additivity_verified=true`, `display_allowed=true`다. 조건이 하나라도
+충족되지 않으면 위 승인 전 응답으로 닫힌다. `items`는 최대 3개이며 위험이 높거나 주의이면
+주의 요인 2개와 긍정 요인 1개, 낮음이면 긍정 요인 2개와 주의 요인 1개를 우선한다.
+
 ### 4.8 예측 결과
 
 `GET /api/v1/predictions/901`

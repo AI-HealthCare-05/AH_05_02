@@ -96,6 +96,23 @@ CREATE TABLE IF NOT EXISTS prediction_risk_curve_points (
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 """
 
+CREATE_RISK_FACTORS_TABLE = """
+CREATE TABLE IF NOT EXISTS risk_factors (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    prediction_id BIGINT NOT NULL,
+    factor_name VARCHAR(100) NOT NULL,
+    display_name VARCHAR(100) NOT NULL,
+    impact_direction VARCHAR(20) NOT NULL,
+    importance_score DOUBLE NOT NULL,
+    display_order INT NOT NULL,
+    is_modifiable BOOL NOT NULL DEFAULT 0,
+    message TEXT NOT NULL,
+    explanation_version VARCHAR(100) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    INDEX idx_risk_factors_prediction_id (prediction_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+"""
+
 CREATE_FOLLOW_UP_ACTIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS follow_up_actions (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -164,6 +181,7 @@ async def ensure_schema() -> None:
             await cursor.execute(CREATE_PREDICTIONS_TABLE)
             await cursor.execute(CREATE_FOLLOW_UP_ACTIONS_TABLE)
             await cursor.execute(CREATE_PREDICTION_RISK_CURVE_POINTS_TABLE)
+            await cursor.execute(CREATE_RISK_FACTORS_TABLE)
             await cursor.execute(
                 "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME='prediction_jobs'",
                 (config.DB_NAME,),
@@ -317,6 +335,35 @@ async def persist_prediction(job_id: str, result: dict[str, Any]) -> int:
                 ),
             )
             prediction_id = int(cursor.lastrowid)
+            explanation = result.get("explanation") or {}
+            if (
+                result.get("display_allowed") is True
+                and result.get("operational_model_activated") is True
+                and explanation.get("status") == "approved"
+                and explanation.get("display_allowed") is True
+                and explanation.get("shap_claimed") is True
+            ):
+                for order, factor in enumerate(explanation.get("items", ()), start=1):
+                    await cursor.execute(
+                        """
+                        INSERT INTO risk_factors (
+                            prediction_id, factor_name, display_name, impact_direction,
+                            importance_score, display_order, is_modifiable, message,
+                            explanation_version
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            prediction_id,
+                            factor["feature"],
+                            factor["display_name"],
+                            factor["direction"],
+                            abs(float(factor["contribution"])),
+                            order,
+                            factor.get("modifiable") is True,
+                            factor["message"],
+                            explanation["explanation_version"],
+                        ),
+                    )
             if result_status == "approved" and risk_category == "high":
                 await cursor.execute(
                     """

@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
 
-# Apply committed schema changes before accepting API traffic. The demo stack
-# uses a disposable SQLite schema generated at startup, while committed Aerich
-# migrations target the production MySQL dialect.
-if [ "${DEMO_MODE:-false}" != "true" ]; then
+# Apply committed schema changes before accepting API traffic. Demo SQLite is
+# persisted between container replacements, so repair its legacy schema too.
+if [ "${DEMO_MODE:-false}" = "true" ]; then
+    uv run --no-sync python -m app.core.db.upgrade_demo_sqlite
+else
     uv run --no-sync aerich upgrade
 fi
 

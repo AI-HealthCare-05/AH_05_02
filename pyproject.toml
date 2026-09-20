@@ -75,6 +75,9 @@ dev = [
 torch = [
     { index = "pytorch-cpu" },
 ]
+torchvision = [
+    { index = "pytorch-cpu" },
+]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
