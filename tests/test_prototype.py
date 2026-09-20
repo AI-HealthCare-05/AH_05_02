@@ -274,7 +274,7 @@ def test_dashboard_health_edit_enters_reanalysis_flow_immediately_after_save() -
         '$("#retry-analysis").addEventListener', 1
     )[0]
     local_save = submit_handler.split("if (isLocalPreview())", 1)[1].split("} else {", 1)[0]
-    remote_save = submit_handler.split("const checkup = await api(editingId ?", 1)[1].split(
+    remote_save = submit_handler.split("const payload = healthCheckupPayload();", 1)[1].split(
         "if (state.currentHealthOnly)", 1
     )[0]
 
@@ -304,6 +304,23 @@ def test_dashboard_health_history_controls_and_today_risk_summary_are_wired() ->
     assert "const pageSize = 10;" in script
     assert 'card.model_key === "diabetes_current_screening"' in script
     assert 'method: editingId ? "PATCH" : "POST"' in script
+    assert 'error.code !== "CHECKUP_ALREADY_PREDICTED"' in script
+    assert 'checkup_type: "reassessment"' in script
+    assert "hyeoldangi-face-${imageRisk}.png" in script
+
+
+def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
+    html = (ROOT / "src/frontend/index.html").read_text(encoding="utf-8")
+    script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
+    intro_script = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
+
+    assert 'id="height" type="number" min="120" max="220" step="0.1"' in html
+    assert "if (state.step === 6)" in script
+    assert 'showHealthInputPanel("review")' in script
+    assert '"챌린지 실천이 기록됐습니다."' in script
+    assert "async function restoreIntroSession()" in intro_script
+    assert 'await api("/auth/token/refresh")' in intro_script
+    assert 'window.addEventListener("pageshow"' in intro_script
 
 
 def test_mvp_exposes_returning_login_and_extended_dashboard_actions() -> None:
