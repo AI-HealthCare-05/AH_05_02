@@ -1,0 +1,79 @@
+{
+  "experiment_id": "klosa-full-retrain-calibration-20260821",
+  "source_file": "klosa_diabetes_incident_all.csv",
+  "source_sha256": "834705c77c0869cb648833808e8b990bf02f70e1b71c55ecd930168a38bd6df3",
+  "target_definition": "t0 미진단자의 다음 인접 조사(약 2년) 신규 당뇨 진단",
+  "split_summary": {
+    "train": {
+      "n": 36273,
+      "positive_n": 917,
+      "positive_rate": 0.025280511675350812
+    },
+    "validation": {
+      "n": 7678,
+      "positive_n": 187,
+      "positive_rate": 0.024355300859598854
+    },
+    "test": {
+      "n": 7856,
+      "positive_n": 195,
+      "positive_rate": 0.024821792260692463
+    }
+  },
+  "null_model_definition": "constant probability equal to train positive prevalence",
+  "selected_c": 0.01,
+  "final_candidate_validation": {
+    "model": "logistic_sigmoid_calibrated",
+    "threshold_version": "thr-ef0f1c41a03c",
+    "n": 7678,
+    "positive_n": 187,
+    "prevalence": 0.024355300859598854,
+    "threshold": 0.02261679472284711,
+    "auroc": 0.6625073082351228,
+    "auprc": 0.04354012802522194,
+    "auprc_lift": 1.7877064330355832,
+    "recall": 0.7433155080213903,
+    "specificity": 0.5060739554131625,
+    "precision": 0.03620734566293306,
+    "f1": 0.06905116741182316,
+    "brier": 0.02359775400832652,
+    "predicted_positive_rate": 0.5,
+    "tn": 3791,
+    "fp": 3700,
+    "fn": 48,
+    "tp": 139,
+    "constraints_passed": true,
+    "null_probability_train_prevalence": 0.025280511675350812,
+    "null_model_brier": 0.023762976194690862,
+    "brier_skill_score": 0.006952924794043969
+  },
+  "final_candidate_test": {
+    "model": "logistic_sigmoid_calibrated",
+    "threshold_source": "validation",
+    "n": 7856,
+    "positive_n": 195,
+    "prevalence": 0.024821792260692463,
+    "threshold": 0.02261679472284711,
+    "auroc": 0.6405985695112442,
+    "auprc": 0.04133337954884407,
+    "auprc_lift": 1.6652052806959952,
+    "recall": 0.6923076923076923,
+    "specificity": 0.4947134838793891,
+    "precision": 0.033699450823764354,
+    "f1": 0.06427041180671268,
+    "brier": 0.024078631154886527,
+    "predicted_positive_rate": 0.509928716904277,
+    "tn": 3790,
+    "fp": 3871,
+    "fn": 60,
+    "tp": 135,
+    "null_probability_train_prevalence": 0.025280511675350812,
+    "null_model_brier": 0.024205881313160878,
+    "brier_skill_score": 0.005256993398755738,
+    "expected_calibration_error": 0.004781025721532738
+  },
+  "model_version": "diabetes-klosa-full-calibrated-v0.4.0",
+  "feature_schema_version": "klosa-diabetes-incident-v1",
+  "local_model_path": "models\\candidate\\klosa_full_retrain\\diabetes-klosa-full-calibrated-v0.4.0.joblib",
+  "promotion_status": "candidate_internal_not_for_personal_probability_display"
+}

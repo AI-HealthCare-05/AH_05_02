@@ -1,0 +1,9 @@
+﻿feature,non_missing_rate
+baseline_hypertension_history,0.9799833999266508
+baseline_cancer_history,0.9828787615573185
+baseline_chronic_lung_history,0.9838631845117455
+baseline_liver_history,0.983612253170421
+baseline_heart_history,0.9833806242399675
+baseline_cerebrovascular_history,0.9814696855637269
+baseline_psychiatric_history,0.9834964387051943
+baseline_arthritis_history,0.9831103904877719

@@ -1,0 +1,52 @@
+version: 1
+status: official_codebook_verified
+
+cohorts:
+  thresholds: [19, 40, 65]
+  comparison:
+    own_cohort_test: true
+    common_65_plus_test: true
+
+datasets:
+  klosa:
+    raw_path: data/interim/source_extract/klosa
+    codebook_path: data/raw/klosa/codebooks
+    registry_path: data/metadata/official_selected_variable_registry.csv
+    person_column: participant_id
+    wave_column: survey_wave
+    age_column: age
+    split_method: group_hash
+    target_method: adjacent_next_wave_incidence_after_observed_disease_free_history
+    official_source: https://survey.keis.or.kr/klosa/klosadownload/List.jsp
+    caution: KLoSA는 고령층 중심 패널이므로 연령별 모델로 분리하지 않음
+    age_models: single_survey_population
+
+  knhanes:
+    raw_path: data/interim/source_extract/knhanes
+    codebook_path: data/raw/knhanes/codebooks
+    registry_path: data/metadata/official_selected_variable_registry.csv
+    record_column: record_key
+    year_column: survey_year
+    age_column: age
+    year_window: [2016, 2024]
+    split_method: temporal_by_survey_year
+    target_method: official_clinical_status_among_explicitly_undiagnosed_adults
+    age_models: [19, 40, 65]
+    official_source: https://knhanes.kdca.go.kr/knhanes/main.do
+
+split:
+  train_fraction: 0.70
+  validation_fraction: 0.15
+  seed: chronic-disease-v1
+
+safety:
+  require_approved_registry: true
+  allow_global_missing_code_rules: false
+  fit_transformers_after_split_only: true
+  exclude_roles:
+    - identifier
+    - target
+    - target_source
+    - target_component
+    - leakage
+    - survey_design

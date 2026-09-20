@@ -1,0 +1,4 @@
+﻿cohort_id,minimum_age,definition,caution
+model_19_plus,19,누적,KNHANES 정상; KLoSA는 원 모집단 때문에 19~44세 대표 불가
+model_40_plus,40,누적,KLoSA에서는 19+와 표본이 동일하거나 거의 동일할 수 있음
+model_65_plus,65,누적,두 데이터 공통 비교 및 서비스 주 타깃 평가셋

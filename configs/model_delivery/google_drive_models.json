@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "source": {
+    "provider": "google_drive",
+    "folder_id": "1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18",
+    "folder_url": "https://drive.google.com/drive/folders/1uvxqFfcX6VZ8g4I9Fjv_az8_vWkkOb18"
+  },
+  "models": [
+    {
+      "name": "today",
+      "manifest_file_id": "1LFdiwtI0mqqdL2TGkVDmKf8QqJuZWGrA",
+      "artifact_file_id": "1-8dFEeIrD3cxhQIm5884qUg-LcQ7H5KQ",
+      "artifact_sha256": "2189257587690adfcdf74702f69b516c0a8559cef6059ebd90d003e008c079b1",
+      "registry_manifest": "models/registry/diabetes_current_screening/candidates/knhanes-today14-sk180-service-v3.json"
+    },
+    {
+      "name": "tomorrow",
+      "manifest_file_id": "1UziXZ1ATSrpuqXSt40GtAq_Jq7h3MRfL",
+      "artifact_file_id": "1GKjksiOUujTjrEOBmPXEMAmg29RXNoIY",
+      "artifact_sha256": "45f7de434a887b82aaff86a3b6afd8e99f75ebdc8bb3c0cd320484db9b71ad8e",
+      "registry_manifest": "models/registry/diabetes_incidence/candidates/rf25-tuned-education4-v2.json"
+    }
+  ]
+}

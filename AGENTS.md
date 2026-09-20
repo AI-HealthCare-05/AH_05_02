@@ -17,11 +17,12 @@
 ## 폴더 책임
 
 - `src/ml`: 전처리, 학습, 평가, 추론
-- `src/backend`: FastAPI, 인증, DB, 외부 API, 모델 서빙
+- `app`: 정식 FastAPI, 인증, DB, 외부 API, 모델 서빙
+- `ai_worker`: Redis 비동기 AI 추론 작업
+- `src/backend`: 과거 프로토타입 호환용이며 신규 기능을 추가하지 않음
 - `src/frontend`: 사용자 화면과 API 연동
 - `src/rag`: 문서 수집, 검색, 근거 기반 생성, 안전장치
 - `configs`: 재현 가능한 설정
 - `experiments`: 실험 조건과 결과
 - `docs`: 요구사항, 회의록, API, DB, 의사결정
 - `tests`: 단위·통합·의료 안전 테스트
-

@@ -1,0 +1,70 @@
+{
+  "experiment_id": "sp2-recall-ensemble-20260821",
+  "seed": 20260821,
+  "cv_folds": 3,
+  "sample_limits": {
+    "train": 6000,
+    "validation": 2000,
+    "test": 3000
+  },
+  "selection_constraints": {
+    "minimum_specificity": 0.5,
+    "minimum_auprc_lift": 1.05
+  },
+  "threshold_grid": {
+    "minimum": 0.01,
+    "maximum": 0.99,
+    "points": 99
+  },
+  "blend_weight_step": 0.25,
+  "datasets": {
+    "klosa": {
+      "feature_schema_version": "klosa-diabetes-incident-v1",
+      "model_version": "diabetes-klosa-incident-recall-v0.2.0",
+      "target_type": "future_incident_next_wave",
+      "numeric_features": [
+        "age",
+        "bmi",
+        "self_rated_health",
+        "meal_count_yesterday"
+      ],
+      "categorical_features": [
+        "sex",
+        "regular_exercise",
+        "current_smoker",
+        "current_drinker"
+      ]
+    },
+    "knhanes": {
+      "feature_schema_version": "knhanes-diabetes-screening-v1",
+      "model_version": "diabetes-knhanes-screening-recall-v0.2.0",
+      "target_type": "current_cross_sectional_screening",
+      "numeric_features": [
+        "age",
+        "height_cm",
+        "weight_kg",
+        "waist_cm",
+        "bmi",
+        "walking_days",
+        "energy_kcal",
+        "protein_g",
+        "fat_g",
+        "carbohydrate_g",
+        "sodium_mg"
+      ],
+      "categorical_features": [
+        "sex",
+        "region",
+        "urban",
+        "education",
+        "income_quartile",
+        "household_income_quartile",
+        "hypertension_family_history",
+        "diabetes_family_history",
+        "current_smoker",
+        "alcohol_frequency",
+        "aerobic_activity"
+      ]
+    }
+  }
+}

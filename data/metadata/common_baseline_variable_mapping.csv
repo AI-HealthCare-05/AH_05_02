@@ -1,0 +1,13 @@
+dataset,source_column,canonical_name,definition,unit,source_coding,harmonized_coding,missing_handling,user_input_possible,comparability,leakage_note,baseline_use
+KLoSA,age,age,조사 시점 만 나이,year,continuous,continuous,학습 세트 중앙값 대치,yes,equivalent,없음,included
+KNHANES,age,age,조사 시점 만 나이,year,continuous,continuous,학습 세트 중앙값 대치,yes,equivalent,없음,included
+KLoSA,sex,female,성별,category,1=남성;5=여성,0=남성;1=여성,학습 세트 최빈값 대치,yes,equivalent,없음,included
+KNHANES,sex,female,성별,category,1=남성;2=여성,0=남성;1=여성,학습 세트 최빈값 대치,yes,equivalent,없음,included
+KLoSA,bmi,bmi,체질량지수,kg/m2,continuous,continuous,학습 세트 중앙값 대치,yes,equivalent,키·몸무게로 산출되며 당뇨 판정 변수가 아님,included
+KNHANES,bmi,bmi,체질량지수,kg/m2,continuous,continuous,학습 세트 중앙값 대치,yes,equivalent,당뇨 판정 변수와 분리,included
+KLoSA,current_smoker,current_smoker,현재 흡연 여부,binary,0=아니오;1=예,0=아니오;1=예,학습 세트 최빈값 대치,yes,equivalent,없음,included
+KNHANES,current_smoker,current_smoker,현재 흡연 여부,binary,0=아니오;1=예,0=아니오;1=예,학습 세트 최빈값 대치,yes,equivalent,없음,included
+KLoSA,regular_exercise,physically_active,규칙적 운동 여부,binary,0=아니오;1=예,0=아니오;1=예,학습 세트 최빈값 대치,yes,proxy,KNHANES 유산소 실천과 문항 정의가 동일하지 않음,included
+KNHANES,aerobic_activity,physically_active,유산소 신체활동 실천 여부,binary,0=아니오;1=예,0=아니오;1=예,학습 세트 최빈값 대치,yes,proxy,KLoSA 규칙적 운동과 문항 정의가 동일하지 않음,included
+KLoSA,current_drinker,current_alcohol_use,현재 음주 여부,binary,0=아니오;1=예,not_harmonized,not_applicable,yes,not_equivalent,KNHANES 빈도 문항과 직접 대응 불가,excluded
+KNHANES,alcohol_frequency,current_alcohol_use,최근 1년 음주 빈도,category,BD1_11 source categories,not_harmonized,not_applicable,yes,needs_codebook,공식 값 라벨·결측코드 검증 전 이진화 금지,excluded
