@@ -850,6 +850,16 @@ async function goStepFromNav(step) {
 }
 
 function goBack() {
+  if (state.step === 6) {
+    state.navigationHistory = state.navigationHistory.filter((step) => step !== 6);
+    if (state.navigationHistory.at(-1) !== 4) state.navigationHistory.push(4);
+    state.visitedSteps.add(4);
+    hydrateSavedHealthForm(state.healthCheckupResult);
+    renderHealthReview();
+    showHealthInputPanel("review");
+    showStep(4, { recordHistory: false });
+    return;
+  }
   if (state.navigationHistory.length <= 1) return;
   state.navigationHistory.pop();
   const previousStep = state.navigationHistory.at(-1) || 1;
@@ -3984,6 +3994,10 @@ async function loadHealthCheckupHistory(items = null) {
 }
 
 async function openSavedAnalysisResult(checkupId) {
+  const selectedCheckup = state.healthCheckupHistory.find(
+    (checkup) => String(checkup.checkup_id) === String(checkupId),
+  );
+  if (selectedCheckup) state.healthCheckupResult = selectedCheckup;
   if (isLocalPreview()) {
     state.checkupId = checkupId;
     renderMvpResultPreview();
@@ -4053,8 +4067,8 @@ function renderDashboardRiskSummary(category, label) {
   $("#dashboard-stage").textContent = label;
   if (summary) summary.dataset.risk = risk;
   if (image) {
-    const imageRisk = risk === "moderate" ? "caution" : risk === "pending" ? "low" : risk;
-    image.src = `/static/assets/hyeoldangi-risk-${imageRisk}.png`;
+    const imageRisk = risk === "high" || risk === "moderate" ? "high" : "low";
+    image.src = `/static/assets/hyeoldangi-face-${imageRisk}.png${imageRisk === "high" ? "?v=20260902-high-face-v2" : ""}`;
     image.alt = risk === "pending" ? "최근 위험 범주 결과 준비 중" : `오늘이 분석 결과 ${label}`;
   }
 }
@@ -4156,7 +4170,7 @@ async function completeDailyRecord(target, source = "self_report", value = 1) {
   updateDailyRecordSummary();
   if (!isLocalPreview()) void loadWeeklyReport().catch(() => {});
   if (allDailyChallengesCompleted()) await maybeOpenDailyReward();
-  else showMessage(target.item?.domain === "hydration" ? "음료 선택 실천을 기록했어요. 당근에 물을 주었습니다! (게임 응원 문구)" : "오늘 기록을 저장했습니다.", "success");
+  showMessage(target.item?.domain === "hydration" ? "음료 선택 실천을 기록했어요. 당근에 물을 주었습니다!" : "챌린지 실천이 기록됐습니다.", "success");
 }
 
 async function undoDailyRecord(target) {
@@ -4422,7 +4436,7 @@ async function submitV3Photo() {
       $("#photo-success-title").textContent = target.item.verification_type === 1 ? "채소 사진 확인 · 기록 저장 완료" : "사진 제출 · 기록 저장 완료";
       showPhotoRecordState("photo-state-success");
     }
-    showMessage(result.notice, "success");
+    showMessage(result.notice || "챌린지 실천이 기록됐습니다.", "success");
     void loadWeeklyReport().catch(() => {});
   } catch (error) {
     if (state.recordTarget !== target || state.token !== token || state.cycle?.cycle_id !== cycleId) return;
@@ -6521,10 +6535,24 @@ $("#health-form").addEventListener("submit", async (event) => {
       renderHealthCheckupHistory();
     } else {
       const editingId = state.editingHealthCheckupId;
-      const checkup = await api(editingId ? `/health-checkups/${editingId}` : "/health-checkups", {
-        method: editingId ? "PATCH" : "POST",
-        body: JSON.stringify(healthCheckupPayload()),
-      });
+      const payload = healthCheckupPayload();
+      let checkup;
+      try {
+        checkup = await api(editingId ? `/health-checkups/${editingId}` : "/health-checkups", {
+          method: editingId ? "PATCH" : "POST",
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        if (!editingId || error.code !== "CHECKUP_ALREADY_PREDICTED") throw error;
+        checkup = await api("/health-checkups", {
+          method: "POST",
+          body: JSON.stringify({
+            ...payload,
+            checkup_type: "reassessment",
+            checkup_date: new Date().toISOString().slice(0, 10),
+          }),
+        });
+      }
       state.editingHealthCheckupId = null;
       state.checkupId = checkup.checkup_id;
       state.healthCheckupResult = checkup;
@@ -7331,7 +7359,7 @@ $("#health-history-list").addEventListener("click", async (event) => {
     state.healthCheckupResult = checkup;
     await openDashboardHealthEdit();
     hydrateSavedHealthForm(checkup);
-    $("#submit-analysis").textContent = "수정 내용 저장하기";
+    $("#submit-analysis").textContent = healthSubmitLabel();
   } catch (error) {
     showMessage(error.message || "건강정보 입력 화면으로 이동하지 못했습니다.");
   }
@@ -7947,7 +7975,7 @@ $("#daily-log-list").addEventListener("click", event => {
   showWorkspace("tools");
   updateLifestyleMap(link.dataset.lifestyleTopic);
 });
-resumeAuthEntryFromQuery();
+const hasExplicitAuthEntry = resumeAuthEntryFromQuery();
 resumeFromForest();
 resumeReturningPreview();
 resumeMealPhotoPreview();
@@ -7957,3 +7985,4 @@ resumeEmergencyQuestionnairePreview();
 resumeHealthInputPreview();
 resumeOnboardingFlowPreview();
 resumeReportForestPreview();
+if (!hasExplicitAuthEntry && !new URLSearchParams(window.location.search).has("preview")) void resumeCookieSession();
