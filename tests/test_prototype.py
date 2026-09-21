@@ -318,6 +318,7 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     script = (ROOT / "src/frontend/app.js").read_text(encoding="utf-8")
     intro_script = (ROOT / "src/frontend/intro-retro-app.js").read_text(encoding="utf-8")
     retro_intro_script = (ROOT / "src/frontend/retro-intro.js").read_text(encoding="utf-8")
+    retro_intro_css = (ROOT / "src/frontend/retro-intro.css").read_text(encoding="utf-8")
 
     assert 'id="height" type="number" min="120" max="220" step="0.1"' in html
     assert "if (state.step === 6)" in script
@@ -328,6 +329,14 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert 'window.addEventListener("pageshow"' in intro_script
     assert "showWorkspaceNav = isLoggedIn && !needsAccountSetup" in intro_script
     assert "if (introRouteNav) introRouteNav.hidden = true;" in intro_script
+    assert 'classList.toggle("intro-authenticated"' in intro_script
+    assert "window.location.assign(`/?workspace=${encodeURIComponent(destination)}`);" in intro_script
+    assert "openModernWorkspace(button.dataset.topWorkspace);" in intro_script
+    assert "async function openRequestedWorkspace()" in script
+    assert 'params.get("workspace")' in script
+    assert 'window.history.replaceState({}, "",' in script
+    assert ".intro-authenticated:has(.retro-intro) .topbar" in retro_intro_css
+    assert ".intro-authenticated:has(.retro-intro) .topbar #font-toggle" in retro_intro_css
     assert "routeNav.hidden = true;" in retro_intro_script
     assert "window.setTimeout(clearMessage, 2000)" in script
     assert "window.setTimeout(clearMessage, 2000)" in intro_script

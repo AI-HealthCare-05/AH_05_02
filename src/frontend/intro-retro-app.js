@@ -643,6 +643,7 @@ function syncSidebarChallengeEntry() {
 function syncTopNavigation() {
   const isLoggedIn = Boolean(state.token);
   const needsAccountSetup = Boolean(state.accountRecovery);
+  document.body.classList.toggle("intro-authenticated", isLoggedIn && !needsAccountSetup);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
   const showWorkspaceNav = isLoggedIn && !needsAccountSetup;
   const showOnboardingNav = false;
@@ -5292,16 +5293,21 @@ $("#enter-forest-game")?.addEventListener("click", () => {
     errorNode.focus();
   }
 });
+function openModernWorkspace(workspace) {
+  const allowedWorkspaces = new Set(["home", "challenge", "report", "together", "tools"]);
+  const destination = allowedWorkspaces.has(workspace) ? workspace : "home";
+  window.location.assign(`/?workspace=${encodeURIComponent(destination)}`);
+}
+
 $$("[data-top-workspace]").forEach((button) => button.addEventListener("click", () => {
   if (!state.token) {
     showStep(2);
     showAuthMode("login", { context: "login" });
     return;
   }
-  showStep(8);
-  showWorkspace(button.dataset.topWorkspace, { moveFocus: false });
+  openModernWorkspace(button.dataset.topWorkspace);
 }));
-$$("[data-top-step]").forEach((button) => button.addEventListener("click", async () => {
+$$("[data-top-step]").forEach((button) => button.addEventListener("click", () => {
   if (!state.token) {
     showStep(2);
     showAuthMode("login", { context: "login" });
@@ -5309,10 +5315,10 @@ $$("[data-top-step]").forEach((button) => button.addEventListener("click", async
   }
   const targetStep = Number(button.dataset.topStep);
   if (targetStep === 7) {
-    try { await openChallengeTab(); } catch (error) { showMessage(error.message); }
+    openModernWorkspace("challenge");
     return;
   }
-  showStep(targetStep);
+  openModernWorkspace("home");
 }));
 $$("[data-onboarding-health]").forEach((button) => button.addEventListener("click", () => {
   if (!state.token) {

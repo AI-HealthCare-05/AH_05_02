@@ -7237,8 +7237,10 @@ async function resumeAuthenticatedAccount() {
       return;
     }
     [4, 8].forEach((step) => state.visitedSteps.add(step));
-    showWorkspace("home", { moveFocus: false });
-    showStep(8);
+    if (!await openRequestedWorkspace()) {
+      showWorkspace("home", { moveFocus: false });
+      showStep(8);
+    }
   } catch (error) {
     if (error.status === 401 && state.sessionRecovery) return;
     if (error.status === 401) state.token = null;
@@ -7254,6 +7256,24 @@ async function resumeAuthenticatedAccount() {
     showAccountRecovery({ email: $("#login-email").value.trim(), token: null, verifyOnly: true },
       "로그인 시간이 만료되었습니다. 기존 계정으로 다시 로그인해 주세요.");
   }
+}
+
+async function openRequestedWorkspace() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedWorkspace = params.get("workspace");
+  const allowedWorkspaces = new Set(["home", "challenge", "report", "together", "tools"]);
+  if (!allowedWorkspaces.has(requestedWorkspace)) return false;
+
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete("workspace");
+  window.history.replaceState({}, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+  if (requestedWorkspace === "challenge") {
+    await openChallengeTab();
+    return true;
+  }
+  showStep(8);
+  showWorkspace(requestedWorkspace, { moveFocus: false });
+  return true;
 }
 
 async function resumeCookieSession() {

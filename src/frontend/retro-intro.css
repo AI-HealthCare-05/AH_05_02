@@ -72,6 +72,10 @@ body.intro-mode .intro-version-switch-floating { display: inline-flex; position:
 body.intro-mode .intro-version-switch-floating:hover,body.intro-mode .intro-version-switch-floating:focus-visible { border-color: #176b5b; background: #e8f3ed; color: #0b473a; }
 body.intro-mode:has(.retro-intro) .topbar.retro-nav-compact { width: min(480px,calc(100% - 28px)); }
 body.intro-mode:has(.retro-intro) .topbar .header-utilities { display: none; }
+body.intro-mode.intro-authenticated:has(.retro-intro) .topbar { top: 0; left: 0; transform: none; width: 100%; min-height: 86px; padding: 0 clamp(16px,3vw,52px); gap: 18px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+body.intro-mode.intro-authenticated:has(.retro-intro) .topbar.retro-nav-compact { width: 100%; }
+body.intro-mode.intro-authenticated:has(.retro-intro) .topbar .header-utilities { display: flex; }
+body.intro-mode.intro-authenticated:has(.retro-intro) .topbar #font-toggle { display: none !important; }
 body.intro-mode .landing-first.retro-intro { height: 500svh; }
 .retro-loaded { transform: perspective(900px) rotateZ(calc(var(--retro-spin,0)*-320deg)) rotateY(calc(var(--retro-spin,0)*12deg)) scale(calc(1 + var(--retro-spin,0)*.62)); transform-origin: 50% 50%; will-change: transform, opacity; }
 .retro-emblem { width: auto; height: 88%; max-width: 90%; object-fit: contain; mix-blend-mode: normal; }
