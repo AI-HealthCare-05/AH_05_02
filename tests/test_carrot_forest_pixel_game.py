@@ -49,7 +49,8 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
         assert landmark in html + script
     for key in ("ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", 'w: "up"', 'a: "left"'):
         assert key in script
-    assert html.count('data-move="') == 4
+    assert 'id="forest-joystick"' in html
+    assert 'data-speed=' not in html
     assert 'width="1536" height="1024"' in html
     assert "image-rendering:pixelated" in (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
 
@@ -78,7 +79,7 @@ def test_pixel_game_accessibility_and_excluded_features() -> None:
     assert "게임 내용으로 바로가기" in html
     assert 'role="status"' in html
     assert 'role="progressbar"' in html
-    assert 'aria-label="아바타 이동 버튼"' in html
+    assert 'aria-label="이동 조이스틱.' in html
     assert "min-height:48px" in css
     for excluded in ("유료 가챠", "현금 결제", "건강정보 공개", "아이템 등급은 희소성"):
         assert excluded not in combined
@@ -226,8 +227,9 @@ def test_forest_onboarding_rag_collaboration_and_tool_routes_are_connected() -> 
     assert "로그인하고 챌린지 시작!" in html
     assert "who.int/publications" in script
     assert "cdc.gov/diabetes-prevention" in script
-    assert "window.location.href = window.ForestProfile.PROFILE_URL" in script
-    assert "/service?workspace=together#forest-invite-title" in html
+    assert "window.location.href = window.ForestProfile.PROFILE_URL" not in script
+    assert "서비스 홈" in (ROOT / "src/frontend/forest-ingame-hud.js").read_text(encoding="utf-8")
+    assert "/?workspace=together#forest-invite-title" in html
     assert "renderInventoryDialog" in script
     assert "groupGoalMemo" in script
     assert 'requestedView.get("workspace")' in app_script
@@ -368,7 +370,7 @@ def test_pixel_game_is_installable_pwa() -> None:
     assert "beforeinstallprompt" in script
     assert 'id="forest-boot" role="status"' in html
     assert "forest-style-ready" in html
-    assert "forest-local-pwa-reset-v39" in html
+    assert "forest-local-pwa-reset-v40" in html
     assert "registration.unregister()" in html
     assert 'classList.add("forest-script-ready")' in script
     assert "localDemoOrigin" in script
@@ -472,7 +474,7 @@ def test_lpc_avatar_expansion_storage_reward_and_sit_toggle_contract() -> None:
     assert (ROOT / "scripts/generate_original_bgm.py").is_file()
     assert "gold_eyes_orange_cat" in phaser_script
     assert "Phaser.Scale.NONE" in phaser_script
-    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v181-wisdom-lp";' in worker
+    assert 'const CACHE_NAME = "gandang-carrot-forest-pwa-v183-navigation-session";' in worker
     assert "town-pro-sensory-cc0.mp3" in worker
     assert "carrot-forest-main-theme.mp3" in worker
     assert "forest-canopy-original.wav" in worker
@@ -814,10 +816,9 @@ def test_arcade_controls_pet_feeding_and_pet_auto_attack_are_connected() -> None
     for action in ("jump", "run", "interact", "sit", "attack"):
         assert f'data-action="{action}"' in html
     assert '<button class="arcade-action action-jump"' in html
-    for label in ("점프 (J)", "달리기 (R)", "상호작용 (Q)", "앉기 (X)"):
-        assert f"<span>{label}</span>" in html
-    assert 'data-action="attack" aria-label="공격, 단축키 Z"' in html
-    assert "<span>공격 (Z)</span>" in html
+    for key in ("점프, 단축키 J", "달리기 꺼짐, 단축키 R", "상호작용, 단축키 Q", "앉기, 단축키 X", "공격, 단축키 Z"):
+        assert key in html
+    assert 'aria-pressed="false"' in html
     assert "attack-spark" not in html
     assert "data-footer-tool=" not in html
     assert 'class="asset-dock rail-assets"' in html

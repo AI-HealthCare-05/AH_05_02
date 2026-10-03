@@ -166,8 +166,9 @@ test('profile entry requires authentication and legacy forest outfit saving cann
   const legacyHtml = fs.readFileSync(path.join(frontend, 'index.html'), 'utf8');
   const legacyJs = fs.readFileSync(path.join(frontend, 'app.js'), 'utf8');
   assert.doesNotMatch(legacyHtml + legacyJs, /forest-display-name/);
-  assert.match(legacyHtml, /href="\/service\?account=profile"/);
-  const outfitSave = legacyJs.slice(legacyJs.indexOf('$("#forest-avatar-form").addEventListener'), legacyJs.indexOf('$("#forest-reward").addEventListener'));
-  assert.doesNotMatch(outfitSave, /display_name/);
-  assert.match(outfitSave, /hair_code:/);
+  assert.match(legacyJs, /const openingAccountProfile =/);
+  const forestJs = fs.readFileSync(path.join(frontend, 'forest-game.js'), 'utf8');
+  const outfitSave = forestJs.slice(forestJs.indexOf('$("#avatar-studio-save").addEventListener'), forestJs.indexOf('$("#asset-dock").addEventListener'));
+  assert.doesNotMatch(outfitSave, /state\.avatar\.name\s*=/);
+  assert.match(outfitSave, /state\.avatar\.cosmetics/);
 });

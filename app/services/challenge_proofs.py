@@ -17,7 +17,7 @@ from tortoise.transactions import in_transaction
 from app.core import config
 from app.models.health import Challenge, ChallengeCycle, ChallengeLog, ChallengeVerification, UserChallenge
 from app.services.challenge_catalog import metadata_for
-from app.vision.food_vision import FoodVisionError, food_vision_is_configured, get_food_vision_provider, sha256_digest
+from app.vision.food_vision import FoodVisionError, FoodVisionRuntimeError, food_vision_is_configured, get_food_vision_provider, sha256_digest
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +114,18 @@ async def _review(photo: bytes, verification_type: int) -> tuple[str, str, objec
                 )
         if result.provider_kind not in {"local_kfood_cv", "local_kfood_openai_vlm"}:
             raise FoodVisionError("The image-review result is not from the local provider")
+    except FoodVisionRuntimeError as exc:
+        # Do not expose DLL paths, image contents, credentials or account details.
+        logger.error("challenge_photo_runtime_unavailable reason=%s", exc.reason_code)
+        notices = {
+            "runtime_security_blocked": "서버의 보안 설정이 사진 분석 프로그램 실행을 차단하고 있어요. 사진 문제가 아니며, 서버 실행 환경을 복구해야 합니다. 기록은 완료되지 않았어요.",
+            "runtime_dependency_missing": "서버에 사진 분석 프로그램이 준비되지 않았어요. 서버 실행 환경을 확인해야 합니다. 기록은 완료되지 않았어요.",
+        }
+        raise HTTPException(status_code=503, detail={
+            "error_code": "PHOTO_REVIEW_UNAVAILABLE",
+            "message": notices.get(exc.reason_code, "서버의 사진 분석 프로그램을 실행하지 못했어요. 서버 실행 환경을 확인해야 합니다. 기록은 완료되지 않았어요."),
+            "retryable": False,
+        }) from exc
     except FoodVisionError as exc:
         raise HTTPException(
             status_code=502, detail="사진 검토에 실패했습니다. 완료되지 않았으니 다시 시도해 주세요."

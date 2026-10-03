@@ -27,7 +27,7 @@ test('reads canonical name from bare users/me response with an in-memory token o
     return reply(url.endsWith('/refresh') ? { access_token: 'test-token' } : { name: '새 닉네임' });
   });
   assert.equal(await app.api.loadName(), '새 닉네임');
-  assert.equal(app.api.PROFILE_URL, '/service?account=profile');
+  assert.equal(app.api.PROFILE_URL, '/?account=profile');
   assert.deepEqual(calls.map(c => c.url), ['/api/v1/auth/token/refresh', '/api/v1/users/me']);
   assert.equal(calls[1].options.headers.Authorization, 'Bearer test-token');
   assert.ok(calls.every(c => !c.options.method && c.options.cache === 'no-store' && c.options.credentials === 'same-origin'));
@@ -90,8 +90,8 @@ test('forest has no local nickname editor, retains customization and loads the b
   for (const id of ['avatar-name', 'profile-nickname', 'profile-form', 'profile-dialog']) assert.ok(!html.includes(`id="${id}"`));
   assert.ok(!html.includes('닉네임 저장')); assert.ok(!game.includes('renderProfileAvatar'));
   assert.ok(html.includes('id="open-avatar-studio"')); assert.ok(html.includes('id="avatar-nameplate"'));
-  assert.ok(html.includes('/static/forest-profile.js?v=20260907-1'));
-  assert.ok(worker.includes('/static/forest-profile.js?v=20260907-1'));
+  assert.ok(html.includes('/static/forest-profile.js?v=20261003-navigation-session-v1'));
+  assert.ok(worker.includes('/static/forest-profile.js?v=20261003-navigation-session-v1'));
   assert.equal((game.match(/ForestProfile.watch\(applyAccountNickname\)/g) || []).length, 1);
   assert.ok(game.indexOf('ForestProfile.watch(applyAccountNickname)') > game.indexOf('adapter.load().then'));
 });

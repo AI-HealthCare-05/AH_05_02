@@ -39,7 +39,7 @@ function setup({ storedFont, legacyLarge = false, blockedRead = false, blockedWr
     addEventListener: (type, callback) => listeners.set(type, callback),
   };
   const context = vm.createContext({
-    window, document: { body }, state, currentScene: 'world', WORLD_WIDTH: 768, WORLD_HEIGHT: 512,
+    canvas: { getBoundingClientRect: () => ({width:768,height:512}) }, window, document: { body }, state, currentScene: 'world', WORLD_WIDTH: 768, WORLD_HEIGHT: 512,
     WISDOM_SPRING_SIGN: { x: 108, y: 424 },
     $: id => elements.get(id) || null,
     localStorage: {
@@ -50,7 +50,7 @@ function setup({ storedFont, legacyLarge = false, blockedRead = false, blockedWr
   });
   vm.runInContext(slice('  const FONT_SIZE_KEY =', '  const atmosphereButton =') +
     slice('  $("#reset-position").addEventListener', '  $("#world-dialog-close").addEventListener') +
-    slice('  function projectMapLabels()', '  let fallbackNightCanvas ='), context);
+    slice('  function fallbackViewport()', '  let fallbackNightCanvas ='), context);
   return {
     window, state, body, classes, storage, context, elements, fits: () => fits, reloads: () => reloads,
     get: id => elements.get(id),

@@ -1,9 +1,13 @@
 /* Display-only account name bridge. Editing belongs to the main MVP profile. */
 ((root) => {
   "use strict";
-  const PROFILE_URL = "/service?account=profile";
+  const PROFILE_URL = "/?account=profile";
   const REVISION_KEY = "gandang-account-profile-revision";
   async function loadName(fetchImpl = root.fetch.bind(root), signal) {
+    if (root.GandangAuthSession) {
+      const { profile } = await root.GandangAuthSession.resolve({ signal, fetchImpl });
+      return typeof profile.name === "string" && profile.name.trim() ? profile.name.trim() : "숲지기";
+    }
     const options = { credentials: "same-origin", cache: "no-store", signal };
     const session = await fetchImpl("/api/v1/auth/token/refresh", options);
     if (!session.ok) return null;
@@ -30,7 +34,7 @@
       const active = controller;
       const timeout = root.setTimeout(() => active.abort(), 5000);
       let name = null;
-      try { name = await loadName(root.fetch.bind(root), active.signal); } catch { /* Keep the forest usable without an account connection. */ }
+      try { name = await loadName(root.fetch.bind(root), active.signal); } catch { /* Keep the last display name on temporary errors; forest-access.js guards entry. */ }
       finally { root.clearTimeout(timeout); }
       if (!disposed && current === sequence) onName(name);
     }

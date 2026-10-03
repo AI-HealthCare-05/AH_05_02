@@ -8,6 +8,24 @@ import pandas as pd
 from src.ml.inference.model_explanations import DISPLAY_NAMES, MODIFIABLE
 
 
+def has_displayable_selection(explanation):
+    """A missing opposite sign is valid; empty or invalid attributions are not."""
+    items = explanation.get("items")
+    if explanation.get("selection_status") not in {"complete", "insufficient_directional_factors"}:
+        return False
+    if not isinstance(items, list) or not 1 <= len(items) <= 3:
+        return False
+    for item in items:
+        if not isinstance(item, dict):
+            return False
+        value = item.get("contribution")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+            return False
+        if abs(value) <= 1e-10 or item.get("direction") != ("increase" if value > 0 else "decrease"):
+            return False
+    return True
+
+
 def select_factors(items, *, elevated):
     """Select up to three real attributions; never manufacture the other sign."""
     if type(elevated) is not bool:
@@ -48,7 +66,7 @@ def _result(values, *, reference, score, method, baseline, model_version, elevat
                 "contribution": float(value),
                 "absolute_contribution": abs(float(value)),
                 "modifiable": feature in MODIFIABLE,
-                "message": "입력 정보가 기준값 대비 당뇨 위험을 "
+                "message": "입력 정보가 비교 기준 대비 모델 점수를 "
                 + ("높이는" if value > 0 else "낮추는" if value < 0 else "바꾸지 않는")
                 + " 방향으로 반영되었습니다.",
             }
@@ -81,13 +99,13 @@ def _result(values, *, reference, score, method, baseline, model_version, elevat
     }
 
 
-def explain_today(frame, score_batch, *, model_version, elevated):
-    """Exact grouped Shapley values over ALL coalitions of missing input groups.
+def explain_today(frame, score_batch, *, model_version, elevated, background=None):
+    """Exact grouped Shapley values over all input-group coalitions.
 
-    The reference is the frozen pipeline's all-missing input, not a population
-    average. Height/weight/BMI form one player to preserve their dependency.
-    Every coalition passes through waist estimation, preprocessing, both models,
-    both Platt calibrators and the final weighted sum without refitting anything.
+    Production uses a fixed Train-only empirical reference. Omitting background
+    retains the legacy all-missing reference for research comparisons only.
+    Related measurements form one player. Every coalition passes through the
+    complete frozen pipeline without refitting preprocessing or models.
     """
     if len(frame) != 1 or len(frame.columns) > 14:
         raise ValueError("Today requires one row with at most fourteen features")
@@ -106,6 +124,11 @@ def explain_today(frame, score_batch, *, model_version, elevated):
     n = len(names)
     if n > 10:
         raise ValueError("Today grouped SHAP requires at most ten independent input groups")
+    if background is not None:
+        if list(background.columns) != list(frame.columns) or not 1 <= len(background) <= 256:
+            raise ValueError("Invalid Train reference shape")
+        if np.isinf(background.to_numpy(dtype=float)).any() or background.isna().all(axis=1).any():
+            raise ValueError("Invalid Train reference values")
     rows = []
     for mask in range(1 << n):
         rows.append(
@@ -116,7 +139,29 @@ def explain_today(frame, score_batch, *, model_version, elevated):
                 for c in frame
             }
         )
-    scores = np.asarray(score_batch(pd.DataFrame(rows, columns=frame.columns)), dtype=float)
+    if background is None:
+        scores = np.asarray(score_batch(pd.DataFrame(rows, columns=frame.columns)), dtype=float)
+    else:
+        # Each masked group is replaced by the same real reference person's group.
+        # Chunk coalitions to bound memory; keep the complete frozen model intact.
+        averages = []
+        reference_values = background.to_numpy(dtype=float)
+        input_values = frame.to_numpy(dtype=float)[0]
+        positions = {name: [frame.columns.get_loc(c) for c in columns] for name, columns in groups.items()}
+        for start in range(0, 1 << n, 32):
+            batches = []
+            for mask in range(start, min(start + 32, 1 << n)):
+                candidates = reference_values.copy()
+                for j, name in enumerate(names):
+                    if mask & (1 << j):
+                        candidates[:, positions[name]] = input_values[positions[name]]
+                batches.append(candidates)
+            batch_frame = pd.DataFrame(np.concatenate(batches, axis=0), columns=frame.columns)
+            batch_scores = np.asarray(score_batch(batch_frame), dtype=float)
+            if batch_scores.shape != (len(batches) * len(background),):
+                raise ValueError("Invalid reference coalition scores")
+            averages.extend(batch_scores.reshape(len(batches), len(background)).mean(axis=1))
+        scores = np.asarray(averages, dtype=float)
     if scores.shape != (1 << n,) or not np.isfinite(scores).all():
         raise ValueError("Invalid coalition scores")
     values = {}
@@ -126,15 +171,20 @@ def explain_today(frame, score_batch, *, model_version, elevated):
             for mask in range(1 << n)
             if not mask & (1 << j)
         )
-    return _result(
+    result = _result(
         values,
         reference=scores[0],
         score=scores[-1],
-        method="exact_grouped_shap_missing_reference_v1",
-        baseline="all input groups missing; frozen Train-fitted preprocessing; not population average",
+        method="exact_grouped_shap_train_reference_v2" if background is not None else "exact_grouped_shap_missing_reference_v1",
+        baseline="mean model output over the fixed Train-only representative reference; grouped replacements" if background is not None
+        else "all input groups missing; frozen Train-fitted preprocessing; not population average",
         model_version=model_version,
         elevated=elevated,
     )
+    if background is not None:
+        result["explanation_version"] = "grouped-train-reference-shap-v2"
+        result["background_size"] = len(background)
+    return result
 
 
 def explain_tomorrow(frame, pipeline, *, model_version, elevated):

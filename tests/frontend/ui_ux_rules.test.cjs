@@ -36,7 +36,7 @@ test('pending future result shows only the gauge and clears a previous risk mark
   assert.equal(pending[0].dataset.level, 'pending');
   assert.equal(pending[0].children.length, 0);
   assert.equal(elements.get('#future-risk-visual').hidden, false);
-  assert.equal(elements.get('#forecast-status-badge').textContent, '결과 준비 중');
+  assert.equal(elements.has('#forecast-status-badge'), false);
 });
 test('medical continuation requires challenge permission and preserves every safety exclusion', () => {
   const state = { capabilities: { challenge: true }, eligibility: { reason_codes: [] }, medicalGuidanceRequired: false };
@@ -53,9 +53,11 @@ test('medical continuation requires challenge permission and preserves every saf
   state.medicalGuidanceRequired = true;
   assert.equal(allowed(), false);
 });
-test('profile writes use current backend path, not GET-only /users/me', () => {
-  assert.equal((source.match(/api\("\/users\/me\/profile", \{ method: "PATCH"/g) || []).length, 3);
-  assert.doesNotMatch(source, /api\("\/users\/me", \{ method: "PATCH"/);
+test('profile writes use the canonical current backend path', () => {
+  const writes = [...source.matchAll(/api\("([^"\n]+)", \{ method: "PATCH"/g)]
+    .map(match => match[1]).filter(route => route.startsWith('/users/me'));
+  assert.equal(writes.length, 3);
+  assert.ok(writes.every(route => route === '/users/me'));
 });
 test('current-only allowed user reanalyses, medically restricted user does not', () => {
   const state = { currentHealthOnly: true, capabilities: { currentHealth: true }, medicalGuidanceRequired: false };
@@ -114,20 +116,23 @@ test('XAI explanation cards show only approved returned factors with safe labels
     nodes[id].closest = () => ({ classList: { toggle: (name, ready) => { nodes[id].ready = ready; } } });
   }
   const state = { currentScreeningPrediction: { screening_signal_detected: false }, prediction: { risk_category: 'low' } };
-  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'formatModelNumber', 'renderModelAnalysisDetails', 'renderShapGraph', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]),
   });
   const render = context.renderXaiExplanationLists;
-  const approvedFactors = { status: 'approved', shap_claimed: true, display_allowed: true, items: [{ display_name: '걷기 시간', direction: 'decrease', modifiable: true, message: '모델 점수를 낮춘 방향입니다.' }] };
+  const approvedFactors = { status: 'approved', shap_claimed: true, display_allowed: true, items: [{ display_name: '걷기 시간', input_value_label: '20분 <확인>', contribution: -.01, direction: 'decrease', modifiable: true, message: '당뇨 위험을 낮춘 방향입니다.' }] };
   render(approvedFactors, { approved: true, currentFactors: approvedFactors, currentApproved: true });
   assert.match(nodes['#current-factor-list'].innerHTML, /걷기 시간/);
   assert.equal(nodes['#current-factor-title'].textContent, '현재 위험 신호 설명');
   assert.equal(nodes['#future-factor-title'].textContent, '미래 당뇨 위험 설명');
   assert.equal(nodes['#factor-list'].ready, true);
   assert.match(nodes['#factor-list'].innerHTML, /걷기 시간/);
-  assert.match(nodes['#factor-list'].innerHTML, /class="xai-factor-direction is-positive">긍정 요인 · 당뇨 위험을 낮춘 방향<\/span>/);
+  assert.match(nodes['#factor-list'].innerHTML, /입력: 20분 &lt;확인&gt;/);
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /<details|SHAP 기여도 상세보기/);
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, /당뇨 위험을 낮춘 방향|<details[^>]* open/);
+  assert.match(nodes['#factor-list'].innerHTML, /class="xai-factor-direction is-positive">점수를 낮춘 요인<\/span>/);
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /(?:참고 요인|바꿀 수 있는 요인|xai-factor-modifier)/);
   assert.doesNotMatch(nodes['#factor-list'].innerHTML, /[↑↓] (?:주의|긍정) 요인/);
   render({ ...approvedFactors, display_allowed: false }, { approved: true });
@@ -139,7 +144,7 @@ test('XAI explanation cards show only approved returned factors with safe labels
   assert.equal(nodes['#current-factor-title'].textContent, '현재 건강 신호 XAI 연결 대기');
   assert.equal(nodes['#factor-list'].ready, false);
 });
-test('XAI replaces an opposite-direction duplicate with the next future factor', () => {
+test('XAI preserves opposite directions across models with different references', () => {
   const nodes = {
     '#current-factor-list': { innerHTML: '', closest: () => ({ classList: { toggle() {} } }) },
     '#factor-list': { innerHTML: '', closest: () => ({ classList: { toggle() {} } }) },
@@ -147,7 +152,7 @@ test('XAI replaces an opposite-direction duplicate with the next future factor',
     '#future-factor-title': { textContent: '' },
   };
   const state = { currentScreeningPrediction: { screening_signal_detected: true }, prediction: { risk_category: 'high' } };
-  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'renderXaiExplanationLists'], {
+  const context = loadMany(['normalizeRiskKey', 'factorDirectionLabel', 'factorModifiableLabel', 'factorIdentity', 'renderFactorItems', 'selectXaiFactors', 'formatModelNumber', 'renderModelAnalysisDetails', 'renderShapGraph', 'renderXaiExplanationLists'], {
     state,
     $: selector => nodes[selector] || null,
     escapeHtml: value => String(value),
@@ -164,10 +169,10 @@ test('XAI replaces an opposite-direction duplicate with the next future factor',
     { display_name: '운동시간', direction: 'decrease', contribution: -.2 },
   ] };
   context.renderXaiExplanationLists(future, { approved: true, currentFactors: current, currentApproved: true });
-  assert.doesNotMatch(nodes['#factor-list'].innerHTML, />BMI</);
+  assert.match(nodes['#factor-list'].innerHTML, />BMI</);
   assert.match(nodes['#factor-list'].innerHTML, />연령</);
   assert.match(nodes['#factor-list'].innerHTML, />가구소득</);
-  assert.match(nodes['#factor-list'].innerHTML, />운동시간</);
+  assert.doesNotMatch(nodes['#factor-list'].innerHTML, />운동시간</);
 });
 test('XAI picks directional 2+1 without padding and hides unknown result states', () => {
   const context = loadMany(['factorDirectionLabel', 'selectXaiFactors']);
@@ -208,4 +213,19 @@ test('unapproved model outputs cannot create a public conflict explanation', () 
   const result = context.modelComparisonGuidance(research, research);
   assert.equal(result.code, 'MODEL_RESULT_NOT_PUBLIC');
   assert.equal(result.display, false);
+});
+
+
+test('missing or unapproved prediction clears numerical details without leaking cached values', () => {
+  const nodes = {'#current-model-details': {hidden:false,open:true}, '#current-model-numbers':{innerHTML:'old numbers'}};
+  const context = loadMany(['formatModelNumber','renderModelAnalysisDetails'], {
+    $: key => nodes[key], escapeHtml: String,
+    isPublicRiskDisplayAllowed: value => value.result_status === 'approved',
+  });
+  context.renderModelAnalysisDetails('current', null);
+  assert.equal(nodes['#current-model-details'].hidden, true);
+  assert.equal(nodes['#current-model-details'].open, false);
+  assert.equal(nodes['#current-model-numbers'].innerHTML, '');
+  context.renderModelAnalysisDetails('current', {result_status:'development_only',model_analysis:{status:'available',model_score:.2,decision_threshold:.1,score_minus_threshold:.1}});
+  assert.equal(nodes['#current-model-details'].hidden, true);
 });

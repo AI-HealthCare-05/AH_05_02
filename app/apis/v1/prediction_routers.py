@@ -17,6 +17,7 @@ from app.prediction.contracts import ACTIVE_MODEL, CURRENT_SCREENING_MODEL, CURR
 from app.prediction.errors import ModelNotReadyError, classify_ml_input_error
 from app.repositories.health_repository import HealthRepository
 from app.services.ai_jobs import create_prediction_job, get_prediction_job
+from app.services.xai_presentation import input_label, model_analysis_payload, shap_graph_payload
 
 prediction_router = APIRouter(tags=["Prediction"])
 
@@ -216,6 +217,7 @@ def prediction_payload(item: Prediction) -> dict[str, object]:
         ),
         "age_risk_forecast": item.age_risk_forecast if public_result_available or local_preview_available else None,
         "raw_probability_exposed": False,
+        "model_analysis": model_analysis_payload(item, approved=public_result_available),
     }
 
 
@@ -378,6 +380,10 @@ async def read_risk_factors(
             }
         )
     contributions = {factor["feature"]: factor["contribution"] for factor in explanation["items"]}
+    repository = HealthRepository()
+    checkup = await repository.get_checkup(item.health_checkup_id, user.id)
+    screening_id = (job.request_payload or {}).get("current_screening_input_id")
+    screening = await repository.get_current_screening_input(screening_id, user.id) if screening_id else None
     return envelope(
         {
             "prediction_id": item.id,
@@ -391,15 +397,25 @@ async def read_risk_factors(
             "reference_value": explanation["reference_value"],
             "selection_policy": explanation["selection_policy"],
             "selection_status": explanation["selection_status"],
+            "baseline_label": explanation.get("baseline_label") or (
+                "학습 자료에 기록된 트리 분포 기준"
+                if explanation["method"] == "treeshap_tree_path_dependent_v1"
+                else "입력 정보가 비어 있는 상태 기준 (이전 계산 방식)"
+                if explanation["method"] == "exact_grouped_shap_missing_reference_v1"
+                else "모델의 저장된 비교 기준"
+            ),
+            "reference_version": explanation.get("reference_version"),
+            "shap_graph": shap_graph_payload(explanation),
             "items": [
                 {
                     "factor_name": factor.factor_name,
                     "display_name": factor.display_name,
                     "direction": factor.impact_direction,
+                    "input_value_label": input_label(factor.factor_name, checkup, screening),
                     "contribution": contributions.get(factor.factor_name),
                     "absolute_contribution": factor.importance_score,
                     "modifiable": factor.is_modifiable,
-                    "message": factor.message,
+                    "message": "비교 기준에 따른 모델의 계산 결과이며, 건강습관 변경의 효과를 뜻하지 않습니다.",
                     "display_order": factor.display_order,
                 }
                 for factor in factors

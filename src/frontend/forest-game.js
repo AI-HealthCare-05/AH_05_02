@@ -1362,28 +1362,11 @@
     fillPixelRect(327, 444, 9, 8, "#4d9a54");
   }
 
-  function drawVehicle() {
-    const x = 470;
-    const y = 376;
-    fillPixelRect(x - 21, y + 18, 46, 6, "rgba(31,57,45,.2)");
-    fillPixelRect(x - 19, y + 7, 15, 15, "#1f3434");
-    fillPixelRect(x + 9, y + 7, 15, 15, "#1f3434");
-    fillPixelRect(x - 15, y + 11, 7, 7, "#a9c7c2");
-    fillPixelRect(x + 13, y + 11, 7, 7, "#a9c7c2");
-    fillPixelRect(x - 11, y - 1, 28, 10, "#c84e30");
-    fillPixelRect(x - 3, y - 10, 18, 11, "#f58e38");
-    fillPixelRect(x, y - 8, 11, 4, "#ffbd5f");
-    fillPixelRect(x + 13, y - 12, 4, 14, "#384e4b");
-    fillPixelRect(x + 9, y - 13, 13, 4, "#384e4b");
-    fillPixelRect(x + 19, y - 15, 5, 5, "#ffdf78");
-  }
-
   function drawMap() {
     const sceneImage = sceneImages[currentScene];
     if (sceneImage?.complete && sceneImage.naturalWidth) {
       context.drawImage(sceneImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
       if (currentScene === "world") {
-        drawVehicle();
         drawPlacedObjects();
       }
       if (currentScene === "home") drawHomeRecordPlayer();
@@ -1413,7 +1396,6 @@
     for (let x = 0; x < WORLD_WIDTH; x += 96) { drawTree(x, 0, .85); drawTree(x + 30, 445, .75); }
     for (let y = 70; y < 420; y += 100) { drawTree(4, y, .72); drawTree(725, y, .72); }
     [[275, 302, "#fff0a1"], [458, 284, "#ff9db0"], [690, 292, "#bba4ff"], [106, 285, "#fff0a1"]].forEach(([x, y, color]) => drawFlower(x, y, color));
-    drawVehicle();
     drawPlacedObjects();
   }
 
@@ -1907,18 +1889,30 @@
     projectMapLabels();
   }
 
+  function fallbackViewport() {
+    const bounds = canvas.getBoundingClientRect();
+    const scale = Math.max(bounds.width / WORLD_WIDTH, bounds.height / WORLD_HEIGHT);
+    return { bounds, scale, offsetX: (bounds.width - WORLD_WIDTH * scale) / 2,
+      offsetY: (bounds.height - WORLD_HEIGHT * scale) / 2 };
+  }
+
+  function fallbackWorldToScreen(x, y) {
+    const { bounds, scale, offsetX, offsetY } = fallbackViewport();
+    return { x: (x * scale + offsetX) / bounds.width, y: (y * scale + offsetY) / bounds.height };
+  }
+
   function projectMapLabels() {
     [[".home-label", 205, 62], [".garden-label", 610, 62]].forEach(([selector, x, y]) => {
       const label = $(selector);
       if (!label?.style) return;
-      const point = window.ForestCamera?.worldToScreen(x, y) || { x: x / WORLD_WIDTH, y: y / WORLD_HEIGHT };
+      const point = window.ForestCamera?.worldToScreen(x, y) || fallbackWorldToScreen(x, y);
       label.hidden = currentScene !== "world" || point.x < .03 || point.x > .97 || point.y < .03 || point.y > .94;
       label.style.left = `${point.x * 100}%`;
       label.style.top = `${point.y * 100}%`;
     });
     const nickname = $("#avatar-nameplate");
     if (!nickname) return;
-    const anchor = window.ForestCamera?.avatarAnchor() || { x: state.avatar.x / WORLD_WIDTH, y: (state.avatar.y - 74) / WORLD_HEIGHT, name: state.avatar.name };
+    const anchor = window.ForestCamera?.avatarAnchor() || { ...fallbackWorldToScreen(state.avatar.x, state.avatar.y - 74), name: state.avatar.name };
     nickname.textContent = anchor.name || state.avatar.name;
     nickname.hidden = !nickname.textContent || anchor.x < 0 || anchor.x > 1 || anchor.y < 0 || anchor.y > 1;
     nickname.style.left = `${anchor.x * 100}%`;
@@ -3265,6 +3259,22 @@
   });
 
   $("#open-avatar-studio").addEventListener("click", openAvatarStudio);
+  $("#avatar-open-presets").addEventListener("click", () => {
+    $("#avatar-studio").close();
+    renderInventoryDialog("wardrobe");
+    $("#inventory-dialog").showModal();
+  });
+  $("#avatar-reset-face").addEventListener("click", () => {
+    avatarDraftHistory.push({ ...avatarDraft });
+    Object.assign(avatarDraft, {
+      lpcHead: avatarDraft.bodyType === "female" ? "human_female" : "human_male",
+      lpcExpression: "neutral", lpcEyebrow: "thin", lpcNose: "button",
+      lpcEyes: "none", lpcWrinkles: "none",
+    });
+    avatarPreviewPose = "idle";
+    avatarPreviewFrame = 0;
+    renderAvatarStudio();
+  });
   $("#avatar-studio-close").addEventListener("click", () => $("#avatar-studio").close());
   $("#avatar-studio").addEventListener("click", (event) => {
     if (event.target === $("#avatar-studio")) $("#avatar-studio").close();
@@ -3272,7 +3282,6 @@
   $("#avatar-studio").addEventListener("close", () => {
     musicEngine?.switchTo(sceneMusicName()).catch(() => setStatus("장면 음악을 다시 재생하지 못했습니다."));
   });
-  $("#open-profile").addEventListener("click", () => { window.location.href = window.ForestProfile.PROFILE_URL; });
   $("#avatar-category-nav").addEventListener("click", (event) => {
     const button = event.target.closest("[data-avatar-category]");
     if (!button) return;
@@ -3339,7 +3348,7 @@
     state.avatar.gender = avatarDraft.bodyType === "female" ? "female" : "male";
     avatarDraft.lpcHead = avatarDraft.bodyType === "female" ? "human_female" : "human_male";
     [
-      "skin", "lpcHead", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcEyes", "lpcWrinkles",
+      "skin", "lpcHead", "lpcExpression", "lpcEyebrow", "lpcNose", "lpcWrinkles",
       "lpcHair", "hairColor", "lpcHat", "lpcGlasses", "lpcArms", "lpcOutfit", "outfitColor",
       "lpcBottom", "bottomColor", "lpcShoes", "shoeColor", "lpcTool", "lpcWeapon",
       "aura", "effect", "vehicle", "pet", "petAccessory", "speech",
@@ -3347,6 +3356,9 @@
       const choices = avatarItemsForCategory(slot);
       if (choices.length) avatarDraft[slot] = choices[Math.floor(Math.random() * choices.length)].id;
     });
+    // Fantasy eye overlays replace the normal eyes. Keep random outfits readable;
+    // users can still select these explicitly in the face collection.
+    avatarDraft.lpcEyes = "none";
     renderAvatarStudio();
   });
   $("#avatar-strip-basics").addEventListener("click", () => {
@@ -3361,11 +3373,9 @@
     renderAvatarStudio();
   });
   $("#avatar-restore-outfit").addEventListener("click", () => {
-    const latest = state.outfitHistory[0];
-    if (!latest) { setStatus("저장된 내 코디가 없습니다."); return; }
     avatarDraftHistory.push({ ...avatarDraft });
-    avatarDraft = { ...defaultCosmetics, ...latest.cosmetics };
-    avatarTuningDraft = { ...defaultAvatarTuning, ...latest.tuning };
+    avatarDraft = { ...defaultCosmetics, ...state.avatar.cosmetics };
+    avatarTuningDraft = { ...defaultAvatarTuning, ...state.avatar.tuning };
     renderAvatarStudio();
   });
   $("#avatar-studio-save").addEventListener("click", async () => {
@@ -3477,9 +3487,9 @@
   }
 
   canvas.addEventListener("click", async (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) * WORLD_WIDTH / bounds.width;
-    const y = (event.clientY - bounds.top) * WORLD_HEIGHT / bounds.height;
+    const { bounds, scale, offsetX, offsetY } = fallbackViewport();
+    const x = (event.clientX - bounds.left - offsetX) / scale;
+    const y = (event.clientY - bounds.top - offsetY) / scale;
     await handleWorldPointer(x, y);
   });
   window.addEventListener("forest-world-pointer", async (event) => {
@@ -3622,6 +3632,7 @@
   // forest-profile.js가 계정 이름을 읽어올 때 쓰는 것과 같은 리프레시 방식으로 토큰을 받는다.
   async function fetchWisdomAuthToken() {
     try {
+      if (window.GandangAuthSession) return (await window.GandangAuthSession.resolve()).token;
       const response = await fetch("/api/v1/auth/token/refresh", { credentials: "same-origin", cache: "no-store" });
       if (!response.ok) return null;
       const payload = await response.json();
@@ -3899,6 +3910,9 @@
     event.preventDefault(); moveAvatar(direction);
   });
   document.querySelectorAll("[data-move]").forEach((button) => button.addEventListener("pointerdown", (event) => { event.preventDefault(); moveAvatar(button.dataset.move); }));
+  window.addEventListener("forest-joystick-step", event => {
+    if (!document.querySelector("dialog[open]") && !placementCode) moveAvatar(event.detail.direction);
+  });
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
     const action = button.dataset.action;
     if (action === "interact") interact();

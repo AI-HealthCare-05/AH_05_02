@@ -8,7 +8,8 @@ const frontend = path.join(__dirname, '../src/frontend');
 const source = fs.readFileSync(path.join(frontend, 'suin/app.js'), 'utf8');
 const html = fs.readFileSync(path.join(frontend, 'suin/index.html'), 'utf8');
 const css = fs.readFileSync(path.join(frontend, 'suin/styles.css'), 'utf8');
-const gate = source.slice(source.indexOf('const returningToForest ='), source.indexOf('function setFormBusy'));
+const currentSource = fs.readFileSync(path.join(frontend, 'app.js'), 'utf8');
+const gate = currentSource.slice(currentSource.indexOf('const returningToForest ='), currentSource.indexOf('function setFormBusy'));
 
 function flow(search = '?returnTo=forest-challenges', failure) {
   const requests = [], destinations = [], screens = [], messages = [];
@@ -76,7 +77,7 @@ test('fresh server safety denial or service outage remains visible and cannot re
 test('isolated upstream frontend keeps assets local and contains no embedded map key', () => {
   const all = [html, source, css].join('\n');
   assert.doesNotMatch(all, /appkey=|KAKAO[_A-Z]*\s*=\s*["'][a-z0-9]{16}/i);
-  assert.doesNotMatch(all, /\/static\/(?!suin\/)/);
+  assert.match(html, /window.location.replace\("\/static\/index.html"/);
   const matches = [...all.matchAll(/\/static\/suin\/assets\/([^"'`\s)<]+)/g)];
   assert.ok(matches.length > 20);
   for (const match of matches) {
@@ -102,6 +103,6 @@ test('account route disables preview fixtures and uses the current backend profi
 test('separate same-origin service route preserves the original main page', () => {
   const main = fs.readFileSync(path.join(__dirname, '../app/main.py'), 'utf8');
   assert.match(main, /@app\.get\("\/service", include_in_schema=False\)/);
-  assert.match(main, /FileResponse\(FRONTEND_DIR \/ "suin" \/ "index\.html"\)/);
-  assert.match(main, /async def home\(\) -> FileResponse:\s+return FileResponse\(FRONTEND_DIR \/ "index\.html"\)/);
+  assert.match(main, /FileResponse\(FRONTEND_DIR \/ "index\.html"\)/);
+  assert.match(main, /async def home\(request: Request\)/);
 });

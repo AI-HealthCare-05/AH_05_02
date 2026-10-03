@@ -1,8 +1,13 @@
 "use strict";
 
 const CACHE_PREFIX = "gandang-carrot-forest-pwa-";
-const CACHE_NAME = "gandang-carrot-forest-pwa-v181-wisdom-lp";
+const CACHE_NAME = "gandang-carrot-forest-pwa-v183-navigation-session";
 const CORE_SHELL = [
+  "/static/auth-session.js?v=20261003-navigation-session-v1",
+  "/static/forest-joystick.js",
+  "/static/forest-ingame-hud.js",
+  "/static/navigation.css",
+  "/static/forest-access.js?v=20261003-navigation-session-v1",
   "/forest",
   "/manifest.webmanifest",
   "/static/forest-game.css?v=20260921-wisdom-lp-v1",
@@ -21,9 +26,9 @@ const CORE_SHELL = [
   "/static/forest-memories.js?v=20260917-1",
   "/static/forest-garden.js?v=20260908-1",
   "/static/forest-phaser.js?v=20260921-wisdom-lp-v1",
-  "/static/forest-profile.js?v=20260907-1",
-  "/static/forest-game.js?v=20260921-wisdom-lp-v1",
-  "/static/challenge-v2.js?v=2.1.10",
+  "/static/forest-profile.js?v=20261003-navigation-session-v1",
+  "/static/forest-game.js?v=20261003-navigation-session-v1",
+  "/static/challenge-v2.js?v=2.1.11",
   "/static/challenge-v2.css?v=2.1.3",
   "/static/suin/design-tokens.css?v=20260908-1",
   "/static/icons/forest-icon-192.png",

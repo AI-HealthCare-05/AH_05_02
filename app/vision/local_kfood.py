@@ -12,7 +12,15 @@ import numpy as np
 from PIL import Image
 
 from app.core import config
-from app.vision.food_vision import FoodVisionError, FoodVisionResult
+from app.vision.food_vision import FoodVisionError, FoodVisionResult, FoodVisionRuntimeError
+
+
+def runtime_load_error(exc: Exception) -> FoodVisionRuntimeError:
+    if isinstance(exc, OSError) and getattr(exc, "winerror", None) in {4551, 577}:
+        return FoodVisionRuntimeError("runtime_security_blocked")
+    if isinstance(exc, ImportError):
+        return FoodVisionRuntimeError("runtime_dependency_missing")
+    return FoodVisionRuntimeError("runtime_load_failed")
 
 
 def _verify_file(path: Path, expected_sha256: str, label: str) -> None:
@@ -92,7 +100,7 @@ class LocalKFoodVisionProvider:
             interpreter = Interpreter(model_path=str(self._segmenter_path))
             interpreter.allocate_tensors()
         except (ImportError, OSError, RuntimeError, KeyError, ValueError) as exc:
-            raise FoodVisionError("로컬 음식 모델을 불러오지 못했습니다.") from exc
+            raise runtime_load_error(exc) from exc
         self._classifier, self._interpreter = classifier, interpreter
         return classifier, interpreter
 
