@@ -397,7 +397,8 @@ async def read_risk_factors(
             "reference_value": explanation["reference_value"],
             "selection_policy": explanation["selection_policy"],
             "selection_status": explanation["selection_status"],
-            "baseline_label": explanation.get("baseline_label") or (
+            "baseline_label": explanation.get("baseline_label")
+            or (
                 "학습 자료에 기록된 트리 분포 기준"
                 if explanation["method"] == "treeshap_tree_path_dependent_v1"
                 else "입력 정보가 비어 있는 상태 기준 (이전 계산 방식)"

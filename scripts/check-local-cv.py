@@ -1,4 +1,5 @@
 """Run trusted CV artifacts against repository demo images, without user data."""
+
 import asyncio
 import json
 import os
@@ -13,6 +14,7 @@ os.chdir(ROOT)
 
 async def main():
     from dotenv import load_dotenv
+
     load_dotenv(ROOT / ".env.local-mobile")
     # This smoke check always stays local, irrespective of server VLM settings.
     os.environ["OPENAI_VLM_FALLBACK_ENABLED"] = "false"
@@ -29,7 +31,11 @@ async def main():
         assert result.decision_status in {"valid", "invalid_food_ratio", "invalid_vegetable_ratio", "uncertain"}
         assert 0 <= result.food_coverage_percent <= 100
         assert 0 <= result.vegetable_ratio_percent <= 100
-        expected = {"vegetable-meal-1.png": "valid", "vegetable-meal-low-veg.png": "invalid_vegetable_ratio", "irrelevant-desk.png": "invalid_food_ratio"}
+        expected = {
+            "vegetable-meal-1.png": "valid",
+            "vegetable-meal-low-veg.png": "invalid_vegetable_ratio",
+            "irrelevant-desk.png": "invalid_food_ratio",
+        }
         assert result.decision_status == expected[name], f"Unexpected decision for {name}"
         results.append({"image": name, **asdict(result)})
         print(f"OK {name}: provider={result.provider_kind}, decision={result.decision_status}")

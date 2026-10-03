@@ -1,4 +1,5 @@
 """Load a checksum-bound, Train-only reference without exposing training rows."""
+
 import hashlib
 import json
 from functools import lru_cache
@@ -13,9 +14,12 @@ DEFAULT_MANIFEST = ROOT / "models/registry/xai/today-train-reference-v2.json"
 @lru_cache(maxsize=4)
 def load_today_background(model_version, model_digest, manifest_path=DEFAULT_MANIFEST):
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-    if (manifest["model_version"] != model_version or manifest["model_artifact_sha256"] != model_digest
-            or manifest.get("train_only") is not True
-            or set(manifest["train_years"]) & set(manifest["excluded_years"])):
+    if (
+        manifest["model_version"] != model_version
+        or manifest["model_artifact_sha256"] != model_digest
+        or manifest.get("train_only") is not True
+        or set(manifest["train_years"]) & set(manifest["excluded_years"])
+    ):
         raise ValueError("Reference/model/split contract mismatch")
     artifact = (ROOT / manifest["artifact_local_path"]).resolve()
     if not artifact.is_relative_to(ROOT / "models/artifacts"):
@@ -33,6 +37,9 @@ def explain_today_with_reference(frame, score_batch, *, model_version, model_dig
 
     background, manifest = load_today_background(model_version, model_digest)
     result = explain_today(frame, score_batch, model_version=model_version, elevated=elevated, background=background)
-    result.update(reference_version=manifest["reference_version"], reference_sha256=manifest["artifact_sha256"],
-                  baseline_label=manifest["baseline_label"])
+    result.update(
+        reference_version=manifest["reference_version"],
+        reference_sha256=manifest["artifact_sha256"],
+        baseline_label=manifest["baseline_label"],
+    )
     return result

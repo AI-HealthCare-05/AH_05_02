@@ -2,6 +2,7 @@
 
 Dry-run by default. --apply backs up SQLite first; predictions and inputs stay intact.
 """
+
 import argparse
 import json
 import os
@@ -17,10 +18,11 @@ sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 os.environ.update({k: v for k, v in dotenv_values(ROOT / ".env.local-mobile").items() if v is not None})
 
-from app.services.ai_jobs import _release_demo_explanation
-
 
 def main():
+    # Import configuration only after the local environment has been loaded.
+    from app.services.ai_jobs import _release_demo_explanation
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
@@ -42,10 +44,14 @@ def main():
             if explanation.get("selection_status") != "insufficient_directional_factors":
                 continue
             released = _release_demo_explanation(explanation, operational=True)
-            if released["display_allowed"] and all(
-                {"feature", "display_name", "direction", "contribution", "message"} <= item.keys()
-                for item in released["items"]
-            ) and released.get("explanation_version"):
+            if (
+                released["display_allowed"]
+                and all(
+                    {"feature", "display_name", "direction", "contribution", "message"} <= item.keys()
+                    for item in released["items"]
+                )
+                and released.get("explanation_version")
+            ):
                 result["explanation"] = released
                 repairs.append((prediction_id, job_id, result))
         print(f"Verified local Today explanations eligible for repair: {len(repairs)}")
@@ -59,17 +65,32 @@ def main():
             for prediction_id, job_id, result in repairs:
                 explanation = result["explanation"]
                 for order, item in enumerate(explanation["items"], 1):
-                    con.execute("""INSERT INTO risk_factors
+                    con.execute(
+                        """INSERT INTO risk_factors
                         (prediction_id,factor_name,display_name,impact_direction,importance_score,
                          display_order,is_modifiable,message,explanation_version,created_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?)""", (
-                        prediction_id, item["feature"], item["display_name"], item["direction"],
-                        abs(item["contribution"]), order, item.get("modifiable") is True, item["message"],
-                        explanation["explanation_version"], datetime.now(UTC).isoformat(),
-                    ))
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            prediction_id,
+                            item["feature"],
+                            item["display_name"],
+                            item["direction"],
+                            abs(item["contribution"]),
+                            order,
+                            item.get("modifiable") is True,
+                            item["message"],
+                            explanation["explanation_version"],
+                            datetime.now(UTC).isoformat(),
+                        ),
+                    )
                 con.execute("UPDATE predictions SET explanation_status='approved' WHERE id=?", (prediction_id,))
-                con.execute("UPDATE prediction_jobs SET result=? WHERE job_id=?", (json.dumps(result, ensure_ascii=False), job_id))
-        print(f"Repaired {len(repairs)} explanations; original predictions and inputs preserved. Backup saved under outputs/mobile.")
+                con.execute(
+                    "UPDATE prediction_jobs SET result=? WHERE job_id=?",
+                    (json.dumps(result, ensure_ascii=False), job_id),
+                )
+        print(
+            f"Repaired {len(repairs)} explanations; original predictions and inputs preserved. Backup saved under outputs/mobile."
+        )
     finally:
         con.close()
 

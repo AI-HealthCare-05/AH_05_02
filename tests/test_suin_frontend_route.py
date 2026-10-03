@@ -40,8 +40,8 @@ class SuinFrontendRouteTests(unittest.IsolatedAsyncioTestCase):
             response = await client.get("/service?returnTo=forest-challenges")
             self.assertEqual(response.status_code, 200)
             self.assertIn('id="login-form"', response.text)
-            self.assertIn('/static/app.js', response.text)
-            self.assertNotIn('/static/suin/app.js', response.text)
+            self.assertIn("/static/app.js", response.text)
+            self.assertNotIn("/static/suin/app.js", response.text)
             self.assertIn("no-store", response.headers["cache-control"])
             for resource in ("app.js", "styles.css", "assets/hyeoldangi-consent.png"):
                 asset = await client.get(f"/static/suin/{resource}")

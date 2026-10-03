@@ -273,11 +273,24 @@ def test_approved_caution_prediction_uses_v56_public_moderate_category() -> None
 @pytest.mark.parametrize("diagnosed, urgent", [(False, False), (True, False), (False, True)])
 def test_eligibility_payload_restores_saved_answers(diagnosed: bool, urgent: bool) -> None:
     reasons = (["DIAGNOSED_DIABETES"] if diagnosed else []) + (["URGENT_MEDICAL_ATTENTION"] if urgent else [])
-    item = SimpleNamespace(id=9, age=51, has_diabetes_diagnosis=diagnosed,
-        has_urgent_warning_sign=urgent, population_in_scope=True, reason_codes=reasons,
-        service_eligible=not reasons, model_eligible=not reasons, target_segment="test",
-        next_action="test", model_key="test", model_version="test", feature_schema_version="test",
-        threshold_version="test", safety_copy_version="test", created_at=datetime.now(UTC))
+    item = SimpleNamespace(
+        id=9,
+        age=51,
+        has_diabetes_diagnosis=diagnosed,
+        has_urgent_warning_sign=urgent,
+        population_in_scope=True,
+        reason_codes=reasons,
+        service_eligible=not reasons,
+        model_eligible=not reasons,
+        target_segment="test",
+        next_action="test",
+        model_key="test",
+        model_version="test",
+        feature_schema_version="test",
+        threshold_version="test",
+        safety_copy_version="test",
+        created_at=datetime.now(UTC),
+    )
     payload = eligibility_payload(item)
     assert payload["has_diabetes_diagnosis"] is diagnosed
     assert payload["has_urgent_warning_sign"] is urgent

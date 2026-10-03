@@ -50,7 +50,7 @@ def test_pixel_game_exposes_required_map_movement_and_group_progress() -> None:
     for key in ("ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", 'w: "up"', 'a: "left"'):
         assert key in script
     assert 'id="forest-joystick"' in html
-    assert 'data-speed=' not in html
+    assert "data-speed=" not in html
     assert 'width="1536" height="1024"' in html
     assert "image-rendering:pixelated" in (ROOT / "src/frontend/forest-game.css").read_text(encoding="utf-8")
 

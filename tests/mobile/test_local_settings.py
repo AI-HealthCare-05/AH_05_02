@@ -1,7 +1,9 @@
 import importlib.util
 from pathlib import Path
 
-spec = importlib.util.spec_from_file_location("mobile_setup", Path(__file__).resolve().parents[2] / "scripts/setup-local-mobile.py")
+spec = importlib.util.spec_from_file_location(
+    "mobile_setup", Path(__file__).resolve().parents[2] / "scripts/setup-local-mobile.py"
+)
 setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
 

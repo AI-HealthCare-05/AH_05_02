@@ -1,4 +1,5 @@
 """Create independent local settings without copying a user's database or secrets."""
+
 import secrets
 from pathlib import Path
 

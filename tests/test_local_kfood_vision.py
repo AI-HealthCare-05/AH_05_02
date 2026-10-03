@@ -242,13 +242,17 @@ def test_vlm_runtime_failure_notice_is_cause_specific(
     assert "로컬 모델 결과만 사용" in notice
 
 
-@pytest.mark.parametrize("kind,reason", [
-    ("blocked", "runtime_security_blocked"),
-    ("missing", "runtime_dependency_missing"),
-    ("other", "runtime_load_failed"),
-])
+@pytest.mark.parametrize(
+    "kind,reason",
+    [
+        ("blocked", "runtime_security_blocked"),
+        ("missing", "runtime_dependency_missing"),
+        ("other", "runtime_load_failed"),
+    ],
+)
 def test_runtime_load_errors_have_safe_diagnostic_codes(kind, reason):
     from app.vision.local_kfood import runtime_load_error
+
     if kind == "blocked":
         error = OSError("private DLL path")
         error.winerror = 4551

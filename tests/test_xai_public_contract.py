@@ -50,9 +50,13 @@ def test_verified_short_selection_is_displayed_without_inventing_factors(monkeyp
     assert released["status"] == "approved" and released["display_allowed"] is True
     assert released["items"] == explanation["items"]
     assert released["selection_status"] == "insufficient_directional_factors"
-    for overrides in [dict(items=[]), dict(additivity_verified=False), dict(shap_claimed=False),
-                      dict(items=[dict(direction="increase", contribution=float("nan"))]),
-                      dict(items=[dict(direction="decrease", contribution=0.1)])]:
+    for overrides in [
+        dict(items=[]),
+        dict(additivity_verified=False),
+        dict(shap_claimed=False),
+        dict(items=[dict(direction="increase", contribution=float("nan"))]),
+        dict(items=[dict(direction="decrease", contribution=0.1)]),
+    ]:
         assert release(_explanation(**overrides), operational=True)["display_allowed"] is False
     assert release(explanation, operational=False)["display_allowed"] is False
     monkeypatch.setattr(module.config, "XAI_DISPLAY_ALLOWED", False)
@@ -80,12 +84,16 @@ async def test_public_risk_factor_endpoint_returns_persisted_approved_contract(m
     )
     monkeypatch.setattr(prediction_routers.HealthRepository, "get_prediction", AsyncMock(return_value=prediction))
     monkeypatch.setattr(prediction_routers.HealthRepository, "risk_factors", AsyncMock(return_value=[factor]))
-    monkeypatch.setattr(prediction_routers.HealthRepository, "get_checkup", AsyncMock(return_value=SimpleNamespace(bmi=24.5)))
+    monkeypatch.setattr(
+        prediction_routers.HealthRepository, "get_checkup", AsyncMock(return_value=SimpleNamespace(bmi=24.5))
+    )
     monkeypatch.setattr(
         prediction_routers.PredictionJob,
         "get_or_none",
         AsyncMock(
-            return_value=SimpleNamespace(request_payload={}, result={"explanation": _explanation(status="approved", display_allowed=True)})
+            return_value=SimpleNamespace(
+                request_payload={}, result={"explanation": _explanation(status="approved", display_allowed=True)}
+            )
         ),
     )
     response = await prediction_routers.read_risk_factors(91, SimpleNamespace(id=7))

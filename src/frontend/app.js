@@ -3220,7 +3220,6 @@ function renderModelAnalysisDetails(prefix, prediction = {}) {
     ["선별 기준점", formatModelNumber(analysis.decision_threshold)],
     ["기준점과의 차이", formatModelNumber(analysis.score_minus_threshold, true)],
     ["분석 기준일", prediction.input_as_of_date || "제공되지 않음"],
-    ["모델 버전", prediction.model_version || "제공되지 않음"],
   ].map(([label,value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl><p>저장된 건강정보를 분석한 모델 점수입니다. 선별 기준점과 비교하며 확정 발병 확률이나 진단 결과가 아닙니다.</p>` : "";
 }
 

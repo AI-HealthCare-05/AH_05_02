@@ -99,16 +99,7 @@ def _result(values, *, reference, score, method, baseline, model_version, elevat
     }
 
 
-def explain_today(frame, score_batch, *, model_version, elevated, background=None):
-    """Exact grouped Shapley values over all input-group coalitions.
-
-    Production uses a fixed Train-only empirical reference. Omitting background
-    retains the legacy all-missing reference for research comparisons only.
-    Related measurements form one player. Every coalition passes through the
-    complete frozen pipeline without refitting preprocessing or models.
-    """
-    if len(frame) != 1 or len(frame.columns) > 14:
-        raise ValueError("Today requires one row with at most fourteen features")
+def _today_groups(frame):
     dependent_groups = {
         "body_measurements": ("height_cm", "weight_kg", "waist_cm", "bmi"),
         "blood_pressure": ("systolic_bp", "diastolic_bp"),
@@ -120,15 +111,57 @@ def explain_today(frame, score_batch, *, model_version, elevated, background=Non
         present = [feature for feature in features if feature in frame]
         if present:
             groups[group_name] = present
+    return groups
+
+
+def _validate_today_reference(frame, background):
+    if list(background.columns) != list(frame.columns) or not 1 <= len(background) <= 256:
+        raise ValueError("Invalid Train reference shape")
+    if np.isinf(background.to_numpy(dtype=float)).any() or background.isna().all(axis=1).any():
+        raise ValueError("Invalid Train reference values")
+
+
+def _today_reference_scores(frame, score_batch, background, groups, names):
+    n = len(names)
+    # Each masked group is replaced by the same real reference person's group.
+    # Chunk coalitions to bound memory; keep the complete frozen model intact.
+    averages = []
+    reference_values = background.to_numpy(dtype=float)
+    input_values = frame.to_numpy(dtype=float)[0]
+    positions = {name: [frame.columns.get_loc(c) for c in columns] for name, columns in groups.items()}
+    for start in range(0, 1 << n, 32):
+        batches = []
+        for mask in range(start, min(start + 32, 1 << n)):
+            candidates = reference_values.copy()
+            for j, name in enumerate(names):
+                if mask & (1 << j):
+                    candidates[:, positions[name]] = input_values[positions[name]]
+            batches.append(candidates)
+        batch_frame = pd.DataFrame(np.concatenate(batches, axis=0), columns=frame.columns)
+        batch_scores = np.asarray(score_batch(batch_frame), dtype=float)
+        if batch_scores.shape != (len(batches) * len(background),):
+            raise ValueError("Invalid reference coalition scores")
+        averages.extend(batch_scores.reshape(len(batches), len(background)).mean(axis=1))
+    return np.asarray(averages, dtype=float)
+
+
+def explain_today(frame, score_batch, *, model_version, elevated, background=None):
+    """Exact grouped Shapley values over all input-group coalitions.
+
+    Production uses a fixed Train-only empirical reference. Omitting background
+    retains the legacy all-missing reference for research comparisons only.
+    Related measurements form one player. Every coalition passes through the
+    complete frozen pipeline without refitting preprocessing or models.
+    """
+    if len(frame) != 1 or len(frame.columns) > 14:
+        raise ValueError("Today requires one row with at most fourteen features")
+    groups = _today_groups(frame)
     names = list(groups)
     n = len(names)
     if n > 10:
         raise ValueError("Today grouped SHAP requires at most ten independent input groups")
     if background is not None:
-        if list(background.columns) != list(frame.columns) or not 1 <= len(background) <= 256:
-            raise ValueError("Invalid Train reference shape")
-        if np.isinf(background.to_numpy(dtype=float)).any() or background.isna().all(axis=1).any():
-            raise ValueError("Invalid Train reference values")
+        _validate_today_reference(frame, background)
     rows = []
     for mask in range(1 << n):
         rows.append(
@@ -142,26 +175,7 @@ def explain_today(frame, score_batch, *, model_version, elevated, background=Non
     if background is None:
         scores = np.asarray(score_batch(pd.DataFrame(rows, columns=frame.columns)), dtype=float)
     else:
-        # Each masked group is replaced by the same real reference person's group.
-        # Chunk coalitions to bound memory; keep the complete frozen model intact.
-        averages = []
-        reference_values = background.to_numpy(dtype=float)
-        input_values = frame.to_numpy(dtype=float)[0]
-        positions = {name: [frame.columns.get_loc(c) for c in columns] for name, columns in groups.items()}
-        for start in range(0, 1 << n, 32):
-            batches = []
-            for mask in range(start, min(start + 32, 1 << n)):
-                candidates = reference_values.copy()
-                for j, name in enumerate(names):
-                    if mask & (1 << j):
-                        candidates[:, positions[name]] = input_values[positions[name]]
-                batches.append(candidates)
-            batch_frame = pd.DataFrame(np.concatenate(batches, axis=0), columns=frame.columns)
-            batch_scores = np.asarray(score_batch(batch_frame), dtype=float)
-            if batch_scores.shape != (len(batches) * len(background),):
-                raise ValueError("Invalid reference coalition scores")
-            averages.extend(batch_scores.reshape(len(batches), len(background)).mean(axis=1))
-        scores = np.asarray(averages, dtype=float)
+        scores = _today_reference_scores(frame, score_batch, background, groups, names)
     if scores.shape != (1 << n,) or not np.isfinite(scores).all():
         raise ValueError("Invalid coalition scores")
     values = {}
@@ -175,8 +189,11 @@ def explain_today(frame, score_batch, *, model_version, elevated, background=Non
         values,
         reference=scores[0],
         score=scores[-1],
-        method="exact_grouped_shap_train_reference_v2" if background is not None else "exact_grouped_shap_missing_reference_v1",
-        baseline="mean model output over the fixed Train-only representative reference; grouped replacements" if background is not None
+        method="exact_grouped_shap_train_reference_v2"
+        if background is not None
+        else "exact_grouped_shap_missing_reference_v1",
+        baseline="mean model output over the fixed Train-only representative reference; grouped replacements"
+        if background is not None
         else "all input groups missing; frozen Train-fitted preprocessing; not population average",
         model_version=model_version,
         elevated=elevated,

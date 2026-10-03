@@ -1,4 +1,5 @@
 """A bad final Drive artifact must never replace an already installed model."""
+
 import hashlib
 import importlib.util
 import json
@@ -18,20 +19,25 @@ def test_bad_last_checksum_preserves_installed_cv_models(monkeypatch, tmp_path):
     registry_dir = tmp_path / "models/registry/food_vision"
     registry_dir.mkdir(parents=True)
     digest = hashlib.sha256(b"verified").hexdigest()
-    config = {"files": [
-        {"name": "best.pt", "file_id": "classifier", "registry_section": "classifier", "digest_key": "sha256"},
-        {"name": "meta.json", "file_id": "metadata", "registry_section": "classifier", "digest_key": "meta_sha256"},
-        {"name": "1.tflite", "file_id": "bad-segmenter", "registry_section": "segmenter", "digest_key": "sha256"},
-    ]}
+    config = {
+        "files": [
+            {"name": "best.pt", "file_id": "classifier", "registry_section": "classifier", "digest_key": "sha256"},
+            {"name": "meta.json", "file_id": "metadata", "registry_section": "classifier", "digest_key": "meta_sha256"},
+            {"name": "1.tflite", "file_id": "bad-segmenter", "registry_section": "segmenter", "digest_key": "sha256"},
+        ]
+    }
     (config_dir / "google_drive_cv.json").write_text(json.dumps(config))
-    (registry_dir / "kfood-vegetable-v1.json").write_text(json.dumps({
-        "classifier": {"sha256": digest, "meta_sha256": digest}, "segmenter": {"sha256": digest}}))
+    (registry_dir / "kfood-vegetable-v1.json").write_text(
+        json.dumps({"classifier": {"sha256": digest, "meta_sha256": digest}, "segmenter": {"sha256": digest}})
+    )
     installed = tmp_path / "models/artifacts/food_vision/kfood/best.pt"
     installed.parent.mkdir(parents=True)
     installed.write_bytes(b"existing-approved-model")
     installations = []
     helpers = {
-        "download": lambda file_id, target: target.write_bytes(b"corrupt" if file_id == "bad-segmenter" else b"verified"),
+        "download": lambda file_id, target: target.write_bytes(
+            b"corrupt" if file_id == "bad-segmenter" else b"verified"
+        ),
         "sha256": lambda target: hashlib.sha256(target.read_bytes()).hexdigest(),
         "atomic_install": lambda source, target: installations.append(target),
     }

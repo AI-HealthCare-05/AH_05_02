@@ -1,4 +1,5 @@
 """Real local CV + HTTP proof flow, using only samples and an in-memory DB."""
+
 import asyncio
 import os
 import runpy
@@ -10,18 +11,22 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
+
 async def main():
     from dotenv import load_dotenv
+
     load_dotenv(ROOT / ".env.local-mobile")
     os.environ["OPENAI_API_KEY"] = ""
     os.environ["OPENAI_VLM_FALLBACK_ENABLED"] = "false"
+    from httpx import ASGITransport, AsyncClient
+    from tortoise import Tortoise
+
     from app.core import config
     from app.core.db.databases import TORTOISE_APP_MODELS
     from app.main import app
     from app.models.health import ChallengeLog, ChallengeVerification
     from app.vision.food_vision import food_vision_is_configured
-    from tortoise import Tortoise
-    from httpx import AsyncClient, ASGITransport
+
     assert not config.OPENAI_VLM_FALLBACK_ENABLED and not config.OPENAI_API_KEY
     assert config.FOOD_VISION_PROVIDER == "local_kfood" and food_vision_is_configured()
     helpers = runpy.run_path(str(ROOT / "tests/test_challenge_v3_api.py"))
@@ -33,10 +38,14 @@ async def main():
             api = SimpleNamespace(user=user, headers=headers, client=client)
             cycle = await helpers["start_cycle"](api, rotation=1)
             item = helpers["find_item"](cycle, "fiber_diet")
+
             async def submit(name, confirmed=False):
-                response = await helpers["submit_photo"](api, item, content=(ROOT / "src/frontend/assets/demo" / name).read_bytes(), confirmed=confirmed)
+                response = await helpers["submit_photo"](
+                    api, item, content=(ROOT / "src/frontend/assets/demo" / name).read_bytes(), confirmed=confirmed
+                )
                 assert response.status_code == 201, response.text
                 return response.json()["data"]
+
             for name in ("vegetable-meal-low-veg.png", "irrelevant-desk.png"):
                 result = await submit(name)
                 assert result["review_status"] == "rejected" and result["challenge_completed"] is False
@@ -56,6 +65,7 @@ async def main():
             print("PASS actual local CV: confirmation, completion, duplicate protection")
     finally:
         await Tortoise.close_connections()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

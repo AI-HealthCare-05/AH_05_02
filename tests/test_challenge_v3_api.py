@@ -630,17 +630,23 @@ def test_photo_review_parser_preserves_real_boolean_false_and_finite_confidence(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("reason,expected", [
-    ("runtime_security_blocked", "보안 설정"),
-    ("runtime_dependency_missing", "준비되지"),
-    ("runtime_load_failed", "실행하지 못"),
-])
+@pytest.mark.parametrize(
+    "reason,expected",
+    [
+        ("runtime_security_blocked", "보안 설정"),
+        ("runtime_dependency_missing", "준비되지"),
+        ("runtime_load_failed", "실행하지 못"),
+    ],
+)
 async def test_runtime_unavailable_reports_server_problem_without_proof_or_log(api, monkeypatch, reason, expected):
     from app.vision.food_vision import FoodVisionRuntimeError
+
     monkeypatch.setattr(config, "FOOD_VISION_PROVIDER", "local_kfood")
     monkeypatch.setattr(config, "OPENAI_VLM_FALLBACK_ENABLED", False)
     monkeypatch.setattr(challenges, "food_vision_is_configured", lambda: True)
-    provider = SimpleNamespace(provider_kind="local_kfood_cv", analyze=AsyncMock(side_effect=FoodVisionRuntimeError(reason)))
+    provider = SimpleNamespace(
+        provider_kind="local_kfood_cv", analyze=AsyncMock(side_effect=FoodVisionRuntimeError(reason))
+    )
     monkeypatch.setattr(challenge_proofs, "get_food_vision_provider", lambda: provider)
     cycle = await start_cycle(api, rotation=1)
     response = await submit_photo(api, find_item(cycle, "fiber_diet"))

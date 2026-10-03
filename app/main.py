@@ -79,7 +79,9 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
-_APP_ENTRY_QUERY_KEYS = frozenset({"intro", "auth", "preview", "resume", "workspace", "invite_token", "account", "returnTo"})
+_APP_ENTRY_QUERY_KEYS = frozenset(
+    {"intro", "auth", "preview", "resume", "workspace", "invite_token", "account", "returnTo"}
+)
 _RETRO_INTRO_URL = "/static/intro-retro.html?v=20260917-server-entry-v1"
 
 
