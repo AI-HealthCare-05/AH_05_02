@@ -8,7 +8,7 @@ function harness(api = async () => ({})) {
   const state = { token: 'session', capabilities: { challenge: true, currentHealth: true, futurePrediction: true } };
   const nodes = {};
   const context = vm.createContext({ state, api, $: key => nodes[key] ||= {}, getAgeFromBirth: () => 52,
-    resetEligibilityAnswers() {}, syncLifestyleAvatar() {}, showStep: step => { state.step = step; } });
+    returnToRequestedForest: () => false, resetEligibilityAnswers() {}, syncLifestyleAvatar() {}, showStep: step => { state.step = step; } });
   for (const name of ['hasHealthDataConsent', 'healthDataConsentItems', 'syncHealthConsentState', 'saveAccountSetup']) {
     const fn = source.match(new RegExp(`^(?:async )?function ${name}\\([^]*?^}`, 'm'));
     assert.ok(fn, name);
@@ -56,7 +56,7 @@ test('retry with uncertain consent read fails closed, without duplicate writes',
   recovery.profileSaved = true;
   recovery.reconcileConsent = true;
   await assert.rejects(context.saveAccountSetup(recovery), /저장 상태/);
-  assert.deepEqual(calls, ['/consents']);
+  assert.deepEqual(calls, ['/users/me', '/consents']);
   assert.equal(state.step, undefined);
 });
 test('account change during profile save cannot send consent under the new session', async () => {
@@ -67,7 +67,7 @@ test('account change during profile save cannot send consent under the new sessi
   state.token = 'different-session';
   resolve({});
   await assert.rejects(pending, error => error.code === 'SESSION_CHANGED');
-  assert.deepEqual(calls, ['/users/me/profile']);
+  assert.deepEqual(calls, ['/users/me']);
   assert.equal(state.step, undefined);
 });
 test('signup nickname is stored with the profile before health consent', async () => {
@@ -79,7 +79,7 @@ test('signup nickname is stored with the profile before health consent', async (
   });
   await context.saveAccountSetup(recovery);
   assert.deepEqual(calls[0], {
-    url: '/users/me/profile',
+    url: '/users/me',
     body: { name: '테스트집주인', birthday: '1974-04-12', gender: 'FEMALE' },
   });
   assert.equal(state.userProfile.name, '테스트집주인');

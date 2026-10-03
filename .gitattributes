@@ -1,0 +1,2 @@
+# Keep the Android wrapper executable on macOS/Linux checkouts.
+src/frontend/native/android/gradlew text eol=lf

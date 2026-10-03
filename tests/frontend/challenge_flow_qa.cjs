@@ -44,6 +44,11 @@ assert.ok(['localhost', '127.0.0.1'].includes(new URL(base).hostname));
       await page.waitForFunction(() => state.step === 8 && state.activeWorkspace === 'challenge');
       assert.equal(await page.locator('.daily-record-card').count(), 3);
       assert.equal(await page.locator('button.daily-record-card').count(), 3);
+      const recordBoxes = await Promise.all((await page.locator('.daily-record-card').all()).map(card => card.boundingBox()));
+      for (let i = 1; i < recordBoxes.length; i++) {
+        assert.ok(recordBoxes[i].y >= recordBoxes[i - 1].y + recordBoxes[i - 1].height, 'Recording items stack vertically');
+        assert.ok(Math.abs(recordBoxes[i].width - recordBoxes[0].width) < 1, 'Recording items use the same full width');
+      }
       assert.equal(await page.locator('.daily-record-card button').count(), 0);
       assert.equal(await page.locator('.daily-record-card:not(:disabled) .record-type-badge').count(), 0);
       assert.equal(await page.locator('#daily-log-list [data-lifestyle-topic]').count(), 0);

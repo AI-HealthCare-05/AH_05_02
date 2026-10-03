@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
+  <script src="/static/auth-session.js?v=20261003-navigation-session-v1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#176B5B">
   <meta name="mobile-web-app-capable" content="yes">
@@ -35,7 +36,7 @@
     (() => {
       const localDemo = ["127.0.0.1", "localhost"].includes(window.location.hostname);
       if (!localDemo || !("serviceWorker" in navigator)) return;
-      const resetKey = "forest-local-pwa-reset-v39";
+      const resetKey = "forest-local-pwa-reset-v40";
       if (sessionStorage.getItem(resetKey)) return;
       sessionStorage.setItem(resetKey, "1");
       Promise.all([
@@ -52,25 +53,29 @@
   </script>
   <link rel="stylesheet" href="/static/forest-game.css?v=20260921-wisdom-lp-v1" onload="document.documentElement.classList.add('forest-style-ready')">
   <link rel="stylesheet" href="/static/forest-atmosphere.css?v=20260903-2">
-  <script src="/static/vendor/phaser-3.90.0.min.js" defer></script>
-  <script src="/static/lpc-avatar-engine.js?v=20260917-1" defer></script>
-  <script src="/static/avatar-compositor.js?v=20260827-10" defer></script>
-  <script src="/static/forest-atmosphere.js?v=20260907-4" defer></script>
-  <script src="/static/forest-objects.js?v=20260910-3" defer></script>
-  <script src="/static/forest-fire.js?v=20260907-3" defer></script>
-  <script src="/static/forest-animals.js?v=20260908-5" defer></script>
-  <script src="/static/forest-pets.js?v=20260908-6" defer></script>
-  <script src="/static/forest-riverduck.js?v=20260908-1" defer></script>
-  <script src="/static/forest-riverduck-art.js?v=20260910-2" defer></script>
-  <script src="/static/forest-memories.js?v=20260917-1" defer></script>
-  <script src="/static/forest-garden.js?v=20260908-1" defer></script>
-  <script src="/static/forest-phaser.js?v=20260921-wisdom-lp-v1" defer></script>
-  <script src="/static/forest-hud.js?v=20260908-4" defer></script>
-  <script src="/static/forest-profile.js?v=20260907-1" defer></script>
-  <script src="/static/forest-game.js?v=20260921-wisdom-lp-v1" defer></script>
+  <script type="text/plain" data-forest-script src="/static/vendor/phaser-3.90.0.min.js"></script>
+  <script type="text/plain" data-forest-script src="/static/lpc-avatar-engine.js?v=20260917-1"></script>
+  <script type="text/plain" data-forest-script src="/static/avatar-compositor.js?v=20260827-10"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-atmosphere.js?v=20260907-4"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-objects.js?v=20260910-3"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-fire.js?v=20260907-3"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-animals.js?v=20260908-5"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-pets.js?v=20260908-6"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-riverduck.js?v=20260908-1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-riverduck-art.js?v=20260910-2"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-memories.js?v=20260917-1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-garden.js?v=20260908-1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-phaser.js?v=20260921-wisdom-lp-v1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-hud.js?v=20260908-4"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-profile.js?v=20261003-navigation-session-v1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-game.js?v=20261003-navigation-session-v1"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-joystick.js"></script>
+  <script type="text/plain" data-forest-script src="/static/forest-ingame-hud.js"></script>
   <link rel="stylesheet" href="/static/challenge-v2.css?v=2.1.3">
   <link rel="stylesheet" href="/static/suin/design-tokens.css?v=20260908-1">
-  <script src="/static/challenge-v2.js?v=2.1.10" defer></script>
+  <script type="text/plain" data-forest-script src="/static/challenge-v2.js?v=2.1.11"></script>
+  <link rel="stylesheet" href="/static/navigation.css">
+  <script src="/static/forest-access.js?v=20261003-navigation-session-v1" defer></script>
 </head>
 <body>
   <div id="forest-boot" role="status" aria-live="polite"><div class="forest-boot-panel"><p class="forest-boot-brand"><img class="forest-boot-logo" src="/static/assets/gandang-logo-forest-pixel-v2.png" width="1629" height="965" alt="간당간당"></p><h1 class="forest-boot-title">당근의 숲</h1><p class="forest-boot-copy">함께 실천하고, 같이 성장하는 모두의 건강 숲</p><div class="forest-boot-progress" aria-hidden="true"><i></i></div><div class="forest-boot-status"><span aria-hidden="true"></span>숲을 준비하고 있어요</div></div></div>
@@ -101,7 +106,7 @@
       </div>
       <button id="atmosphere-toggle" class="icon-button" type="button" aria-pressed="true" aria-label="날씨·시간 효과 켜짐">날씨·시간</button>
       <label class="font-size-control" for="font-size-select"><span>글자 크기</span><select id="font-size-select" aria-label="글자 크기"><option value="small">작게</option><option value="default" selected>보통</option><option value="large">크게</option></select></label>
-      <button id="open-profile" class="profile-button" type="button" aria-label="메인 MVP 개인정보 열기"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></button>
+      <div id="open-profile" class="profile-button forest-user-name" aria-label="사용자 이름"><span aria-hidden="true">👤</span><span id="topbar-nickname">내 프로필</span></div>
     </div>
   </header>
 
@@ -195,16 +200,17 @@
             <div class="game-controls-overlay arcade-deck" aria-label="게임 조작 버튼">
               <div class="control-cluster">
                 <div class="hud-panel-heading" role="group" aria-label="조작 버튼과 UI 표시"><button id="controls-toggle" class="toolbar-button" type="button" aria-expanded="true" aria-controls="controls-content">버튼 숨기기(8)</button><button id="reset-position" class="toolbar-button" type="button" title="페이지 새로고침">초기화(9)</button><button id="ui-toggle" class="toolbar-button" type="button" aria-pressed="false">UI 숨기기(0)</button></div>
-                <div id="controls-content" class="touch-controls" aria-label="아바타 이동 버튼">
-                  <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J"><span>점프 (J)</span></button>
-                  <button type="button" data-move="up" aria-label="위로 이동">▲<span>위</span></button>
-                  <button class="arcade-action action-run" type="button" data-action="run" aria-pressed="false" aria-label="달리기 꺼짐, 단축키 R"><span>달리기 (R)</span></button>
-                  <button type="button" data-move="left" aria-label="왼쪽으로 이동">◀<span>왼쪽</span></button>
-                  <button class="arcade-action action-interact" type="button" data-action="interact" aria-label="상호작용, 단축키 Q"><span>상호작용 (Q)</span></button>
-                  <button type="button" data-move="right" aria-label="오른쪽으로 이동">▶<span>오른쪽</span></button>
-                  <button class="arcade-action action-sit" type="button" data-action="sit" aria-label="앉기, 단축키 X"><span>앉기 (X)</span></button>
-                  <button type="button" data-move="down" aria-label="아래로 이동">▼<span>아래</span></button>
-                  <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z"><span>공격 (Z)</span></button>
+                <div id="controls-content" class="touch-controls joystick-controls" aria-label="아바타 조작">
+                  <div id="forest-joystick" class="forest-joystick" tabindex="0" role="group" aria-label="이동 조이스틱. 밀어서 이동하고 놓으면 멈춥니다. 키보드 방향키도 사용할 수 있습니다.">
+                    <span class="joystick-ring" aria-hidden="true"></span><span class="joystick-knob" aria-hidden="true"></span>
+                  </div>
+                  <div class="joystick-actions">
+                    <button class="arcade-action action-jump" type="button" data-action="jump" aria-label="점프, 단축키 J">점프</button>
+                    <button class="arcade-action action-interact" type="button" data-action="interact" aria-label="상호작용, 단축키 Q">상호작용</button>
+                    <button class="arcade-action action-run" type="button" data-action="run" aria-pressed="false" aria-label="달리기 꺼짐, 단축키 R">달리기</button>
+                    <button class="arcade-action action-sit" type="button" data-action="sit" aria-label="앉기, 단축키 X">앉기</button>
+                    <button class="arcade-action action-attack" type="button" data-action="attack" aria-label="공격, 단축키 Z">공격</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -246,7 +252,7 @@
           <div class="progress-track" role="progressbar" aria-label="공동 목표 진행률" aria-valuemin="0" aria-valuemax="15" aria-valuenow="12"><span id="group-progress-bar"></span></div>
           <ul id="member-list" class="member-list" aria-label="구성원별 퀘스트 진행 상태"></ul>
           <form id="group-goal-form" class="group-goal-form"><label for="group-goal-memo">오늘의 목표</label><textarea id="group-goal-memo" maxlength="80" rows="3" placeholder="예: 오늘도 함께, 가볍게 한 걸음!"></textarea><button type="submit">목표 저장</button></form>
-          <a id="add-family-colleague" class="add-member-button" href="/service?workspace=together#forest-invite-title">+ 가족/동료 추가하기</a>
+          <a id="add-family-colleague" class="add-member-button" href="/?workspace=together#forest-invite-title">+ 가족/동료 추가하기</a>
         </section>
       </aside>
       </div>
@@ -289,6 +295,8 @@
           <p id="avatar-preview-name">세준</p>
         </div>
         <div class="avatar-quick-actions" aria-label="코디 빠른 작업">
+          <button id="avatar-open-presets" type="button">프리셋 · 저장한 코디</button>
+          <button id="avatar-reset-face" type="button">기본 얼굴로</button>
           <button id="avatar-strip-basics" type="button">모두 벗기</button>
           <button id="avatar-restore-outfit" type="button">내 코디로 돌아가기</button>
         </div>

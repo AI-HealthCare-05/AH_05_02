@@ -33,6 +33,14 @@ class FoodVisionError(RuntimeError):
     """이미지 인식 provider 호출에 실패했을 때 사용하는 예외입니다."""
 
 
+class FoodVisionRuntimeError(FoodVisionError):
+    """Local runtime failure with a safe, non-personal diagnostic code."""
+
+    def __init__(self, reason_code: str):
+        self.reason_code = reason_code
+        super().__init__("Local food vision runtime unavailable")
+
+
 @dataclass(frozen=True)
 class FoodVisionResult:
     provider_kind: str

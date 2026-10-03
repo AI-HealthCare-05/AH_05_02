@@ -15,13 +15,15 @@ MEDICAL_NOTICE = "이 결과는 시스템 연동 확인 또는 위험 선별 보
 
 def _release_explanation(explanation: dict[str, Any], *, operational: bool) -> dict[str, Any]:
     """Apply the independent XAI release gate without changing SHAP values."""
+    from src.ml.inference.shap_explanations import has_displayable_selection
+
     released = dict(explanation)
     allowed = (
         operational
         and config.XAI_DISPLAY_ALLOWED
         and released.get("shap_claimed") is True
         and released.get("additivity_verified") is True
-        and released.get("selection_status") == "complete"
+        and has_displayable_selection(released)
     )
     released["status"] = "approved" if allowed else released.get("status", "unavailable")
     released["display_allowed"] = allowed
@@ -380,16 +382,18 @@ async def run_task(task_type: str, payload: dict[str, Any]) -> dict[str, Any]:  
             and loaded.manifest.get("artifact_sha256") == CURRENT_SCREENING_MODEL.model_artifact_digest
         )
         signal = bool(output["screening_signal_detected"])
-        from src.ml.inference.shap_explanations import explain_today, safe_explanation
+        from src.ml.inference.shap_explanations import safe_explanation
+        from src.ml.inference.xai_background import explain_today_with_reference
         from src.ml.modeling.knhanes_current_screening import predict_artifact
 
         frame = pd.DataFrame([contracted_input], columns=loaded.manifest["features"])
         explanation = await asyncio.to_thread(
             safe_explanation,
-            explain_today,
+            explain_today_with_reference,
             frame,
             lambda candidates: predict_artifact(loaded.artifact, candidates),
             model_version=output["model_version"],
+            model_digest=loaded.manifest["artifact_sha256"],
             elevated=signal,
         )
         explanation = _release_explanation(explanation, operational=operational)

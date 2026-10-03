@@ -325,7 +325,11 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert 'showHealthInputPanel("review")' in script
     assert '"챌린지 실천이 기록됐습니다."' in script
     assert "async function restoreIntroSession()" in intro_script
-    assert 'await api("/auth/token/refresh")' in intro_script
+    auth_session = (ROOT / "src/frontend/auth-session.js").read_text(encoding="utf-8")
+    assert "window.GandangAuthSession.resolve" in intro_script
+    assert 'fetchImpl("/api/v1/auth/token/refresh", options)' in auth_session
+    assert 'fetchImpl("/api/v1/users/me"' in auth_session
+    assert 'Authorization: "Bearer " + token' in auth_session
     assert 'window.addEventListener("pageshow"' in intro_script
     assert "showWorkspaceNav = isLoggedIn && !needsAccountSetup" in intro_script
     assert "if (introRouteNav) introRouteNav.hidden = true;" in intro_script
@@ -336,9 +340,13 @@ def test_follow_up_flow_keeps_session_and_returns_results_to_review() -> None:
     assert 'params.get("workspace")' in script
     assert 'window.history.replaceState({}, "",' in script
     assert ".intro-authenticated:has(.retro-intro) .topbar" in retro_intro_css
-    assert ".intro-authenticated:has(.retro-intro) .topbar #font-toggle" in retro_intro_css
+    navigation_css = (ROOT / "src/frontend/navigation.css").read_text(encoding="utf-8")
+    intro_html = (ROOT / "src/frontend/intro-retro.html").read_text(encoding="utf-8")
+    assert "/static/navigation.css" in intro_html
+    assert 'id="font-toggle"' in intro_html
+    assert ".font-toggle-button" in navigation_css
     assert "routeNav.hidden = true;" in retro_intro_script
-    assert "window.setTimeout(clearMessage, 2000)" in script
+    assert 'window.setTimeout(clearMessage, kind === "success" ? 6000 : 4000)' in script
     assert "window.setTimeout(clearMessage, 2000)" in intro_script
 
 
@@ -409,8 +417,11 @@ def test_frontend_uses_current_backend_signup_profile_and_prediction_contract() 
     assert 'id="signup-gender" required' in html
     assert 'email, password, terms_agreed: $("#personal-consent").checked' not in script
     assert "birth_date: birthDate" in script
-    assert 'api("/users/me/profile", { method: "PATCH"' in script
-    assert 'api("/users/me", { method: "PATCH"' not in script
+    user_router = (ROOT / "app/apis/v1/user_routers.py").read_text(encoding="utf-8")
+    # The backend deliberately exposes both documented profile and forest aliases.
+    assert 'api("/users/me", { method: "PATCH"' in script
+    assert '@user_router.patch("/me",' in user_router
+    assert '@user_router.patch("/me/profile",' in user_router
     assert 'birthday: $("#eligibility-birth-date").value' in script
     assert '$("#eligibility-birth-date").value = birthDate' in script
     assert 'state.token = state.token || "local-demo-token"' not in script

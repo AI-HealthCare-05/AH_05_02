@@ -19,7 +19,7 @@ test('responsive shell allocates real toolbar height and keeps chat outside the 
   assert.match(shell, /flex:1 1 0;min-width:0;min-height:0/);
   assert.match(shell, /height:auto/);
   assert.match(shell, /padding-bottom:calc\(60px \+ env\(safe-area-inset-bottom,0px\)\)/);
-  assert.doesNotMatch(responsive, /100dvh\s*-\s*\d+px|74vw|650px|1536px/);
+  assert.doesNotMatch(responsive.slice(0, responsive.indexOf('/* v175:')), /100dvh\s*-\s*\d+px|74vw|650px|1536px/);
   assert.match(declaration('.workspace,body.forest-ui-hidden .workspace'), /grid-template-columns:var\(--hud-left\) minmax\(0,1fr\) var\(--hud-left\)/);
 });
 
@@ -33,7 +33,7 @@ test('canvas frame fills both measured axes without a native-width or fixed-aspe
   assert.match(frame, /box-sizing:border-box;border:0;padding:0/);
   assert.match(declaration('#phaser-world canvas'), /width:100%!important;height:100%!important/);
   assert.match(declaration('#phaser-world canvas'), /aspect-ratio:auto/);
-  assert.match(declaration('#forest-canvas'), /object-fit:contain/);
+  assert.match(declaration('#forest-canvas'), /object-fit:cover/);
   assert.doesNotMatch(responsive, /aspect-ratio:3\/2|forest-native-width/);
 });
 

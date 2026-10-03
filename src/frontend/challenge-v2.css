@@ -40,3 +40,14 @@
 .challenge-v2-enabled #challenge-form{display:none!important}
 .challenge-v2-enabled #workspace-panel-challenge>.section-heading{display:none}
 @media(min-width:1201px){.challenge-v2-enabled .inspector{position:sticky;top:80px;max-height:calc(100vh - 96px);overflow-y:auto;scrollbar-color:#4c8b60 #e6eee8;scrollbar-width:thin}}
+
+/* A saved-record notice stays visible without jumping to the page header. */
+.record-notice:not([hidden]) {
+  position: fixed !important; z-index: 100000; left: 16px; right: 16px;
+  top: auto !important; transform: none !important; min-height: 0 !important;
+  bottom: calc(24px + env(safe-area-inset-bottom)); width: auto !important;
+  max-width: 640px; margin: 0 auto !important; padding: 16px 20px !important;
+  border: 2px solid #16705d; border-radius: 14px; background: #edf8ec !important;
+  color: #173b30 !important; box-shadow: 0 8px 24px #0003;
+  font-size: 18px; line-height: 1.5; word-break: keep-all; overflow-wrap: break-word;
+}

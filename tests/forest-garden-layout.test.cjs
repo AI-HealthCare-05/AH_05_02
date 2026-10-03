@@ -137,7 +137,7 @@ test('Canvas map rendering invokes the shared garden only inside the garden afte
     window: { ForestGarden: { draw(ctx, image) {
       assert.equal(ctx, context); assert.equal(image, carrotImage); calls.push(['shared-garden']);
     } } },
-    drawHomeRecordPlayer() {}, drawVehicle() {}, drawPlacedObjects() {},
+    drawHomeRecordPlayer() {}, drawPlacedObjects() {},
   });
   vm.runInContext(section(gameSource, '  function drawMap(', '  function drawHomeRecordPlayer('), env);
   env.drawMap();
@@ -162,7 +162,7 @@ test('Phaser loads shared assets, displays the shared layer only in the garden a
     ForestRiverDuckArt: { assets: [] }, ForestAnimals: { assets: [] }, ForestObjects: { INDIVIDUAL_ASSETS: [] },
   };
   vm.runInNewContext(read('forest-phaser.js'), {
-    window, Phaser, document: { getElementById: () => ({}) }, localStorage: { getItem: () => null }, performance: { now: () => 0 },
+    window, Phaser, document: { documentElement: { classList: { contains: () => false } }, getElementById: () => ({}) }, localStorage: { getItem: () => null }, performance: { now: () => 0 },
   });
   const scene = new window.carrotForestPhaserGame.config.scene();
   scene.load = { image: (...args) => loaded.push(args), spritesheet() {} };
@@ -239,4 +239,26 @@ test('thirty display carrots neither cap earned rewards nor allow duplicate harv
   assert.deepEqual(rendered, [138]);
   assert.equal(events.length, 1);
   assert.equal(events[0].type, 'forest-avatar-action');
+});
+
+
+test('world fallback preserves the loaded field art and placed objects without a legacy vehicle overlay', () => {
+  const calls = [];
+  const image = { complete: true, naturalWidth: 768 };
+  const env = vm.createContext({
+    currentScene: 'world', sceneImages: { world: image },
+    context: { drawImage: (...args) => calls.push(['image', ...args]) },
+    WORLD_WIDTH: 768, WORLD_HEIGHT: 512, MAP_WIDTH: 24, MAP_HEIGHT: 16, TILE: 32,
+    animationFrame: 0, window: {},
+    fillPixelRect: (...args) => calls.push(['pixel', ...args]),
+    drawPlacedObjects: () => calls.push(['placed']),
+    drawPond() {}, drawHouse() {}, drawCarrotPlot() {}, drawSharedTree() {}, drawTree() {}, drawFlower() {},
+  });
+  vm.runInContext(section(gameSource, '  function drawMap(', '  function drawHomeRecordPlayer('), env);
+  env.drawMap();
+  assert.deepEqual(calls, [['image', image, 0, 0, 768, 512], ['placed']], 'loaded background is not painted over by an unowned decoration');
+  calls.length = 0; image.complete = false; env.drawMap();
+  assert.ok(calls.some(call => call[0] === 'pixel'), 'slow background still renders the fallback field');
+  assert.equal(calls.filter(call => call[0] === 'placed').length, 1);
+  assert.ok(!calls.some(call => call[0] === 'pixel' && ['#c84e30', '#f58e38', '#1f3434'].includes(call.at(-1))), 'slow loading cannot revive the orange vehicle');
 });

@@ -63,7 +63,7 @@ function setup({ devicePixelRatio = 1, zoom = 1, clientWidth = 768, clientHeight
   };
   const context = vm.createContext({
     window, Phaser, localStorage: { getItem: () => null }, performance: { now: () => 0 },
-    document: { getElementById: () => host, activeElement: { tagName: 'DIV' } },
+    document: { documentElement: { classList: { contains: () => false } }, getElementById: () => host, activeElement: { tagName: 'DIV' } },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
   });
   vm.runInContext(source, context);

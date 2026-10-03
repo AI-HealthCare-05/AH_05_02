@@ -307,14 +307,14 @@ body.modal-open{overflow:hidden}
     "mascot"
     "message"
     "track";
-  grid-template-rows:190px 230px 92px;
+  grid-template-rows:190px auto auto;
   align-items:start;
   gap:12px;
   width:min(980px,100%);
-  height:620px;
+  height:auto;
   min-height:620px;
   margin:0;
-  padding:clamp(30px,4vw,42px) clamp(34px,5vw,58px);
+  padding:clamp(24px,4vw,42px) clamp(18px,5vw,58px);
   border:10px solid #75441f;
   border-radius:24px;
   background:
@@ -362,8 +362,8 @@ body.modal-open{overflow:hidden}
   align-content:center;
   align-self:start;
   width:min(620px,100%);
-  height:230px;
-  min-height:0;
+  height:auto;
+  min-height:230px;
   margin:0 auto;
   padding:24px clamp(28px,4vw,46px);
   border:3px solid #c98e52;
@@ -376,7 +376,8 @@ body.modal-open{overflow:hidden}
 }
 .analysis-room-screen .prediction-status-message-card #retry-analysis{
   margin:14px 0 0;
-  min-width:220px;
+  min-width:0;
+  max-width:100%;
   min-height:54px;
   border:3px solid #75441f;
   border-radius:14px;
@@ -392,6 +393,8 @@ body.modal-open{overflow:hidden}
   font-size:clamp(34px,4.6vw,54px);
   letter-spacing:-.04em;
   line-height:1.1;
+  word-break:keep-all;
+  overflow-wrap:anywhere;
 }
 .analysis-room-screen .prediction-status-card p{
   display:grid;
@@ -415,7 +418,7 @@ body.modal-open{overflow:hidden}
   padding:16px 0 0;
   border-top:2px dashed rgba(151,103,61,.36);
   gap:14px;
-  overflow:hidden;
+  overflow:visible;
 }
 .analysis-room-screen .prediction-status-track li{
   color:#7a5a39;
@@ -1640,7 +1643,7 @@ body.modal-open{overflow:hidden}
 .record-type-badge.photo{background:var(--warning-bg);color:#8a5b00}
 .daily-record-panel{margin:24px 0 28px;padding:24px;border:1px solid var(--line);border-radius:20px;background:#fff}
 .daily-record-panel h4{font-size:26px;margin:0 0 16px;color:var(--ink)}
-.daily-record-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
+.daily-record-list{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
 .daily-record-card{display:flex;flex-direction:column;align-items:flex-start;gap:20px;width:100%;min-width:0;padding:26px;border:2px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s}
 .daily-record-card:not(:disabled):hover{border-color:var(--green);background:#f5fbf8;box-shadow:0 6px 18px rgba(23,107,91,.08)}
 .daily-record-card:not(:disabled):active{background:var(--mint)}
@@ -2402,8 +2405,11 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
 .screen-title-with-mascot h2{margin:0}
 #intro-title{font-size:clamp(42px,4.25vw,60px);white-space:nowrap}
 .challenge-mascot{display:block;flex:0 0 142px;width:142px;height:142px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(23,107,91,.12))}
-.today-card{position:relative;padding-right:210px!important;overflow:hidden}
-.today-card-mascot{position:absolute;right:30px;bottom:12px;width:160px;height:160px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(23,107,91,.13))}
+.today-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 112px;column-gap:16px;overflow:hidden}
+.today-card>.eyebrow{grid-column:1;grid-row:1;align-self:end}
+.today-card>h3{grid-column:1;grid-row:2;min-width:0;align-self:start;word-break:keep-all;overflow-wrap:anywhere}
+.today-card>p:not(.eyebrow),.today-card>button{grid-column:1/-1;min-width:0!important}
+.today-card-mascot{position:static;grid-column:2;grid-row:1/3;align-self:center;justify-self:end;width:112px;height:112px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(23,107,91,.13))}
 .section-title-with-mascot{display:flex;align-items:center;gap:14px;margin-bottom:10px}
 .section-title-with-mascot img{width:84px;height:84px;object-fit:contain}
 .section-title-with-mascot h3{margin:0}
@@ -2814,8 +2820,8 @@ body.intro-mode .intro-process-grid strong{color:#fff;font-size:17px;letter-spac
   .intro-process-grid strong{font-size:15px;line-height:1.25}
   .screen-title-with-mascot{align-items:flex-start;gap:12px;margin-bottom:18px}
   .screen-title-with-mascot>img{flex-basis:78px;width:78px;height:78px}
-  .today-card{padding-right:22px!important;padding-bottom:126px!important}
-  .today-card-mascot{right:12px;bottom:4px;width:126px;height:126px}
+  .today-card{grid-template-columns:minmax(0,1fr) 88px;column-gap:12px}
+  .today-card-mascot{width:88px;height:88px}
   .together-mascot{width:76px;height:76px}
   .health-tool-question-mascot{float:none;display:block;width:100px;height:100px;margin:0 auto 12px}
   #challenge-list .challenge-card span{gap:14px;padding:16px}
@@ -3699,6 +3705,12 @@ body.intro-mode .story-input-visual{position:relative;isolation:isolate}
 .health-management-header-actions{display:flex;align-items:center;gap:10px}.health-management-header-actions button{min-height:48px}.medical-facility-shortcut{border:1px solid #a93f37;border-radius:12px;background:#a93f37;color:#fff;padding:10px 18px;font-weight:900;cursor:pointer}.medical-facility-shortcut:hover{border-color:#8d3029;background:#8d3029}.dashboard-risk-summary{display:flex!important;align-items:center!important;justify-content:space-between;gap:12px}.dashboard-risk-summary>div{min-width:0}.dashboard-risk-summary img{width:58px;height:58px;object-fit:contain;flex:0 0 auto}.dashboard-risk-summary[data-risk="low"] strong{color:#277e62}.dashboard-risk-summary[data-risk="moderate"] strong{color:#b57613}.dashboard-risk-summary[data-risk="high"] strong{color:#b23b35}.dashboard-risk-summary[data-risk="pending"] strong{color:var(--muted)}
 .health-history-filter{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:14px 0 0;padding:12px;border-radius:12px;background:#f7faf9}.health-history-filter>div{display:grid;gap:4px}.health-history-filter label{color:var(--muted);font-size:13px;font-weight:800}.health-history-filter input{min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 10px}.health-history-filter button{min-height:44px}.health-history-edit,.health-history-delete{border:0;background:transparent;padding:3px 0;font:inherit;font-size:14px;font-weight:900;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.health-history-edit{color:var(--green-dark)}.health-history-delete{color:#b42318}.health-history-item summary span{gap:10px}.health-history-pagination{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:14px}.health-history-pagination button{display:grid;place-items:center;min-width:40px;min-height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--green-dark);font-weight:900;cursor:pointer}.health-history-pagination button[aria-current="page"]{border-color:var(--green);background:var(--green);color:#fff}
 @media(max-width:700px){.health-management-header-actions{width:100%;align-items:stretch;flex-direction:column}.health-history-filter>div{width:100%}.health-history-filter button{flex:1}}
+/* Both actions share the available space, including the 700–900px tablet range. */
+.health-management > .dashboard-management-heading:not(.health-record-actions){display:grid;grid-template-columns:minmax(0,1fr)}
+.health-management > .dashboard-management-heading h3{min-width:0;max-width:100%}
+.health-management .health-management-header-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;min-width:0;max-width:100%;width:100%;align-items:stretch}
+.health-management .health-management-header-actions button{min-width:0;max-width:100%;width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.health-management #close-health-management{width:auto;white-space:nowrap}
 .feature-report{background:linear-gradient(120deg,#e1f1ec,#f5faf6)}
 .challenge-v3-controls{padding:24px;background:#f1f7f4;border:1px solid #c4dbd2;border-radius:20px;margin:20px 0;color:#153d32}
 .challenge-v3-controls h3{font-size:26px;margin:8px 0 14px}.challenge-v3-controls>small{display:block;margin:10px 0;line-height:1.6}
@@ -5625,3 +5637,50 @@ body.intro-mode .topbar .intro-version-switch:hover,body.intro-mode .topbar .int
 /* Keep page feedback readable without tying it to the top-left content edge. */
 .message{top:50%;transform:translate(-50%,-50%);text-align:center}
 dialog .message{top:0;transform:none}
+
+/* Keep Korean labels readable in narrow health forms and review cards. */
+@media (max-width: 900px) {
+  .health-room-board #health-review-panel .review-grid,
+  .health-room-board #health-review-panel .review-card dl,
+  .health-room-board #health-activity-panel .health-combined-lifestyle {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .health-room-board #health-review-panel .review-card { min-width: 0; padding: 16px; }
+  .health-room-board #health-review-panel .review-card dl div { min-width: 0; min-height: 0; padding: 12px 14px; }
+  .health-room-board #health-review-panel .review-card :is(dt,dd) {
+    min-width: 0; word-break: keep-all; overflow-wrap: break-word; line-height: 1.5;
+  }
+  .health-room-board #health-review-panel .review-card dt { font-size: 17px; }
+  .health-room-board #health-review-panel .review-card dd { font-size: 22px; margin: 0; }
+  .health-room-board .segmented-choice { display: flex; flex-wrap: wrap; gap: 10px; }
+  .health-room-board .segmented-choice label { flex: 1 1 100px; min-width: 0; }
+  .health-room-board .segmented-choice span { white-space: nowrap; padding: 12px 8px; }
+  .health-room-board :is(.choice-title,.form-row label) { word-break: keep-all; overflow-wrap: break-word; }
+}
+
+/* A saved-record notice stays visible without jumping to the page header. */
+.record-notice:not([hidden]) {
+  min-height: 0 !important; padding: 16px 20px !important;
+  border: 2px solid #16705d; border-radius: 14px; background: #edf8ec !important;
+  color: #173b30 !important; box-shadow: 0 8px 24px #0003;
+  font-size: 18px; line-height: 1.5; word-break: keep-all; overflow-wrap: break-word;
+}
+
+@media (max-width: 900px) {
+  .health-room-stage:has(#health-review-panel:not([hidden])) .health-room-board { padding: 0; border-width: 0; }
+  .health-room-board #health-review-panel { padding: 14px; }
+  .health-room-board #health-review-title { font-size: 24px; line-height: 1.4; word-break: keep-all; }
+}
+
+/* Completion feedback stays centered, including inside top-layer reward dialogs. */
+.message.record-notice,
+dialog .message.record-notice {
+  position: fixed; top: 50%; left: 50%; right: auto; bottom: auto;
+  transform: translate(-50%, -50%); margin: 0;
+  width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+  z-index: 10000; text-align: center; box-sizing: border-box;
+  word-break: keep-all; overflow-wrap: anywhere; pointer-events: none;
+}
+
+/* Keep photo-review messages readable in a narrow native viewport. */
+.photo-state h4,.photo-state p{min-width:0;word-break:keep-all;overflow-wrap:anywhere;}

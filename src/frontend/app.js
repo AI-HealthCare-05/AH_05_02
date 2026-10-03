@@ -22,6 +22,50 @@ const HEALTH_DRAFT_STORAGE_KEY = "gandang-health-draft-v1";
 const SESSION_RECOVERY_STORAGE_KEY = "gandang-session-recovery-v1";
 const HEALTH_DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
+const returningToForest = new URLSearchParams(window.location.search).get("returnTo") === "forest-challenges";
+// A fixed account view, never an arbitrary redirect or a health/challenge shortcut.
+const openingAccountProfile = new URLSearchParams(window.location.search).get("account") === "profile";
+
+async function returnToForestSettings(eligibility) {
+  if (!returningToForest) return false;
+  if (!eligibility) {
+    beginReturningEligibility("forest-challenges");
+    return true;
+  }
+  const blocked = (eligibility.reason_codes || []).some(code => [
+    "DIAGNOSED_DIABETES", "URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION",
+    "CONSENT_REQUIRED", "UNDER_MINIMUM_SERVICE_AGE",
+  ].includes(code));
+  if (!eligibility.service_eligible || blocked) {
+    showStoredEligibilityGuidance();
+    return true;
+  }
+  try {
+    // Read-only server gate includes current consent and outstanding medical follow-up.
+    // It does not enroll the user, create a day, or manufacture health records.
+    await api("/challenge-v2/today", { method: "GET" });
+    window.location.assign("/forest#daily-settings");
+  } catch (error) {
+    showStep(3);
+    showMessage(error.message || "챌린지 이용 가능 상태를 확인하지 못했습니다. 다시 확인해 주세요.");
+  }
+  return true;
+}
+
+function showRequestedAccountProfile() {
+  if (!openingAccountProfile) return false;
+  // Editing account information grants no consent, eligibility, or challenge access.
+  state.accountRecovery = null;
+  showStep(1, { recordHistory: false });
+  openProfileEditor();
+  return true;
+}
+
+function notifyAccountProfileUpdated() {
+  // Only invalidate other tabs. Never persist a name, account identifier, or token here.
+  try { window.localStorage.setItem("gandang-account-profile-revision", String(Date.now())); } catch {}
+}
+
 function setFormBusy(form, activeButton, busyLabel) {
   if (!form) return () => {};
   const submitButton = activeButton || form.querySelector("button[type='submit']");
@@ -422,14 +466,15 @@ function showMessage(message, kind = "error") {
   // people actually see the warning instead of just feeling the page jump.
   const openDialogs = document.querySelectorAll("dialog[open]");
   const activeDialog = openDialogs.length ? openDialogs[openDialogs.length - 1] : null;
-  const host = activeDialog || _messageHome;
+  const host = activeDialog || (kind === "success" ? document.body : _messageHome);
   if (box.parentElement !== host) host.prepend(box);
   box.textContent = message;
   box.dataset.kind = kind;
+  box.classList.toggle("record-notice", kind === "success");
   box.hidden = false;
-  box.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (kind !== "success") box.scrollIntoView({ behavior: "smooth", block: "center" });
   window.clearTimeout(_messageTimer);
-  _messageTimer = window.setTimeout(clearMessage, 2000);
+  _messageTimer = window.setTimeout(clearMessage, kind === "success" ? 6000 : 4000);
 }
 function clearMessage() {
   window.clearTimeout(_messageTimer);
@@ -720,8 +765,18 @@ function syncSidebarChallengeEntry() {
   }
 }
 
+function returnToRequestedForest() {
+  if (!state.token || new URLSearchParams(window.location.search).get("returnTo") !== "forest") return false;
+  window.GandangAuthSession?.save(state.token);
+  window.location.assign("/forest");
+  return true;
+}
+
 function syncTopNavigation() {
   const isLoggedIn = Boolean(state.token);
+  if (isLoggedIn && !isLocalPreview()) window.GandangAuthSession?.save(state.token);
+  const forestEntry = $("#header-forest-entry");
+  if (forestEntry) forestEntry.href = isLoggedIn ? "/forest" : "/service?auth=login&returnTo=forest";
   const hasHealthRecord = Boolean(state.checkupId || state.healthCheckupResult || state.healthCheckupHistory.length);
   const hasChallengeAccess = Boolean(state.cycle || state.capabilities.challenge || state.step >= 7);
   const needsAccountSetup = Boolean(state.accountRecovery);
@@ -754,11 +809,13 @@ function syncTopNavigation() {
 }
 
 function showStep(step, { recordHistory = true, instant = false } = {}) {
+  if (step === 1 && state.token) step = 8;
   if (step >= 3 && state.token && state.accountRecovery?.token === state.token) {
     showAccountRecovery(state.accountRecovery, "먼저 계정 설정과 건강정보 동의를 완료해 주세요.");
     return;
   }
   const targetStep = Math.max(1, Math.min(8, step));
+  rememberServiceView();
   if (targetStep !== 2) document.body.classList.remove("account-mode");
   if (recordHistory && state.navigationHistory.at(-1) !== targetStep) state.navigationHistory.push(targetStep);
   state.step = targetStep;
@@ -856,7 +913,41 @@ async function goStepFromNav(step) {
   showStep(step);
 }
 
+const serviceViewTrail = [];
+let serviceViewRestore = false, serviceViewReady = false, serviceViewPending = null;
+let currentHealthPanel = "metrics";
+const serviceViewSnapshot = () => ({ step: state.step, workspace: state.activeWorkspace, panel: currentHealthPanel });
+document.addEventListener("click", () => { serviceViewReady = true; }, true);
+document.addEventListener("keydown", () => { serviceViewReady = true; }, true);
+function rememberServiceView() {
+  if (!serviceViewReady || serviceViewRestore || serviceViewPending) return;
+  const previous = serviceViewSnapshot();
+  serviceViewPending = previous;
+  queueMicrotask(() => {
+    serviceViewPending = null;
+    if (JSON.stringify(previous) !== JSON.stringify(serviceViewSnapshot())) {
+      serviceViewTrail.push(previous);
+      if (serviceViewTrail.length > 50) serviceViewTrail.shift();
+    }
+  });
+}
+window.GandangPageBack = () => {
+  let previous;
+  while ((previous = serviceViewTrail.pop())) {
+    if (state.token && previous.step <= 2) continue;
+    serviceViewRestore = true;
+    try {
+      showHealthInputPanel(previous.panel);
+      showStep(previous.step, { recordHistory: false });
+      if (previous.step === 8) showWorkspace(previous.workspace, { moveFocus: false });
+    } finally { serviceViewRestore = false; }
+    return true;
+  }
+  return false;
+};
+
 function goBack() {
+  if (window.GandangPageBack()) return;
   if (state.step === 6) {
     state.navigationHistory = state.navigationHistory.filter((step) => step !== 6);
     if (state.navigationHistory.at(-1) !== 4) state.navigationHistory.push(4);
@@ -874,12 +965,14 @@ function goBack() {
 }
 
 function showHealthInputPanel(panel) {
+  rememberServiceView();
   const canonicalPanel = {
     lifestyle: "habits",
     drinking: "habits",
     nutrition: "habits",
     details: "family",
   }[panel] || panel;
+  currentHealthPanel = canonicalPanel;
   const panelMap = {
     metrics: "health-metrics-panel",
     vitals: "health-vitals-panel",
@@ -958,6 +1051,27 @@ function inferFuturePredictionCapability(eligibility = state.eligibility) {
   return age >= 45;
 }
 
+function hydrateSavedEligibilityForm(eligibility = state.eligibility) {
+  if (!eligibility) return;
+  const key = JSON.stringify([state.token, eligibility.eligibility_check_id || eligibility.created_at,
+    eligibility.age, eligibility.has_diabetes_diagnosis, eligibility.has_urgent_warning_sign]);
+  if (state.eligibilityFormRecordKey === key) return;
+  resetEligibilityAnswers();
+  const profile = state.userProfile || {};
+  if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
+  if (["FEMALE", "MALE"].includes(profile.gender)) $("#gender").value = profile.gender;
+  const age = eligibility.age;
+  $("#eligibility-age-band-check").value = typeof age === "number" && Number.isFinite(age) && age >= 10
+    ? String(Math.min(80, Math.floor(age / 10) * 10)) : "";
+  if (typeof eligibility.has_urgent_warning_sign === "boolean") {
+    setRadioValue("urgent-warning", eligibility.has_urgent_warning_sign ? "yes" : "no");
+  }
+  if (typeof eligibility.has_diabetes_diagnosis === "boolean") {
+    setRadioValue("diabetes-diagnosis", eligibility.has_diabetes_diagnosis ? "yes" : "no");
+  }
+  state.eligibilityFormRecordKey = key;
+}
+
 function syncReturningEligibilityState(eligibility) {
   const reasonCodes = eligibility?.reason_codes || [];
   const inferredFuturePrediction = inferFuturePredictionCapability(eligibility);
@@ -972,6 +1086,8 @@ function syncReturningEligibilityState(eligibility) {
   state.medicalGuidanceRequired = reasonCodes.some((code) => (
     code === "URGENT_MEDICAL_ATTENTION" || code === "DIAGNOSED_DIABETES" || code === "UNDER_MINIMUM_SERVICE_AGE"
   ));
+  if (eligibility) hydrateSavedEligibilityForm(eligibility);
+  else resetEligibilityAnswers();
 }
 
 function shouldRunPredictionAfterHealthEdit() {
@@ -1063,6 +1179,7 @@ function showAuthMode(mode, { moveFocus = true, context = "login" } = {}) {
 function openProfileEditor() {
   $("#header-my-page").open = false;
   const profile = state.userProfile || {};
+  $("#profile-name").value = profile.name || "";
   $("#profile-birthday").value = profile.birthday || $("#eligibility-birth-date").value || $("#signup-birth-date").value || "";
   $("#profile-gender").value = profile.gender || $("#gender").value || $("#signup-gender").value || "FEMALE";
   $("#profile-editor-message").hidden = true;
@@ -1219,7 +1336,7 @@ async function saveAccountSetup(recovery) {
     || recovery.gender !== state.userProfile?.gender;
   if (!recovery.profileSaved || profileChanged) {
     recovery.stage = "profile";
-    await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+    await api("/users/me", { method: "PATCH", body: JSON.stringify({
       ...(recovery.name ? { name: recovery.name } : {}),
       birthday: recovery.birthday,
       gender: recovery.gender,
@@ -1248,6 +1365,7 @@ async function saveAccountSetup(recovery) {
   $("#account-recovery-form").hidden = true;
   resetEligibilityAnswers();
   syncLifestyleAvatar();
+  if (returnToRequestedForest()) return;
   showStep(3);
 }
 
@@ -1286,6 +1404,7 @@ async function openDashboardHealthEdit() {
     try {
       const latestEligibility = await api("/eligibility-checks/latest");
       syncReturningEligibilityState(latestEligibility);
+    if (await returnToForestSettings(latestEligibility)) return;
     } catch (error) {
       if (error.status !== 404) throw error;
     }
@@ -1479,6 +1598,7 @@ function clearSessionRecovery() {
 }
 
 function clearAuthenticatedClientState({ keepEmail = true } = {}) {
+  window.GandangAuthSession?.clear();
   const email = keepEmail ? (state.userProfile?.email || $("#login-email")?.value || "") : "";
   clearHealthDraft();
   clearSessionRecovery();
@@ -1510,6 +1630,7 @@ function clearAuthenticatedClientState({ keepEmail = true } = {}) {
 }
 
 function beginSessionRecovery() {
+  window.GandangAuthSession?.clear();
   if (state.accountRecovery) return;
   if (state.step === 4) persistHealthDraft();
   const recovery = state.sessionRecovery || {
@@ -1780,6 +1901,8 @@ function clearQuestionnaireAnswers(name) {
 }
 
 function resetEligibilityAnswers() {
+  state.eligibilityFormRecordKey = null;
+  $("#eligibility-age-band-check").value = "";
   ["urgent-warning", "diabetes-diagnosis", "urgent-summary", "same-day-summary"].forEach(clearQuestionnaireAnswers);
   $("#emergency-questionnaire-summary").textContent = "";
   $("#emergency-questionnaire-summary").hidden = true;
@@ -1865,6 +1988,9 @@ function getLocalEligibilityResult() {
   const safetyBlocked = reasonCodes.some((code) => ["URGENT_MEDICAL_ATTENTION", "SAME_DAY_MEDICAL_ATTENTION", "DIAGNOSED_DIABETES"].includes(code));
   return {
     age,
+    has_diabetes_diagnosis: $("#diagnosed-diabetes-yes").checked,
+    has_urgent_warning_sign: $("#urgent-warning-yes").checked,
+    population_in_scope: true,
     service_eligible: Number.isFinite(age) && age >= 19,
     challenge_eligible: Number.isFinite(age) && age >= 14 && !safetyBlocked,
     current_health_check_eligible: Number.isFinite(age) && age >= 19 && !safetyBlocked,
@@ -2233,7 +2359,6 @@ function updateResultConfirmation(prediction = state.currentScreeningPrediction 
     },
   }[risk];
   card.dataset.risk = risk;
-  $("#risk-confirm-label").textContent = content.label;
   const trafficLight = $("#risk-traffic-light");
   if (trafficLight) trafficLight.setAttribute(
     "aria-label",
@@ -2852,7 +2977,9 @@ async function api(path, options = {}) {
     if (response.status === 401 && authenticatedRequest && !state.accountRecovery) beginSessionRecovery();
     throw apiError;
   }
-  return payload.data ?? payload;
+  const result = payload.data ?? payload;
+  if (path === "/auth/login" || path === "/auth/token/refresh") window.GandangAuthSession?.save(result.access_token);
+  return result;
 }
 async function pollPrediction(jobId) {
   const startedAt = Date.now();
@@ -2921,8 +3048,7 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
   const chart = $("#future-risk-visual");
   const pointContainer = $("#future-risk-points");
   const stateBox = $("#forecast-state");
-  const statusBadge = $("#forecast-status-badge");
-  if (!chart || !pointContainer || !stateBox || !statusBadge) return;
+  if (!chart || !pointContainer || !stateBox) return;
   const resolvedPoint = options.canDisplayRisk
     ? selectTwoYearForecastPoint(prediction, options.fallbackLevel)
     : null;
@@ -2951,8 +3077,6 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
     $("#forecast-state-message").textContent = options.failed
       ? "실패한 분석만 다시 시도하면 이어서 확인할 수 있어요."
       : "공개 가능한 결과가 도착하면 그래프에 표시합니다.";
-    statusBadge.textContent = options.failed ? "분석 실패" : "결과 준비 중";
-    statusBadge.dataset.status = options.failed ? "failed" : "pending";
     chart.setAttribute("aria-label", options.failed
       ? "약 2년 뒤 위험 신호 전망 그래프: 분석 실패"
       : "약 2년 뒤 위험 신호 전망 그래프: 결과 준비 중");
@@ -2975,8 +3099,6 @@ function renderTwoYearRiskForecast(prediction = {}, options = {}) {
   label.textContent = point.label;
   item.append(value, track, label);
   pointContainer.append(item);
-  statusBadge.textContent = options.preview ? "화면 확인용 예시" : "승인된 결과";
-  statusBadge.dataset.status = options.preview ? "preview" : "approved";
   chart.setAttribute("aria-label", `약 2년 뒤 당뇨병 위험 신호 전망. ${point.label} ${forecastSignalLabel(point.level)}`);
 }
 
@@ -3036,8 +3158,8 @@ function renderPrediction(prediction, factors, currentFactors = null) {
 
 function factorDirectionLabel(item = {}) {
   const raw = String(item.direction || item.effect_direction || item.impact_direction || "").toLowerCase();
-  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "주의 요인 · 당뇨 위험을 높인 방향";
-  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "긍정 요인 · 당뇨 위험을 낮춘 방향";
+  if (["increase", "increased", "risk_up", "higher", "positive"].includes(raw)) return "점수를 높인 요인";
+  if (["decrease", "decreased", "risk_down", "lower", "negative"].includes(raw)) return "점수를 낮춘 요인";
   return "";
 }
 
@@ -3057,14 +3179,14 @@ function factorIdentity(item = {}) {
 function renderFactorItems(items = []) {
   return items.map((item) => {
     const factorName = item.display_name || item.factor_name || item.name || "확인된 신호";
-    const factorDescription = item.message || item.description || item.guidance || "검증된 설명만 표시합니다.";
+    const inputValue = item.input_value_label || "저장된 입력값 확인 불가";
     const direction = factorDirectionLabel(item);
-    const caution = direction.startsWith("주의 요인");
+    const caution = direction === "점수를 높인 요인";
     const icon = caution ? "xai-arrow-up.svg" : "xai-arrow-down.svg";
     const meta = direction
       ? `<small class="xai-factor-meta"><span class="xai-factor-direction ${caution ? "is-caution" : "is-positive"}">${escapeHtml(direction)}</span></small>`
       : "";
-    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong>${meta}<p>${escapeHtml(factorDescription)}</p></div></li>`;
+    return `<li><img class="xai-direction-icon" src="/static/assets/${icon}" alt="" aria-hidden="true"><div><strong>${escapeHtml(factorName)}</strong><p class="xai-input-value">입력: ${escapeHtml(inputValue)}</p>${meta}</div></li>`;
   }).join("");
 }
 
@@ -3074,16 +3196,64 @@ function selectXaiFactors(items, elevated) {
     || (typeof item.contribution === "number" && Number.isFinite(item.contribution)
       && Math.abs(item.contribution) > 1e-10))
     .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0));
-  const positive = sorted.filter(item => factorDirectionLabel(item).startsWith("긍정 요인"));
-  const caution = sorted.filter(item => factorDirectionLabel(item).startsWith("주의 요인"));
+  const positive = sorted.filter(item => factorDirectionLabel(item) === "점수를 낮춘 요인");
+  const caution = sorted.filter(item => factorDirectionLabel(item) === "점수를 높인 요인");
   return elevated ? [...caution.slice(0, 2), ...positive.slice(0, 1)]
     : [...positive.slice(0, 2), ...caution.slice(0, 1)];
+}
+
+function formatModelNumber(value, signed = false) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "제공되지 않음";
+  return `${signed && value > 0 ? "+" : ""}${value.toFixed(6)}`;
+}
+
+function renderModelAnalysisDetails(prefix, prediction = {}) {
+  const details = $(`#${prefix}-model-details`), numbers = $(`#${prefix}-model-numbers`);
+  if (!details || !numbers) return;
+  const analysis = prediction?.model_analysis;
+  const ready = isPublicRiskDisplayAllowed(prediction || {}) && analysis?.status === "available"
+    && [analysis.model_score, analysis.decision_threshold, analysis.score_minus_threshold].every(value => typeof value === "number" && Number.isFinite(value));
+  details.hidden = !ready;
+  details.open = false;
+  numbers.innerHTML = ready ? `<dl class="model-number-grid">${[
+    ["모델 점수 (0~1)", formatModelNumber(analysis.model_score)],
+    ["선별 기준점", formatModelNumber(analysis.decision_threshold)],
+    ["기준점과의 차이", formatModelNumber(analysis.score_minus_threshold, true)],
+    ["분석 기준일", prediction.input_as_of_date || "제공되지 않음"],
+  ].map(([label,value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl><p>저장된 건강정보를 분석한 모델 점수입니다. 선별 기준점과 비교하며 확정 발병 확률이나 진단 결과가 아닙니다.</p>` : "";
+}
+
+function renderShapGraph(prefix, factors, approved) {
+  const element = $(`#${prefix}-shap-graph`);
+  if (!element) return;
+  const graph = factors?.shap_graph;
+  const items = Array.isArray(graph?.items) ? graph.items : [];
+  const valid = approved && factors?.display_allowed === true && graph?.complete === true && items.length > 0
+    && items.every(item => typeof item.contribution === "number" && Number.isFinite(item.contribution))
+    && [graph.reference_value, graph.explained_score, graph.contribution_sum].every(value => typeof value === "number" && Number.isFinite(value))
+    && Math.abs(items.reduce((sum,item) => sum + item.contribution, 0) - graph.contribution_sum) <= 1e-8
+    && Math.abs(graph.reference_value + graph.contribution_sum - graph.explained_score) <= 1e-8;
+  element.hidden = !valid;
+  if (!valid) { element.innerHTML = ""; return; }
+  const sorted = [...items].sort((a,b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  const maximum = Math.max(...sorted.map(item => Math.abs(item.contribution)));
+  const rows = sorted.map(item => {
+    const width = maximum > 0 ? Math.abs(item.contribution) / maximum * 50 : 0;
+    const positive = item.contribution > 0;
+    const direction = positive ? "점수를 높임" : item.contribution < 0 ? "점수를 낮춤" : "기여 없음";
+    return `<li class="shap-row"><div class="shap-row-heading"><span>${escapeHtml(item.display_name || item.feature)}</span><strong>${formatModelNumber(item.contribution, true)}</strong></div><div class="shap-bar-track" role="img" aria-label="${escapeHtml(`${item.display_name || item.feature}: ${direction}, ${formatModelNumber(item.contribution, true)}`)}"><span class="shap-bar ${positive ? "is-increase" : "is-decrease"}" style="left:${positive ? 50 : 50-width}%;width:${width}%"></span></div></li>`;
+  }).join("");
+  element.innerHTML = `<details class="shap-details"><summary>SHAP 분석 결과 자세히 보기</summary><div class="shap-details-body"><p>전체 ${items.length}개 요인의 기여도입니다. 왼쪽은 점수를 낮춘 요인, 오른쪽은 높인 요인입니다.</p><div class="shap-axis" aria-hidden="true"><span>−${formatModelNumber(maximum)}</span><span>0</span><span>+${formatModelNumber(maximum)}</span></div><ol class="shap-rows">${rows}</ol><dl class="shap-total"><div><dt>비교 기준 점수</dt><dd>${formatModelNumber(graph.reference_value)}</dd></div><div><dt>전체 SHAP 기여도 합</dt><dd>${formatModelNumber(graph.contribution_sum, true)}</dd></div><div><dt>설명된 모델 점수</dt><dd>${formatModelNumber(graph.explained_score)}</dd></div></dl><p>비교 기준 점수 + 전체 기여도 합 = 설명된 모델 점수입니다. 생활습관 변경의 효과나 발병 확률 변화가 아닙니다.</p></div></details>`;
 }
 
 function renderXaiExplanationLists(
   factors,
   { approved = false, currentFactors = null, currentApproved = false } = {},
 ) {
+  renderModelAnalysisDetails("current", state.currentScreeningPrediction);
+  renderModelAnalysisDetails("future", state.prediction);
+  renderShapGraph("current", currentFactors, currentApproved);
+  renderShapGraph("future", factors, approved);
   const currentList = $("#current-factor-list");
   const currentSignal = state.currentScreeningPrediction?.screening_signal_detected;
   const currentItems = selectXaiFactors(
@@ -3091,7 +3261,17 @@ function renderXaiExplanationLists(
   );
   const futureList = $("#factor-list");
   const currentReady = Boolean(currentApproved && currentFactors?.display_allowed === true && currentItems.length);
+  const currentNote = $("#current-factor-note");
+  if (currentNote) {
+    currentNote.hidden = !currentReady || currentItems.length >= 3;
+    currentNote.textContent = "확인된 영향 요인만 표시합니다. 반대 방향의 요인이 없으면 3개보다 적게 표시될 수 있습니다.";
+  }
   const currentTitle = $("#current-factor-title");
+  const currentBaseline = $("#current-factor-baseline");
+  if (currentBaseline) {
+    currentBaseline.hidden = !currentReady;
+    currentBaseline.textContent = `비교 기준: ${currentFactors?.baseline_label || "모델의 저장된 비교 기준"}. 건강습관 변경의 효과를 뜻하지 않습니다.`;
+  }
   if (currentTitle) currentTitle.textContent = currentReady ? "현재 위험 신호 설명" : "현재 건강 신호 XAI 연결 대기";
   if (currentList) {
     currentList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", currentReady);
@@ -3100,16 +3280,23 @@ function renderXaiExplanationLists(
       : `<li><strong>현재 건강 신호 XAI 연결 대기</strong><p>${escapeHtml(currentFactors?.message || "검증된 설명 결과가 제공되기 전까지 임의 요인을 표시하지 않습니다.")}</p></li>`;
   }
   const futureCategory = normalizeRiskKey({ risk_category: state.prediction?.risk_category });
-  const currentDirections = new Map(currentItems.map(item => [factorIdentity(item), factorDirectionLabel(item)]));
-  const futureCandidates = (Array.isArray(factors?.items) ? factors.items : []).filter((item) => {
-    const currentDirection = currentDirections.get(factorIdentity(item));
-    return !currentDirection || currentDirection === factorDirectionLabel(item);
-  });
+  // Each model has its own outcome and reference; opposite attributions are valid.
+  const futureCandidates = Array.isArray(factors?.items) ? factors.items : [];
   const factorItems = selectXaiFactors(futureCandidates,
     ["low", "moderate", "high"].includes(futureCategory) ? futureCategory !== "low" : null);
   if (!futureList) return;
   const futureReady = Boolean(approved && factors?.display_allowed === true && factorItems.length);
+  const futureNote = $("#future-factor-note");
+  if (futureNote) {
+    futureNote.hidden = !futureReady || factorItems.length >= 3;
+    futureNote.textContent = "확인된 영향 요인만 표시합니다. 반대 방향의 요인이 없으면 3개보다 적게 표시될 수 있습니다.";
+  }
   const futureTitle = $("#future-factor-title");
+  const futureBaseline = $("#future-factor-baseline");
+  if (futureBaseline) {
+    futureBaseline.hidden = !futureReady;
+    futureBaseline.textContent = `비교 기준: ${factors?.baseline_label || "모델의 저장된 비교 기준"}. 오늘이와 별도로 계산한 모델 설명입니다.`;
+  }
   if (futureTitle) futureTitle.textContent = futureReady ? "미래 당뇨 위험 설명" : "미래 위험 XAI 연결 대기";
   futureList.closest?.(".result-xai-card")?.classList.toggle("xai-ready", futureReady);
   futureList.innerHTML = approved && factors?.display_allowed === true && factorItems.length
@@ -4000,6 +4187,32 @@ async function loadHealthCheckupHistory(items = null) {
   }
 }
 
+async function openAnalysisTab() {
+  if (state.analysisTabBusy) return;
+  const run = state.analysisRun;
+  if (run && run.key === analysisInputKey()) {
+    const hasResult = Object.values(run.models || {}).some(result => result.status === "succeeded");
+    showStep(!run.busy && hasResult ? 6 : 5);
+    return;
+  }
+  if (isLocalPreview()) {
+    if (state.prediction || state.currentScreeningPrediction) showStep(6);
+    else showMessage("건강정보 입력 후 분석을 시작할 수 있어요.");
+    return;
+  }
+  const checkupId = state.checkupId || state.healthCheckupResult?.checkup_id || state.healthCheckupHistory?.[0]?.checkup_id;
+  if (!checkupId) {
+    showMessage("건강정보 입력 후 분석을 시작할 수 있어요.");
+    return;
+  }
+  state.analysisTabBusy = true;
+  try {
+    await openSavedAnalysisResult(checkupId);
+  } finally {
+    state.analysisTabBusy = false;
+  }
+}
+
 async function openSavedAnalysisResult(checkupId) {
   const selectedCheckup = state.healthCheckupHistory.find(
     (checkup) => String(checkup.checkup_id) === String(checkupId),
@@ -4313,6 +4526,7 @@ function resetPhotoRecordModal() {
     ? "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요."
     : "밝은 곳에서 인증 대상이 잘 보이도록 다시 찍어주세요.";
   $("#photo-pending-hint").textContent = "사진은 제출됐지만 아직 챌린지 완료로 처리되지 않았습니다. 잠시 후 다시 확인하거나, 더 선명한 사진으로 다시 제출해 주세요.";
+  $("#photo-fail-title").textContent = "사진 기록을 완료하지 못했어요";
   $("#photo-success-title").textContent = "확인됐어요!";
   $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
   $("#demo-photo-selection").textContent = "";
@@ -4447,6 +4661,9 @@ async function submitV3Photo() {
     void loadWeeklyReport().catch(() => {});
   } catch (error) {
     if (state.recordTarget !== target || state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    $("#photo-fail-title").textContent = error.status >= 500
+      ? "사진 검토를 진행할 수 없어요"
+      : "사진 기록을 완료하지 못했어요";
     $("#photo-fail-hint").textContent = error.message;
     showPhotoRecordState("photo-state-fail");
   } finally {
@@ -5232,6 +5449,7 @@ function renderTogetherMember(item) {
 }
 
 function showWorkspace(name, { moveFocus = true } = {}) {
+  rememberServiceView();
   $("#home-health-management").hidden = true;
   $("#open-health-management").setAttribute("aria-expanded", "false");
   state.activeWorkspace = name;
@@ -5864,8 +6082,7 @@ $$("[data-onboarding-step]").forEach((button) => button.addEventListener("click"
   const targetStep = Number(button.dataset.onboardingStep);
   if (targetStep >= 4 && !await ensureActiveHealthConsent("건강정보 입력")) return;
   if (targetStep === 5) {
-    if (state.step >= 5 || state.analysisRun || state.prediction || state.currentScreeningPrediction) showStep(5);
-    else showMessage("건강정보 입력 후 분석을 시작할 수 있어요.");
+    try { await openAnalysisTab(); } catch (error) { showMessage(error.message); }
     return;
   }
   showStep(targetStep);
@@ -5909,9 +6126,22 @@ document.addEventListener("keydown", (event) => {
 });
 $("#profile-editor-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (event.currentTarget.getAttribute("aria-busy") === "true") return;
+  const name = $("#profile-name").value.trim();
   const birthday = $("#profile-birthday").value;
   const gender = $("#profile-gender").value;
   const message = $("#profile-editor-message");
+  if (!state.token || !state.userProfile) {
+    message.textContent = "로그인 상태를 확인한 뒤 다시 저장해 주세요.";
+    message.hidden = false;
+    return;
+  }
+  if ((name && (Array.from(name).length < 2 || Array.from(name).length > 20)) || (!name && state.userProfile?.name)) {
+    message.textContent = "닉네임은 2~20자로 입력해 주세요. 기존 닉네임은 빈 값으로 변경할 수 없습니다.";
+    message.hidden = false;
+    $("#profile-name").focus();
+    return;
+  }
   if (getAgeFromBirth(birthday) < 14) {
     message.textContent = "서비스 약관에 따라 만 14세 미만은 생년월일로 변경할 수 없습니다.";
     message.hidden = false;
@@ -5919,15 +6149,17 @@ $("#profile-editor-form")?.addEventListener("submit", async (event) => {
   }
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "저장 중…");
   try {
+    const updates = { birthday, gender, ...(name ? { name } : {}) };
     const profile = isLocalPreview()
-      ? { ...(state.userProfile || {}), birthday, gender }
-      : await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({ birthday, gender }) });
-    state.userProfile = { ...(state.userProfile || {}), ...(profile || {}), birthday, gender };
+      ? { ...(state.userProfile || {}), ...updates }
+      : await api("/users/me", { method: "PATCH", body: JSON.stringify(updates) });
+    state.userProfile = { ...(state.userProfile || {}), ...updates, ...(profile || {}) };
+    notifyAccountProfileUpdated();
     $("#eligibility-birth-date").value = birthday;
     $("#gender").value = gender;
     syncLifestyleAvatar();
     closeProfileEditor();
-    showMessage("생년월일과 성별을 수정했습니다. 다음 분석부터 변경된 정보를 사용합니다.", "success");
+    showMessage("개인정보를 수정했습니다. 닉네임은 당근의 숲에도 반영되며, 생년월일과 성별은 다음 분석부터 사용됩니다.", "success");
   } catch (error) {
     message.textContent = error.message || "기본정보를 저장하지 못했습니다.";
     message.hidden = false;
@@ -6261,10 +6493,11 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
   const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "이용 가능 확인 중…");
   try {
     if (!isLocalPreview()) {
-      await api("/users/me/profile", { method: "PATCH", body: JSON.stringify({
+      const profile = await api("/users/me", { method: "PATCH", body: JSON.stringify({
         birthday: $("#eligibility-birth-date").value,
         gender: $("#gender").value,
       }) });
+      state.userProfile = { ...(state.userProfile || {}), ...(profile || {}) };
     }
     const result = isLocalPreview()
       ? getLocalEligibilityResult()
@@ -6275,6 +6508,7 @@ $("#eligibility-form").addEventListener("submit", async (event) => {
         population_in_scope: true,
       }) });
     syncReturningEligibilityState(result);
+    if (await returnToForestSettings(result)) return;
     if (!result.model_eligible) {
       showEligibilityGuidance(result.reason_codes);
       return;
@@ -6984,20 +7218,33 @@ $("#daily-log-form")?.addEventListener("submit", async (event) => {
   } catch (error) { showMessage(error.message); }
   finally { releaseBusy(); }
 });
+async function saveBarrierRecord() {
+  const challengeId = $("#barrier-challenge").value;
+  if (!challengeId) throw new Error("기록할 챌린지를 선택해 주세요.");
+  const token = state.token;
+  const cycle = state.cycle;
+  const preview = isLocalPreview();
+  const result = preview ? { suggestion: "목표를 더 작게 나누고, 내일 다시 시작해 보세요." }
+    : await api(`/user-challenges/${challengeId}/barriers`, { method: "POST", body: JSON.stringify({
+      log_date: challengeDay(), reason_code: $("#barrier-reason").value,
+    }) });
+  if (state.token !== token || state.cycle !== cycle) return false;
+  $("#barrier-suggestion-text").textContent = result?.suggestion || "내일 실천하기 쉬운 작은 목표로 다시 시작해 보세요.";
+  $("#barrier-suggestion").hidden = false;
+  showMessage(preview ? "실천하지 못한 이유를 화면 확인용으로 기록했어요." : "실천하지 못한 이유를 기록했어요. 아래 목표 조정안을 확인해 주세요.", "success");
+  if (!preview) void loadWeeklyReport().catch(() => {});
+  return true;
+}
+
 $("#barrier-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
+  if (form.getAttribute("aria-busy") === "true") return;
+  const releaseBusy = setFormBusy(form, event.submitter, "기록 저장 중…");
   try {
-    if (isLocalPreview()) {
-      $("#barrier-suggestion").textContent = "목표를 더 작게 나누고, 내일 다시 시작해 보세요.";
-      showMessage("실천하지 못한 이유를 화면 확인용으로 저장했습니다.", "success");
-      return;
-    }
-    const result = await api(`/user-challenges/${$("#barrier-challenge").value}/barriers`, { method: "POST", body: JSON.stringify({
-      log_date: new Date().toISOString().slice(0, 10), reason_code: $("#barrier-reason").value,
-    }) });
-    $("#barrier-suggestion").textContent = result.suggestion;
-    await loadWeeklyReport();
+    await saveBarrierRecord();
   } catch (error) { showMessage(error.message); }
+  finally { releaseBusy(); }
 });
 $("#education-list")?.addEventListener("click", (event) => {
   const button = event.target.closest(".education-open");
@@ -7186,9 +7433,11 @@ async function resumeAuthenticatedAccount() {
   try {
     const profile = await api("/users/me");
     state.userProfile = profile;
+    if (returnToRequestedForest()) return;
     if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
     if (profile.gender) $("#gender").value = profile.gender;
     syncLifestyleAvatar();
+    if (showRequestedAccountProfile()) return;
     const consents = await api("/consents");
     if (!Array.isArray(consents?.items)) throw new Error("동의 정보를 확인하지 못했습니다.");
     syncHealthConsentState(consents);
@@ -7210,6 +7459,7 @@ async function resumeAuthenticatedAccount() {
       if (eligibilityError.status !== 404) throw eligibilityError;
     }
     syncReturningEligibilityState(latestEligibility);
+    if (await returnToForestSettings(latestEligibility)) return;
     const healthHistory = await api("/health-checkups");
     state.healthCheckupHistory = Array.isArray(healthHistory?.items) ? healthHistory.items : [];
     renderHealthCheckupHistory();
@@ -7279,14 +7529,20 @@ async function openRequestedWorkspace() {
 async function resumeCookieSession() {
   if (state.token || isLocalPreview()) return false;
   try {
-    const refreshed = await api("/auth/token/refresh");
-    if (!refreshed?.access_token) return false;
-    state.token = refreshed.access_token;
+    const session = await window.GandangAuthSession.resolve();
+    state.token = session.token;
     await resumeAuthenticatedAccount();
     return true;
   } catch (error) {
     if (error.status !== 401) console.warn("저장된 로그인 상태를 복원하지 못했습니다.");
     return false;
+  } finally {
+    const params = new URLSearchParams(window.location.search);
+    if (!state.token && ["workspace", "account", "returnTo"].some(key => params.has(key))) {
+      showStep(2, { recordHistory: false });
+      showAuthMode("login", { context: params.get("account") === "profile" ? "mypage" : "login" });
+    }
+    document.documentElement.classList.remove("service-session-checking");
   }
 }
 $("#login-form").addEventListener("submit", async (event) => {
@@ -7611,9 +7867,11 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
   }
 });
 function showOcrPreview(result, label) {
+  clearMessage();
   const fields = result.extracted_fields || {};
   state.ocrDraftId = result.draft_id;
   state.ocrExtractedFields = fields;
+  $("#health-ocr-entry").open = true;
   $("#ocr-file-name").textContent = label;
   $("#ocr-height-confirm").value = fields.height_cm ?? "";
   $("#ocr-weight-confirm").value = fields.weight_kg ?? "";
@@ -7673,32 +7931,31 @@ $("#checkup-image-input")?.addEventListener("change", async (event) => {
   } catch (error) { showMessage(error.message); }
   finally { event.target.value = ""; }
 });
-$("#ocr-confirm-form")?.addEventListener("submit", async (event) => {
+$("#ocr-confirm-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "건강정보 갱신 중…");
-  const candidate = (id) => $(id).value === "" ? null : Number($(id).value);
-  const updates = {
-    height_cm: candidate("#ocr-height-confirm"), weight_kg: candidate("#ocr-weight-confirm"),
-    waist_cm: candidate("#ocr-waist-confirm"), systolic_bp: candidate("#ocr-systolic-confirm"),
-    diastolic_bp: candidate("#ocr-diastolic-confirm"),
+  if (!event.currentTarget.reportValidity()) return;
+  const inputMap = {
+    "ocr-height-confirm": "height", "ocr-weight-confirm": "weight", "ocr-waist-confirm": "waist",
+    "ocr-systolic-confirm": "systolic", "ocr-diastolic-confirm": "diastolic",
   };
-  try {
-    let result;
-    if (isLocalPreview()) {
-      result = { message: "건강정보가 갱신되었습니다.", updated_fields: Object.fromEntries(Object.entries(updates).filter(([, value]) => value != null)) };
-    } else {
-      if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
-      result = await api(`/ocr-drafts/${state.ocrDraftId}/health-checkups/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(updates) });
-      await loadHealthCheckupHistory();
+  const changes = Object.entries(inputMap).filter(([source]) => document.getElementById(source).value !== "");
+  if (!changes.length) { showMessage("반영할 값을 하나 이상 입력해 주세요."); return; }
+  for (const [source, target] of changes) {
+    const value = Number(document.getElementById(source).value), input = document.getElementById(target);
+    if (!Number.isFinite(value) || (input.min && value < Number(input.min)) || (input.max && value > Number(input.max))) {
+      showMessage("인식한 값이 건강정보 입력 범위를 벗어납니다. 값을 확인해 주세요.");
+      document.getElementById(source).focus(); return;
     }
-    const inputMap = { height_cm: "#height", weight_kg: "#weight", waist_cm: "#waist", systolic_bp: "#systolic", diastolic_bp: "#diastolic" };
-    Object.entries(result.updated_fields).forEach(([key, value]) => { if (inputMap[key]) $(inputMap[key]).value = value; });
-    const fieldLabels = { height_cm: "신장", weight_kg: "체중", waist_cm: "허리둘레", systolic_bp: "수축기 혈압", diastolic_bp: "이완기 혈압", bmi: "BMI" };
-    const changed = Object.keys(result.updated_fields).map((key) => fieldLabels[key] || key).join(", ");
-    $("#ocr-upload-result").innerHTML = `<div><strong>${escapeHtml(result.message)}</strong><p>갱신 항목: ${escapeHtml(changed)}</p></div>`;
-    $("#ocr-confirm-form").hidden = true;
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+  }
+  for (const [source, target] of changes) {
+    const input = document.getElementById(target);
+    input.value = document.getElementById(source).value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  $("#ocr-upload-result").hidden = false;
+  $("#ocr-upload-result").innerHTML = "<div><strong>확인한 값을 건강정보 입력란에 반영했어요.</strong><p>나머지 항목을 확인하고 건강정보를 제출하면 저장됩니다.</p></div>";
+  $("#ocr-confirm-form").hidden = true;
+  showMessage("건강정보 입력란에 반영했어요. 제출 전 나머지 항목도 확인해 주세요.", "success");
 });
 $("#food-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -8043,4 +8300,4 @@ resumeEmergencyQuestionnairePreview();
 resumeHealthInputPreview();
 resumeOnboardingFlowPreview();
 resumeReportForestPreview();
-if (!hasExplicitAuthEntry && !new URLSearchParams(window.location.search).has("preview")) void resumeCookieSession();
+if ((!hasExplicitAuthEntry || window.GandangAuthSession?.read()) && !new URLSearchParams(window.location.search).has("preview")) void resumeCookieSession();

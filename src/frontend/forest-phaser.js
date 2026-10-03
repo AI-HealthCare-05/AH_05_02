@@ -1249,7 +1249,7 @@
     }
 
     isWorldInputBlocked() {
-      return this.memoryCapturing || Boolean(document.querySelector?.('dialog[open], [aria-modal="true"]:not([hidden])'));
+      return this.memoryCapturing || Boolean(document.querySelector?.('dialog[open], .forest-game-settings[open], [aria-modal="true"]:not([hidden])'));
     }
 
     canWalkSegment(from, to) {
@@ -1527,6 +1527,14 @@
       const running = window.carrotForestRunning === true;
       const speed = this.avatar.mounted ? 185 : running ? 150 : 92;
       const distance = speed * Math.min(delta, 40) / 1000;
+      const joystick = window.ForestJoystickInput;
+      const joystickActive = !direction && !modalOpen &&
+        !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName) && !this.placementActive &&
+        joystick && (joystick.x !== 0 || joystick.y !== 0);
+      if (joystickActive) {
+        direction = Math.abs(joystick.x) > Math.abs(joystick.y)
+          ? (joystick.x > 0 ? "right" : "left") : (joystick.y > 0 ? "down" : "up");
+      }
       if (direction) this.cancelPointerMovement?.();
       const pointerStep = !direction && inputAllowed && !this.placementActive ? this.pointerMovementStep?.(distance, time) : null;
       if (pointerStep) direction = pointerStep.direction;
@@ -1535,7 +1543,8 @@
         this.updatePet(time, delta, false);
         return;
       }
-      const vector = { left: [-distance, 0], right: [distance, 0], up: [0, -distance], down: [0, distance] }[direction];
+      const vector = joystickActive ? [joystick.x * distance, joystick.y * distance]
+        : { left: [-distance, 0], right: [distance, 0], up: [0, -distance], down: [0, distance] }[direction];
       const nextX = pointerStep ? pointerStep.x : this.avatar.x + vector[0];
       const nextY = pointerStep ? pointerStep.y : this.avatar.y + vector[1];
       this.avatar.direction = direction;
@@ -1994,7 +2003,9 @@
 
   const initialViewport = viewportSize();
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    // Android WebView/emulator GPU drivers can corrupt repeatedly uploaded
+    // canvas avatar textures. Draw native games directly from those canvases.
+    type: document.documentElement?.classList?.contains("gandang-native") ? Phaser.CANVAS : Phaser.AUTO,
     parent: "phaser-world",
     width: initialViewport.width,
     height: initialViewport.height,

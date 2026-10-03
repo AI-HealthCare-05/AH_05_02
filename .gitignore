@@ -68,3 +68,14 @@ models/cache/
 node_modules/
 dist/
 build/
+
+# Local app builds and private runtime
+storage/
+.env.local-mobile
+*.jks
+*.keystore
+src/frontend/native/android/.gradle/
+src/frontend/native/android/app/src/main/assets/
+src/frontend/native/ios/App/App/public/
+src/frontend/native/ios/App/App/capacitor.config.json
+src/frontend/native/ios/App/CapApp-SPM/.build/

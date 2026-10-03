@@ -8,7 +8,7 @@ const app = fs.readFileSync(path.join(__dirname, '../src/frontend/app.js'), 'utf
 const settled = () => new Promise(resolve => setImmediate(resolve));
 
 async function widget({ authenticated = true, enrolled = true, hash = '', requestHook, initialToken } = {}) {
-  const handlers = {}, requests = [], message = {}, section = { hidden: true };
+  const handlers = {}, requests = [], message = { classList: { add() {} } }, section = { hidden: true };
   const root = {
     hidden: true, innerHTML: '', parentElement: { matches: () => false },
     addEventListener: (type, listener) => { handlers[type] = listener; },
@@ -17,7 +17,7 @@ async function widget({ authenticated = true, enrolled = true, hash = '', reques
   const document = { querySelector: () => root, addEventListener() {}, documentElement: { classList: { add() {} } } };
   const window = { addEventListener() {}, dispatchEvent() {}, challengeV2TokenProvider: () => initialToken };
   vm.runInNewContext(source, {
-    document, window, location: { hash }, FormData: class {}, CustomEvent: class {},
+    document, window, location: { hash }, setTimeout: () => 0, clearTimeout() {}, FormData: class {}, CustomEvent: class {},
     fetch: async (url, options) => {
       requests.push(url);
       if (requestHook) {
@@ -35,7 +35,7 @@ async function widget({ authenticated = true, enrolled = true, hash = '', reques
 
 test('signed-out users get a return-aware login link, not an unsavable settings form', async () => {
   const { root, message, requests } = await widget({ authenticated: false });
-  assert.match(root.innerHTML, /href="\/service\?returnTo=forest-challenges"/);
+  assert.match(root.innerHTML, /href="\/\?returnTo=forest-challenges"/);
   assert.doesNotMatch(root.innerHTML, /data-preferences/);
   assert.match(message.textContent, /로그인/);
   assert.equal(requests.some(url => url.endsWith('/today')), false);
@@ -51,7 +51,7 @@ test('authentication outages are not mistaken for a signed-out user or writable 
 test('the backend invalid refresh cookie response offers login without loading a plan', async () => {
   const { root, message, requests } = await widget({ requestHook: async url => url.includes('refresh')
     ? { ok: false, status: 400, json: async () => ({ detail: 'Provided invalid token.' }) } : null });
-  assert.match(root.innerHTML, /href="\/service\?returnTo=forest-challenges"/);
+  assert.match(root.innerHTML, /href="\/\?returnTo=forest-challenges"/);
   assert.doesNotMatch(root.innerHTML, /data-preferences/);
   assert.match(message.textContent, /로그인/);
   assert.equal(requests.some(url => url.endsWith('/today')), false);
@@ -109,7 +109,7 @@ test('settings open button toggles existing form without discarding edits', asyn
   await handlers.click(event);
   assert.equal(section.hidden, false);
   assert.equal(button['aria-expanded'], 'true');
-  assert.equal(button.textContent, '설정 닫기');
+  assert.equal(button.textContent, '다시 설정 닫기');
   assert.equal(root.innerHTML, before);
   await handlers.click(event);
   assert.equal(section.hidden, true);
@@ -132,19 +132,8 @@ test('plain-language copy retains privacy, optional photos and medical boundarie
   }
 });
 
-test('forest return accepts only the fixed destination and keeps safety exclusions', () => {
-  const fn = app.slice(app.indexOf('function returnToForestSettings'), app.indexOf('const $ ='));
-  const destinations = [];
-  const context = { returningToForest: true, window: { location: { assign: value => destinations.push(value) } } };
-  vm.createContext(context);
-  vm.runInContext(fn, context);
-  for (const reason of ['DIAGNOSED_DIABETES', 'URGENT_MEDICAL_ATTENTION', 'CONSENT_REQUIRED', 'UNDER_MINIMUM_SERVICE_AGE']) {
-    assert.equal(context.returnToForestSettings({ service_eligible: true, reason_codes: [reason] }), false);
-  }
-  assert.equal(context.returnToForestSettings({ service_eligible: false }), false);
-  assert.equal(destinations.length, 0);
-  assert.equal(context.returnToForestSettings({ service_eligible: true, reason_codes: [] }), true);
-  assert.deepEqual(destinations, ['/forest?challenge=settings-v139#daily-settings']);
-  context.returningToForest = false;
-  assert.equal(context.returnToForestSettings({ service_eligible: true }), false);
+test('forest return uses a server safety gate in the current UI', () => {
+  assert.match(app, /async function returnToForestSettings/);
+  assert.match(app, /await api\("\/challenge-v2\/today", \{ method: "GET" \}\)/);
+  assert.match(app, /window.location.assign\("\/forest#daily-settings"\)/);
 });

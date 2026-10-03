@@ -128,13 +128,14 @@ function photoHarness(response) {
   const target = { id: '9', item: { catalog_version: 'evidence-v3', verification_type: 2, goal: { target_minutes: 20 } } };
   const state = { token: 'session-A', cycle: { cycle_id: 1 }, recordTarget: target, dailyCompleted: new Set() };
   const nodes = { '#v3-photo-file': { files: [{ size: 1200 }] }, '#v3-photo-minutes': { value: '20' } };
-  const $ = key => nodes[key] ||= {};
+  const $ = key => nodes[key] ||= { classList: { toggle() {}, add() {}, remove() {} }, scrollIntoView() {} };
   let calls = 0;
   let photoState;
   const formFields = {};
   const context = load(['submitV3Photo'], {
     $, state, isLocalPreview: () => false, challengeDay: () => '2026-09-09',
-    FormData: class { append(key, value) { formFields[key] = value; } },
+    FormData: class { append(key, value) { formFields[key] = value; } set(key,value) { formFields[key] = value; } },
+    window: { confirm: () => true },
     setButtonBusy: () => () => {}, showPhotoRecordState(value) { photoState = value; },
     api: async (url, options) => { calls++; assert.match(url, /\/9\/photo-verifications$/); assert.equal(options.method, 'POST'); return await response(); },
     renderDailyRecordList() {}, updateDailyRecordSummary() {}, showMessage() {}, loadWeeklyReport: async () => {},
@@ -246,4 +247,31 @@ test('walking photo proof hides every vegetable-only demo and guidance block', (
     assert.match(source, /\$\$\("\.v3-vegetable-only"\)\.forEach/);
     assert.match(source, /인증 대상이 잘 보이도록 다시 찍어주세요/);
   }
+});
+
+
+test('photo runtime outage describes a server problem without accepting evidence', async () => {
+  const error = Object.assign(new Error('서버 실행 환경을 복구해야 합니다.'), {status:503});
+  const h = photoHarness(async () => {throw error;});
+  await h.submitV3Photo();
+  assert.equal(h.$('#photo-fail-title').textContent, '사진 검토를 진행할 수 없어요');
+  assert.equal(h.$('#photo-fail-hint').textContent, error.message);
+  assert.equal(h.photoState(), 'photo-state-fail');
+  assert.equal(h.state.dailyCompleted.size, 0);
+  assert.equal(h.target.submitting, false);
+});
+
+
+for (const confirmed of [true, false]) test(`valid photo requires final confirmation: ${confirmed}`, async () => {
+  let count=0;
+  const h=photoHarness(async()=> ++count === 1
+    ? {review_status:'needs_confirmation',challenge_completed:false,notice:'최종 확인'}
+    : {review_status:'accepted',challenge_completed:true});
+  h.target.item.verification_type=1;
+  h.window.confirm=()=>confirmed;
+  await h.submitV3Photo();
+  assert.equal(h.calls(),confirmed ? 2 : 1);
+  assert.equal(h.state.dailyCompleted.has('9'),confirmed);
+  assert.equal(h.fields.confirmed,confirmed ? 'true' : undefined);
+  assert.equal(h.photoState(),confirmed ? 'photo-state-success' : 'photo-state-fail');
 });

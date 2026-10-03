@@ -79,7 +79,9 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
-_APP_ENTRY_QUERY_KEYS = frozenset({"intro", "auth", "preview", "resume", "workspace", "invite_token"})
+_APP_ENTRY_QUERY_KEYS = frozenset(
+    {"intro", "auth", "preview", "resume", "workspace", "invite_token", "account", "returnTo"}
+)
 _RETRO_INTRO_URL = "/static/intro-retro.html?v=20260917-server-entry-v1"
 
 
@@ -122,8 +124,8 @@ async def site_favicon() -> FileResponse:
 
 @app.get("/service", include_in_schema=False)
 async def suin_service() -> FileResponse:
-    """Namespaced September 7 frontend; shares the forest's host-only session."""
-    response = FileResponse(FRONTEND_DIR / "suin" / "index.html")
+    """Compatibility entry for the current customer UI and its session restore."""
+    response = FileResponse(FRONTEND_DIR / "index.html")
     response.headers["Cache-Control"] = "no-store, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response

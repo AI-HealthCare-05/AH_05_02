@@ -38,6 +38,9 @@ def eligibility_payload(item: EligibilityCheck) -> dict[str, object]:
     return {
         "eligibility_check_id": item.id,
         "age": item.age,
+        "has_diabetes_diagnosis": item.has_diabetes_diagnosis,
+        "has_urgent_warning_sign": item.has_urgent_warning_sign,
+        "population_in_scope": item.population_in_scope,
         "service_eligible": item.service_eligible,
         "challenge_eligible": challenge_eligible,
         "current_health_check_eligible": current_health_check_eligible,

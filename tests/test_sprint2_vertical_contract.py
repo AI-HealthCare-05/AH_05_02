@@ -17,7 +17,7 @@ from app.main import app
 from app.prediction.contracts import ACTIVE_MODEL, KLOSA_FEATURE_SCHEMA, PredictionFeatures, input_schema_document
 from app.prediction.providers import DevelopmentPredictionProvider
 from app.services.engagement import BARRIER_SUGGESTIONS, EDUCATION_CATALOG, ENCOURAGEMENT_TEXT
-from app.services.health import eligibility_reason_codes
+from app.services.health import eligibility_payload, eligibility_reason_codes
 
 VALID_FEATURES = {
     "age": 61,
@@ -234,6 +234,7 @@ def test_unapproved_prediction_never_exposes_internal_score_as_public_probabilit
     assert public["promotion_status"] == "development_only"
     assert public["raw_probability_exposed"] is False
     assert "internal_score" not in public
+    assert public["model_analysis"] is None
     assert "probability" not in public
 
 
@@ -266,3 +267,34 @@ def test_approved_caution_prediction_uses_v56_public_moderate_category() -> None
     public = prediction_payload(item)
     assert public["risk_category"] == "moderate"
     assert public["risk_category_label"] == "주의"
+    assert public["model_analysis"]["model_score"] == 0.02
+
+
+@pytest.mark.parametrize("diagnosed, urgent", [(False, False), (True, False), (False, True)])
+def test_eligibility_payload_restores_saved_answers(diagnosed: bool, urgent: bool) -> None:
+    reasons = (["DIAGNOSED_DIABETES"] if diagnosed else []) + (["URGENT_MEDICAL_ATTENTION"] if urgent else [])
+    item = SimpleNamespace(
+        id=9,
+        age=51,
+        has_diabetes_diagnosis=diagnosed,
+        has_urgent_warning_sign=urgent,
+        population_in_scope=True,
+        reason_codes=reasons,
+        service_eligible=not reasons,
+        model_eligible=not reasons,
+        target_segment="test",
+        next_action="test",
+        model_key="test",
+        model_version="test",
+        feature_schema_version="test",
+        threshold_version="test",
+        safety_copy_version="test",
+        created_at=datetime.now(UTC),
+    )
+    payload = eligibility_payload(item)
+    assert payload["has_diabetes_diagnosis"] is diagnosed
+    assert payload["has_urgent_warning_sign"] is urgent
+    assert payload["population_in_scope"] is True
+    if diagnosed or urgent:
+        assert payload["current_health_check_eligible"] is False
+        assert payload["challenge_eligible"] is False

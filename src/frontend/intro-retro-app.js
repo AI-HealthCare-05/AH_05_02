@@ -640,8 +640,18 @@ function syncSidebarChallengeEntry() {
   }
 }
 
+function returnToRequestedForest() {
+  if (!state.token || new URLSearchParams(window.location.search).get("returnTo") !== "forest") return false;
+  window.GandangAuthSession?.save(state.token);
+  window.location.assign("/forest");
+  return true;
+}
+
 function syncTopNavigation() {
   const isLoggedIn = Boolean(state.token);
+  if (isLoggedIn && !isLocalPreview()) window.GandangAuthSession?.save(state.token);
+  const forestEntry = $("#header-forest-entry");
+  if (forestEntry) forestEntry.href = isLoggedIn ? "/forest" : "/service?auth=login&returnTo=forest";
   const needsAccountSetup = Boolean(state.accountRecovery);
   document.body.classList.toggle("intro-authenticated", isLoggedIn && !needsAccountSetup);
   $("#header-my-page").hidden = !isLoggedIn || needsAccountSetup;
@@ -1115,6 +1125,7 @@ async function saveAccountSetup(recovery) {
   $("#account-recovery-form").hidden = true;
   resetEligibilityAnswers();
   syncLifestyleAvatar();
+  if (returnToRequestedForest()) return;
   showStep(3);
 }
 
@@ -1298,6 +1309,7 @@ function clearSessionRecovery() {
 }
 
 function clearAuthenticatedClientState({ keepEmail = true } = {}) {
+  window.GandangAuthSession?.clear();
   const email = keepEmail ? (state.userProfile?.email || $("#login-email")?.value || "") : "";
   clearHealthDraft();
   clearSessionRecovery();
@@ -1333,6 +1345,7 @@ function clearAuthenticatedClientState({ keepEmail = true } = {}) {
 }
 
 function beginSessionRecovery() {
+  window.GandangAuthSession?.clear();
   if (state.accountRecovery) return;
   if (state.step === 4) persistHealthDraft();
   const recovery = state.sessionRecovery || {
@@ -2597,7 +2610,9 @@ async function api(path, options = {}) {
     if (response.status === 401 && authenticatedRequest && !state.accountRecovery) beginSessionRecovery();
     throw apiError;
   }
-  return payload.data ?? payload;
+  const result = payload.data ?? payload;
+  if (path === "/auth/login" || path === "/auth/token/refresh") window.GandangAuthSession?.save(result.access_token);
+  return result;
 }
 async function pollPrediction(jobId) {
   const startedAt = Date.now();
@@ -3712,6 +3727,7 @@ function resetPhotoRecordModal() {
   $("#photo-fail-hint").textContent = vegetableReview
     ? "밝은 곳에서 음식이 잘 보이도록 다시 찍어주세요."
     : "밝은 곳에서 인증 대상이 잘 보이도록 다시 찍어주세요.";
+  $("#photo-fail-title").textContent = "사진 기록을 완료하지 못했어요";
   $("#photo-success-title").textContent = "확인됐어요!";
   $$(".demo-photo-card").forEach((card) => card.setAttribute("aria-pressed", "false"));
   $("#demo-photo-selection").textContent = "";
@@ -3845,6 +3861,9 @@ async function submitV3Photo() {
     void loadWeeklyReport().catch(() => {});
   } catch (error) {
     if (state.recordTarget !== target || state.token !== token || state.cycle?.cycle_id !== cycleId) return;
+    $("#photo-fail-title").textContent = error.status >= 500
+      ? "사진 검토를 진행할 수 없어요"
+      : "사진 기록을 완료하지 못했어요";
     $("#photo-fail-hint").textContent = error.message;
     showPhotoRecordState("photo-state-fail");
   } finally { target.submitting = false; releaseBusy(); }
@@ -5232,16 +5251,20 @@ window.addEventListener("popstate", applyAuthEntryFromUrl);
 applyAuthEntryFromUrl();
 
 let introSessionRestore = null;
+let introRedirecting = false;
 async function restoreIntroSession() {
   if (state.token || ["login", "signup"].includes(new URLSearchParams(window.location.search).get("auth"))) return false;
   if (introSessionRestore) return introSessionRestore;
   introSessionRestore = (async () => {
     try {
-      const refreshed = await api("/auth/token/refresh");
-      if (!refreshed?.access_token) return false;
-      state.token = refreshed.access_token;
-      state.userProfile = await api("/users/me");
+      const session = await window.GandangAuthSession.resolve();
+      state.token = session.token;
+      state.userProfile = session.profile;
       syncTopNavigation();
+      if (new URLSearchParams(window.location.search).get("intro") !== "replay") {
+        introRedirecting = true;
+        window.location.replace("/?workspace=home");
+      }
       return true;
     } catch (error) {
       if (error.status !== 401) console.warn("인트로에서 로그인 상태를 복원하지 못했습니다.");
@@ -5251,6 +5274,7 @@ async function restoreIntroSession() {
       return false;
     } finally {
       introSessionRestore = null;
+      if (!introRedirecting) document.documentElement.classList.remove("intro-session-checking");
     }
   })();
   return introSessionRestore;
@@ -6443,6 +6467,7 @@ async function resumeAuthenticatedAccount() {
   try {
     const profile = await api("/users/me");
     state.userProfile = profile;
+    if (returnToRequestedForest()) return;
     if (profile.birthday) $("#eligibility-birth-date").value = profile.birthday;
     if (profile.gender) $("#gender").value = profile.gender;
     syncLifestyleAvatar();
@@ -6684,9 +6709,11 @@ $("#rag-form")?.addEventListener("submit", async (event) => {
   }
 });
 function showOcrPreview(result, label) {
+  clearMessage();
   const fields = result.extracted_fields || {};
   state.ocrDraftId = result.draft_id;
   state.ocrExtractedFields = fields;
+  $("#health-ocr-entry").open = true;
   $("#ocr-file-name").textContent = label;
   $("#ocr-height-confirm").value = fields.height_cm ?? "";
   $("#ocr-weight-confirm").value = fields.weight_kg ?? "";
@@ -6746,28 +6773,31 @@ $("#checkup-image-input")?.addEventListener("change", async (event) => {
   } catch (error) { showMessage(error.message); }
   finally { event.target.value = ""; }
 });
-$("#ocr-confirm-form")?.addEventListener("submit", async (event) => {
+$("#ocr-confirm-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
-  const releaseBusy = setFormBusy(event.currentTarget, event.submitter, "건강정보 갱신 중…");
-  const candidate = (id) => $(id).value === "" ? null : Number($(id).value);
-  const updates = {
-    height_cm: candidate("#ocr-height-confirm"), weight_kg: candidate("#ocr-weight-confirm"),
-    waist_cm: candidate("#ocr-waist-confirm"), systolic_bp: candidate("#ocr-systolic-confirm"),
-    diastolic_bp: candidate("#ocr-diastolic-confirm"),
+  if (!event.currentTarget.reportValidity()) return;
+  const inputMap = {
+    "ocr-height-confirm": "height", "ocr-weight-confirm": "weight", "ocr-waist-confirm": "waist",
+    "ocr-systolic-confirm": "systolic", "ocr-diastolic-confirm": "diastolic",
   };
-  try {
-    if (isLocalPreview()) {
-      $("#ocr-upload-result").innerHTML = "<div><strong>건강정보가 갱신되었습니다.</strong><p>확인한 값은 다음 건강정보 제출 때 저장됩니다.</p></div>";
-    } else {
-      if (!state.checkupId) throw new ApiError("먼저 기본 건강정보를 등록해 주세요.");
-      const result = await api(`/ocr-drafts/${state.ocrDraftId}/health-checkups/${state.checkupId}`, { method: "PATCH", body: JSON.stringify(updates) });
-      await loadHealthCheckupHistory();
-      const changed = Object.keys(result.updated_fields).join(", ");
-      $("#ocr-upload-result").innerHTML = `<div><strong>${escapeHtml(result.message)}</strong><p>갱신 항목: ${escapeHtml(changed)}</p></div>`;
+  const changes = Object.entries(inputMap).filter(([source]) => document.getElementById(source).value !== "");
+  if (!changes.length) { showMessage("반영할 값을 하나 이상 입력해 주세요."); return; }
+  for (const [source, target] of changes) {
+    const value = Number(document.getElementById(source).value), input = document.getElementById(target);
+    if (!Number.isFinite(value) || (input.min && value < Number(input.min)) || (input.max && value > Number(input.max))) {
+      showMessage("인식한 값이 건강정보 입력 범위를 벗어납니다. 값을 확인해 주세요.");
+      document.getElementById(source).focus(); return;
     }
-    $("#ocr-confirm-form").hidden = true;
-  } catch (error) { showMessage(error.message); }
-  finally { releaseBusy(); }
+  }
+  for (const [source, target] of changes) {
+    const input = document.getElementById(target);
+    input.value = document.getElementById(source).value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  $("#ocr-upload-result").hidden = false;
+  $("#ocr-upload-result").innerHTML = "<div><strong>확인한 값을 건강정보 입력란에 반영했어요.</strong><p>나머지 항목을 확인하고 건강정보를 제출하면 저장됩니다.</p></div>";
+  $("#ocr-confirm-form").hidden = true;
+  showMessage("건강정보 입력란에 반영했어요. 제출 전 나머지 항목도 확인해 주세요.", "success");
 });
 $("#food-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();

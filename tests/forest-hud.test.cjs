@@ -343,8 +343,8 @@ test('native attack returns to the same pad shape and label treatment as the oth
   const html = fs.readFileSync(path.join(__dirname, '../src/frontend/forest.html'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../src/frontend/forest-game.css'), 'utf8');
   assert.ok(html.includes('data-action="attack" aria-label="공격, 단축키 Z"'));
-  assert.ok(html.includes('<span>공격 (Z)</span>'));
-  assert.ok(html.includes('<span>상호작용 (Q)</span>'));
+  assert.match(html, /data-action="attack"[^>]*>공격<\/button>/);
+  assert.match(html, /data-action="interact"[^>]*>상호작용<\/button>/);
   assert.doesNotMatch(html, /attack-spark/);
   assert.doesNotMatch(css, /\.game-controls-overlay \.touch-controls button\.action-attack/);
   assert.doesNotMatch(css, /ffe0a1|efae54|attack-spark/);

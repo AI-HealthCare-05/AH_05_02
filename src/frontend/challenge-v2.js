@@ -1,4 +1,4 @@
-/* Shared authenticated plan. Never synthesizes AI approval or stores tokens in browser storage. */
+/* Shared authenticated plan. Never synthesizes AI approval. Authentication is shared within this app tab. */
 (() => {
   "use strict";
   const root = document.querySelector("[data-challenge-v2]");
@@ -18,7 +18,7 @@
   const mvpStorageKey="gandang.challenge-v2.mvp-completions.v1";
   const mvpWaterCupStorageKey="gandang.challenge-v2.water-cups.v1";
   const mvpCycleStorageKey="gandang.challenge-v2.daily-cycle.v1";
-  const setupUrl = "/service?returnTo=forest-challenges";
+  const setupUrl = "/?returnTo=forest-challenges";
   let token=null, plan=null, busy=false, needsSetup=false, connectionFailed=false, settingsOpen=location.hash==="#daily-settings";
   let mvpCompletions=readMvpCompletions();
   let mvpWaterCups=readMvpWaterCups();
@@ -82,7 +82,11 @@
   async function readJson(response) {
     try { return await response.json(); } catch { return {}; }
   }
-  async function refreshToken() {
+  async function refreshToken(forceRefresh=false) {
+    if(window.GandangAuthSession){
+      try{token=(await window.GandangAuthSession.resolve({forceRefresh})).token;return;}
+      catch(error){error.needsSetup=[401,403].includes(error.status);if(error.needsSetup)token=null;throw error;}
+    }
     const auth=await fetch("/api/v1/auth/token/refresh",{credentials:"same-origin",cache:"no-store"});
     if (!auth.ok) {
       const result=await readJson(auth);
@@ -97,14 +101,14 @@
     if(typeof token!=="string"||!token)throw new Error("로그인 상태를 확인하지 못했어요. 잠시 후 새로고침해 주세요.");
   }
   async function api(path,options={},canRefresh=true) {
-    token=token||window.challengeV2TokenProvider?.();
+    token=token||window.challengeV2TokenProvider?.()||window.GandangAuthSession?.read();
     if (!token) await refreshToken();
     const headers={Authorization:`Bearer ${token}`};
     if (options.body && !(options.body instanceof FormData)) headers["Content-Type"]="application/json";
     const response=await fetch(`/api/v1/challenge-v2${path}`,{...options,headers,credentials:"same-origin",cache:"no-store"});
     if(response.status===401&&canRefresh){
       token=null;
-      await refreshToken();
+      await refreshToken(true);
       return api(path,options,false);
     }
     const result=await readJson(response);
@@ -280,7 +284,16 @@
     if(root.parentElement.matches('[data-step="7"]'))root.insertAdjacentHTML("beforeend",'<button type="button" data-dashboard>대시보드로 이동</button>');
     window.dispatchEvent(new CustomEvent("challenge-v2-updated",{detail:effectivePlan}));
   }
-  const notify=message=>{root.querySelector("[data-message]").textContent=message;};
+  let noticeTimer;
+  const notify=message=>{
+    const notice=root.querySelector("[data-message]");
+    if(!notice)return;
+    notice.textContent=message;
+    notice.classList.add("record-notice");
+    notice.hidden=false;
+    clearTimeout(noticeTimer);
+    noticeTimer=setTimeout(()=>{notice.hidden=true;},6000);
+  };
   async function load() {
     if(busy)return;busy=true;
     try {plan=await api("/today",{method:"POST"});needsSetup=false;connectionFailed=false;render();} catch(error){needsSetup=Boolean(error.needsSetup);connectionFailed=!needsSetup;plan=null;render();notify(error.message);} finally{busy=false;}

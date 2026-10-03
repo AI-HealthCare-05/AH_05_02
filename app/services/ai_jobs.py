@@ -390,13 +390,15 @@ async def _complete_demo_prediction(
 
 def _release_demo_explanation(explanation: dict[str, Any], *, operational: bool) -> dict[str, Any]:
     """Apply the independent public-XAI gate without altering SHAP values."""
+    from src.ml.inference.shap_explanations import has_displayable_selection
+
     released = dict(explanation)
     allowed = (
         operational
         and config.XAI_DISPLAY_ALLOWED
         and released.get("shap_claimed") is True
         and released.get("additivity_verified") is True
-        and released.get("selection_status") == "complete"
+        and has_displayable_selection(released)
     )
     released["status"] = "approved" if allowed else released.get("status", "unavailable")
     released["display_allowed"] = allowed
@@ -609,16 +611,18 @@ async def _demo_current_explanation(
         return _release_demo_explanation({}, operational=operational)
     import pandas as pd
 
-    from src.ml.inference.shap_explanations import explain_today, safe_explanation
+    from src.ml.inference.shap_explanations import safe_explanation
+    from src.ml.inference.xai_background import explain_today_with_reference
 
     try:
         frame = pd.DataFrame([contracted_input], columns=loaded.manifest["features"])
         explanation = await asyncio.to_thread(
             safe_explanation,
-            explain_today,
+            explain_today_with_reference,
             frame,
             lambda candidates: predict_artifact(loaded.artifact, candidates),
             model_version=model_version,
+            model_digest=loaded.manifest["artifact_sha256"],
             elevated=elevated,
         )
     except Exception:
