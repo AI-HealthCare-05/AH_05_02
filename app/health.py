@@ -98,9 +98,7 @@ async def ready(response: Response) -> dict[str, object]:
             "food_vision_vlm_fallback_enabled": config.OPENAI_VLM_FALLBACK_ENABLED,
             "food_vision_vlm_fallback_ready": food_vision_vlm_fallback_ready,
             "demo_artifact_inference_enabled": config.DEMO_ARTIFACT_INFERENCE_ENABLED,
-            "worker_preload_required_for_release": not (
-                config.DEMO_MODE and config.DEMO_ARTIFACT_INFERENCE_ENABLED
-            ),
+            "worker_preload_required_for_release": not (config.DEMO_MODE and config.DEMO_ARTIFACT_INFERENCE_ENABLED),
         },
         "active_model": {
             "model_key": ACTIVE_MODEL.model_key,
