@@ -123,6 +123,10 @@ class Config(BaseSettings):
     HEALTH_EDUCATION_RELEVANCE_THRESHOLD: float = 0.18
     HEALTH_EDUCATION_TOP_K: int = 6
     HEALTH_EDUCATION_MAX_CITATIONS: int = 3
+    HEALTH_EDUCATION_RETRIEVER: str = "memory"
+    QDRANT_URL: str = "http://qdrant:6333"
+    QDRANT_COLLECTION: str = "health_education"
+    QDRANT_API_KEY: str = ""
 
     # 위치 기반 근처 의료기관 조회. 진단·처방을 대신하지 않고, 위치 기반 안내만 제공합니다.
     MEDICAL_FACILITY_SEARCH_PROVIDER: str = "development"
