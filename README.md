@@ -78,6 +78,16 @@ API 문서 확인: `GET http://localhost:8000/api/docs`
 
 ## 환경변수
 
+건강교육 RAG는 로컬·테스트에서 `HEALTH_EDUCATION_RETRIEVER=memory`를 기본으로 사용합니다.
+운영에서 Qdrant HNSW 인덱스를 사용하려면 provider와 API 키를 설정한 뒤 승인 문서를 동기화합니다.
+
+```bash
+HEALTH_EDUCATION_RETRIEVER=qdrant uv run python -m src.rag.indexing sync
+```
+
+동기화가 성공한 뒤 FastAPI의 `HEALTH_EDUCATION_RETRIEVER`를 `qdrant`로 전환합니다. 실패한 동기화는
+기존 컬렉션의 검색 가능 상태를 유지하며, 검색 서비스 장애 시 API는 근거 없는 답변을 생성하지 않습니다.
+
 `.env.example`을 `.env`로 복사하고 필요한 값을 입력합니다. 실제 키가 들어 있는 `.env`는 커밋하지 않습니다.
 
 ## 배포 방향
