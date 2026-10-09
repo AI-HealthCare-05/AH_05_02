@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from app.core import config
 from src.rag.chunking import Chunk, split_into_chunks
-from src.rag.embeddings import get_embedding_provider
+from src.rag.embeddings import EmbeddingError, get_embedding_provider
 from src.rag.generation import AnswerGenerationError, get_generation_provider
 from src.rag.retrieval import hybrid_search, top_chunks
 from src.rag.verification import cited_document_ids, verify_sentences
@@ -316,14 +316,21 @@ def _insufficient_evidence() -> dict[str, object]:
 
 async def _hybrid_answer(question: str) -> dict[str, object]:
     """②~⑥단계: 하이브리드 검색 → 관련도 검사 → 재정렬 → LLM 제한 생성 → 문장별 출처 검사."""
-    embedding_provider = get_embedding_provider()
-
-    scored = await hybrid_search(
-        question,
-        chunks=ALL_CHUNKS,
-        keyword_lookup=KEYWORDS_BY_DOCUMENT,
-        embedding_provider=embedding_provider,
-    )
+    try:
+        embedding_provider = get_embedding_provider()
+        scored = await hybrid_search(
+            question,
+            chunks=ALL_CHUNKS,
+            keyword_lookup=KEYWORDS_BY_DOCUMENT,
+            embedding_provider=embedding_provider,
+        )
+    except EmbeddingError:
+        return {
+            "answer": "지금은 근거를 검색하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            "answer_status": "insufficient_evidence",
+            "citations": [],
+            "retrieval_method": "hybrid_keyword_embedding_v2",
+        }
     top_score = scored[0].combined_score if scored else 0.0
     if top_score < config.HEALTH_EDUCATION_RELEVANCE_THRESHOLD:
         return _insufficient_evidence()

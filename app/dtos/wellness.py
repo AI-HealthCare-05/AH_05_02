@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 
 class WearableConnectionRequest(BaseModel):
@@ -42,6 +42,36 @@ class WearableHealthCandidateApplyRequest(BaseModel):
 
 class RagQuestionRequest(BaseModel):
     question: str = Field(min_length=2, max_length=500)
+
+
+class RagCitationResponse(BaseModel):
+    document_id: str
+    title: str
+    url: HttpUrl
+    checked_at: date
+
+
+class RagQuestionDataResponse(BaseModel):
+    answer: str
+    answer_status: Literal[
+        "grounded",
+        "insufficient_evidence",
+        "medical_safety_refusal",
+        "emergency_redirect",
+    ]
+    citations: list[RagCitationResponse]
+    retrieval_method: str
+    medical_notice: str
+
+
+class ResponseMeta(BaseModel):
+    request_id: str
+    timestamp: datetime
+
+
+class RagQuestionResponse(BaseModel):
+    data: RagQuestionDataResponse
+    meta: ResponseMeta
 
 
 class QuizAnswerRequest(BaseModel):
