@@ -53,7 +53,6 @@ services:
       REDIS_HOST: redis
       DB_GENERATE_SCHEMAS: "false"
     volumes:
-      - static_volume:/app/templates
       - media_volume:/app/media
       - food_vision_cache:/app/storage/food_vision
     networks: [healthcare]
@@ -98,11 +97,10 @@ services:
       start_period: 45s
 
   nginx:
-    image: nginx:1.29-alpine
+    image: ${DOCKER_USER:?DOCKER_USER is required}/${DOCKER_REPOSITORY:?DOCKER_REPOSITORY is required}:web-${APP_VERSION:?APP_VERSION is required}
     restart: unless-stopped
     volumes:
       - ../nginx/runtime/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume:/vol/web/static:ro
       - media_volume:/vol/web/media:ro
       - certbot_conf:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
@@ -136,7 +134,6 @@ volumes:
   redis_data:
   model_cache:
   food_vision_cache:
-  static_volume:
   media_volume:
   certbot_conf:
   certbot_www:

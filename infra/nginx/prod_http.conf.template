@@ -9,6 +9,15 @@ server {
 
     server_tokens off;
     client_max_body_size 10m;
+    gzip on;
+    gzip_vary on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    location /static/assets/ {
+        alias /usr/share/nginx/html/static/assets/;
+        expires 30d;
+        access_log off;
+    }
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;

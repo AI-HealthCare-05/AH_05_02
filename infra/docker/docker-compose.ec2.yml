@@ -98,7 +98,7 @@ services:
       start_period: 30s
 
   nginx:
-    image: nginx:1.29-alpine
+    image: ${DOCKER_USER}/${DOCKER_REPOSITORY}:web-${APP_VERSION}
     restart: unless-stopped
     environment:
       SERVER_NAME: ${SERVER_NAME}
