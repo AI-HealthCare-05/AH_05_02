@@ -15,7 +15,9 @@ AI_WORKER_VERSION="$2"
 cd "$ROOT_DIR"
 docker build --platform linux/amd64 -f app/Dockerfile -t "$DOCKER_USER/$DOCKER_REPOSITORY:app-$APP_VERSION" .
 docker build --platform linux/amd64 -f ai_worker/Dockerfile -t "$DOCKER_USER/$DOCKER_REPOSITORY:ai-$AI_WORKER_VERSION" .
+docker build --platform linux/amd64 -f infra/nginx/Dockerfile -t "$DOCKER_USER/$DOCKER_REPOSITORY:web-$APP_VERSION" .
 docker push "$DOCKER_USER/$DOCKER_REPOSITORY:app-$APP_VERSION"
 docker push "$DOCKER_USER/$DOCKER_REPOSITORY:ai-$AI_WORKER_VERSION"
+docker push "$DOCKER_USER/$DOCKER_REPOSITORY:web-$APP_VERSION"
 
 echo "Images pushed. Set APP_VERSION=$APP_VERSION and AI_WORKER_VERSION=$AI_WORKER_VERSION in the EC2 .env."

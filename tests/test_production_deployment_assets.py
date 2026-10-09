@@ -39,3 +39,30 @@ def test_all_nginx_entrypoints_allow_photo_upload_multipart_overhead() -> None:
     for config_path in configs:
         config = (ROOT / config_path).read_text(encoding="utf-8")
         assert "client_max_body_size 10m;" in config, config_path
+
+
+def test_nginx_serves_game_assets_directly_with_long_lived_cache() -> None:
+    configs = (
+        "infra/nginx/default.conf",
+        "infra/nginx/prod_http.conf",
+        "infra/nginx/prod_https.conf",
+        "infra/nginx/prod_http.conf.template",
+        "infra/nginx/prod_https.conf.template",
+        "infra/nginx/ec2-http.conf.template",
+    )
+    for config_path in configs:
+        config = (ROOT / config_path).read_text(encoding="utf-8")
+        assert "location /static/assets/" in config, config_path
+        assert "alias /usr/share/nginx/html/static/assets/;" in config, config_path
+        assert "expires 30d;" in config, config_path
+        assert "access_log off;" in config, config_path
+
+
+def test_release_build_includes_frontend_nginx_image() -> None:
+    dockerfile = (ROOT / "infra" / "nginx" / "Dockerfile").read_text(encoding="utf-8")
+    build_script = (ROOT / "scripts" / "build-release-images.sh").read_text(encoding="utf-8")
+    production_compose = (ROOT / "infra" / "docker" / "docker-compose.prod.yml").read_text(encoding="utf-8")
+
+    assert "COPY ./src/frontend /usr/share/nginx/html/static" in dockerfile
+    assert 'web-$APP_VERSION' in build_script
+    assert ":web-${APP_VERSION" in production_compose
