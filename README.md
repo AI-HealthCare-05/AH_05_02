@@ -88,6 +88,14 @@ HEALTH_EDUCATION_RETRIEVER=qdrant uv run python -m src.rag.indexing sync
 동기화가 성공한 뒤 FastAPI의 `HEALTH_EDUCATION_RETRIEVER`를 `qdrant`로 전환합니다. 실패한 동기화는
 기존 컬렉션의 검색 가능 상태를 유지하며, 검색 서비스 장애 시 API는 근거 없는 답변을 생성하지 않습니다.
 
+검색·안전 라우팅 품질은 승인된 골든 질문 세트로 회귀 측정합니다.
+
+```bash
+uv run python -m src.rag.evaluation
+```
+
+기본 품질 기준은 Recall@6 0.90 이상, MRR 0.80 이상, 응답 상태 정확도 1.0입니다.
+
 `.env.example`을 `.env`로 복사하고 필요한 값을 입력합니다. 실제 키가 들어 있는 `.env`는 커밋하지 않습니다.
 
 ## 배포 방향
