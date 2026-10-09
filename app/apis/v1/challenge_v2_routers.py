@@ -10,7 +10,11 @@ from app.models.users import User
 from app.services import challenge_v2 as service
 from app.services import challenge_v2_evidence as evidence
 
-challenge_v2_router = APIRouter(prefix="/challenge-v2", tags=["Challenge V2 pilot"])
+challenge_v2_router = APIRouter(
+    prefix="/challenge-v2",
+    tags=["Challenge V2 pilot (deprecated)"],
+    deprecated=True,
+)
 
 
 async def active_user(user: Annotated[User, Depends(get_request_user)]):
