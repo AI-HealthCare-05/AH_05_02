@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.dtos.wellness import RagQuestionResponse
 from src.rag.engine import answer_with_sources
 
 
@@ -52,3 +53,17 @@ async def test_rag_diet_and_complication_questions_are_grounded_in_new_documents
     complications = await answer_with_sources("당뇨병 합병증으로 어떤 검진을 받아야 하나요?")
     assert complications["answer_status"] == "grounded"
     assert any(item["document_id"] == "kdca-diabetes-complications" for item in complications["citations"])
+
+
+def test_rag_response_model_documents_the_complete_envelope() -> None:
+    schema = RagQuestionResponse.model_json_schema()
+    data_schema = schema["$defs"]["RagQuestionDataResponse"]
+
+    assert set(data_schema["required"]) == {
+        "answer",
+        "answer_status",
+        "citations",
+        "retrieval_method",
+        "medical_notice",
+    }
+    assert set(schema["required"]) == {"data", "meta"}

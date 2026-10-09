@@ -16,14 +16,14 @@ from fastapi import APIRouter, Depends
 
 from app.apis.responses import envelope
 from app.dependencies.security import get_request_user
-from app.dtos.wellness import RagQuestionRequest
+from app.dtos.wellness import RagQuestionRequest, RagQuestionResponse
 from app.models.users import User
 from src.rag.engine import answer_with_sources
 
 rag_router = APIRouter(tags=["Health education RAG"])
 
 
-@rag_router.post("/health-education/questions")
+@rag_router.post("/health-education/questions", response_model=RagQuestionResponse)
 async def ask_health_education(request: RagQuestionRequest, user: Annotated[User, Depends(get_request_user)]):
     _ = user
     result = await answer_with_sources(request.question)

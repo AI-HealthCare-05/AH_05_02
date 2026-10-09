@@ -125,6 +125,20 @@ def test_openai_embedding_provider_requires_api_key(monkeypatch: pytest.MonkeyPa
         OpenAIEmbeddingProvider()
 
 
+@pytest.mark.asyncio
+async def test_engine_fails_closed_when_embedding_provider_is_unavailable(monkeypatch: pytest.MonkeyPatch):
+    async def unavailable_search(*args: object, **kwargs: object):
+        del args, kwargs
+        raise EmbeddingError("provider unavailable")
+
+    monkeypatch.setattr(engine, "hybrid_search", unavailable_search)
+    result = await engine.answer_with_sources("당뇨병 운동 방법을 알려주세요")
+
+    assert result["answer_status"] == "insufficient_evidence"
+    assert result["citations"] == []
+    assert "잠시 후" in result["answer"]
+
+
 class _FakeEmbeddingsAsyncClient:
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
